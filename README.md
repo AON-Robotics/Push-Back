@@ -1,7 +1,7 @@
-# VEX-U High Stakes 2025 Competition Repository
+# VEX-U Push Back 2026 Competition Repository
 
 ## Overview
-This repository contains all the code used for the VEX-U High Stakes 2025 competition, including both the operator-controlled and autonomous period programs. The code is built using the **PROS (Purdue Robotics Operating System) framework** and incorporates **OkapiLib** for motion control and path planning.
+This repository contains all the code used for the VEX-U Push Back 2026 competition, including both the operator-controlled and autonomous period programs. The code is built using the **PROS (Purdue Robotics Operating System) framework** and incorporates **OkapiLib** for motion control and path planning.
 
 ## Features
 - **Autonomous Period**: Pre-programmed routines for different strategies.
@@ -19,8 +19,8 @@ This repository contains all the code used for the VEX-U High Stakes 2025 compet
 
 ### Cloning the Repository
 ```sh
-git clone https://github.com/yourusername/high-stakes-2025.git
-cd high-stakes-2025
+git clone https://github.com/AON-Robotics/Push-Back.git
+cd "Push-Back"
 ```
 
 ### Building & Uploading Code
