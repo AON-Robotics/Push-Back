@@ -1,0 +1,68 @@
+name: High Stakes Issue
+description: Template for reporting issues related to AON Robotics' high-stakes repository.
+title: "[Component]: Brief issue title"
+projects: "Project"
+type: "Type"
+labels: []
+assignees: []
+
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: "🔩 Component"
+      description: "Which part of the system does this issue pertain to?"
+      options:
+        - Drivetrain
+        - Odometry
+        - General
+        - Testing and Debugging System
+        - Vision Sensor
+        - Distance Sensor
+        - GPS
+        - Piston
+        - Intake
+        - Claw
+        - Clamp
+        - Motors
+        - Arms
+        - Graphic User Interface
+        - Documentation
+        - Admin
+        - Training
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: "📌 Description"
+      description: "Provide a detailed description of the issue using bullet points."
+      placeholder: |
+        - Describe the problem or feature request.
+        - List key observations.
+        - Mention any specific constraints or requirements.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: "⏳ Urgency"
+      description: "How urgent is this issue?"
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+    validations:
+      required: true
+
+  - type: input
+    id: time_frame
+    attributes:
+      label: "📅 Expected Time Frame"
+      description: "Provide an estimated completion time (e.g., '2 days', '1 week')."
+      placeholder: "e.g., 3 days, 1 week"
+    validations:
+      required: true
