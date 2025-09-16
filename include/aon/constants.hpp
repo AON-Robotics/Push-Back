@@ -47,7 +47,7 @@
 #define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
 
 #define MAX_RPM (int)driveFull.getGearing()
-#define INTAKE_VELOCITY (int)intake.getGearing() * .8
+#define INTAKE_VELOCITY (int)(200 * 0.8)  // move to header file. intake motor is on green (200 RPM), running it at ~80%
 
 /**
  * \brief Maximum acceleration without slippage 
