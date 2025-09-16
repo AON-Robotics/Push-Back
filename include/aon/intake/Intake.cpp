@@ -1,26 +1,25 @@
-#include "Intake.hpp"
+#include "intake.hpp"
 #include "../constants.hpp"
-#include "../globals.hpp"
 #include "../okapi/api.hpp"
 
 namespace aon{
-//Singleton
-Intake& Intake::instance() {
-  static Intake s_instance;
-  return s_instance;
-}
-//Construction
-Intake::Intake()
-  : intake(intake_)
-  , rail(rail_)
-  , gate(gate_) {
+
+// Construction
+Intake::Intake(const std::initializer_list<okapi::Motor> &allPorts, int railPort, int gatePort, int distanceSensorPort)
+  : intake(allPorts)
+  , rail(railPort)
+  , gate(gatePort)
+  , distanceSensor(distanceSensorPort) {
 }
 
 //High Stakes Intake Functions:
 //Public API
 
-void Intake::startScan() { intakeScanning = true; }
-void Intake::stopScan()  { intakeScanning = false; }
+void Intake::startScan() { 
+  objectDetected = false; // TODO: test with phsyical system if this works as intended
+  scanning = true;
+}
+void Intake::stopScan()  { scanning = false; }
 
 // /**
 //  * \brief This small subroutine moves the intake such that a ring is scored on the mobile goal being carried
@@ -65,17 +64,35 @@ void Intake::move(int velocity){
   intake.moveVelocity(velocity);
 }
 
+void Intake::moveRail(int velocity){
+  rail.moveVelocity(velocity);
+}
+
+void Intake::moveGate(int velocity){
+  gate.moveVelocity(velocity);
+}
+
 /// @brief Runs a background loop to auto-pick rings when scanning is active.
 //For this function, the drivetrain logic can be accessed via a bool in autonomous so that
 // So instead of using drivetrain logic here just use a bool to not have drivetrain logic here. 
 void Intake::scan(){
   while(true){
     if (intakeScanning && distanceSensor.get() <= DISTANCE) {
-      intakePickupDetected = true;
+      objectDetected = true;
       pickUp();
       intake.moveVelocity(0);
     }
     pros::delay(20);
   }
+}
+
+/// @brief Gets the distance from the distance sensor
+/// @return The distance from the sensor to whatever it is detecting
+double Intake::getDistance(){
+  return distanceSensor.get();
+}
+
+bool Intake::isObjectDetected(){
+  return objectDetected;
 }
 }

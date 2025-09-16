@@ -8,7 +8,7 @@
 #include "./constants.hpp"
 #include "./controls/pid/pid.hpp"
 #include "./tools/vector.hpp"
-#include "aon/intake/Intake.hpp"
+#include "aon/Intake/intake.hpp"
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
 //  |  \/  |/ _ \_   _/ _ \| _ \/ __|
@@ -26,12 +26,7 @@ okapi::MotorGroup driveFull = okapi::MotorGroup({-20, 19, -18, 9, -8, 7});
 #include "./controls/s-curve-profile.hpp" //! Change this, I dont like doing the include this far down and after ive done other stuff
 
 //Intake:
-okapi::MotorGroup intake_({-16,17});
-okapi::Motor      rail_(17);
-okapi::Motor      gate_(-16);
-aon::Intake intake;
-aon::Intake rail;
-aon::Intake gate;
+aon::Intake intake = aon::Intake({-16, 17}, 17, -16, 3);
 
 MotionProfile forwardProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
 // Misc
@@ -82,11 +77,6 @@ pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8
 pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
 pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
-
-// Distance
-
-pros::Distance distanceSensor(3);
-volatile bool intakePickupDetected = false;  // set in Intake::scan, read/reset in auton
 
 // Gyro/Accelerometer
 
@@ -222,9 +212,9 @@ void testEndpoint(int speed = 100){
  * \brief Makes the rail go slightly back
  */
 void kickBackRail(){
-  rail.move(-100);
+  intake.moveRail(-100);
   pros::delay(150);
-  rail.move(0);
+  intake.moveRail(0);
 }
 
 /**

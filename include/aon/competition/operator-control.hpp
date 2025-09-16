@@ -64,7 +64,6 @@ inline double AnalogInputScaling(const double x, const double t) {
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
-  auto &intakeSys = aon::Intake::instance();
   //////////// DRIVE ////////////
   const double vertical = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
   const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY) * .8;

@@ -705,22 +705,19 @@ double getDistanceToRing(const Colors &color = COLOR){
 void driveTillPickUp(const double &maxDistance = getDistanceToRing()){
   // Let auton own the drivetrain; Intake will only set the flag & run motors.
   const double additional_distance = 0;   // tune if needed
-  activateIntakeScan();
+  intake.startScan();
   // clear the flag before starting to drive
-  intakePickupDetected = false;
   // simple forward drive until either the flag fires or we reach the max distance
   const double CRUISE_RPM = 120;          // tune this for your bot
   double traveled = 0.0;
   aon::Vector startPos = aon::odometry::GetPosition();
-  while (!intakePickupDetected && traveled < (maxDistance + additional_distance)) {
+  while (!intake.isObjectDetected() && traveled < (maxDistance + additional_distance)) {
     driveFull.moveVelocity(CRUISE_RPM);
     traveled = (aon::odometry::GetPosition() - startPos).GetMagnitude(); // inches
     pros::delay(10);
   }
   driveFull.moveVelocity(0);
   deactivateIntakeScan();
-  // optional: reset the flag if you don't need it after this point
-  intakePickupDetected = false;
 }
 
 /// @brief Get a stake and scores a preload
@@ -769,15 +766,15 @@ void testSpeed(double RPM = (double)driveFull.getGearing()){
   MovingAverage mav(50);
   while(true) {
     driveFull.moveVelocity(RPM);
-    double measured = metersToInches(distanceSensor.get_object_velocity());
-    double calculated = getSpeed(RPM);
-    double error = abs(getErrorPercentage(calculated, measured));
-    double avg = mav.update(error);
-    pros::lcd::print(1, "RPM: %.2f", RPM);
-    pros::lcd::print(2, "Calculated Velocity: %.2f", calculated);
-    pros::lcd::print(3, "Measured Velocity: %.2f", measured);
-    pros::lcd::print(4, "Error %: %.2f%", avg);
-    pros::delay(10);
+  //   double measured = metersToInches(distanceSensor.get_object_velocity());
+  //   double calculated = getSpeed(RPM);
+  //   double error = abs(getErrorPercentage(calculated, measured));
+  //   double avg = mav.update(error);
+  //   pros::lcd::print(1, "RPM: %.2f", RPM);
+  //   pros::lcd::print(2, "Calculated Velocity: %.2f", calculated);
+  //   pros::lcd::print(3, "Measured Velocity: %.2f", measured);
+  //   pros::lcd::print(4, "Error %: %.2f%", avg);
+  //   pros::delay(10);
   }
 }
 
