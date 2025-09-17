@@ -74,11 +74,11 @@ inline void DriveDefault() {
   //////////// INTAKE ////////////
   
   if (mainController.get_digital(DIGITAL_R1)) {
-    intake.moveVelocity(INTAKE_VELOCITY);
+    intake.move(INTAKE_VELOCITY);
   } else if (mainController.get_digital(DIGITAL_R2)) {
-    intake.moveVelocity(-INTAKE_VELOCITY);
+    intake.move(-INTAKE_VELOCITY);
   } else {
-    intake.moveVelocity(0);
+    intake.move(0);
   }
   
   if (mainController.get_digital_new_press(DIGITAL_A)) 

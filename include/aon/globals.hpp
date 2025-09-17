@@ -8,7 +8,7 @@
 #include "./constants.hpp"
 #include "./controls/pid/pid.hpp"
 #include "./tools/vector.hpp"
-
+#include "aon/Intake/intake.hpp"
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
 //  |  \/  |/ _ \_   _/ _ \| _ \/ __|
@@ -24,14 +24,11 @@ okapi::MotorGroup driveLeft = okapi::MotorGroup({-20, 19, -18});
 okapi::MotorGroup driveRight = okapi::MotorGroup({9, -8, 7});
 okapi::MotorGroup driveFull = okapi::MotorGroup({-20, 19, -18, 9, -8, 7});
 #include "./controls/s-curve-profile.hpp" //! Change this, I dont like doing the include this far down and after ive done other stuff
+
+//Intake:
+aon::Intake intake = aon::Intake({-16, 17}, 17, -16, 3);
+
 MotionProfile forwardProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-
-// Intake
-
-okapi::MotorGroup intake = okapi::MotorGroup({-16, 17});
-okapi::Motor rail = okapi::Motor(17);
-okapi::Motor gate = okapi::Motor(-16);
-
 // Misc
 
 okapi::Motor arm = okapi::Motor(11);
@@ -80,12 +77,6 @@ pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8
 pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
 pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
-
-// Distance
-
-pros::Distance distanceSensor(3);
-volatile bool intakeScanning = false;
-
 
 // Gyro/Accelerometer
 
@@ -146,11 +137,6 @@ inline void ConfigureMotors(const bool opcontrol = true) {
   driveFull.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   driveFull.tarePosition();
 
-  intake.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  intake.setGearing(okapi::AbstractMotor::gearset::green);
-  intake.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  intake.tarePosition();
-
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
   arm.setGearing(okapi::AbstractMotor::gearset::red);
   arm.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -177,7 +163,7 @@ inline void ConfigureColors(){
  */
 void STOP(){
   driveFull.moveVelocity(0);
-  intake.moveVelocity(0);
+  intake.move(0);
   arm.moveVelocity(0);
   turret.moveVelocity(0);
 }
@@ -216,19 +202,19 @@ inline bool toggle(bool &boolean) {
  * \note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
 */
 void testEndpoint(int speed = 100){
-  STOP();
-  intake.moveVelocity(speed);
+  STOP(); 
+  intake.move(speed);
   pros::delay(1000);
-  intake.moveVelocity(0);
+  intake.move(0);
 }
 
 /**
  * \brief Makes the rail go slightly back
  */
 void kickBackRail(){
-  rail.moveVelocity(-100);
+  intake.moveRail(-100);
   pros::delay(150);
-  rail.moveVelocity(0);
+  intake.moveRail(0);
 }
 
 /**
@@ -277,15 +263,13 @@ void releaseORBIT() {
   turretBraking = false;
 }
 
-/// @brief Starts intake scanning cycle
-void activateIntakeScan(){
-  intakeScanning = true;
-}
+/// @brief Starts intake scanning cycle, inside intake files
+//change this as well, this can go inside the Intake.hpp and Intake.cpp files
+//so no function here, just access the file
+void activateIntakeScan(){ intake.startScan(); }
 
 /// @brief Ends intake scanning cycle
-void deactivateIntakeScan(){
-  intakeScanning = false;
-}
+void deactivateIntakeScan(){ intake.stopScan(); }
 
 }  // namespace aon
 
