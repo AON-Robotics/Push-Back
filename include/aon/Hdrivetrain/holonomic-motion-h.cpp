@@ -4,8 +4,6 @@
  * \brief Implementation of holonomic motion and some control algorithms that
  * make use of it.
  * */
-#if !USING_BLACK_ROBOT
-
 #pragma once
 
 #include <cmath>
@@ -19,67 +17,7 @@
 namespace aon::holonomic_motion {
 
 /**
- * \brief Move drive at desired velocity with respect to plane of reference with X drive train
- *
- * \details When used with odometry, moves the drive in the corresponding X or Y
- * component and rotates it using the field as a plane of reference. Therefore,
- * motions only depend on the plane and it's coordinates, not on the current
- * orientation
- *
- * \param vx Linear velocity in the X component (relative to reference plane)
- * \param vy Linear velocity in the Y component (relative to reference plane)
- * \param vT Angular velocity with respect to the robot's center of rotation
- * \param use_odom Use odometry for external reference plane
- *
- * \note
- *  Do not use odometry when function is used just to move drive taking
- * advantage of this function's vector addition for velocities
- *
- * \attention
- *    Positive (+) X is to the "right" and positive (+) Y to the "top" like a
- * normal Cartesian plane
- */
-void MoveHolonomicMotion(double vx, double vy, double vT,
-                         bool use_odom = true) {
-  const double kSin45 = M_SQRT2 / 2.0; // sin(45) because the wheels of X drive train are at 45 degress
-  const double d = DRIVE_WIDTH / 2.0; // Half the width of the robot
-  const double r = DRIVE_WHEEL_DIAMETER / 2.0; // Wheel radio
-
-  // Odometry uses CW as positive while conventionally CCW is positive
-  const double phi = (use_odom) ? -aon::odometry::GetRadians() : 0.0; // orientation relative to the field
-
-  // Accounts for rotation
-  // d converts the angular velocity (vT) into linear velocity for the wheel
-  // physics v (wheel) = w (angular velocity) x r (distance from center)
-  const double rotation = -d * vT;
-
-  // Use the rotation matrix to transform field-oriented velocities into robot relative
-  // Use sin(45) because the wheel in X drive train are in 45 degrees
-  const double xAxis = kSin45 * (vx * std::cos(phi) + vy * std::sin(phi));
-  const double yAxis = kSin45 * (vy * std::cos(phi) - vx * std::sin(phi));
-
-  // Compute velocity for each of the wheels (inches per second)
-  // The 1/r converts from linear velocity to wheel angular velocity
-  // wheel angular velocity (rad/sec) = linear velocity (parenthesis part) / r (wheel radio)
-  const double FL = (1.0 / r * (rotation + xAxis + yAxis)); // Front left wheel
-  const double BL = (1.0 / r * (rotation - xAxis + yAxis)); // Back left wheel
-  const double FR = (1.0 / r * (rotation + xAxis - yAxis)); // Front right wheel
-  const double BR = (1.0 / r * (rotation - xAxis - yAxis)); // Back right wheel
-
-  // Compute conversion factor in order to get RPMs.
-  // 2*PI*WheelRadius = 1rev, 60 secs = 1 min
-  // in per s * (1 rev / (2*pi*WheelRadius) in) * (60 s / 1 min) = rev per min
-  const double INPS2RPM = 60.0 / (M_PI * DRIVE_WHEEL_DIAMETER);
-
-  // Move motors
-  drive_front_left.moveVelocity(FL * INPS2RPM);
-  drive_back_left.moveVelocity(BL * INPS2RPM);
-  drive_front_right.moveVelocity(-FR * INPS2RPM);
-  drive_back_right.moveVelocity(-BR * INPS2RPM);
-}
-
-/**
- * \brief Move drive at desired velocity with respect to plane of reference with H drive train
+ * \brief Move drive at desired velocity with respect to plane of reference
  *
  * \details When used with odometry, moves the drive in the corresponding X or Y
  * component and rotates it using the field as a plane of reference. Therefore,
@@ -139,6 +77,12 @@ void MoveHolonomicMotionH(double vx, double vy, double vT,
 
 inline void emptyFunction(int t) {}
 
+// Helper function to calculate the time limit
+double computeTimeout(double distance, double maxVel, double maxAccel) {
+    double t_ideal = (distance / maxVel) + (maxVel / maxAccel);
+    return t_ideal * 1.5; // safety factor
+}
+
 /**
  * \brief Move drive using Trapezoid Speed Profile
  *
@@ -154,38 +98,29 @@ inline void emptyFunction(int t) {}
  * \param max_accel Absolute maximum acceleration and deceleration for
 trapezoidal motion
  *
-  \code{.cpp}
-// Move back while closing pneumatics and dropping some balls
-MoveTrapezoid(12.0, 12.0, -45.0, 10.0, [](int t){
-    if(t <= 100){
-      close_pneumatics();
-    } else if(t <= 500){
-      set_intake(-50);
-    } else{
-      stop_intake();
-    }
-  });
-
-  \endcode
  *
  * */
-void MoveTrapezoid(double X, double Y, double T, double timeout,
+void MoveTrapezoid(double X, double Y, double T,
                    double max_accel = MAX_ACCELERATION,
                    std::function<void(int)> function = emptyFunction,
                    double v0 = DEFAULT_INITIAL_SPEED,
                    double vf = DEFAULT_FINAL_SPEED,
-                   double max_speed = MAX_SPEED) {
+                   double max_speed = MAX_SPEED,
+                   PID pid = drivePID) {
   // Instantiate Trapezoid objects
   // Its a motion profile that the acceleration and desacceletarion looks like a trapezoid
   aon::TrapezoidProfile xMotionProfile = aon::TrapezoidProfile();
   aon::TrapezoidProfile yMotionProfile = aon::TrapezoidProfile();
   aon::ExponentialProfile TMotionProfile = aon::ExponentialProfile(); // better for rotation
+  pid.Reset()
 
   // Store initial conditions
   const double start_x = aon::odometry::GetX();
   const double start_y = aon::odometry::GetY();
   // Odometry uses CW as positive, but we want CCW to be positive
   const double start_Theta = -aon::odometry::GetDegrees();
+  const double start_time = pros::millis() / 1000.0;
+  double last_t = start_time;
 
   // Determine how much base should move in each component
   const double dx = X - start_x;
@@ -208,6 +143,13 @@ void MoveTrapezoid(double X, double Y, double T, double timeout,
   const double max_ax = max_accel * cos_max_speed;
   const double max_ay = max_accel * sin_max_speed;
 
+  double timeoutX = computeTimeout(std::abs(dx), max_vx, max_ax);
+  double timeoutY = computeTimeout(std::abs(dy), max_vy, max_ay);
+  double timeoutTheta = computeTimeout(std::abs(dT), max_vt, max_accel); /// FIND MAX FOR THETA
+
+  // pick the largest
+  double timeout = std::max({timeoutX, timeoutY, timeoutTheta});
+
   pros::lcd::print(0, "Before setting position parameters");
   xMotionProfile.SetParams(dx, max_vx, v0x, vfx, max_ax, max_ax, 0.5);
   yMotionProfile.SetParams(dy, max_vy, v0y, vfy, max_ay, max_ax, 0.5);
@@ -220,7 +162,6 @@ void MoveTrapezoid(double X, double Y, double T, double timeout,
   #define vy yMotionProfile.SpeedProfile(ty)
   #define vT TMotionProfile.SpeedProfile(tT)
 
-  const double start_time = pros::millis() / 1000.0;
 
   // Initialize timing variables
   double tx = FLT_EPSILON;
@@ -234,16 +175,45 @@ void MoveTrapezoid(double X, double Y, double T, double timeout,
   // Run loop while time hasn't run out
   while (t < timeout) {
     // Run moveHolonomicMotion function with odometry
-    std::cout << "vx = " << vx << ", vy = " << vy << ", vT = " << vT
-              << std::endl;
-    MoveHolonomicMotion(vx, vy, vT * M_PI / 180.0, true);
+    std::cout << "vx = " << vx << ", vy = " << vy << ", vT = " << vT << std::endl;
+    double t = pros::millis() / 1000.0 - start_time; // get time
+    double dt = t - last_t; // calculate dt
+    last_t = t; // save for next iteration
+
+    // Compute feedforward velocities (vx, vy, vT)
+    double vx_ff = vx;
+    double vy_ff = vy;
+    
+    // Convert vT to rad/s for MoveHolonomicMotion
+    double vT_ff_deg = vT;
+    double vT_ff = vT_ff_deg * M_PI / 180.0;
+
+    // Current change
+    Vector current_position = aon::odometry::GetPosition();
+    double current_dT = aon::odometry::GetDegrees() - start_theta;
+    double current_dx = current_position.GetX() - start_x;
+    double current_dy = current_position.GetY() - start_y;
+
+    // Apply PID corrections
+    double vx_corr = vxPID.Output(dx, current_dx, dt);
+    double vy_corr = vyPID.Output(dy, current_dy, dt);
+    double vT_corr = thetaPID.Output(dT, current_dT, dt);
+    
+    // Convert angular correction from deg/s to rad/s
+    vT_corr *= M_PI / 180.0;
+
+    // Final command = feedforward + correction
+    MoveHolonomicMotion(vx_ff + vx_corr,
+                        vy_ff + vy_corr,
+                        vT_ff + vT_corr,
+                        true);
 
     // Run custom user function at the current time (millisecond)
     function(t * 1000);
 
     pros::delay(10);
 
-    aon::odometry::Update();
+    // aon::odometry::Update();
 
     // Update these values BEFORE while loop comparison
     t = pros::millis() / 1000.0 - start_time;
@@ -266,5 +236,3 @@ void MoveTrapezoid(double X, double Y, double T, double timeout,
 }
 
 };  // namespace aon::holonomic_motion
-
-#endif

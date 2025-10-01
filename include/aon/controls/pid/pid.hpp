@@ -115,6 +115,38 @@ class PID {
     return result;
   }
   double GetResult() { return result; }
+
+  /**
+   * \brief Method to calculate and add pid constants, with dt.
+   *
+   * \param setpoint Desired target value we want to achieve.
+   * \param process_variable Current value the robot is processing.
+   * \param dt Time between interations.
+   * \return double This is the sum of all the controls in the pid.
+   */
+  double OutputDt(double setpoint, double process_variable, double dt) {
+    error = setpoint - process_variable;
+
+    // Integral with actual dt
+    double delta_integral = ((error + last_error) / 2.0) * dt;
+    if (error > -start_integral && error < start_integral) {
+      if (last_error != 0) {
+        if (delta_integral + integral > anti_windup) delta_integral = 0;
+        if (delta_integral + integral < -anti_windup) delta_integral = 0;
+        integral += delta_integral;
+      }
+    }
+
+    derivative = (error - last_error) / dt;
+    last_error = error;
+
+    const double p = error * kP;
+    const double i = kI * integral;
+    const double d = derivative * kD;
+
+    result = p + i + d;
+    return result;
+  }
   /**
    * \brief Sets attributes to their original values excluding gains.
    *
