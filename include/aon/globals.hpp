@@ -9,7 +9,7 @@
 #include "./controls/pid/pid.hpp"
 #include "./tools/vector.hpp"
 #include "./x-drive/x-drive.hpp"
-#include "aon/Intake/intake.hpp"
+#include "./intake/intake.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -25,7 +25,7 @@ aon::XDrive drivetrain = aon::XDrive();
 
 
 //Intake:
-aon::Intake intake = aon::Intake({-16, 17}, 17, -16, 3);
+aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);
 
 okapi::MotorGroup bottom = okapi::MotorGroup({1});
 okapi::MotorGroup top = okapi::MotorGroup({-2});

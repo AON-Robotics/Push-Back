@@ -111,7 +111,7 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
   inline pros::Mutex orientation_mutex;
 
   // from the web
-  Vector changeWeb;
+  inline Vector changeWeb;
 
   //> Encoder back struct instance
   inline STRUCT_encoder encoderBack_data;
@@ -121,26 +121,6 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
   inline STRUCT_encoder encoderLeft_data;
   //> Gyro struct instance
   inline STRUCT_gyro gyro_data;
-
-
-// ============================================================================
-//   _______ _                        _ 
-//  |__   __| |                      | |
-//     | |  | |__  _ __ ___  __ _  __| |
-//     | |  | '_ \| '__/ _ |/ _` |/ _` |
-//     | |  | | | | | |  __| (_| | (_| |
-//     |_|  |_| |_|_|  \___|\__,_|\__,_|
-//
-// ============================================================================
-/**
- * \brief Function for odometry thread
- */
-inline void Odometry(){
-  while(true){
-    Update();
-    pros::delay(20);
-  }
-}
 
   // ============================================================================
   //     ___     _   _                __       ___      _   _
@@ -357,7 +337,7 @@ inline void Initialize() {
  * 
  * */
 
-void Update() {
+inline void Update() {
   /// Read encoder values, divided by 100 to convert centidegrees to degrees
   encoderRight_data.currentValue = encoderRight.get_position() / 100.0; 
   encoderLeft_data.currentValue = encoderLeft.get_position() / 100.0; 
@@ -468,14 +448,23 @@ inline Vector gpsPosition(){
   return current;
 }
 
-/// @brief Returns position of the robot in the field
-/// @returns The GPS coordinates as a `Vector`
-inline Vector gpsPosition(){
-  pros::delay(2000);
-  pros::c::gps_status_s_t status = gps.get_status();
-  Vector current = Vector().SetPosition(status.x, status.y);
-
-  return current;
+// ============================================================================
+//   _______ _                        _ 
+//  |__   __| |                      | |
+//     | |  | |__  _ __ ___  __ _  __| |
+//     | |  | '_ \| '__/ _ |/ _` |/ _` |
+//     | |  | | | | | |  __| (_| | (_| |
+//     |_|  |_| |_|_|  \___|\__,_|\__,_|
+//
+// ============================================================================
+/**
+ * \brief Function for odometry thread
+ */
+inline void Odometry(){
+  while(true){
+    Update();
+    pros::delay(20);
+  }
 }
 
 // ============================================================================

@@ -51,7 +51,7 @@ void grabGoal(const int &delay = 600){
   pros::delay(delay * 1/6);
   drivetrain.motors(100);
   pros::delay(delay);
-  driveFull.moveVelocity(0);
+  drivetrain.stop();
 }
 
 /**
@@ -204,7 +204,7 @@ inline void turretRotationRelative(const double &givenAngle) {
 /// @param color The color of the ring we wish to track
 /// @return The filtered distance to that ring
 /// @note Takes half a second (0.5s) to complete
-double getDistanceToRing(const Colors &color = COLOR){
+double distanceToRing(const Colors &color = COLOR){
   COLOR = color;
   okapi::EKFFilter ekf;
 
@@ -221,7 +221,7 @@ double getDistanceToRing(const Colors &color = COLOR){
 
 /// @brief Drives forward until a ring hits the distance sensor
 /// @param distance The distance from the robot to a ring
-void driveTillPickUp(const double &distance = getDistanceToRing()){
+void driveTillPickUp(const double &distance = distanceToRing()){
   const double additional_distance = 0; //? This is to give the robot some distance to actually grip the donut, determine this experimentally
   intake.startScan();
   drivetrain.move(distance + additional_distance);
