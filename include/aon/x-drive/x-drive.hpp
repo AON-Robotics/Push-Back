@@ -25,6 +25,7 @@ class Pose {
   Pose(double x = 0, double y = 0, double theta = 0) : x(x), y(y), theta(theta) {}
 };
 
+// TODO: modify implementation of most methods to use holonomic motion
 class XDrive {
  private:
   const int max_rpm;
