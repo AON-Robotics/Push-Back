@@ -14,7 +14,7 @@
 #include "../sensing/odometry.hpp"
 #include "../globals.hpp"
 
-namespace aon::holonomic_motion {
+namespace aon::holonomic_motionH {
 
 /**
  * \brief Move drive at desired velocity with respect to plane of reference
@@ -61,8 +61,7 @@ void MoveHolonomicMotionH(double vx, double vy, double vT,
   // in charge to do the rotation during the movement of the robot
   const double vl = vy_field + rotation;  // left wheel
   const double vr = vy_field - rotation;  // right wheel
-  const double vm = vx_field;           // middle wheel
-
+  const double vm = vx_field;             // middle wheel
 
   // Compute conversion factor in order to get RPMs.
   // 2*PI*WheelRadius = 1rev, 60 secs = 1 min
@@ -70,9 +69,9 @@ void MoveHolonomicMotionH(double vx, double vy, double vT,
   const double INPS2RPM = 60.0 / (M_PI * DRIVE_WHEEL_DIAMETER);
 
   // Move motors
-  drive_left.moveVelocity(vl * INPS2RPM);
-  drive_right.moveVelocity(vr * INPS2RPM);
-  drive_middle.moveVelocity(vm * INPS2RPM);
+  driveLeft.moveVelocity(vl * INPS2RPM);
+  driveRight.moveVelocity(vr * INPS2RPM);
+  middleMotor.moveVelocity(vm * INPS2RPM);
 }
 
 inline void emptyFunction(int t) {}
@@ -80,7 +79,7 @@ inline void emptyFunction(int t) {}
 // Helper function to calculate the time limit
 double computeTimeout(double distance, double maxVel, double maxAccel) {
     double t_ideal = (distance / maxVel) + (maxVel / maxAccel);
-    return t_ideal * 1.5; // safety factor
+    return t_ideal;
 }
 
 /**
@@ -100,32 +99,40 @@ trapezoidal motion
  *
  *
  * */
-void MoveTrapezoid(double X, double Y, double T,
-                   double max_accel = MAX_ACCELERATION,
+void MoveTrapezoidH(double X, double Y, double T,
+                   double max_accel = MAX_ACCEL,
                    std::function<void(int)> function = emptyFunction,
                    double v0 = DEFAULT_INITIAL_SPEED,
                    double vf = DEFAULT_FINAL_SPEED,
-                   double max_speed = MAX_SPEED,
-                   PID pid = drivePID) {
+                   double max_speed = MAX_VELOCITY_LINEAR,
+                   PID drivePID = drivePID, PID turnPID = turnPID) {
+
+  const double d = DRIVE_WIDTH / 2.0; // Half the width of the robot
+
   // Instantiate Trapezoid objects
   // Its a motion profile that the acceleration and desacceletarion looks like a trapezoid
   aon::TrapezoidProfile xMotionProfile = aon::TrapezoidProfile();
   aon::TrapezoidProfile yMotionProfile = aon::TrapezoidProfile();
   aon::ExponentialProfile TMotionProfile = aon::ExponentialProfile(); // better for rotation
-  pid.Reset()
+  drivePID.Reset();
+  turnPID.Reset();
+
+  // Instantiate PID objects
+  PID vxPID = drivePID;
+  PID vyPID = drivePID;
+  PID thetaPID = turnPID;
 
   // Store initial conditions
   const double start_x = aon::odometry::GetX();
   const double start_y = aon::odometry::GetY();
-  // Odometry uses CW as positive, but we want CCW to be positive
-  const double start_Theta = -aon::odometry::GetDegrees();
+  const double start_theta = -aon::odometry::GetDegrees();   // Odometry uses CW as positive, but we want CCW to be positive
   const double start_time = pros::millis() / 1000.0;
   double last_t = start_time;
 
   // Determine how much base should move in each component
   const double dx = X - start_x;
   const double dy = Y - start_y;
-  const double dT = T - start_Theta;
+  const double dT = T - start_theta;
 
   // Decompose max_speed and max_accel magnitudes into x and y components
   // using angle made by dx and dy as angle for the vector
@@ -136,6 +143,7 @@ void MoveTrapezoid(double X, double Y, double T,
 
   const double max_vx = max_speed * cos_max_speed;
   const double max_vy = max_speed * sin_max_speed;
+  const double max_vt = max_speed / d;
   const double v0x = v0 * cos_max_speed;
   const double v0y = v0 * sin_max_speed;
   const double vfx = vf * cos_max_speed;
@@ -169,8 +177,6 @@ void MoveTrapezoid(double X, double Y, double T,
   double tT = FLT_EPSILON;
   double t = pros::millis() / 1000.0 - start_time;
 
-  aon::odometry::Update();
-
   pros::lcd::print(2, "Before Loop");
   // Run loop while time hasn't run out
   while (t < timeout) {
@@ -195,15 +201,15 @@ void MoveTrapezoid(double X, double Y, double T,
     double current_dy = current_position.GetY() - start_y;
 
     // Apply PID corrections
-    double vx_corr = vxPID.Output(dx, current_dx, dt);
-    double vy_corr = vyPID.Output(dy, current_dy, dt);
-    double vT_corr = thetaPID.Output(dT, current_dT, dt);
+    double vx_corr = vxPID.OutputDt(dx, current_dx, dt);
+    double vy_corr = vyPID.OutputDt(dy, current_dy, dt);
+    double vT_corr = thetaPID.OutputDt(dT, current_dT, dt);
     
     // Convert angular correction from deg/s to rad/s
     vT_corr *= M_PI / 180.0;
 
     // Final command = feedforward + correction
-    MoveHolonomicMotion(vx_ff + vx_corr,
+    MoveHolonomicMotionH(vx_ff + vx_corr,
                         vy_ff + vy_corr,
                         vT_ff + vT_corr,
                         true);
@@ -224,12 +230,12 @@ void MoveTrapezoid(double X, double Y, double T,
     ty = yMotionProfile.PositionProfileInverse(
         fabs(aon::odometry::GetY() - start_y));
     tT = TMotionProfile.PositionProfileInverse(
-        fabs(aon::odometry::GetDegrees() - start_Theta));
+        fabs(aon::odometry::GetDegrees() - start_theta));
     pros::lcd::print(3, "After Inverses");
   }
 
   pros::lcd::print(4, "After Loop");
-  MoveHolonomicMotion(0, 0, 0, false);
+  MoveHolonomicMotionH(0, 0, 0, false);
 #undef vx
 #undef vy
 #undef vT

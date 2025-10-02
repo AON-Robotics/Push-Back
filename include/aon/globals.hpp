@@ -23,6 +23,7 @@
 okapi::MotorGroup driveLeft = okapi::MotorGroup({-20, 19, -18});
 okapi::MotorGroup driveRight = okapi::MotorGroup({9, -8, 7});
 okapi::MotorGroup driveFull = okapi::MotorGroup({-20, 19, -18, 9, -8, 7});
+okapi::Motor middleMotor = okapi::Motor({1});
 #include "./controls/s-curve-profile.hpp" //! Change this, I dont like doing the include this far down and after ive done other stuff
 
 //Intake:
@@ -222,7 +223,7 @@ void kickBackRail(){
  */
 void autonSafety(){
   while(true){
-    while(mainController.get_digital(DIGITAL_X)){
+    while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
       STOP();
     }
     pros::delay(50);

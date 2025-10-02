@@ -81,6 +81,6 @@ What if we dont stop the robot after a movement? and we choose when the robot sh
 */
 
 void move2D(double x, double y, double t = aon::odometry::GetDegrees()) {
-  MoveTrapezoid(x, y, t)
+  aon::holonomic_motionH::MoveHolonomicMotionH(x, y, t);
 }
 

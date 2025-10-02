@@ -4,6 +4,7 @@
 #include "../tools/vector.hpp"
 #include "../controls/s-curve-profile.hpp"
 #include "../sensing/odometry.hpp" 
+#include "holonomic-motion-h.hpp" 
 
 class HDrive {
     private:
