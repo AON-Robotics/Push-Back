@@ -3,7 +3,6 @@
 #include "../constants.hpp"
 #include "../../api.h"
 #include "../../okapi/api.hpp"
-#include <atomic>
 
 // Intake system managing intake motors, rail, and gate mechanisms.
 
