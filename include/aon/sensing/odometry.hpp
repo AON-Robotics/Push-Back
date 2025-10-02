@@ -452,12 +452,13 @@ void Update() {
       std::cout << "Delta: " << deltaDlocal.GetX() << ", " << deltaDlocal.GetY() << "\n";
       
       // alteration with back encoder
+      #if ENCODER_BACK
       changeMine.SetPosition(changeMine.GetX() + (2 * std::sin(deltaTheta/2) * ((encoderBack_data.deltaDistance / deltaTheta) + DISTANCE_BACK_TRACKING_WHEEL_CENTER)),
       changeMine.GetY() + (2 * std::sin(deltaTheta/2) * (averageR)));
-      
       // FROM THE VIDEO OF THE KID
       changeVideo.SetPosition(changeVideo.GetX() + (2 * std::sin(deltaTheta/2) * ((encoderBack_data.deltaDistance / deltaTheta) + DISTANCE_BACK_TRACKING_WHEEL_CENTER)),
       changeVideo.GetY() + (2 * std::sin(deltaTheta/2) * ((encoderRight_data.deltaDistance / deltaTheta) + DISTANCE_RIGHT_TRACKING_WHEEL_CENTER)));
+      #endif
     }
   }
   // ElseiIf the robot is moving straight forward or backward, average encoder values for distance    
