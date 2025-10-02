@@ -13,7 +13,6 @@
 
 #include <cmath>
 #include "../constants.hpp"
-#include "../globals.hpp"
 
 inline double getSpeed(const double &RPM);
 
@@ -94,12 +93,13 @@ class MotionProfile {
 };
 
 /// @brief Determines the speed of the robot given drivetrain motors' `RPM`
-/// @param RPM The RPM for which to calculate the velocity (default current RPM)
+/// @param RPM The RPM for which to calculate the velocity (default max RPM)
 /// @return The speed in \b in/s at which the robot would move at the given RPM
 /// @note Test the accuracy precision of the `getActualVelocity()` method which is used as a default value,
 /// @note it may be possible to need to use `get_velocity()` from `pros::Rotation` which uses \b centidegrees.
 /// @note The distance units depend on the units used for measuring `DRIVE_WHEEL_DIAMETER`.
-inline double getSpeed(const double &RPM = (int)driveFull.getActualVelocity()){
+// inline double getSpeed(const double &RPM = (int)driveFull.getActualVelocity()){
+double getSpeed(const double &RPM = MAX_RPM){
   double circumference = DRIVE_WHEEL_DIAMETER * M_PI;
   double RPS = RPM / 60;
   double speed = MOTOR_TO_DRIVE_RATIO * circumference * RPS;

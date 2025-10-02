@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef AON_SENSING_ODOMETRY_HPP_
 #define AON_SENSING_ODOMETRY_HPP_
 
@@ -8,8 +10,6 @@
 #include "../../okapi/api.hpp"
 #endif
 #include "../tools/vector.hpp"
-#include "../globals.hpp"
-
 /**
  * \namespace aon::odometry
  *
@@ -45,6 +45,14 @@
  * */
 
 namespace aon::odometry {
+
+inline pros::Rotation encoderRight(5, true);
+inline pros::Rotation encoderLeft(4, false);
+inline pros::Rotation encoderBack(11, false);
+#if GYRO_ENABLED
+inline pros::Imu gyroscope(6);
+#endif
+inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
   // ============================================================================
   //   __   __        _      _    _
@@ -89,20 +97,20 @@ namespace aon::odometry {
   };
     
   //> Calculate delta angle each iteration using tracking wheel data
-  double deltaTheta;
+  inline double deltaTheta;
   //> Stores the change in position in local reference plane
-  Vector deltaDlocal;
+  inline Vector deltaDlocal;
   //> Final calculated orientation in both \b radians and \b degrees
-  Angle orientation;
+  inline Angle orientation;
   //> Final calculated position in \b inches
-  Vector position;
+  inline Vector position;
   //> Conversion factor
-  const double conversionFactor = M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+  inline const double conversionFactor = M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
     
   //> Mutex for absolute position
-  pros::Mutex p_mutex;
+  inline pros::Mutex p_mutex;
   //> Mutex for orientation to prevent race condition when retrieving value
-  pros::Mutex orientation_mutex;
+  inline pros::Mutex orientation_mutex;
 
   // From the web
   Vector changeWeb;
@@ -116,32 +124,11 @@ namespace aon::odometry {
   STRUCT_encoder encoderBack_data;
   #endif
   //> Encoder right struct instance
-  STRUCT_encoder encoderRight_data;
+  inline STRUCT_encoder encoderRight_data;
   //> Encoder left struct instance
-  STRUCT_encoder encoderLeft_data;
-  
+  inline STRUCT_encoder encoderLeft_data;
   //> Gyro struct instance
-  STRUCT_gyro gyro_data;
-
-
-// ============================================================================
-//   _______ _                        _ 
-//  |__   __| |                      | |
-//     | |  | |__  _ __ ___  __ _  __| |
-//     | |  | '_ \| '__/ _ |/ _` |/ _` |
-//     | |  | | | | | |  __| (_| | (_| |
-//     |_|  |_| |_|_|  \___|\__,_|\__,_|
-//
-// ============================================================================
-/**
- * \brief Function for odometry thread
- */
-inline void Odometry(){
-  while(true){
-    Update();
-    pros::delay(20);
-  }
-}
+  inline STRUCT_gyro gyro_data;
 
   // ============================================================================
   //     ___     _   _                __       ___      _   _
@@ -505,6 +492,35 @@ void Update() {
   encoderLeft_data.previousDistance = encoderLeft_data.currentDistance;
 
   gyro_data.prevDegrees = gyro_data.currentDegrees;
+}
+
+/// @brief Returns position of the robot in the field
+/// @returns The GPS coordinates as a `Vector`
+inline Vector gpsPosition(){
+  pros::delay(2000);
+  pros::c::gps_status_s_t status = gps.get_status();
+  Vector current = Vector().SetPosition(status.x, status.y);
+
+  return current;
+}
+
+// ============================================================================
+//   _______ _                        _ 
+//  |__   __| |                      | |
+//     | |  | |__  _ __ ___  __ _  __| |
+//     | |  | '_ \| '__/ _ |/ _` |/ _` |
+//     | |  | | | | | |  __| (_| | (_| |
+//     |_|  |_| |_|_|  \___|\__,_|\__,_|
+//
+// ============================================================================
+/**
+ * \brief Function for odometry thread
+ */
+inline void Odometry(){
+  while(true){
+    Update();
+    pros::delay(20);
+  }
 }
 
 // ============================================================================

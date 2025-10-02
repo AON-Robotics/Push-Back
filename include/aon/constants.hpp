@@ -1,6 +1,8 @@
 #ifndef AON_CONSTANTS_HPP_
 #define AON_CONSTANTS_HPP_
 
+#define PROS_USE_SIMPLE_NAMES
+
 #define BRAIN_SCREEN_WIDTH 480
 #define BRAIN_SCREEN_HEIGHT 240
 #define DEGREES_PER_REVOLUTION 360.0
@@ -53,18 +55,14 @@
 #define DEFAULT_INITIAL_SPEED 0.0
 #define DEFAULT_FINAL_SPEED 0.0
 
-/**
- * \brief Maximum acceleration without slippage 
- * 
- * \see https://www.desmos.com/calculator/uuiafowges
- */ 
+/// @brief Maximum acceleration without slippage 
+///
+/// @see https://www.desmos.com/calculator/uuiafowges
 #define MAX_ACCEL 4991.46340024
 
-/**
- * \brief Maximum deceleration without tipping 
- * 
- * \see https://www.desmos.com/calculator/kgdezwvxrr
- */
+/// @brief Maximum deceleration without tipping
+///
+/// @see https://www.desmos.com/calculator/kgdezwvxrr
 #define MAX_DECEL 206.258818192
 
 #define DISTANCE 90 // This is the activation distance for the intake (the distance under which we know a ring is waiting in front of the intake)

@@ -66,10 +66,22 @@ inline double AnalogInputScaling(const double x, const double t) {
 inline void DriveDefault() { 
   //////////// DRIVE ////////////
   const double vertical = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
-  const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY) * .8;
+  const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY);
   
-  driveLeft.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0) * .9);
-  driveRight.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0) * .9);
+  top.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0));
+  bottom.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0));
+
+  // driveLeft.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0) * .9);
+  // driveRight.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0) * .9);
+
+  //# From now on, all drivetrains used will need to use this format for driving
+  if(false){
+    double leftX = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X) / 127.0, SENSITIVITY);
+    double leftY = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
+    double rightX = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY);
+    double rightY = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y) / 127.0, SENSITIVITY);
+    drivetrain.drive(leftX, leftY, rightX, rightY);
+  }
   
   //////////// INTAKE ////////////
   
@@ -104,7 +116,7 @@ inline void DriveDefault() {
     arm.moveVelocity(-INTAKE_VELOCITY);
   } else {
     arm.moveVelocity(0);
-  }  
+  }
 }
 
 /// Ian's Operator Control configuration

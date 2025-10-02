@@ -1,6 +1,4 @@
 #include "main.hpp"
-#include "globals.hpp"
-// #include "Intake.hpp"
 
 void initialize() {
   pros::Task guiTask(aon::gui::Initialize);
