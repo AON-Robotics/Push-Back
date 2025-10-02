@@ -11,7 +11,6 @@
 #include "../tools/moving-average.hpp"
 #include "../tools/general.hpp"
 #include "../math/misc/misc.hpp"
-
 // TODO: for modularity we will have odometry, drivetrain, navigator, orbit, intake, and claw (the last two will most likely change with each game and modules may be added or removed as needed)
 //# Navigator will use odometry and drivetrain under the hood for auton, but drivers will use just drivetrain for driving
 // TODO: add support for a drive mode that is videogame-like (i think rocket league has it). Basically with reference to where the driver is standing on the field, the direction towards which you move the joystick is where the robot will turn to and drive to at the same time. This should greatly facilitate general directional movement if implemented correctly. Leave a toggle available for traditional driving in accordance to the chosen drivetrain for better fine grained control in tight spaces.
@@ -37,40 +36,6 @@ double groundDistanceToDisk(const double &pixels);
 // ============================================================================|
 
 /**
- * \brief This small subroutine moves the intake such that a ring is scored on the mobile goal being carried
- *
- * \param delay The time in \b milliseconds to leave the intake running
- */
-void pickUpRing(const int &delay = 1000){
-  intake.moveVelocity(INTAKE_VELOCITY / .8);
-  pros::delay(delay);
-  intake.moveVelocity(0);
-}
-
-/**
- * \brief This small subroutine moves the rail such that a ring is scored on the mobile goal being carried
- *
- * \param delay The time in \b milliseconds to leave the intake running
- */
-void scoreRing(const int &delay = 1500){
-  rail.moveVelocity(INTAKE_VELOCITY);
-  pros::delay(delay);
-  rail.moveVelocity(0);
-}
-
-/// @brief Asynchronous task for activating the intake when a ring is encountered
-void intakeScan(){
-  while(true){
-    if (intakeScanning && distanceSensor.get() <= DISTANCE) {
-      pickUpRing();
-      drivetrain.stop();
-      intake.moveVelocity(0);
-    }
-    pros::delay(20);
-  }
-}
-
-/**
  * \brief This small subroutine grabs a goal (stake)
  *
  * \param delay The amount of time in \b milliseconds you will be moving back (500-600 is quick and works)
@@ -86,18 +51,7 @@ void grabGoal(const int &delay = 600){
   pros::delay(delay * 1/6);
   drivetrain.motors(100);
   pros::delay(delay);
-  drivetrain.motors(0);
-}
-
-/**
- * \brief Discards disk at beginning of match
- *
- * \note This function is really meant for routines that will focus on enemy rings
- */
-void discardDisk(){
-  intake.moveVelocity(-INTAKE_VELOCITY);
-  pros::delay(1000);
-  intake.moveVelocity(0);
+  driveFull.moveVelocity(0);
 }
 
 /**
@@ -129,13 +83,6 @@ void RemoveTop(){
   moveIndexer();
   drivetrain.turn(-45);
   moveIndexer(false);
-}
-
-/// @brief Drops the gate from starting position so the robot can grab stuff
-void enableGate(){
-  gate.moveVelocity(-100);
-  pros::delay(250);
-  gate.moveVelocity(0);
 }
 
 /// @brief Async task to align ORBIT only to the item with the globally set `COLOR` signature
@@ -276,15 +223,15 @@ double getDistanceToRing(const Colors &color = COLOR){
 /// @param distance The distance from the robot to a ring
 void driveTillPickUp(const double &distance = getDistanceToRing()){
   const double additional_distance = 0; //? This is to give the robot some distance to actually grip the donut, determine this experimentally
-  activateIntakeScan();
+  intake.startScan();
   drivetrain.move(distance + additional_distance);
-  deactivateIntakeScan();
+  intake.stopScan();
 }
 
 /// @brief Get a stake and scores a preload
 void grabAndScore(){
   findAndGrabGoal(10);
-  scoreRing();
+  intake.score();
 }
 
 /// @brief Aligns robot to the ring of the specified `color` and grabs it and scores it on the held stake
@@ -295,7 +242,7 @@ void alignAndIntake(const Colors &color = COLOR){
   alignRobotTo(COLOR);
   drivetrain.move(12);
   driveTillPickUp();
-  scoreRing();
+  intake.score();
 }
 
 
@@ -327,14 +274,14 @@ void testSpeed(double RPM = MAX_RPM){
   MovingAverage mav(50);
   while(true) {
     drivetrain.motors(RPM);
-    double measured = math::metersToInches(distanceSensor.get_object_velocity());
-    double calculated = getSpeed(RPM);
-    double error = abs(math::getErrorPercentage(calculated, measured));
-    double avg = mav.update(error);
-    pros::lcd::print(1, "RPM: %.2f", RPM);
-    pros::lcd::print(2, "Calculated Velocity: %.2f", calculated);
-    pros::lcd::print(3, "Measured Velocity: %.2f", measured);
-    pros::lcd::print(4, "Error %: %.2f%", avg);
+    // double measured = math::metersToInches(distanceSensor.get_object_velocity());
+    // double calculated = getSpeed(RPM);
+    // double error = abs(math::getErrorPercentage(calculated, measured));
+    // double avg = mav.update(error);
+    // pros::lcd::print(1, "RPM: %.2f", RPM);
+    // pros::lcd::print(2, "Calculated Velocity: %.2f", calculated);
+    // pros::lcd::print(3, "Measured Velocity: %.2f", measured);
+    // pros::lcd::print(4, "Error %: %.2f%", avg);
     pros::delay(10);
   }
 }
@@ -634,7 +581,7 @@ int testMultiple(){
 void quickMiddleScore(){
   drivetrain.move(-3);
   grabGoal();
-  scoreRing();
+  intake.score();
   drivetrain.move(10);
 }
 
@@ -652,8 +599,8 @@ int RedRingsRoutine(){
   // Secure and score the first ring in the middle stake
   raceToGoal();
   drivetrain.move(6);
-  scoreRing();
-  enableGate();
+  intake.score();
+  intake.openGate();
 
   // Get the next ring in our side
   drivetrain.turnTo(-.6, -1.2);
@@ -686,8 +633,8 @@ int BlueRingsRoutine(){
   // Secure and score the first ring in the middle stake
   raceToGoal();
   drivetrain.move(6);
-  scoreRing();
-  enableGate();
+  intake.score();
+  intake.openGate();
   
   // Get the next ring in our side
   drivetrain.turnTo(.6, 1.2);
@@ -720,13 +667,13 @@ int BlueRingsRoutine(){
 int BlueRingsRoutine_JorgeGuz(){
   // Go into the esquina
   drivetrain.move(4);
-  pickUpRing(1500);
+  intake.pickUp(1500);
   drivetrain.move(-4);
   drivetrain.move(4);
-  pickUpRing(1500);
+  intake.pickUp(1500);
   drivetrain.move(-4);
   drivetrain.move(4);
-  pickUpRing(1500);
+  intake.pickUp(1500);
   drivetrain.move(-4);
   
 }
@@ -781,8 +728,8 @@ int BlueRingsRoutineJorgeLuna() {
   // go to the side mobile goal
   raceToGoal();
   drivetrain.move(6);
-  scoreRing(2000);
-  enableGate();
+  intake.score(2000);
+  intake.openGate();
 
   // go to ring on the bottom
   drivetrain.goTo(1.2, -0.55);
@@ -878,7 +825,7 @@ int SkillsBlackBotKevin(){
 int greenBotRedSide(){
   drivetrain.move(-6);
   grabGoal();
-  scoreRing();
+  intake.score();
   enableGate();
 
   drivetrain.turnTo(-1.2,1.2);
@@ -897,7 +844,7 @@ int greenBotRedSide(){
 void simple_Auto_Red(){
     drivetrain.move(-.5);
     grabGoal();
-    scoreRing();
+    intake.score();
     enableGate();
   
     drivetrain.turnTo(-1.2,1.2);
@@ -920,7 +867,7 @@ void Auto_with_indexer(){
   moveTilesStraight(-.5);
   drivetrain.turn(180);
   grabGoal();
-  scoreRing();
+  intake.score();
   enableGate();
 
   drivetrain.turnTo(-0.6,1.2);

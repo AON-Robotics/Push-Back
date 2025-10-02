@@ -9,6 +9,7 @@
 #include "./controls/pid/pid.hpp"
 #include "./tools/vector.hpp"
 #include "./x-drive/x-drive.hpp"
+#include "aon/Intake/intake.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -20,17 +21,14 @@
 
 
 // Drivetrain
-
 aon::XDrive drivetrain = aon::XDrive();
+
+
+//Intake:
+aon::Intake intake = aon::Intake({-16, 17}, 17, -16, 3);
 
 okapi::MotorGroup bottom = okapi::MotorGroup({1});
 okapi::MotorGroup top = okapi::MotorGroup({-2});
-
-// Intake
-
-okapi::MotorGroup intake = okapi::MotorGroup({-16, 17});
-okapi::Motor rail = okapi::Motor(17);
-okapi::Motor gate = okapi::Motor(-16);
 
 // Misc
 
@@ -122,11 +120,6 @@ inline void ConfigureMotors(const bool opcontrol = true) {
 
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
 
-  intake.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  intake.setGearing(okapi::AbstractMotor::gearset::green);
-  intake.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  intake.tarePosition();
-
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
   arm.setGearing(okapi::AbstractMotor::gearset::red);
   arm.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -153,7 +146,7 @@ inline void ConfigureColors(){
  */
 void STOP(){
   drivetrain.stop();
-  intake.moveVelocity(0);
+  intake.move(0);
   arm.moveVelocity(0);
   turret.moveVelocity(0);
 }
@@ -178,19 +171,19 @@ inline bool toggle(bool &boolean) {
  * \note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
 */
 void testEndpoint(int speed = 100){
-  STOP();
-  intake.moveVelocity(speed);
+  STOP(); 
+  intake.move(speed);
   pros::delay(1000);
-  intake.moveVelocity(0);
+  intake.move(0);
 }
 
 /**
  * \brief Makes the rail go slightly back
  */
 void kickBackRail(){
-  rail.moveVelocity(-100);
+  intake.moveRail(-100);
   pros::delay(150);
-  rail.moveVelocity(0);
+  intake.moveRail(0);
 }
 
 /**
@@ -239,15 +232,13 @@ void releaseORBIT() {
   turretBraking = false;
 }
 
-/// @brief Starts intake scanning cycle
-void activateIntakeScan(){
-  intakeScanning = true;
-}
+/// @brief Starts intake scanning cycle, inside intake files
+//change this as well, this can go inside the Intake.hpp and Intake.cpp files
+//so no function here, just access the file
+void activateIntakeScan(){ intake.startScan(); }
 
 /// @brief Ends intake scanning cycle
-void deactivateIntakeScan(){
-  intakeScanning = false;
-}
+void deactivateIntakeScan(){ intake.stopScan(); }
 
 }  // namespace aon
 

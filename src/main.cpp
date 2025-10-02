@@ -1,4 +1,6 @@
 #include "main.hpp"
+#include "globals.hpp"
+// #include "Intake.hpp"
 
 void initialize() {
   pros::Task guiTask(aon::gui::Initialize);
@@ -10,7 +12,7 @@ void initialize() {
   pros::Task odomTask(aon::odometry::Odometry);
   pros::Task safetyTask(aon::autonSafety);
   pros::Task turretFollowTask(aon::turretFollow);
-  pros::Task intakeTask(aon::intakeScan);
+  pros::Task intakeTask([]{intake.scan();});
   pros::Task turretScanTask(aon::turretScan); // TODO: combine this with the follow task
 }
 
