@@ -308,7 +308,7 @@ int main(){
  *
  * \see Angle
  */
-std::ostream &operator<<(std::ostream &out, Angle direction) {
+inline std::ostream &operator<<(std::ostream &out, Angle direction) {
   return out << std::string(direction);
 }
 
@@ -894,12 +894,12 @@ int main(){
  *
  * \see Vector
  */
-std::ostream &operator<<(std::ostream &out, Vector v) {
+inline std::ostream &operator<<(std::ostream &out, Vector v) {
   return out << std::string(v);
 }
 
 //> Extends the vector's scalar mutliplication so it's commutative.
-Vector operator*(double scalar, Vector vector) { return vector * scalar; }
+inline Vector operator*(double scalar, Vector vector) { return vector * scalar; }
 
 }  // namespace aon
 

@@ -68,39 +68,39 @@ inline void DriveDefault() {
   const double vertical = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
   const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY) * .8;
   
-  driveLeft.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0) * .9);
-  driveRight.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0) * .9);
+  tankDrive.driveLeft.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0) * .9);
+  tankDrive.driveRight.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0) * .9);
   
   //////////// INTAKE ////////////
   
-  if (mainController.get_digital(DIGITAL_R1)) {
-    intake.move(INTAKE_VELOCITY);
-  } else if (mainController.get_digital(DIGITAL_R2)) {
-    intake.move(-INTAKE_VELOCITY);
+  if (mainController.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+    intake.moveVelocity(INTAKE_VELOCITY);
+  } else if (mainController.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+    intake.moveVelocity(-INTAKE_VELOCITY);
   } else {
-    intake.move(0);
+    intake.moveVelocity(0);
   }
   
-  if (mainController.get_digital_new_press(DIGITAL_A)) 
+  if (mainController.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)) 
   { 
     claw.set_value(toggle(clawOn));
   }
   
-  if (mainController.get_digital_new_press(DIGITAL_B)) 
+  if (mainController.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) 
   { 
     kickBackRail();
   }
   
-  if(mainController.get_digital(DIGITAL_Y)){
+  if(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_Y)){
     indexer.set_value(true);
   } 
   else {
     indexer.set_value(false);
   }
   
-  if (mainController.get_digital(DIGITAL_L1)) {
+  if (mainController.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
     arm.moveVelocity(INTAKE_VELOCITY);
-  } else if (mainController.get_digital(DIGITAL_L2)) {
+  } else if (mainController.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
     arm.moveVelocity(-INTAKE_VELOCITY);
   } else {
     arm.moveVelocity(0);

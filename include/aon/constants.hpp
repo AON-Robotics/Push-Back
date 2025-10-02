@@ -24,15 +24,47 @@
 #define ENCODER_CONFIDENCE 0
 #define OFFSET_X_ENCODER_MID 3.250
 
-#define DRIVE_WIDTH 12.15 // distance between front wheels
-#define DRIVE_LENGTH 9 // distance from back wheel to front wheel
-#define DISTANCE_FRONT_LEFT_DRIVE_WHEEL_CENTER 7.55
-#define DISTANCE_BACK_LEFT_DRIVE_WHEEL_CENTER 7.55
-#define DISTANCE_FRONT_RIGHT_DRIVE_WHEEL_CENTER 7.55 //PYTHAG
-#define DISTANCE_BACK_RIGHT_DRIVE_WHEEL_CENTER 7.55
-#define AVG_DRIVETRAIN_RADIUS (DISTANCE_FRONT_LEFT_DRIVE_WHEEL_CENTER + DISTANCE_BACK_LEFT_DRIVE_WHEEL_CENTER + DISTANCE_FRONT_RIGHT_DRIVE_WHEEL_CENTER + DISTANCE_BACK_RIGHT_DRIVE_WHEEL_CENTER) / 4
-// This number may be dependent on the degrees being turn in which case it will not be a constant
-#define CLOCKWISE_ROTATION_DEGREES_OFFSET 0
+// ============================================================================
+//   _____  _    _  _ _  __  ___  ___ _____   _____ 
+//  |_   _|/_\  | \| | |/ / |   \| _ \_ _\ \ / / __|
+//    | | / _ \ | .` | ' <  | |) |   /| | \ V /| _| 
+//    |_|/_/ \_\|_|\_|_|\_\ |___/|_|_|___| \_/ |___|
+//
+// ============================================================================
+
+// Tank Drive Physical Constants
+#define TANK_TRACK_WIDTH 12.15                    // distance between wheels
+#define TANK_WHEELBASE_LENGTH 9.0                 // distance from back to front wheel  
+#define TANK_ROTATION_OFFSET 0.0                  // clockwise rotation offset in degrees
+
+// Tank Drive Motion Profile Constants
+#define TANK_MAX_VELOCITY 600.0                   // Maximum RPM
+#define TANK_DEFAULT_WHEEL_CENTER 7.55            // Default wheel center distance
+
+// Tank Drive Safety Limits
+#define TANK_MIN_VELOCITY 0.0
+// [refactor-note]: TANK_MAX_VELOCITY ya definido arriba, eliminando duplicación
+// #define TANK_MAX_VELOCITY 600.0
+#define TANK_MIN_DISTANCE -1000.0                 // inches
+#define TANK_MAX_DISTANCE 1000.0                  // inches
+#define TANK_MIN_ANGLE -720.0                     // degrees
+#define TANK_MAX_ANGLE 720.0                      // degrees
+#define TANK_MIN_SPEED -1.0
+#define TANK_MAX_SPEED 1.0
+
+// Tank Drive PID Default Values
+#define TANK_DRIVE_PID_KP 0.02
+#define TANK_DRIVE_PID_KI 0.0
+#define TANK_DRIVE_PID_KD 0.0
+#define TANK_TURN_PID_KP 0.002
+#define TANK_TURN_PID_KI 0.0
+#define TANK_TURN_PID_KD 0.0
+
+#define MAX_RPM 600.0
+#define DRIVE_LENGTH 9.0
+#define DRIVE_WIDTH 12.15
+#define AVG_DRIVETRAIN_RADIUS 7.55
+#define CLOCKWISE_ROTATION_DEGREES_OFFSET 0.0
 
 // Depend on the robot and the routine
 #define INITIAL_ODOMETRY_X 0.0
@@ -46,8 +78,7 @@
 #define GPS_INITIAL_Y -0.47 // Field
 #define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
 
-#define MAX_RPM (int)driveFull.getGearing()
-#define INTAKE_VELOCITY (int)(200 * 0.8)  // move to header file. intake motor is on green (200 RPM), running it at ~80%
+#define INTAKE_VELOCITY (int)intake.getGearing() * .8
 
 /**
  * \brief Maximum acceleration without slippage 
