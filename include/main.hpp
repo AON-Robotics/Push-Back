@@ -7,7 +7,6 @@
 
 #include "api.h"
 #include "okapi/api.hpp"
-#include "pros/imu.hpp"
 
 #ifdef __cplusplus
 extern "C" {
