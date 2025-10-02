@@ -77,7 +77,7 @@ void Intake::moveGate(int velocity){
 // So instead of using drivetrain logic here just use a bool to not have drivetrain logic here. 
 void Intake::scan(){
   while(true){
-    if (intakeScanning && distanceSensor.get() <= DISTANCE) {
+    if (scanning && distanceSensor.get() <= DISTANCE) {
       objectDetected = true;
       pickUp();
       intake.moveVelocity(0);
