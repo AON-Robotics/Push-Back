@@ -339,7 +339,7 @@ void testConcurrency(){
     pros::delay(20);
   }
   #undef time
-  drivetrain.motors(0);
+  drivetrain.stop();
   intake.stopScan();
 }
 
