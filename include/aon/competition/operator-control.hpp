@@ -90,7 +90,7 @@ inline void DriveDefault() {
   } else if (mainController.get_digital(DIGITAL_R2)) {
     intake.move(-INTAKE_VELOCITY);
   } else {
-    intake.move(0);
+    intake.stop();
   }
   
   if (mainController.get_digital_new_press(DIGITAL_A)) 

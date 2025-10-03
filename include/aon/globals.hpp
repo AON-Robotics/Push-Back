@@ -146,7 +146,7 @@ inline void ConfigureColors(){
  */
 void STOP(){
   drivetrain.stop();
-  intake.move(0);
+  intake.stop();
   arm.moveVelocity(0);
   turret.moveVelocity(0);
 }
@@ -174,16 +174,16 @@ void testEndpoint(int speed = 100){
   STOP(); 
   intake.move(speed);
   pros::delay(1000);
-  intake.move(0);
+  intake.stop();
 }
 
 /**
  * \brief Makes the rail go slightly back
  */
 void kickBackRail(){
-  intake.moveRail(-100);
+  intake.rail(-100);
   pros::delay(150);
-  intake.moveRail(0);
+  intake.rail(0);
 }
 
 /**
@@ -231,14 +231,6 @@ void brakeORBIT(){
 void releaseORBIT() {
   turretBraking = false;
 }
-
-/// @brief Starts intake scanning cycle, inside intake files
-//change this as well, this can go inside the Intake.hpp and Intake.cpp files
-//so no function here, just access the file
-void activateIntakeScan(){ intake.startScan(); }
-
-/// @brief Ends intake scanning cycle
-void deactivateIntakeScan(){ intake.stopScan(); }
 
 }  // namespace aon
 

@@ -223,7 +223,7 @@ double distanceToRing(const Colors &color = COLOR){
 /// @param distance The distance from the robot to a ring
 void driveTillPickUp(const double &distance = distanceToRing()){
   const double additional_distance = 0; //? This is to give the robot some distance to actually grip the donut, determine this experimentally
-  intake.startScan();
+  intake.activateScan();
   drivetrain.move(distance + additional_distance);
   intake.stopScan();
 }
@@ -329,9 +329,9 @@ void testIndexer(){
   grabGoal();
 }
 
-/// @brief Test to ensure the concurrency is working fine, requires `intakeScanning` to be running in another thread
+/// @brief Test to ensure the concurrency is working fine, requires `intake.scan()` to be running in another thread
 void testConcurrency(){
-  activateIntakeScan();
+  intake.activateScan();
   int startTime = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - startTime
   while(time < 5){
@@ -340,7 +340,7 @@ void testConcurrency(){
   }
   #undef time
   drivetrain.motors(0);
-  deactivateIntakeScan();
+  intake.stopScan();
 }
 
 /// @brief Test function to see if the angle from the ORBIT makes sense
@@ -379,7 +379,7 @@ void testADIEncoder(){
 void driveIntoRing(const Colors &color = COLOR){
   COLOR = color;
   activateORBITFollow();
-  activateIntakeScan();
+  intake.activateScan();
   pros::delay(500);
   okapi::EKFFilter ekf;
   const int TOLERANCE = 5; //? Probably adjust this
@@ -418,7 +418,7 @@ void driveIntoRing(const Colors &color = COLOR){
   #undef TIME
   deactivateORBITFollow();
   deactivateORBITScan();
-  deactivateIntakeScan();
+  intake.stopScan();
   drivetrain.setMaxVelocity(MAX_RPM);
   driveTillPickUp();
 }
