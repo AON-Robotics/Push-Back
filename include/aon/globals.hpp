@@ -178,15 +178,6 @@ void testEndpoint(int speed = 100){
 }
 
 /**
- * \brief Makes the rail go slightly back
- */
-void kickBackRail(){
-  intake.rail(-100);
-  pros::delay(150);
-  intake.rail(0);
-}
-
-/**
  * \brief Task to stop all motors during auton testing if something goes wrong
  */
 void autonSafety(){

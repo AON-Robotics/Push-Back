@@ -25,7 +25,7 @@ bool Intake::isObjectDetected() { return this->distance() <= DISTANCE; }
 
 void Intake::scan() {
   while (true) {
-    if (scanning && this->isObjectDetected()) { 
+    if (scanning && this->isObjectDetected()) {
       this->pickUp();
     }
     pros::delay(20);
@@ -58,6 +58,13 @@ void Intake::discard() {
   this->move(-INTAKE_VELOCITY);
   pros::delay(1000);
   this->stop();
+}
+
+void Intake::kickBackRail(){
+  this->rail(-100);
+  pros::delay(150);
+  this->rail(0);
+
 }
 
 }  // namespace aon
