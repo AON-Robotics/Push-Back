@@ -1,90 +1,65 @@
-#include "../include/aon/x-drive/x-drive.hpp"
+#include "../include/aon/tank-drive/tank-drive.hpp"
 
 namespace aon {
 
-void XDrive::motors(const double &rpm) {
-  this->frontLeftMotors.moveVelocity(rpm);
-  this->frontRightMotors.moveVelocity(rpm);
-  this->backLeftMotors.moveVelocity(rpm);
-  this->backRightMotors.moveVelocity(rpm);
+void TankDrive::motors(const double &rpm) {
+  this->driveLeft.moveVelocity(rpm);
+  this->driveRight.moveVelocity(rpm);
 }
 
-void XDrive::rotate(const double &rpm) {
-  this->frontLeftMotors.moveVelocity(rpm);
-  this->backLeftMotors.moveVelocity(rpm);
-  this->frontRightMotors.moveVelocity(-rpm);
-  this->backRightMotors.moveVelocity(-rpm);
+void TankDrive::rotate(const double &rpm) {
+  this->driveLeft.moveVelocity(rpm);
+  this->driveRight.moveVelocity(-rpm);
 }
 
-void XDrive::driveWhileTurning(const double &forward, const double &turn){
-  this->frontLeftMotors.moveVelocity(forward + turn);
-  this->backLeftMotors.moveVelocity(forward + turn);
-  this->frontRightMotors.moveVelocity(forward - turn);
-  this->backRightMotors.moveVelocity(forward - turn);
+void TankDrive::driveWhileTurning(const double &forward, const double &turn){
+  this->driveLeft.moveVelocity(forward + turn);
+  this->driveRight.moveVelocity(forward - turn);
 }
 
-void XDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-  // Convert the left X and Y from their reference plane to the 45º degree
-  // angled lines of the X-Drive using matrix conversions like angel taught me
-  // TODO: implement
+void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {
+    // TODO: implement
 }
 
-void XDrive::stop() { this->motors(0); }
+void TankDrive::stop() { this->motors(0); }
 
-void XDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset){
-  frontLeftMotors.setBrakeMode(brakeMode);
-  frontLeftMotors.setGearing(gearset);
-  frontLeftMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  frontLeftMotors.tarePosition();
-
-  frontRightMotors.setBrakeMode(brakeMode);
-  frontRightMotors.setGearing(gearset);
-  frontRightMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  frontRightMotors.tarePosition();
-  
-  backLeftMotors.setBrakeMode(brakeMode);
-  backLeftMotors.setGearing(gearset);
-  backLeftMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  backLeftMotors.tarePosition();
-
-  backRightMotors.setBrakeMode(brakeMode);
-  backRightMotors.setGearing(gearset);
-  backRightMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  backRightMotors.tarePosition();
+void TankDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset){
+    driveLeft.setBrakeMode(brakeMode);
+    driveLeft.setGearing(gearset);
+    driveLeft.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+    driveLeft.tarePosition();
+    
+    driveRight.setBrakeMode(brakeMode);
+    driveRight.setGearing(gearset);
+    driveRight.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+    driveRight.tarePosition();
 }
 
-double XDrive::getRPM(){
-  // TODO: test and validate
-  double frontLeft = frontLeftMotors.getActualVelocity();
-  double frontRight = frontRightMotors.getActualVelocity();
-  double backLeft = backLeftMotors.getActualVelocity();
-  double backRight = backRightMotors.getActualVelocity();
-  return ((frontLeft + frontRight + backLeft + backRight) / 4)/ 2;
+double TankDrive::getRPM(){
+  double left = driveLeft.getActualVelocity();
+  double right = driveRight.getActualVelocity();
+  return (left + right) / 2;
 }
 
-void XDrive::drivePID(PID pid, double dist, const double &MAX_REVS) {
-  const int sign = dist / abs(dist); // Getting the direction of the movement
-  dist = abs(dist); // Setting the magnitude to positive
+void TankDrive::drivePID(PID pid, double dist, const double &MAX_REVS) {
+  const int sign = dist / abs(dist);  // Getting the direction of the movement
+  dist = abs(dist);                   // Setting the magnitude to positive
   pid.Reset();
-
+  
   Vector initialPos = odometry::GetPosition();
 
   const double timeLimit = math::estimateTimetoTarget(dist, MAX_REVS);
   const double start_time = pros::micros() / 1E6;
-  #define time (pros::micros() / 1E6) - start_time // every time the variable is called it is recalculated automatically
+  #define time (pros::micros() / 1E6) - start_time  // every time the variable is called it is recalculated automatically
 
-  while((odometry::GetPosition() - initialPos).GetMagnitude() < dist){
-
-    double currentDisplacement = (odometry::GetPosition() - initialPos).GetMagnitude();
-
+  while ((aon::odometry::GetPosition() - initialPos).GetMagnitude() < dist) {
+    double currentDisplacement =
+        (aon::odometry::GetPosition() - initialPos).GetMagnitude();
     double output = pid.Output(dist, currentDisplacement);
-
     pros::lcd::print(0, "Time Limit %.2f", timeLimit);
     pros::lcd::print(1, "Time: %.2f", time);
     pros::lcd::print(2, "Odometry Displacement %.2f", currentDisplacement);
-
     this->motors(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
-
     pros::delay(10);
   }
 
@@ -94,31 +69,31 @@ void XDrive::drivePID(PID pid, double dist, const double &MAX_REVS) {
   #undef time
 }
 
-void XDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
-  const int sign = angle / abs(angle); // Getting the direction of the movement
-  angle = abs(angle); // Setting the magnitude to positive
+void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
+  const int sign = angle / abs(angle);  // Getting the direction of the movement
+  angle = abs(angle);                   // Setting the magnitude to positive
   pid.Reset();
-  odometry::gyroscope.tare(); // .tare() or .reset(true) depending on the time issue
-  const double startAngle = odometry::GetDegrees(); // Angle relative to the start
+  odometry::gyroscope.tare();  // .tare() or .reset(true) depending on the time issue
+  const double startAngle = odometry::GetDegrees();  // Angle relative to the start
   
   double timeLimit = math::getTimetoTurnDeg(angle);
-
-  if(sign == -1) { angle = 360.0 - angle + CLOCKWISE_ROTATION_DEGREES_OFFSET; }
-  if(sign == 1) { angle -= CLOCKWISE_ROTATION_DEGREES_OFFSET; }
-
+  
+  if (sign == -1) { angle = 360.0 - angle + CLOCKWISE_ROTATION_DEGREES_OFFSET; }
+  if (sign == 1) { angle -= CLOCKWISE_ROTATION_DEGREES_OFFSET; 
+}
   const double startTime = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - startTime
 
-  while(time < timeLimit){
+  while (time < 3 * timeLimit) {
 
     double traveledAngle = abs(odometry::GetDegrees() - startAngle);
-
+    
     double output = pid.Output(angle, traveledAngle);
 
     pros::lcd::print(0, "Time Limit %.2f", timeLimit);
     pros::lcd::print(1, "Time: %.2f", time);
     pros::lcd::print(2, "Gyroscope Displacement %.2f", traveledAngle);
-
+    
     // Taking clockwise rotation as positive (to change this just flip the negative on the sign below)
     this->rotate(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
 
@@ -130,33 +105,32 @@ void XDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
   #undef time
 }
 
-void XDrive::driveProfiled(double dist){
-  if(dist == 0) { return; }
-  const int sign = dist / abs(dist); // Getting the direction of the movement
-  dist = abs(dist); // Setting the magnitude to positive
-
-  double dt = 0.02; // (s)
+void TankDrive::driveProfiled(double dist) {
+  if (dist == 0) { return; }
+  const int sign = dist / abs(dist);  // Getting the direction of the movement
+  dist = abs(dist);                   // Setting the magnitude to positive
+  
+  double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  Vector startPos = odometry::GetPosition();
-
+  Vector startPos = aon::odometry::GetPosition();
+  
   double now = pros::micros() / 1E6;
   double lastTime = now;
-
+  
   this->motionProfile.setVelocity(this->getRPM());
-
-  while(traveledDist < dist){
-    traveledDist = (odometry::GetPosition() - startPos).GetMagnitude();
+  
+  while (traveledDist < dist) {
+    traveledDist = (aon::odometry::GetPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
-    dt =  now - lastTime;
+    dt = now - lastTime;
     lastTime = now;
-
-    currVelocity = this->motionProfile.update(remainingDist, dt);
-
+    
+    currVelocity = motionProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
 
-    if(traveledDist >= dist) { break; } // Overshoot prevention
+    if (traveledDist >= dist) { break; }  // Overshoot prevention
 
     pros::delay(20);
   }
@@ -164,77 +138,77 @@ void XDrive::driveProfiled(double dist){
   this->stop();
 }
 
-void XDrive::turnProfiled(double angle){
-  if(angle == 0) { return; }
-  const int sign = angle / abs(angle); // Getting the direction of the movement
-  angle = abs(angle); // Setting the magnitude to positive
+void TankDrive::turnProfiled(double angle) {
+  if (angle == 0) { return; }
+  const int sign = angle / abs(angle);  // Getting the direction of the movement
+  angle = abs(angle);                   // Setting the magnitude to positive
   
-  const double circumference = DRIVE_LENGTH * M_PI; // Of the robot's rotation, used in the condition to calculate the length of arc remaining
-  const double MAX_VELOCITY = MAX_RPM; // (RPM)
-  const double MAX_JERK = MAX_ACCEL; // (RPM/s^2)
-  double dt = 0.02; // (s)
+  const double circumference = DRIVE_LENGTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
+  const double MAX_VELOCITY = MAX_RPM;  // (RPM)
+  const double MAX_JERK = MAX_ACCEL;    // (RPM/s^2)
+  double dt = 0.02;                     // (s)
   double currVelocity = 0;
   double currAccel = 0;
   double traveledAngle = 0;
-  double startAngle = odometry::GetDegrees();
+  double startAngle = aon::odometry::GetDegrees();
 
   double now;
   double lastTime = pros::micros() / 1E6;
-  
-  while(traveledAngle < angle){
-    traveledAngle = abs(odometry::GetDegrees() - startAngle);
+
+  while (traveledAngle < angle) {
+    traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
-    dt =  now - lastTime;
+    dt = now - lastTime;
     lastTime = now;
-
+    
     // Debugging output to brain
     pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
     pros::lcd::print(2, "RPM: %.2f, Accel: %.2f", currVelocity, currAccel);
     pros::lcd::print(3, "Remaining: %.2f", remainingAngle);
     pros::lcd::print(4, "Calculated Velocity: %.2f", getSpeed(currVelocity));
     pros::lcd::print(5, "Max Velocity: %.2f", getSpeed(MAX_VELOCITY));
-
+    
     // Acceleration
-    // For the condition, consider half the deceleration for accuracy (there is an error of half an inch almost constant when not used, I have to investigate a bit further on that part but if works fine like this)
-    if(circumference * (remainingAngle / 360.0) <= getSpeed(currVelocity) * getSpeed(currVelocity) / (2.0 * getSpeed(MAX_DECEL * 0.5))){
-      currAccel = - MAX_DECEL;
+    // For the condition, consider half the deceleration for accuracy (there is
+    // an error of half an inch almost constant when not used, I have to
+    // investigate a bit further on that part but if works fine like this)
+    if (circumference * (remainingAngle / 360.0) <= getSpeed(currVelocity) * getSpeed(currVelocity) / (2.0 * getSpeed(MAX_DECEL * 0.5))) {
+      currAccel = -MAX_DECEL;
     } else {
       currAccel = std::min(currAccel + (MAX_JERK * dt), MAX_ACCEL);
     }
 
     currVelocity += currAccel * dt;
-    currVelocity = std::min(currVelocity,  MAX_VELOCITY);
+    currVelocity = std::min(currVelocity, MAX_VELOCITY);
 
-    frontLeftMotors.moveVelocity(sign * currVelocity);
-    backLeftMotors.moveVelocity(sign * currVelocity);
-    frontRightMotors.moveVelocity(-sign * currVelocity);
-    backRightMotors.moveVelocity(-sign * currVelocity);
+    this->rotate(sign * currVelocity);
 
-    if(traveledAngle >= angle) { break; } // Overshoot prevention
+    if (traveledAngle >= angle) { break; }  // Overshoot prevention
 
     pros::delay(20);
   }
   this->stop();
 }
 
-void XDrive::move(const double &dist){
+
+void TankDrive::move(const double &dist) {
   driveProfiled(dist);
 }
 
-void XDrive::turn(const double &angle){
+void TankDrive::turn(const double &angle) {
   turnProfiled(angle);
 }
 
-void XDrive::setMaxVelocity(const double &rpm){
+void TankDrive::setMaxVelocity(const double &rpm){
   motionProfile.setMaxVelocity(rpm);
 }
 
-double XDrive::updateProfile(const double &distance, const double &dt){
+double TankDrive::updateProfile(const double &distance, const double &dt){
   return motionProfile.update(distance, dt);
 }
 
-void XDrive::driveInArc(double radius, const double &midSpeed) {
+void TankDrive::driveInArc(double radius, const double &midSpeed) {
   if(radius == 0) return;
   const bool clockwise = radius > 0.0;
   radius = std::abs(radius);
@@ -258,13 +232,11 @@ void XDrive::driveInArc(double radius, const double &midSpeed) {
     leftSpeed = innerSpeed;
   }
 
-  frontLeftMotors.moveVelocity(leftSpeed); 
-  backLeftMotors.moveVelocity(leftSpeed); 
-  frontRightMotors.moveVelocity(rightSpeed);
-  backRightMotors.moveVelocity(rightSpeed);
+  driveLeft.moveVelocity(leftSpeed); 
+  driveRight.moveVelocity(rightSpeed);
 }
 
-void XDrive::driveAngleOfArc(const double &radius, const double &angle) {
+void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
   if(angle == 0) { return; }
   if(radius == 0) {
     turn(angle);
@@ -299,7 +271,7 @@ void XDrive::driveAngleOfArc(const double &radius, const double &angle) {
   this->stop();
 }
 
-void XDrive::driveInArcTo(const double &x, const double &y){
+void TankDrive::driveInArcTo(const double &x, const double &y){
   // Get the current pose
   Vector position = odometry::GetPosition();
   position.SetPosition(math::inchesToMeters(position.GetX()), math::inchesToMeters(position.GetY()));
@@ -356,54 +328,43 @@ void XDrive::driveInArcTo(const double &x, const double &y){
   this->driveAngleOfArc(math::metersToInches(radius), angle);
 }
 
-/**
- * \brief Determines the angle needed to be turned in order to face a specific point in the field
- *
- * \param target The point we wish to face
- * \param current Where the robot is now
- *
- * \returns The angle the robot needs to turn in order to face the target location
- *
- * \note The result must be passed into functions such as `turn()` and `drivetrain.turnPID()` as negative because of the GPS convention
- */
-double calculateTurn(Vector target, Vector current) {
+inline double calculateTurn(Vector target, Vector current) {
   // Get and change the heading to the common cartesian plane
   double heading = 90 - odometry::gps.get_heading();
-
   // Limiting the heading to the 0-360 range
-  if (heading < 0) heading += 360;
-  else if (heading > 360) heading -= 360;
- 
-  // This number is in respect to the common cartesian plane if odometry position is used
+  if (heading < 0)
+    heading += 360;
+  else if (heading > 360)
+    heading -= 360;
+  // This number is in respect to the common cartesian plane if odometry
+  // position is used
   double toTarget = (target - current).GetDegrees();
- 
   // Limiting the the target to the 0-360 range
-  if (toTarget < 0) toTarget += 360;
-  else if (toTarget >= 360) toTarget -= 360;
-
-  double angle = toTarget - heading; // Calculate the angle to turn
- 
+  if (toTarget < 0)
+    toTarget += 360;
+  else if (toTarget >= 360)
+    toTarget -= 360;
+  double angle = toTarget - heading;  // Calculate the angle to turn
   // Limiting the heading to the -180-180 range
-  if (angle > 180) angle -= 360;
-  else if (angle < -180) angle += 360;
-
+  if (angle > 180)
+    angle -= 360;
+  else if (angle < -180)
+    angle += 360;
   return angle;
 }
 
-void XDrive::turnTo(const double &x, const double &y){
+void TankDrive::turnTo(const double &x, const double &y) {
   Vector target = Vector().SetPosition(x, y);
   // Determine current position
   Vector current = odometry::gpsPosition();
-
   // Do the movement
   turn(-calculateTurn(target, current));
 }
 
-void XDrive::goTo(const double &x, const double &y){
+void TankDrive::goTo(const double &x, const double &y) {
   Vector target = Vector().SetPosition(x, y);
   // Determine current position
   Vector current = odometry::gpsPosition();
-
   // Do the movement
   turn(-calculateTurn(target, current));
   move(math::findDistance(target, current));
