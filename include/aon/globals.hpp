@@ -22,27 +22,27 @@
 
 
 // Drivetrain
-inline aon::XDrive drivetrain = aon::XDrive();
-inline aon::TankDrive drivetrainTank = aon::TankDrive();
+aon::XDrive drivetrain = aon::XDrive();
+aon::TankDrive drivetrainTank = aon::TankDrive();
 
 
 //Intake:
-inline aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);
+aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);
 
-inline okapi::MotorGroup bottom = okapi::MotorGroup({1});
-inline okapi::MotorGroup top = okapi::MotorGroup({-2});
+okapi::MotorGroup bottom = okapi::MotorGroup({1});
+okapi::MotorGroup top = okapi::MotorGroup({-2});
 
 // Misc
 
-inline okapi::Motor arm = okapi::Motor(11);
-inline okapi::Motor turret = okapi::Motor(-15);
+okapi::Motor arm = okapi::Motor(11);
+okapi::Motor turret = okapi::Motor(-15);
 
 // TriPort
 
-inline pros::ADIDigitalOut indexer ('G');
-inline bool indexerOut = false;
-inline pros::ADIDigitalOut claw ('H');
-inline bool clawOn = false;
+pros::ADIDigitalOut indexer ('G');
+bool indexerOut = false;
+pros::ADIDigitalOut claw ('H');
+bool clawOn = false;
 
 // ============================================================================
 //   ___ ___ _  _ ___  ___  ___  ___ 
@@ -54,9 +54,9 @@ inline bool clawOn = false;
 
 // Encoders
 
-inline pros::Rotation turretEncoder(14, true);
+pros::Rotation turretEncoder(14, true);
 
-inline pros::ADIEncoder opticalEncoder('A', 'B');
+pros::ADIEncoder opticalEncoder('A', 'B');
 
 // Vision
 
@@ -67,34 +67,34 @@ enum Colors {
   STAKE
 };
 
-inline Colors COLOR = RED;
+Colors COLOR = RED;
 
-inline pros::Vision vision_sensor(12);
-inline volatile bool turretFollowing = false;
-inline volatile bool turretBraking = true;
-inline volatile bool turretScanning = false;
-inline pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8973, 11143, 10058, -2119, -1053, -1586, 5.4, 0);
-inline pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
-inline pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
+pros::Vision vision_sensor(12);
+volatile bool turretFollowing = false;
+volatile bool turretBraking = true;
+volatile bool turretScanning = false;
+pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8973, 11143, 10058, -2119, -1053, -1586, 5.4, 0);
+pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
+pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 
 // Distance
 
-inline pros::Distance distanceSensor(3);
-inline volatile bool intakeScanning = false;
+pros::Distance distanceSensor(3);
+volatile bool intakeScanning = false; // TODO: remove this
 
 // Potentiometer
 
-inline pros::ADIPotentiometer potentiometer('F');
+pros::ADIPotentiometer potentiometer('F');
 
 /// PIDs
 
-inline aon::PID drivePID = aon::PID(0.02, 0, 0);
-inline aon::PID turnPID = aon::PID(0.002, 0, 0);
-inline aon::PID fastPID = aon::PID(1, 0, 0);
-inline aon::PID turretPID = aon::PID(0.25, 0, 0);
+aon::PID drivePID = aon::PID(0.02, 0, 0);
+aon::PID turnPID = aon::PID(0.002, 0, 0);
+aon::PID fastPID = aon::PID(1, 0, 0);
+aon::PID turretPID = aon::PID(0.25, 0, 0);
 
 /// Controller
-inline pros::Controller mainController = pros::Controller(pros::E_CONTROLLER_MASTER);
+pros::Controller mainController = pros::Controller(pros::E_CONTROLLER_MASTER);
 
 namespace aon::operator_control {
 
@@ -146,7 +146,7 @@ inline void ConfigureColors(){
 /**
  * \brief Stops movement from robot
  */
-inline void STOP(){
+void STOP(){
   drivetrain.stop();
   intake.stop();
   arm.moveVelocity(0);
@@ -172,7 +172,7 @@ inline bool toggle(bool &boolean) {
  * 
  * \note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
 */
-inline void testEndpoint(int speed = 100){
+void testEndpoint(int speed = 100){
   STOP(); 
   intake.move(speed);
   pros::delay(1000);
@@ -182,7 +182,7 @@ inline void testEndpoint(int speed = 100){
 /**
  * \brief Task to stop all motors during auton testing if something goes wrong
  */
-inline void autonSafety(){
+void autonSafety(){
   while(true){
     while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
       STOP();
@@ -192,36 +192,36 @@ inline void autonSafety(){
 }
 
 /// @brief Begins ORBIT following cycle
-inline void activateORBITFollow(){
+void activateORBITFollow(){
   turretFollowing = true;
   turretBraking = true;
   turretScanning = false;
 }
 
 /// @brief Ends ORBIT following cycle
-inline void deactivateORBITFollow(){
+void deactivateORBITFollow(){
   turretFollowing = false;
 }
 
 /// @brief Begins ORBIT scanning cycle
-inline void activateORBITScan(){
+void activateORBITScan(){
   turretFollowing = false;
   turretBraking = false;
   turretScanning = true;
 }
 
 /// @brief Ends ORBIT scanning cycle
-inline void deactivateORBITScan(){
+void deactivateORBITScan(){
   turretScanning = false;
 }
 
 /// @brief Sets the ORBIT to brake if not scanning
-inline void brakeORBIT(){
+void brakeORBIT(){
   turretBraking = true;
 }
 
 /// @brief Releases the ORBIT from braking to allow other functions to use it
-inline void releaseORBIT() {
+void releaseORBIT() {
   turretBraking = false;
 }
 
