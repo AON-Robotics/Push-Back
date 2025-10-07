@@ -3,18 +3,18 @@
 namespace aon {
 
 void TankDrive::motors(const double &rpm) {
-  this->driveLeft.moveVelocity(rpm);
-  this->driveRight.moveVelocity(rpm);
+  this->leftMotors.moveVelocity(rpm);
+  this->rightMotors.moveVelocity(rpm);
 }
 
 void TankDrive::rotate(const double &rpm) {
-  this->driveLeft.moveVelocity(rpm);
-  this->driveRight.moveVelocity(-rpm);
+  this->leftMotors.moveVelocity(rpm);
+  this->rightMotors.moveVelocity(-rpm);
 }
 
 void TankDrive::driveWhileTurning(const double &forward, const double &turn){
-  this->driveLeft.moveVelocity(forward + turn);
-  this->driveRight.moveVelocity(forward - turn);
+  this->leftMotors.moveVelocity(forward + turn);
+  this->rightMotors.moveVelocity(forward - turn);
 }
 
 void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {
@@ -24,20 +24,20 @@ void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) 
 void TankDrive::stop() { this->motors(0); }
 
 void TankDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset){
-    driveLeft.setBrakeMode(brakeMode);
-    driveLeft.setGearing(gearset);
-    driveLeft.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    driveLeft.tarePosition();
+    leftMotors.setBrakeMode(brakeMode);
+    leftMotors.setGearing(gearset);
+    leftMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+    leftMotors.tarePosition();
     
-    driveRight.setBrakeMode(brakeMode);
-    driveRight.setGearing(gearset);
-    driveRight.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    driveRight.tarePosition();
+    rightMotors.setBrakeMode(brakeMode);
+    rightMotors.setGearing(gearset);
+    rightMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+    rightMotors.tarePosition();
 }
 
 double TankDrive::getRPM(){
-  double left = driveLeft.getActualVelocity();
-  double right = driveRight.getActualVelocity();
+  double left = leftMotors.getActualVelocity();
+  double right = rightMotors.getActualVelocity();
   return (left + right) / 2;
 }
 
@@ -232,8 +232,8 @@ void TankDrive::driveInArc(double radius, const double &midSpeed) {
     leftSpeed = innerSpeed;
   }
 
-  driveLeft.moveVelocity(leftSpeed); 
-  driveRight.moveVelocity(rightSpeed);
+  leftMotors.moveVelocity(leftSpeed); 
+  rightMotors.moveVelocity(rightSpeed);
 }
 
 void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {

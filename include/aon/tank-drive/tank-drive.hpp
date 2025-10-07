@@ -27,18 +27,18 @@ class PoseTank {
 
 class TankDrive {
  private:
-  okapi::MotorGroup driveLeft;
-  okapi::MotorGroup driveRight;
+  okapi::MotorGroup leftMotors;
+  okapi::MotorGroup rightMotors;
   MotionProfile motionProfile;
   PoseTank pose;
 
   // TODO: add the odom object once it is done, use namespace temporarily
 
  public:
-  TankDrive(const std::initializer_list<okapi::Motor> &leftMotors = {-20, 19, -18},
-            const std::initializer_list<okapi::Motor> &rightMotors = {9, -8, 7})
-      : driveLeft(leftMotors),
-        driveRight(rightMotors),
+  TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {-20, 19, -18},
+            const std::initializer_list<okapi::Motor> &rightPorts = {9, -8, 7})
+      : leftMotors(leftPorts),
+        rightMotors(rightPorts),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         pose() {}
 
