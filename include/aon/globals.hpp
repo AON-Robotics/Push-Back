@@ -3,11 +3,14 @@
 #ifndef AON_GLOBALS_HPP_
 #define AON_GLOBALS_HPP_
 
+#include "./constants.hpp"
 #include "../api.h"
 #include "../okapi/api.hpp"
-#include "./constants.hpp"
 #include "./controls/pid/pid.hpp"
 #include "./tools/vector.hpp"
+#include "./x-drive/x-drive.hpp"
+#include "./intake/intake.hpp"
+#include "./tank-drive/tank-drive.hpp"
 #include "orbit.hpp"
 
 // ============================================================================
@@ -21,18 +24,15 @@
 aon::Orbit orbit(1,true,1,1);
 
 // Drivetrain
+aon::XDrive drivetrain = aon::XDrive();
+aon::TankDrive drivetrainTank = aon::TankDrive();
 
-okapi::MotorGroup driveLeft = okapi::MotorGroup({-20, 19, -18});
-okapi::MotorGroup driveRight = okapi::MotorGroup({9, -8, 7});
-okapi::MotorGroup driveFull = okapi::MotorGroup({-20, 19, -18, 9, -8, 7});
-#include "./controls/s-curve-profile.hpp" //! Change this, I dont like doing the include this far down and after ive done other stuff
-MotionProfile forwardProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
 
-// Intake
+//Intake:
+aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);
 
-okapi::MotorGroup intake = okapi::MotorGroup({-16, 17});
-okapi::Motor rail = okapi::Motor(17);
-okapi::Motor gate = okapi::Motor(-16);
+okapi::MotorGroup bottom = okapi::MotorGroup({1});
+okapi::MotorGroup top = okapi::MotorGroup({-2});
 
 // Misc
 
@@ -61,25 +61,13 @@ pros::Rotation encoderLeft(4, false);
 pros::Rotation encoderBack(11, false);
 
 pros::ADIEncoder opticalEncoder('A', 'B');
-// enum Colors {
-//   RED = 1,
-//   BLUE,
-//   STAKE
-// };
 
 pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
 // Distance
 
 pros::Distance distanceSensor(3);
-volatile bool intakeScanning = false;
-
-
-// Gyro/Accelerometer
-
-#if GYRO_ENABLED
-pros::Imu gyroscope(6);
-#endif
+volatile bool intakeScanning = false; // TODO: remove this
 
 // Potentiometer
 
@@ -119,25 +107,7 @@ inline void ConfigureMotors(const bool opcontrol = true) {
   // HOLD for AUTONOMOUS ||| BRAKE for OPERATOR CONTROL
   okapi::AbstractMotor::brakeMode brakeMode = opcontrol ? okapi::AbstractMotor::brakeMode::brake : okapi::AbstractMotor::brakeMode::hold;
 
-  driveLeft.setBrakeMode(brakeMode); 
-  driveLeft.setGearing(okapi::AbstractMotor::gearset::blue);
-  driveLeft.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  driveLeft.tarePosition();
-
-  driveRight.setBrakeMode(brakeMode);
-  driveRight.setGearing(okapi::AbstractMotor::gearset::blue);
-  driveRight.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  driveRight.tarePosition();
-
-  driveFull.setBrakeMode(brakeMode);
-  driveFull.setGearing(okapi::AbstractMotor::gearset::blue);
-  driveFull.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  driveFull.tarePosition();
-
-  intake.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  intake.setGearing(okapi::AbstractMotor::gearset::green);
-  intake.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  intake.tarePosition();
+  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
 
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
   arm.setGearing(okapi::AbstractMotor::gearset::red);
@@ -154,24 +124,10 @@ inline void ConfigureMotors(const bool opcontrol = true) {
  * \brief Stops movement from robot
  */
 void STOP(){
-  driveFull.moveVelocity(0);
-  intake.moveVelocity(0);
+  drivetrain.stop();
+  intake.stop();
   arm.moveVelocity(0);
   turret.moveVelocity(0);
-}
-
-/**
- * \brief Returns position of the robot in the field
- *
- * \returns The GPS coordinates as a `Vector`
- */
-Vector position(){
-  STOP();
-  pros::delay(2000);
-  pros::c::gps_status_s_t status = gps.get_status();
-  Vector current = Vector().SetPosition(status.x, status.y);
-
-  return current;
 }
 
 /**
@@ -194,19 +150,10 @@ inline bool toggle(bool &boolean) {
  * \note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
 */
 void testEndpoint(int speed = 100){
-  STOP();
-  intake.moveVelocity(speed);
+  STOP(); 
+  intake.move(speed);
   pros::delay(1000);
-  intake.moveVelocity(0);
-}
-
-/**
- * \brief Makes the rail go slightly back
- */
-void kickBackRail(){
-  rail.moveVelocity(-100);
-  pros::delay(150);
-  rail.moveVelocity(0);
+  intake.stop();
 }
 
 /**
@@ -214,7 +161,7 @@ void kickBackRail(){
  */
 void autonSafety(){
   while(true){
-    while(mainController.get_digital(DIGITAL_X)){
+    while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
       STOP();
     }
     pros::delay(50);
