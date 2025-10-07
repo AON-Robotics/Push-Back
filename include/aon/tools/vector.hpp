@@ -13,6 +13,7 @@
  */
 #ifndef AON_TOOLS_VECTOR_HPP_
 #define AON_TOOLS_VECTOR_HPP_
+#pragma once
 
 #include <cmath>
 #include <string>

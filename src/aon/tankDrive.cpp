@@ -1,23 +1,21 @@
-#include "../include/aon/controls/TankDrive/tankDrive.hpp"
+#include "../../include/aon/TankDrive/tankDrive.hpp"
 #include "../include/aon/globals.hpp"
 #include "../include/aon/sensing/odometry.hpp"
 #include "../include/aon/controls/s-curve-profile.hpp"
 
-namespace aon {
-// Global forwardProfile instance
 MotionProfile forwardProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-}
 
 namespace aon {
 // Global TankDrive instance
 TankDrive tankDrive;
 
-TankDrive::TankDrive(const std::initializer_list<okapi::Motor> &leftMotors, const std::initializer_list<okapi::Motor> &rightMotors, const std::initializer_list<okapi::Motor> &fullMotors):
-    driveLeft(leftMotors),
-    driveRight(rightMotors),
-    driveFull(fullMotors),
-    drivePID(TANK_DRIVE_PID_KP, TANK_DRIVE_PID_KI, TANK_DRIVE_PID_KD),
-    turnPID(TANK_TURN_PID_KP, TANK_TURN_PID_KI, TANK_TURN_PID_KD) {
+TankDrive::TankDrive(const std::initializer_list<okapi::Motor> &leftMotors, const std::initializer_list<okapi::Motor> &rightMotors, const std::initializer_list<okapi::Motor> &fullMotors)
+    : driveLeft(leftMotors),
+      driveRight(rightMotors),
+      driveFull(fullMotors),
+      drivePID(TANK_DRIVE_PID_KP, TANK_DRIVE_PID_KI, TANK_DRIVE_PID_KD),
+      turnPID(TANK_TURN_PID_KP, TANK_TURN_PID_KI, TANK_TURN_PID_KD),
+      forwardProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL) {
 
     // Initialize motor groups for drivetrain
     driveLeft.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
@@ -50,7 +48,7 @@ void TankDrive::MoveDrivePID(PID pid, double dist, const double &MAX_REVS) {
     dist = abs(dist); // Setting the magnitude to positive
     pid.Reset();
     aon::Vector initialPos = aon::odometry::GetPosition();
-    const double timeLimit = getTimetoTarget(dist, MAX_REVS);
+    const double timeLimit = math::estimateTimetoTarget(dist, MAX_REVS);
     const double start_time = pros::micros() / 1E6;
 #define time \
     (pros::micros() / 1E6) - start_time // every time the variable is called it is
@@ -74,9 +72,9 @@ void TankDrive::MoveTurnPID(PID pid, double angle, const double &MAX_REVS) {
     const int sign = angle / abs(angle); // Getting the direction of the movement
     angle = abs(angle); // Setting the magnitude to positive
     pid.Reset();
-    gyroscope.tare(); // .tare() or .reset(true) depending on the time issue
+    odometry::gyroscope.tare(); // .tare() or .reset(true) depending on the time issue
     const double startAngle = odometry::GetDegrees(); // Angle relative to the start
-    double timeLimit = getTimetoTurnDeg(angle);
+    double timeLimit = math::getTimetoTurnDeg(angle);
     if (sign == -1) {
         angle = 360.0 - angle + CLOCKWISE_ROTATION_DEGREES_OFFSET;
     }
@@ -105,7 +103,7 @@ void TankDrive::MoveTurnPID(PID pid, double angle, const double &MAX_REVS) {
 void TankDrive::turnToTarget(double x, double y) {
     Vector target = Vector().SetPosition(x, y);
     // Determine current position
-    Vector current = position();
+    Vector current = odometry::gpsPosition();
     // Do the movement
     turn(-calculateTurn(target, current));
 }
@@ -113,10 +111,10 @@ void TankDrive::turnToTarget(double x, double y) {
 void TankDrive::goToTarget(double x, double y) {
     Vector target = Vector().SetPosition(x, y);
     // Determine current position
-    Vector current = position();
+    Vector current = odometry::gpsPosition();
     // Do the movement
     turn(-calculateTurn(target, current));
-    move(findDistance(target, current));
+    move(math::findDistance(target, current));
 }
 
 // ------------------------------------------------------------ Motion Profile Functions ------------------------------------------------------------
@@ -240,16 +238,9 @@ void TankDrive::moveAndTurn(double forward, double turn) {
     driveRight.moveVelocity(rightSpeed);
 }
 
-//////////////////////////////////////// Nota: Posiblemente necesite relocalización ///////////////////////////////////////////////
-/////////////////////////////////////////////////////// HELPER FUNCTIONS //////////////////////////////////////////////////////////
-double TankDrive::findDistance(Vector target, Vector current) {
-    double distInMeters = (target - current).GetMagnitude();
-    return metersToInches(distInMeters);
-}
-
 double TankDrive::calculateTurn(Vector target, Vector current) {
     // Get and change the heading to the common cartesian plane
-    double heading = 90 - gps.get_heading();
+    double heading = 90 - odometry::gps.get_heading();
     // Limiting the heading to the 0-360 range
     if (heading < 0)
         heading += 360;
@@ -270,42 +261,11 @@ double TankDrive::calculateTurn(Vector target, Vector current) {
     else if (angle < -180)
         angle += 360;
     return angle;
-}
-
-double TankDrive::metersToInches(const double &meters) {
-    return meters * 39.3701;
-}
-
-double TankDrive::inchesToMeters(const double &inches) {
-    return inches / 39.3701;
-}
-
-void TankDrive::STOP() {
+    }
+    
+ void TankDrive::STOP() {
     driveFull.moveVelocity(0);
     driveLeft.moveVelocity(0);
     driveRight.moveVelocity(0);
-}
-
-Vector TankDrive::position() {
-    STOP();
-    pros::delay(2000);
-    pros::c::gps_status_s_t status = gps.get_status();
-    Vector current = Vector().SetPosition(status.x, status.y);
-    return current;
-}
-
-double TankDrive::getTimetoTarget(const double &distance, const double &RPM) {
-    double time = 4 * distance / getSpeed(RPM);
-    return time;
-}
-
-double TankDrive::getTimetoTurnDeg(const double &degrees) {
-    return getTimetoTurnRad(degrees * M_PI / 180, MAX_RPM / 4);
-}
-
-double TankDrive::getTimetoTurnRad(const double &radians, const double &RPM) {
-    double arcLength = radians * AVG_DRIVETRAIN_RADIUS; // Of the turn (inches)
-    double time = 2 * arcLength / getSpeed(RPM); // Calculated time (seconds)
-    return time;
-}
+ }
 } // namespace aon
