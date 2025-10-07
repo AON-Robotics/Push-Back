@@ -10,6 +10,7 @@
 #include "./tools/vector.hpp"
 #include "./x-drive/x-drive.hpp"
 #include "./intake/intake.hpp"
+#include "./tankDrive/tankDrive.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -22,6 +23,7 @@
 
 // Drivetrain
 aon::XDrive drivetrain = aon::XDrive();
+aon::TankDrive drivetrainTank = aon::TankDrive();
 
 
 //Intake:
@@ -78,7 +80,7 @@ pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAK
 // Distance
 
 pros::Distance distanceSensor(3);
-volatile bool intakeScanning = false;
+volatile bool intakeScanning = false; // TODO: remove this
 
 // Potentiometer
 
@@ -182,7 +184,7 @@ void testEndpoint(int speed = 100){
  */
 void autonSafety(){
   while(true){
-    while(mainController.get_digital(DIGITAL_X)){
+    while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
       STOP();
     }
     pros::delay(50);

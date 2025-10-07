@@ -15,6 +15,9 @@ temp.errors
 *.ini
 .d/
 
+# VSCode / Clangd index files
+*.idx
+
 # Python env
 env/
 .DS_Store

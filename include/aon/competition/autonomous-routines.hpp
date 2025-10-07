@@ -676,6 +676,7 @@ int BlueRingsRoutine_JorgeGuz(){
   intake.pickUp(1500);
   drivetrain.move(-4);
   
+  return 0;
 }
 
 /**
@@ -696,6 +697,7 @@ int safeRingRoutine() {
   drivetrain.turnTo(1.2,-1.2);
   drivetrain.goTo(1.2,-1.2);
   driveIntoRing(RED);
+  return 0;
 }
 
 int safeRingRoutine2() {
@@ -709,6 +711,7 @@ int safeRingRoutine2() {
   drivetrain.turnTo(-1.2,1.2);
   drivetrain.goTo(-1.2,1.2);
   driveIntoRing(RED);
+  return 0;
 }
 
 
@@ -750,6 +753,7 @@ int BlueRingsRoutineJorgeLuna() {
 
   drivetrain.move(-6);
   drivetrain.turnTo(1.8, 1.8);
+  return 0;
 }
 
 /**
@@ -785,6 +789,7 @@ int SkillsBlackBotJorge(){
   // if we suppose all the red rings are as points
     // take blue ring 1.8, -1.8
   // put stake in 1.8, -1.8
+  return 0;
 }
 
 /**
@@ -815,7 +820,7 @@ int SkillsBlackBotKevin(){
   // Grab ring in (0, -1.2)
   drivetrain.turnTo(0, -1.2);
   
-  
+  return 0;
 }
 
 
