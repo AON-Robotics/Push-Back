@@ -622,45 +622,6 @@ void enableGate(){
   gate.moveVelocity(0);
 }
 
-/// @brief Async task to align ORBIT only to the item with the globally set `COLOR` signature
-void turretFollow(){
-  const int TOLERANCE = 10;
-  const int VISION_FIELD_CENTER = 315 / 2;
-  int OBJ_CENTER;
-  double position;
-  
-  while(true){
-    if(turretFollowing){
-      auto object = vision_sensor.get_by_sig(0, COLOR);
-      OBJ_CENTER = object.x_middle_coord;
-      double SPEED = turretPID.Output(0, VISION_FIELD_CENTER - OBJ_CENTER);
-      position = turretEncoder.get_angle() / 100;
-
-      if(object.signature == COLOR){
-        if(abs(OBJ_CENTER - VISION_FIELD_CENTER) <= TOLERANCE){
-          turret.moveVelocity(0);
-        }
-        // Limiting to protect hardware
-        else if (ORBIT_LIMITED && (ORBIT_LEFT_LIMIT >= position && position >= ORBIT_RIGHT_LIMIT)) {
-          turretRotationAbsolute(nearest(position, std::make_pair(ORBIT_LEFT_LIMIT + 10, ORBIT_RIGHT_LIMIT - 10)));
-        }
-        else { // Turn Towards Object
-          turret.moveVelocity(SPEED);
-        }
-      }
-      // Dont move if nothing is there
-      else {
-        activateORBITScan();
-      }
-    }
-    else if(turretBraking) {
-      turret.moveVelocity(0);
-    }
-    pros::delay(10);
-  }
-  turret.moveVelocity(0);
-}
-
 /**
  * \brief Aligns ORBIT and DRIVETRAIN to the item with the set `COLOR`
  * 
@@ -668,22 +629,21 @@ void turretFollow(){
  * 
  * \note Setting `color` to `STAKE` makes the robot turn 180° after alignment
  */
-void alignRobotTo(const Colors &color = COLOR){
-  COLOR = color;
-  activateORBITFollow();
+void alignRobotTo(const Colors &color = orbit.getColor()){
+  orbit.setColor(orbit.getColor());
+  orbit.follow();
   pros::delay(500);
-  const int TOLERANCE = 5;
+  const double tolerance = 5;
   double difference;
-  #define TURRET_ANGLE turretEncoder.get_angle() / 100
-  while(abs(TURRET_ANGLE) > TOLERANCE){
-    difference = TURRET_ANGLE < 180 ? TURRET_ANGLE : TURRET_ANGLE - 360;
+  while(!orbit.isAligned(tolerance)){
+    difference = orbit.difference();
     double SPEED = turnPID.Output(0, -difference) * 400;
     driveLeft.moveVelocity(SPEED);
     driveRight.moveVelocity(-SPEED);
     pros::delay(20);
   }
-  #undef TURRET_ANGLE
-  deactivateORBITFollow();
+  
+  orbit.deactivateFollow();
   driveLeft.moveVelocity(0);
   driveRight.moveVelocity(0);
   if(color == STAKE){
@@ -699,59 +659,20 @@ void findAndGrabGoal(const double &dist = 8){
   grabGoal();
 }
 
-/// @brief Rotates the ORBIT to a given angle, with respect to 0 degrees facing forward. (Absolute Rotation)
-/// @param targetAngle Angle in degrees we wish to rotate ORBIT. within [-180, 180] or [0, 360]
-/// @details `turretEncoder.get_angle()` is divided by 100 for scaling purposes.
-inline void turretRotationAbsolute(double targetAngle) { 
-  const double TOLERANCE = 5;
-  if(targetAngle > 180) targetAngle -= 360;
-  double currentAngle;
-  do {
-    currentAngle = turretEncoder.get_angle() / 100.0;
-    if(currentAngle > 180) currentAngle -= 360;
-    double output = turretPID.Output(targetAngle, currentAngle); 
-    turret.moveVelocity(output); 
-    pros::delay(10);
-  } while(abs(currentAngle - targetAngle) > TOLERANCE);
-  turret.moveVelocity(0);
-}
-
-
-/**
- * \brief Rotates the ORBIT a given angle, starting from wherever it currently is. (Relative Rotation)
- * 
- * \param givenAngle Angle in degrees we wish to rotate ORBIT.
- *
- * \details `turretEncoder.get_angle()` is divided by 100 for scaling purposes.
- */
-inline void turretRotationRelative(const double &givenAngle) { 
-  const double TOLERANCE = 5;
-  double currentAngle;
-  double initialAngle = turretEncoder.get_position() / 100.0; 
-  double targetAngle = initialAngle + givenAngle; 
-  do {
-    currentAngle = turretEncoder.get_position() / 100.0;
-    double output = turretPID.Output(targetAngle, currentAngle); 
-    turret.moveVelocity(output); 
-    pros::delay(10);
-  } while(abs(currentAngle - targetAngle) > TOLERANCE);
-  turret.moveVelocity(0);
-}
-
 
 /// @brief Calculates the distance to a ring of the specified `color` using a EKF
 /// @param color The color of the ring we wish to track
 /// @return The filtered distance to that ring
 /// @note Takes half a second (0.5s) to complete
-double getDistanceToRing(const Colors &color = COLOR){
-  COLOR = color;
+double getDistanceToRing(const Colors &color = orbit.getColor()){
+  orbit.setColor(orbit.getColor());
   okapi::EKFFilter ekf;
 
   double distance;
 
   // Filter the distance for half a second using 100 measurements (1 every 5 milliseconds)
   for(int i = 0; i < 100; i++){
-    distance = ekf.filter(groundDistanceToDisk(vision_sensor.get_by_sig(0, color).width));
+    distance = ekf.filter(groundDistanceToDisk((orbit.getLargestObject()).width));
     pros::delay(5);
   }
 
@@ -775,10 +696,10 @@ void grabAndScore(){
 
 /// @brief Aligns robot to the ring of the specified `color` and grabs it and scores it on the held stake
 /// @param color The color of the ring to be picked up
-void alignAndIntake(const Colors &color = COLOR){
-  COLOR = color;
+void alignAndIntake(const Colors &color = orbit.getColor()){
+  orbit.setColor(orbit.getColor());
   move(12);
-  alignRobotTo(COLOR);
+  alignRobotTo(orbit.getColor());
   move(12);
   driveTillPickUp();
   scoreRing();
@@ -882,23 +803,6 @@ void testConcurrency(){
   deactivateIntakeScan();
 }
 
-/// @brief Test function to see if the angle from the ORBIT makes sense
-void testTurret(){
-  while(true){
-    double position = turretEncoder.get_angle() / 100.0;
-    const double turretTurn = aon::operator_control::AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY);
-    if (ORBIT_LIMITED && (ORBIT_LEFT_LIMIT >= position && position >= ORBIT_RIGHT_LIMIT)) {
-      turret.moveVelocity(0);
-      turretRotationAbsolute(0);
-    }
-    else {
-      turret.moveVelocity(MAX_RPM * turretTurn * .1);
-    }
-    pros::lcd::print(1, "ORBIT Angle: %.2f", position);
-    pros::delay(20);
-  }
-}
-
 /// @brief Tests the alignment of the robot to the object of `COLOR` using tasks
 void testAlignment(){
   while(true){
@@ -914,13 +818,13 @@ void testADIEncoder(){
 
 /// @brief Uses the ORBIT to adjust the path going toward a ring to intake it accurately
 /// @param color The color of the ring we wish to intake
-void driveIntoRing(const Colors &color = COLOR){
-  COLOR = color;
-  activateORBITFollow();
+void driveIntoRing(const Colors &color = orbit.getColor()){
+  orbit.setColor(orbit.getColor());
+  orbit.follow();
   activateIntakeScan();
   pros::delay(500);
   okapi::EKFFilter ekf;
-  const int TOLERANCE = 5; //? Probably adjust this
+  const double tolerance = 5; //? Probably adjust this
   double difference;
   #define TURRET_ANGLE turretEncoder.get_angle() / 100
 
@@ -928,20 +832,20 @@ void driveIntoRing(const Colors &color = COLOR){
 
   forwardProfile.setMaxVelocity(MAX_RPM / 2);
 
-  while(abs(TURRET_ANGLE) > TOLERANCE){
-    auto object = vision_sensor.get_by_sig(0, color);
+  while(!orbit.isAligned(tolerance)){
+    auto object = (orbit.getLargestObject());
 
     // Safety to scan when object is lost
     if(object.signature != color) { 
-      activateORBITScan();
+      orbit.activateScan();
       driveFull.moveVelocity(0);
       continue;
     } 
     else {
-      activateORBITFollow();
+      orbit.activateFollow();
     }
 
-    difference = TURRET_ANGLE < 180 ? TURRET_ANGLE : TURRET_ANGLE - 360;
+    difference = orbit.difference();
     //? maybe motion profile this variable
     double TURN = turnPID.Output(0, -difference) * 500;
     
@@ -955,52 +859,11 @@ void driveIntoRing(const Colors &color = COLOR){
   }
   #undef TURRET_ANGLE
   #undef TIME
-  deactivateORBITFollow();
-  deactivateORBITScan();
+  orbit.deactivateFollow();
+  orbit.deactivateScan();
   deactivateIntakeScan();
   forwardProfile.setMaxVelocity(MAX_RPM);
   driveTillPickUp();
-}
-
-/// @brief Calculates the distance the robot would have to travel to get to an object
-/// @param pixels The pixels reported by the vision sensor viewing an object (preferably width of that object)
-/// @return The distance in \b inches that the robot is from the object, probably to pass into the `move()` function
-double groundDistanceToDisk(const double &pixels){
-  const double distance = widthToDistance(pixels);
-  if(distance < ORBIT_HEIGHT) { return distance; } // avoid √(-1) issues if the ring is detected to be bigger than it should be for some reason
-  // pythagorean theorem: a^2 + b^2 = c^2
-  // a = √(c^2 - b^2)
-  return std::sqrt((distance * distance) - (ORBIT_HEIGHT * ORBIT_HEIGHT));
-}
-
-/// @brief Converts the amount of `pixels` seen from the vision sensor, to the corresponding \b inches
-/// @param pixels The pixels reported by the vision sensor viewing an object (preferably width of that object)
-/// @return The corresponding amount of \b inches
-double pixelsToInches(const double &pixels){
-  const double CONSTANT = 0.000208333; // found experimentally be measuring the distance from the vision sensor to the object and using algebra to tune the value until consistent/realistic results were returned
-  return pixels * CONSTANT;
-}
-
-/// @brief Calculates the distance in \b inches of an object based on its width in \b pixels from the vision sensor
-/// @param width The width of the object detected by the sensor in \b pixels
-/// @return The distance from the vision sensor to the object in \b inches
-/// @note This function assumes the entire object is in view, this may be changed later
-/// @details The funcion uses `pixelsToInches()` as a crucial part of the calculations
-/// @details The math is explained inside and the formulas are from optical geometry
-double widthToDistance(const double &width){
-  // m = -i/d
-  // m = w_i / w_o
-  // d = |i| * (w_o / w_i)
-  // w_i = pixels * CONSTANT
-  // since i, w_o and CONSTANT are constants
-  // then the formula technically is:
-  // d = K / pixels
-  // where K is a constant K = |i| * (w_o / CONSTANT)
-  const double REAL_WIDTH = 7;
-  const double DISTANCE_OF_IMAGE = 0.0625; // estimated/experimental
-  const double imageWidthInInches = pixelsToInches(width); // also somewhat estimated/experimental
-  const double distance = DISTANCE_OF_IMAGE * (REAL_WIDTH / imageWidthInInches);
-  return distance;
 }
 
 /// @brief Outputs and logs the width of a ring, and the distance to it based on that width
@@ -1010,9 +873,9 @@ void testDistanceFromVision(){
   MovingAverage ekfMav(50);
   MovingAverage avg_ekfMav(50);
   okapi::EKFFilter ekf;
-  activateORBITFollow();
+  orbit.activateFollow();
   while(true){
-    pros::vision_object ring = vision_sensor.get_by_sig(0, RED);
+    pros::vision_object ring = orbit.getLargestObject();
     if(ring.signature == RED){
       const double distance = groundDistanceToDisk(ring.width);
       if(!std::isnormal(distance)) { continue; }
@@ -1031,7 +894,7 @@ void testDistanceFromVision(){
     }
     pros::delay(20);
   }
-  deactivateORBITFollow();
+  orbit.deactivateFollow();
 }
 
 /// @brief Uses the gyro to test the precision of an ekf
@@ -1044,7 +907,6 @@ void testEKFWithGyro(){
     pros::delay(20);
   }
 }
-
 /// @brief ORBIT async task scanning test function
 void turretScan(){
   // To scan, make the ORBIT go from one side of its maximum FOV to the other,
@@ -1052,29 +914,29 @@ void turretScan(){
   // if at any point the ORBIT detects an object, start following it and stop scanning
   bool goingLeft = true;
   while(true) {
-    if(turretScanning && !turretFollowing){
+    if(orbit.isScanning() && !orbit.isFollowing()){
 
-      deactivateORBITFollow(); // redundant but ensures no fight for the vision sensor
-      pros::vision_object object = vision_sensor.get_by_sig(0, COLOR);
+      orbit.deactivateFollow(); // redundant but ensures no fight for the vision sensor
+      pros::vision_object object = (orbit.getLargestObject());
 
-      if(object.signature == COLOR){
+      if(object.signature == orbit.getColor()){
         // stop scanning and start following if we find something
-        activateORBITFollow();
+        orbit.activateFollow();
       }
       else {
-        double position = turretEncoder.get_angle() / 100;
+        double position = orbit.getAngle();
         // scan if we find nothing
         // Limiting to protect hardware (even if the rotation is 360°, we dont want to twist the cable)
-        if (ORBIT_LEFT_LIMIT >= position && position >= ORBIT_RIGHT_LIMIT) {
+        if (orbit.getLeftLimit() >= position && position >= orbit.getRightLimit()) { // TODO: extract this to a function in the orbit
           goingLeft = !goingLeft;
           // Make the ORBIT go to the nearest limit and keep rotating from there
-          turretRotationAbsolute(nearest(position, std::make_pair(ORBIT_LEFT_LIMIT + 20, ORBIT_RIGHT_LIMIT - 20)));
+          turretRotationAbsolute(nearest(position, std::make_pair(orbit.getLeftLimit() + 20, orbit.getRightLimit() - 20)));
         }
         turret.moveVelocity(40 * (goingLeft ? -1 : 1));
       }
     }
-    else if(turretFollowing) {
-      deactivateORBITScan(); // dont scan if the ORBIT following was activated elsewhere for some reason
+    else if(orbit.isFollowing()) {
+      orbit.deactivateScan(); // dont scan if the ORBIT following was activated elsewhere for some reason
     } // an else would be redundant for our purposes
     pros::delay(20);
   }
@@ -1353,7 +1215,7 @@ int RedRingsRoutine(){
   move(6);
   RemoveTop();
   move(-6);
-  alignRobotTo(COLOR);
+  alignRobotTo(orbit.getColor());
   driveTillPickUp();
 
   // Get the last ring in that line
@@ -1387,7 +1249,7 @@ int BlueRingsRoutine(){
   move(6);
   RemoveTop();
   move(-6);
-  alignRobotTo(COLOR);
+  alignRobotTo(orbit.getColor());
   driveTillPickUp();
   
   // Get the last ring in that line
@@ -1480,19 +1342,19 @@ int BlueRingsRoutineJorgeLuna() {
   // go to ring on the bottom
   goToTarget(1.2, -0.55);
   RemoveTop();
-  driveIntoRing(COLOR);
+  driveIntoRing(orbit.getColor());
 
   // then the one below that one
   goToTarget(1.2, -1.1);
-  driveIntoRing(COLOR);
+  driveIntoRing(orbit.getColor());
 
   // drive into the corner and try to grab the rings
   goToTarget(1.7, -1.7);
   RemoveTop();
-  driveIntoRing(COLOR);
+  driveIntoRing(orbit.getColor());
   turnToTarget(1.7, -1.7);
   RemoveTop();
-  driveIntoRing(COLOR);
+  driveIntoRing(orbit.getColor());
 
   move(-6);
   turnToTarget(1.8, 1.8);
