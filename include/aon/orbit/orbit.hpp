@@ -73,7 +73,7 @@ class Orbit {
   bool isScanning() { return scanning; };
 
   /// @brief  Adds the colors to the vision sensor
-  inline void ConfigureColors();
+  inline void configure();
 
   /// @brief Begins ORBIT following cycle
   void activateFollow();
@@ -102,7 +102,7 @@ class Orbit {
   /// @param givenAngle Angle in degrees we wish to rotate ORBIT.
   /// @details `turretEncoder.get_angle()` is divided by 100 for scaling
   /// purposes.
-  inline void turretRotationRelative(const double &givenAngle);
+  inline void rotateRelative(const double &givenAngle);
 
   /// @brief Rotates the ORBIT to a given angle, with respect to 0 degrees
   /// facing forward. (Absolute Rotation)
@@ -110,7 +110,7 @@ class Orbit {
   /// 180] or [0, 360]
   /// @details `turretEncoder.get_angle()` is divided by 100 for scaling
   /// purposes.
-  inline void turretRotationAbsolute(double targetAngle);
+  inline void rotateAbsolute(double targetAngle);
 
   // Testing:
 
@@ -153,5 +153,11 @@ class Orbit {
   /// @details The math is explained inside and the formulas are from optical
   /// geometry
   double widthToDistance(const double &width);
+
+  /// @brief Calculates the distance to a ring of the specified `color` using a EKF
+  /// @param color The color of the ring we wish to track
+  /// @return The filtered distance to that ring
+  /// @note Takes half a second (0.5s) to complete
+  double getDistanceToRing(Colors color);
 };
 }  // namespace aon

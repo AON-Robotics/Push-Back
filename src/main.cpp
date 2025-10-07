@@ -5,7 +5,7 @@ void initialize() {
   aon::logging::Initialize();
   pros::lcd::initialize();
   aon::ConfigureMotors(false);
-  aon::ConfigureColors();
+  aon::configure();
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
   pros::Task safetyTask(aon::autonSafety);

@@ -1,4 +1,5 @@
 #include "orbit.hpp"
+#include "general.hpp"
 namespace aon {
 
 // Constructor
@@ -11,7 +12,7 @@ Orbit::Orbit(int rotationPort, bool reversedEncoder, int visionPort, int port)
 // Functions :
 
 /// @brief Adds the colors to the vision sensor
-inline void Orbit::ConfigureColors() {
+inline void Orbit::configure() {
   vision_sensor.set_signature(RED, &RED_SIG);
   vision_sensor.set_signature(BLUE, &BLUE_SIG);
   vision_sensor.set_signature(STAKE, &STAKE_SIG);
@@ -64,7 +65,7 @@ void Orbit::follow() {
         }
         // Limiting to protect hardware
         else if (limited && (leftLimit >= position && position >= rightLimit)) {
-          turretRotationAbsolute(nearest(
+          rotateAbsolute(nearest(
               position, std::make_pair(leftLimit + 10, rightLimit - 10)));
         } else {  // Turn Towards Object
           motor.moveVelocity(SPEED);
@@ -82,7 +83,7 @@ void Orbit::follow() {
   motor.moveVelocity(0);
 }
 
-inline void Orbit::turretRotationRelative(const double &givenAngle) {
+inline void Orbit::rotateRelative(const double &givenAngle) {
   const double TOLERANCE = 5;
   double currentAngle;
   double initialAngle = encoder.get_position() / 100.0;
@@ -120,7 +121,7 @@ void Orbit::scan() {
         if (leftLimit >= position && position >= rightLimit) {
           goingLeft = !goingLeft;
           // Make the ORBIT go to the nearest limit and keep rotating from there
-          turretRotationAbsolute(nearest(
+          rotateAbsolute(nearest(
               position, std::make_pair(leftLimit + 20, rightLimit - 20)));
         }
         motor.moveVelocity(40 * (goingLeft ? -1 : 1));
@@ -138,7 +139,7 @@ void Orbit::scan() {
 /// @param targetAngle Angle in degrees we wish to rotate ORBIT. within [-180,
 /// 180] or [0, 360]
 /// @details `turretEncoder.get_angle()` is divided by 100 for scaling purposes.
-inline void Orbit::turretRotationAbsolute(double targetAngle) {
+inline void Orbit::rotateAbsolute(double targetAngle) {
   const double TOLERANCE = 5;
   if (targetAngle > 180) targetAngle -= 360;
   double currentAngle;
@@ -217,4 +218,25 @@ double Orbit::widthToDistance(const double &width) {
   const double distance = DISTANCE_OF_IMAGE * (REAL_WIDTH / imageWidthInInches);
   return distance;
 }
+
+/// @brief Calculates the distance to a ring of the specified `color` using a EKF
+/// @param color The color of the ring we wish to track
+/// @return The filtered distance to that ring
+/// @note Takes half a second (0.5s) to complete
+double Orbit::getDistanceToRing(Colors color){
+  color = this->getColor();
+  this->setColor(this->getColor());
+  okapi::EKFFilter ekf;
+
+  double distance;
+
+  // Filter the distance for half a second using 100 measurements (1 every 5 milliseconds)
+  for(int i = 0; i < 100; i++){
+    distance = ekf.filter(groundDistanceToDisk((this->getLargestObject()).width));
+    pros::delay(5);
+  }
+
+  return distance;
+}
+
 }  // namespace aon

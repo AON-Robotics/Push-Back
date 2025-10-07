@@ -24,7 +24,7 @@
 
 namespace aon {
 
-void turretRotationAbsolute(double targetAngle);
+void rotateAbsolute(double targetAngle);
 double widthToDistance(const double &width);
 double groundDistanceToDisk(const double &pixels);
 
@@ -86,13 +86,6 @@ void RemoveTop(){
   moveIndexer(false);
 }
 
-/// @brief Drops the gate from starting position so the robot can grab stuff
-void enableGate(){
-  gate.moveVelocity(-100);
-  pros::delay(250);
-  gate.moveVelocity(0);
-}
-
 /**
  * \brief Aligns ORBIT and DRIVETRAIN to the item with the set `COLOR`
  * 
@@ -150,7 +143,7 @@ double getDistanceToRing(const Colors &color = orbit.getColor()){
 
 /// @brief Drives forward until a ring hits the distance sensor
 /// @param distance The distance from the robot to a ring
-void driveTillPickUp(const double &distance = distanceToRing()){
+void driveTillPickUp(const double &distance = getDistanceToRing()){
   const double additional_distance = 0; //? This is to give the robot some distance to actually grip the donut, determine this experimentally
   intake.activateScan();
   drivetrain.move(distance + additional_distance);
@@ -398,7 +391,7 @@ void turretScan(){
         if (orbit.getLeftLimit() >= position && position >= orbit.getRightLimit()) { // TODO: extract this to a function in the orbit
           goingLeft = !goingLeft;
           // Make the ORBIT go to the nearest limit and keep rotating from there
-          turretRotationAbsolute(nearest(position, std::make_pair(orbit.getLeftLimit() + 20, orbit.getRightLimit() - 20)));
+          rotateAbsolute(nearest(position, std::make_pair(orbit.getLeftLimit() + 20, orbit.getRightLimit() - 20)));
         }
         turret.moveVelocity(40 * (goingLeft ? -1 : 1));
       }
@@ -509,8 +502,8 @@ int BlueRingsRoutine(){
   drivetrain.turnTo(.6, 1.2);
   drivetrain.move(6);
   RemoveTop();
-  move(-6);
-  alignRobotTo(COLOR);
+  drivetrain.move(-6);
+  alignRobotTo(orbit.getColor());
   driveTillPickUp();
   
   // Get the last ring in that line
@@ -609,14 +602,14 @@ int BlueRingsRoutineJorgeLuna() {
   driveIntoRing(orbit.getColor());
 
   // then the one below that one
-  goToTarget(1.2, -1.1);
-  driveIntoRing(COLOR);
+  drivetrain.goTo(1.2, -1.1);
+  driveIntoRing(orbit.getColor());
 
   // drive into the corner and try to grab the rings
   drivetrain.goTo(1.7, -1.7);
   RemoveTop();
-  driveIntoRing(COLOR);
-  turnToTarget(1.7, -1.7);
+  driveIntoRing(orbit.getColor());
+  drivetrain.turnTo(.7, -1.7);
   RemoveTop();
   driveIntoRing(orbit.getColor());
 
