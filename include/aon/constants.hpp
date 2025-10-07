@@ -9,14 +9,6 @@
 #define TILE_WIDTH 23.6220472441
 #define TILE_DIAG_LENGTH 33.4066195836 // Calculated with the Pythagorean theorem
 
-// Tank Drive PID Constants
-#define TANK_DRIVE_PID_KP 0.02
-#define TANK_DRIVE_PID_KI 0.0
-#define TANK_DRIVE_PID_KD 0.0
-#define TANK_TURN_PID_KP 0.002
-#define TANK_TURN_PID_KI 0.0
-#define TANK_TURN_PID_KD 0.0
-
 // NOT using black robot = Using green robot
 #define USING_BLACK_ROBOT true
 #define TESTING_AUTONOMOUS false 
@@ -56,7 +48,7 @@
 #define GPS_INITIAL_Y -0.47 // Field
 #define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
 
-#define MAX_RPM 600.0 // For the drivetrain
+#define MAX_RPM 600 // For the drivetrain
 #define INTAKE_VELOCITY 600 * .8
 
 /// @brief Maximum acceleration without slippage 
