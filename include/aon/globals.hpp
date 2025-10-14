@@ -10,6 +10,7 @@
 #include "./tools/vector.hpp"
 #include "./x-drive/x-drive.hpp"
 #include "./intake/intake.hpp"
+#include "./tank-drive/tank-drive.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -22,6 +23,7 @@
 
 // Drivetrain
 aon::XDrive drivetrain = aon::XDrive();
+aon::TankDrive drivetrainTank = aon::TankDrive();
 
 okapi::MotorGroup driveLeft = okapi::MotorGroup({-20, 19, -18});
 okapi::MotorGroup driveRight = okapi::MotorGroup({9, -8, 7});
@@ -83,7 +85,7 @@ pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAK
 // Distance
 
 pros::Distance distanceSensor(3);
-volatile bool intakeScanning = false;
+volatile bool intakeScanning = false; // TODO: remove this
 
 // Potentiometer
 
@@ -151,7 +153,7 @@ inline void ConfigureColors(){
  */
 void STOP(){
   drivetrain.stop();
-  intake.move(0);
+  intake.stop();
   arm.moveVelocity(0);
   turret.moveVelocity(0);
 }
@@ -179,16 +181,7 @@ void testEndpoint(int speed = 100){
   STOP(); 
   intake.move(speed);
   pros::delay(1000);
-  intake.move(0);
-}
-
-/**
- * \brief Makes the rail go slightly back
- */
-void kickBackRail(){
-  intake.moveRail(-100);
-  pros::delay(150);
-  intake.moveRail(0);
+  intake.stop();
 }
 
 /**
@@ -236,14 +229,6 @@ void brakeORBIT(){
 void releaseORBIT() {
   turretBraking = false;
 }
-
-/// @brief Starts intake scanning cycle, inside intake files
-//change this as well, this can go inside the Intake.hpp and Intake.cpp files
-//so no function here, just access the file
-void activateIntakeScan(){ intake.startScan(); }
-
-/// @brief Ends intake scanning cycle
-void deactivateIntakeScan(){ intake.stopScan(); }
 
 }  // namespace aon
 

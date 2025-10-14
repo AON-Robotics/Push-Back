@@ -1,69 +1,70 @@
 #include "../include/aon/intake/intake.hpp"
 
-namespace aon{
+namespace aon {
 
-Intake::Intake(const std::initializer_list<okapi::Motor> &allPorts, const std::initializer_list<okapi::Motor> &railPort, const std::initializer_list<okapi::Motor> &gatePort, int distanceSensorPort)
-  : intake(allPorts)
-  , rail(railPort)
-  , gate(gatePort)
-  , distanceSensor(distanceSensorPort) {
-}
+Intake::Intake(const std::initializer_list<okapi::Motor> &allPorts,
+               const std::initializer_list<okapi::Motor> &railPorts,
+               const std::initializer_list<okapi::Motor> &gatePorts,
+               int distanceSensorPort)
+    : _intake(allPorts),
+      _rail(railPorts),
+      _gate(gatePorts),
+      distanceSensor(distanceSensorPort) {}
 
-void Intake::startScan() { 
-  objectDetected = false; // TODO: test with phsyical system if this works as intended
-  scanning = true;
-}
+void Intake::move(const int &rpm) { _intake.moveVelocity(rpm); }
 
-void Intake::stopScan()  { scanning = false; }
+void Intake::rail(const int &rpm) { _rail.moveVelocity(rpm); }
 
-void Intake::pickUp(const int &delay) {
-  intake.moveVelocity(INTAKE_VELOCITY / 0.8); // run a bit faster than our default
-  pros::delay(delay);
-  intake.moveVelocity(0);                     // stop after the delay
-}
+void Intake::gate(const int &rpm) { _gate.moveVelocity(rpm); }
 
-void Intake::score(const int &delay) {
-  rail.moveVelocity(INTAKE_VELOCITY);
-  pros::delay(delay);
-  rail.moveVelocity(0);
-}
+void Intake::stop() { _intake.moveVelocity(0); }
 
-void Intake::discard() {
-  intake.moveVelocity(-INTAKE_VELOCITY);
-  pros::delay(1000);
-  intake.moveVelocity(0);
-}
+double Intake::distance() { return distanceSensor.get(); }
 
-void Intake::openGate(const int &delay) {
-  gate.moveVelocity(-100);
-  pros::delay(delay);
-  gate.moveVelocity(0);
-}
+bool Intake::isObjectDetected() { return this->distance() <= DISTANCE; }
 
-void Intake::move(const int &rpm){
-  intake.moveVelocity(rpm);
-}
-
-void Intake::moveRail(const int &rpm){
-  rail.moveVelocity(rpm);
-}
-
-void Intake::moveGate(const int &rpm){
-  gate.moveVelocity(rpm);
-}
-
-void Intake::scan(){
-  while(true){
-    if (scanning && distanceSensor.get() <= DISTANCE) {
-      objectDetected = true;
-      pickUp();
-      intake.moveVelocity(0);
+void Intake::scan() {
+  while (true) {
+    if (scanning && this->isObjectDetected()) {
+      this->pickUp();
     }
     pros::delay(20);
   }
 }
 
-double Intake::distance() { return distanceSensor.get(); }
+void Intake::activateScan() { scanning = true; }
 
-bool Intake::isObjectDetected() { return objectDetected; }
+void Intake::stopScan() { scanning = false; }
+
+void Intake::openGate(const int &delay) {
+  this->gate(-100);
+  pros::delay(delay);
+  this->gate(0);
 }
+
+void Intake::pickUp(const int &delay) {
+  this->move(INTAKE_VELOCITY / 0.8);  // run a bit faster than our default
+  pros::delay(delay);
+  this->stop();  // stop after the delay
+}
+
+void Intake::score(const int &delay) {
+  this->rail(INTAKE_VELOCITY);
+  pros::delay(delay);
+  this->rail(0);
+}
+
+void Intake::discard() {
+  this->move(-INTAKE_VELOCITY);
+  pros::delay(1000);
+  this->stop();
+}
+
+void Intake::kickBackRail(){
+  this->rail(-100);
+  pros::delay(150);
+  this->rail(0);
+
+}
+
+}  // namespace aon

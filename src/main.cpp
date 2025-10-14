@@ -1,4 +1,4 @@
-#include "main.hpp"
+#include "../include/main.hpp"
 
 void initialize() {
   pros::Task guiTask(aon::gui::Initialize);

@@ -223,7 +223,7 @@ double distanceToRing(const Colors &color = COLOR){
 /// @param distance The distance from the robot to a ring
 void driveTillPickUp(const double &distance = distanceToRing()){
   const double additional_distance = 0; //? This is to give the robot some distance to actually grip the donut, determine this experimentally
-  intake.startScan();
+  intake.activateScan();
   drivetrain.move(distance + additional_distance);
   intake.stopScan();
 }
@@ -329,9 +329,9 @@ void testIndexer(){
   grabGoal();
 }
 
-/// @brief Test to ensure the concurrency is working fine, requires `intakeScanning` to be running in another thread
+/// @brief Test to ensure the concurrency is working fine, requires `intake.scan()` to be running in another thread
 void testConcurrency(){
-  activateIntakeScan();
+  intake.activateScan();
   int startTime = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - startTime
   while(time < 5){
@@ -339,8 +339,8 @@ void testConcurrency(){
     pros::delay(20);
   }
   #undef time
-  drivetrain.motors(0);
-  deactivateIntakeScan();
+  drivetrain.stop();
+  intake.stopScan();
 }
 
 /// @brief Test function to see if the angle from the ORBIT makes sense
@@ -379,7 +379,7 @@ void testADIEncoder(){
 void driveIntoRing(const Colors &color = COLOR){
   COLOR = color;
   activateORBITFollow();
-  activateIntakeScan();
+  intake.activateScan();
   pros::delay(500);
   okapi::EKFFilter ekf;
   const int TOLERANCE = 5; //? Probably adjust this
@@ -418,7 +418,7 @@ void driveIntoRing(const Colors &color = COLOR){
   #undef TIME
   deactivateORBITFollow();
   deactivateORBITScan();
-  deactivateIntakeScan();
+  intake.stopScan();
   drivetrain.setMaxVelocity(MAX_RPM);
   driveTillPickUp();
 }
@@ -676,6 +676,7 @@ int BlueRingsRoutine_JorgeGuz(){
   intake.pickUp(1500);
   drivetrain.move(-4);
   
+  return 0;
 }
 
 /**
@@ -696,6 +697,7 @@ int safeRingRoutine() {
   drivetrain.turnTo(1.2,-1.2);
   drivetrain.goTo(1.2,-1.2);
   driveIntoRing(RED);
+  return 0;
 }
 
 int safeRingRoutine2() {
@@ -709,6 +711,7 @@ int safeRingRoutine2() {
   drivetrain.turnTo(-1.2,1.2);
   drivetrain.goTo(-1.2,1.2);
   driveIntoRing(RED);
+  return 0;
 }
 
 
@@ -750,6 +753,7 @@ int BlueRingsRoutineJorgeLuna() {
 
   drivetrain.move(-6);
   drivetrain.turnTo(1.8, 1.8);
+  return 0;
 }
 
 /**
@@ -785,6 +789,7 @@ int SkillsBlackBotJorge(){
   // if we suppose all the red rings are as points
     // take blue ring 1.8, -1.8
   // put stake in 1.8, -1.8
+  return 0;
 }
 
 /**
@@ -815,7 +820,7 @@ int SkillsBlackBotKevin(){
   // Grab ring in (0, -1.2)
   drivetrain.turnTo(0, -1.2);
   
-  
+  return 0;
 }
 
 
