@@ -24,9 +24,17 @@
 
 namespace aon {
 
-void rotateAbsolute(double targetAngle);
-double widthToDistance(const double &width);
-double groundDistanceToDisk(const double &pixels);
+inline void rotateAbsolute(double targetAngle) {
+  orbit.rotateAbsolute(targetAngle);
+}
+
+inline double widthToDistance(const double &width) {
+  return orbit.widthToDistance(width);
+}
+
+inline double groundDistanceToDisk(const double &pixels) {
+  return orbit.groundDistanceToDisk(pixels);
+}
 
 // ============================================================================|
 //   ____        _       ____             _   _                
@@ -368,40 +376,7 @@ void testEKFWithGyro(){
     pros::delay(20);
   }
 }
-/// @brief ORBIT async task scanning test function
-void turretScan(){
-  // To scan, make the ORBIT go from one side of its maximum FOV to the other,
-  // if the ORBIT is not limited, make it go from 175° to 185° (going the long way)
-  // if at any point the ORBIT detects an object, start following it and stop scanning
-  bool goingLeft = true;
-  while(true) {
-    if(orbit.isScanning() && !orbit.isFollowing()){
 
-      orbit.deactivateFollow(); // redundant but ensures no fight for the vision sensor
-      pros::vision_object object = (orbit.getLargestObject());
-
-      if(object.signature == orbit.getColor()){
-        // stop scanning and start following if we find something
-        orbit.activateFollow();
-      }
-      else {
-        double position = orbit.getAngle();
-        // scan if we find nothing
-        // Limiting to protect hardware (even if the rotation is 360°, we dont want to twist the cable)
-        if (orbit.getLeftLimit() >= position && position >= orbit.getRightLimit()) { // TODO: extract this to a function in the orbit
-          goingLeft = !goingLeft;
-          // Make the ORBIT go to the nearest limit and keep rotating from there
-          rotateAbsolute(nearest(position, std::make_pair(orbit.getLeftLimit() + 20, orbit.getRightLimit() - 20)));
-        }
-        turret.moveVelocity(40 * (goingLeft ? -1 : 1));
-      }
-    }
-    else if(orbit.isFollowing()) {
-      orbit.deactivateScan(); // dont scan if the ORBIT following was activated elsewhere for some reason
-    } // an else would be redundant for our purposes
-    pros::delay(20);
-  }
-}
 
 /// @brief Function wrapper for test function that is to be executed through the GUI
 /// @return 1 for successful execution
@@ -851,5 +826,4 @@ int SkillsGreenBotJorge(){
 #endif
 
 };  // namespace aon
-
 

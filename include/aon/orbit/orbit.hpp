@@ -2,9 +2,9 @@
 
 #include "../../api.h"
 #include "../../okapi/api.hpp"
-#include "./constants.hpp"
-#include "./controls/pid/pid.hpp"
-#include "./tools/vector.hpp"
+#include "../constants.hpp"
+#include "../controls/pid/pid.hpp"
+#include "../tools/vector.hpp"
 
 namespace aon {
 enum Colors { RED = 1, BLUE, STAKE };
@@ -73,7 +73,7 @@ class Orbit {
   bool isScanning() { return scanning; };
 
   /// @brief  Adds the colors to the vision sensor
-  inline void configure();
+  void configure();
 
   /// @brief Begins ORBIT following cycle
   void activateFollow();
@@ -102,7 +102,7 @@ class Orbit {
   /// @param givenAngle Angle in degrees we wish to rotate ORBIT.
   /// @details `turretEncoder.get_angle()` is divided by 100 for scaling
   /// purposes.
-  inline void rotateRelative(const double &givenAngle);
+  void rotateRelative(const double &givenAngle);
 
   /// @brief Rotates the ORBIT to a given angle, with respect to 0 degrees
   /// facing forward. (Absolute Rotation)
@@ -110,7 +110,7 @@ class Orbit {
   /// 180] or [0, 360]
   /// @details `turretEncoder.get_angle()` is divided by 100 for scaling
   /// purposes.
-  inline void rotateAbsolute(double targetAngle);
+  void rotateAbsolute(double targetAngle);
 
   // Testing:
 

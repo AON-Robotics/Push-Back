@@ -5,13 +5,13 @@ void initialize() {
   aon::logging::Initialize();
   pros::lcd::initialize();
   aon::ConfigureMotors(false);
-  aon::configure();
+  orbit.configure();
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
   pros::Task safetyTask(aon::autonSafety);
-  pros::Task turretFollowTask(aon::turretFollow);
   pros::Task intakeTask([]{intake.scan();});
-  pros::Task turretScanTask(aon::turretScan); // TODO: combine this with the follow task
+  pros::Task turretFollowTask([]{orbit.follow();});
+  pros::Task turretScanTask([]{orbit.scan();});
 }
 
 void disabled() {}

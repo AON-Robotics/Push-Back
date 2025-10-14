@@ -1,5 +1,5 @@
-#include "orbit.hpp"
-#include "general.hpp"
+#include "../include/aon/orbit/orbit.hpp"
+#include "../include/aon/tools/general.hpp"
 namespace aon {
 
 // Constructor
@@ -12,7 +12,7 @@ Orbit::Orbit(int rotationPort, bool reversedEncoder, int visionPort, int port)
 // Functions :
 
 /// @brief Adds the colors to the vision sensor
-inline void Orbit::configure() {
+void Orbit::configure() {
   vision_sensor.set_signature(RED, &RED_SIG);
   vision_sensor.set_signature(BLUE, &BLUE_SIG);
   vision_sensor.set_signature(STAKE, &STAKE_SIG);
@@ -83,7 +83,7 @@ void Orbit::follow() {
   motor.moveVelocity(0);
 }
 
-inline void Orbit::rotateRelative(const double &givenAngle) {
+void Orbit::rotateRelative(const double &givenAngle) {
   const double TOLERANCE = 5;
   double currentAngle;
   double initialAngle = encoder.get_position() / 100.0;
@@ -105,7 +105,7 @@ void Orbit::scan() {
   // stop scanning
   bool goingLeft = true;
   while (true) {
-    if (isScanning && !following) {
+    if (isScanning() && !following) {
       deactivateFollow();  // redundant but ensures no fight for the vision
                            // sensor
       pros::vision_object object = vision_sensor.get_by_sig(0, COLOR);
@@ -126,7 +126,7 @@ void Orbit::scan() {
         }
         motor.moveVelocity(40 * (goingLeft ? -1 : 1));
       }
-    } else if (isFollowing) {
+    } else if (isFollowing()) {
       deactivateScan();  // dont scan if the ORBIT following was activated
                          // elsewhere for some reason
     }  // an else would be redundant for our purposes
@@ -139,7 +139,7 @@ void Orbit::scan() {
 /// @param targetAngle Angle in degrees we wish to rotate ORBIT. within [-180,
 /// 180] or [0, 360]
 /// @details `turretEncoder.get_angle()` is divided by 100 for scaling purposes.
-inline void Orbit::rotateAbsolute(double targetAngle) {
+void Orbit::rotateAbsolute(double targetAngle) {
   const double TOLERANCE = 5;
   if (targetAngle > 180) targetAngle -= 360;
   double currentAngle;
@@ -167,7 +167,7 @@ double Orbit::difference() {
 /// (preferably width of that object)
 /// @return The distance in \b inches that the robot is from the object,
 /// probably to pass into the `move()` function
-double Orbit::groundDistanceToDisk(const double &pixels) {
+double Orbit::groundDistanceToDisk(const double &pixels){
   const double distance = widthToDistance(pixels);
   if (distance < this->getHeight()) {
     return distance;
