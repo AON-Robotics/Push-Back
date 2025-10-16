@@ -79,8 +79,7 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
   double timeLimit = math::getTimetoTurnDeg(angle);
   
   if (sign == -1) { angle = 360.0 - angle + CLOCKWISE_ROTATION_DEGREES_OFFSET; }
-  if (sign == 1) { angle -= CLOCKWISE_ROTATION_DEGREES_OFFSET; 
-}
+  if (sign == 1) { angle -= CLOCKWISE_ROTATION_DEGREES_OFFSET; }
   const double startTime = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - startTime
 

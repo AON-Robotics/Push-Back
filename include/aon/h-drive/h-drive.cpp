@@ -1,5 +1,4 @@
-#include "Hdrivetrain.hpp"
-
+#include "h-drive.hpp"
 
 // ============================================================================
 //    _  _     _                 ___             _   _
@@ -46,7 +45,6 @@ double computeTimeout(double distance, double maxVel, double maxAccel) {
     return t_ideal * 1.5; // safety factor
 }
 
-
 // ============================================================================
 //    ___      _
 //   |   \ _ _(_)_ _____ _ _ ___
@@ -81,6 +79,10 @@ What if we dont stop the robot after a movement? and we choose when the robot sh
 */
 
 void move2D(double x, double y, double t = aon::odometry::GetDegrees()) {
-  aon::holonomic_motionH::MoveHolonomicMotionH(x, y, t);
+  aon::holonomic_motionH::MoveTrapezoidH(x, y, t);
+}
+
+void moveHorizontal(double dist) {
+
 }
 
