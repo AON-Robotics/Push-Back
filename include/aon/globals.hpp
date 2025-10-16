@@ -25,17 +25,32 @@
 aon::XDrive drivetrain = aon::XDrive();
 aon::TankDrive drivetrainTank = aon::TankDrive();
 
+// Intake
+aon::Intake intake = aon::Intake({-1, 1}, {1}, {-1}, 1);
 
-//Intake:
-aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);
+// Big Bot
+okapi::MotorGroup elevatorB = okapi::MotorGroup({1});
+okapi::MotorGroup hoarder = okapi::MotorGroup({-1});
+okapi::MotorGroup scorerB = okapi::MotorGroup({-1});
+// End Big Bot
 
-okapi::MotorGroup bottom = okapi::MotorGroup({1});
-okapi::MotorGroup top = okapi::MotorGroup({-2});
+// Small Bot
+// Drivetrain
+okapi::MotorGroup left({-7, -8, 9, 10});
+okapi::MotorGroup right({14, 12, -13, -11});
+
+// Intake
+okapi::MotorGroup elevator({6, 3});
+okapi::MotorGroup scorer({-4});
+okapi::MotorGroup judge({2});
+pros::ADIDigitalOut topScorer ('A');
+pros::ADIDigitalOut puncher ('B');
+// End Small Bot
 
 // Misc
 
-okapi::Motor arm = okapi::Motor(11);
-okapi::Motor turret = okapi::Motor(-15);
+okapi::Motor arm = okapi::Motor(1);
+okapi::Motor turret = okapi::Motor(-11);
 
 // TriPort
 
@@ -54,9 +69,9 @@ bool clawOn = false;
 
 // Encoders
 
-pros::Rotation turretEncoder(14, true);
+pros::Rotation turretEncoder(1, true);
 
-pros::ADIEncoder opticalEncoder('A', 'B');
+pros::ADIEncoder opticalEncoder('C', 'D');
 
 // Vision
 
@@ -69,7 +84,7 @@ enum Colors {
 
 Colors COLOR = RED;
 
-pros::Vision vision_sensor(12);
+pros::Vision vision_sensor(1);
 volatile bool turretFollowing = false;
 volatile bool turretBraking = true;
 volatile bool turretScanning = false;
@@ -79,7 +94,7 @@ pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAK
 
 // Distance
 
-pros::Distance distanceSensor(3);
+pros::Distance distanceSensor(1);
 volatile bool intakeScanning = false; // TODO: remove this
 
 // Potentiometer
@@ -122,8 +137,48 @@ inline void ConfigureMotors(const bool opcontrol = true) {
 
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
 
+  elevator.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  elevator.setGearing(okapi::AbstractMotor::gearset::green);
+  elevator.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  elevator.tarePosition();
+
+  hoarder.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  hoarder.setGearing(okapi::AbstractMotor::gearset::green);
+  hoarder.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  hoarder.tarePosition();
+
+  scorer.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  scorer.setGearing(okapi::AbstractMotor::gearset::green);
+  scorer.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  scorer.tarePosition();
+
+  left.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
+  left.setGearing(okapi::AbstractMotor::gearset::blue);
+  left.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  left.tarePosition();
+
+  right.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
+  right.setGearing(okapi::AbstractMotor::gearset::blue);
+  right.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  right.tarePosition();
+
+  scorer.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
+  scorer.setGearing(okapi::AbstractMotor::gearset::blue);
+  scorer.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  scorer.tarePosition();
+
+  judge.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
+  judge.setGearing(okapi::AbstractMotor::gearset::blue);
+  judge.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  judge.tarePosition();
+
+  elevator.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
+  elevator.setGearing(okapi::AbstractMotor::gearset::blue);
+  elevator.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  elevator.tarePosition();
+
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  arm.setGearing(okapi::AbstractMotor::gearset::red);
+  arm.setGearing(okapi::AbstractMotor::gearset::green);
   arm.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   arm.tarePosition();
 
@@ -134,18 +189,14 @@ inline void ConfigureMotors(const bool opcontrol = true) {
 
 }
 
-/**
- * \brief Adds the colors to the vision sensor
-*/
+/// @brief Adds the colors to the vision sensor
 inline void ConfigureColors(){
   vision_sensor.set_signature(RED, &RED_SIG);
   vision_sensor.set_signature(BLUE, &BLUE_SIG);
   vision_sensor.set_signature(STAKE, &STAKE_SIG);
 }
 
-/**
- * \brief Stops movement from robot
- */
+/// @brief Stops movement from robot
 void STOP(){
   drivetrain.stop();
   intake.stop();
@@ -153,25 +204,17 @@ void STOP(){
   turret.moveVelocity(0);
 }
 
-/**
- * \brief Toggles the value of a bool
- * 
- * \param boolean The variable to be toggled
- * 
- * \returns The updated boolean
- */
+/// @brief Toggles the value of a bool
+/// @param boolean The variable to be toggled
+/// @returns The updated boolean
 inline bool toggle(bool &boolean) {
   boolean = !boolean;
   return boolean;
 }
 
-/**
- * \brief Used to make sure a condition is being met or a block of code is being run
- * 
- * \param speed The speed with which to spin the intake to differentiate between multiple tests
- * 
- * \note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
-*/
+/// @brief Used to make sure a condition is being met or a block of code is being run
+/// @param speed The speed with which to spin the intake to differentiate between multiple tests
+/// @note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
 void testEndpoint(int speed = 100){
   STOP(); 
   intake.move(speed);
@@ -179,9 +222,7 @@ void testEndpoint(int speed = 100){
   intake.stop();
 }
 
-/**
- * \brief Task to stop all motors during auton testing if something goes wrong
- */
+/// @brief Task to stop all motors during auton testing if something goes wrong
 void autonSafety(){
   while(true){
     while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){

@@ -585,7 +585,7 @@ void quickMiddleScore(){
   drivetrain.move(10);
 }
 
-#if USING_BLACK_ROBOT
+#if USING_BIG_ROBOT
 
 /**
  * \brief This routine is if WE ARE RED and want to grab RED RINGS

@@ -7,7 +7,7 @@
 /// @brief Encapsulates functions and state for operator control.
 /// @details Practically uses Singleton design pattern, but classes would have
 ///          made it more complicated for beginners to understand. Also makes extensive
-///          use of USING_BLACK_ROBOT global constant and preprocessor directives to
+///          use of USING_BIG_ROBOT global constant and preprocessor directives to
 ///          make switching between robots not require separate branches, which could make
 ///          fixes and updates to one branch not apply to the other. Finally, it includes
 ///          tests for practically all of the fundamental functions except the driver
@@ -30,15 +30,15 @@ namespace aon::operator_control {
 ///          movements can be done without as much of a hassle.
 /// @param x The controller's user input between -1 and 1
 /// @param t Sensitivity (higher is more sensible and vice-versa)
-/// <a href="https://www.desmos.com/calculator/uhjyivyj4r">Demonstration of scaling function in Desmos.</a>
 /// @return double
-/// @warning Make sure that the input x is between -1 and 1!!!
+///
+/// @see Demonstration of scaling function in Desmos. https://www.desmos.com/calculator/kq9hgbxbwp
+/// @warning Make sure that the input x is between -127 and 127!!!
 inline double AnalogInputScaling(const double x, const double t) {
-  const double z = 127.0 * x;
   const double a = ::std::exp(-::std::fabs(t) / 10.0);
-  const double b = ::std::exp((::std::fabs(z) - 127.0) / 10.0);
+  const double b = ::std::exp((::std::fabs(x) - 127.0) / 10.0);
 
-  return (a + b * (1 - a)) * z / 127.0;
+  return (a + b * (1 - a)) * x / 127.0;
 }
 
 // ============================================================================
@@ -49,24 +49,103 @@ inline double AnalogInputScaling(const double x, const double t) {
 //
 // ============================================================================
 
+double sign = 1;
+bool up = false;
+bool out = false;
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
   //////////// DRIVE ////////////
-  const double vertical = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
-  const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY);
-  
-  top.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0));
-  bottom.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0));
+  const double vertical = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y), SENSITIVITY) * 600;
+  const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X), SENSITIVITY) * 600;
+
+  left.moveVelocity(vertical + turn);
+  right.moveVelocity(vertical - turn);
 
   //# From now on, all drivetrains used will need to use this format for driving
   if(false){
-    double leftX = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X) / 127.0, SENSITIVITY);
-    double leftY = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
-    double rightX = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY);
-    double rightY = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y) / 127.0, SENSITIVITY);
+    double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+    double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+    double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
+    double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
     drivetrain.drive(leftX, leftY, rightX, rightY);
   }
+
+  drivetrain.getPose();
+
+  #if !USING_BIG_ROBOT
+  // Score
+  if(mainController.get_digital(DIGITAL_Y)){
+    // intake.score(HIGH);
+    elevator.moveVelocity(sign * 200);
+    scorer.moveVelocity(-sign * 200);
+    hoarder.moveVelocity(sign * 200);
+  }
+  // Store High
+  else if(mainController.get_digital(DIGITAL_A)){
+    // intake.store(HIGH);
+    elevator.moveVelocity(sign * 200);
+    scorer.moveVelocity(sign * 200);
+    hoarder.moveVelocity(sign * 200);
+  }
+  // Store Low
+  else if(mainController.get_digital(DIGITAL_B)){
+    // intake.store(LOW);
+    elevator.moveVelocity(sign * 200);
+    scorer.moveVelocity(sign * 200);
+    hoarder.moveVelocity(-sign * 200);
+  }
+  // Stop otherwise
+  else {
+    // intake.stop();
+    elevator.moveVelocity(0);
+    scorer.moveVelocity(0);
+    hoarder.moveVelocity(0);
+  }
+  // Toggle direction
+  if(mainController.get_digital_new_press(DIGITAL_X)){
+    sign = (sign == 1) ? -1 : 1;
+  }
+  #else
+  int rpm = (int)elevator.getGearing();
+  // Score
+  if(mainController.get_digital(DIGITAL_Y)){
+    // intake.score(HIGH);
+    elevator.moveVelocity(sign * rpm);
+    scorer.moveVelocity(sign * rpm);
+    judge.moveVelocity(sign * rpm);
+  }
+  // Discard
+  else if(mainController.get_digital(DIGITAL_A)){
+    // intake.store(HIGH);
+    elevator.moveVelocity(sign * rpm);
+    scorer.moveVelocity(sign * rpm);
+    judge.moveVelocity(-sign * rpm);
+  }
+  // Change Height
+  else if(mainController.get_digital_new_press(DIGITAL_B)){
+    // intake.toggleHeight();
+    up = !up;
+    topScorer.set_value(up ? HIGH : LOW);
+  }
+  // Toggle descoring mechanism
+  else if(mainController.get_digital_new_press(DIGITAL_DOWN)){
+    // puncher.toggle();
+    out = !out;
+    puncher.set_value(out ? HIGH : LOW);
+  }
+  // Stop otherwise
+  else {
+    // intake.stop();
+    elevator.moveVelocity(0);
+    scorer.moveVelocity(0);
+    judge.moveVelocity(0);
+  }
+  // Toggle direction
+  if(mainController.get_digital_new_press(DIGITAL_X)){
+    sign = (sign == 1) ? -1 : 1;
+  }
+  #endif
   
   //////////// INTAKE ////////////
   

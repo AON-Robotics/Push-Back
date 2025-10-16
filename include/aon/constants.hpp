@@ -10,10 +10,10 @@
 #define TILE_DIAG_LENGTH 33.4066195836 // Calculated with the Pythagorean theorem
 
 // NOT using black robot = Using green robot
-#define USING_BLACK_ROBOT true
+#define USING_BIG_ROBOT true
 #define TESTING_AUTONOMOUS false 
 
-#define SENSITIVITY 1 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
+#define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
 #define DRIVE_WHEEL_DIAMETER 3.25
 #define TRACKING_WHEEL_DIAMETER 1.959
 #define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 1.572
