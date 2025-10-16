@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "../constants.hpp"
 #include "../globals.hpp"
-#include "../sensing/odometry.hpp"
+#include "../odometry/odometry.hpp"
 #include "../controls/pid/pid.hpp"
 #include "../controls/s-curve-profile.hpp"
 #include "../tools/logging.hpp"
@@ -22,6 +22,7 @@
  */
 
 namespace aon {
+Odometry odometry;
 
 void turretRotationAbsolute(double targetAngle);
 double widthToDistance(const double &width);
@@ -499,7 +500,7 @@ void testDistanceFromVision(){
 void testEKFWithGyro(){
   okapi::EKFFilter ekf(2.6E-4, 0.04);
   while(true){
-    const double pos = odometry::gyroscope.get_heading();
+    const double pos = odometry.gyroscope.get_heading();
     pros::lcd::print(0, "Heading = %.2f", pos);
     pros::lcd::print(1, "Filtered = %.2f", ekf.filter(pos)); // this one is slower which might mean i want to tweak the values for the ekf
     pros::delay(20);

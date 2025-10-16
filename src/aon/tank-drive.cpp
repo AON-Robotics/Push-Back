@@ -1,5 +1,6 @@
 #include "../include/aon/tank-drive/tank-drive.hpp"
 
+
 namespace aon {
 
 void TankDrive::motors(const double &rpm) {
@@ -46,15 +47,15 @@ void TankDrive::drivePID(PID pid, double dist, const double &MAX_REVS) {
   dist = abs(dist);                   // Setting the magnitude to positive
   pid.Reset();
   
-  Vector initialPos = odometry::GetPosition();
+  Vector initialPos = odometry.getPosition();
 
   const double timeLimit = math::estimateTimetoTarget(dist, MAX_REVS);
   const double start_time = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - start_time  // every time the variable is called it is recalculated automatically
 
-  while ((aon::odometry::GetPosition() - initialPos).GetMagnitude() < dist) {
+  while ((odometry.getPosition() - initialPos).GetMagnitude() < dist) {
     double currentDisplacement =
-        (aon::odometry::GetPosition() - initialPos).GetMagnitude();
+        (odometry.getPosition() - initialPos).GetMagnitude();
     double output = pid.Output(dist, currentDisplacement);
     pros::lcd::print(0, "Time Limit %.2f", timeLimit);
     pros::lcd::print(1, "Time: %.2f", time);
@@ -73,8 +74,8 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
   pid.Reset();
-  odometry::gyroscope.tare();  // .tare() or .reset(true) depending on the time issue
-  const double startAngle = odometry::GetDegrees();  // Angle relative to the start
+  odometry.gyroscope.tare();  // .tare() or .reset(true) depending on the time issue
+  const double startAngle = odometry.getDegrees();  // Angle relative to the start
   
   double timeLimit = math::getTimetoTurnDeg(angle);
   
@@ -86,7 +87,7 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
 
   while (time < 3 * timeLimit) {
 
-    double traveledAngle = abs(odometry::GetDegrees() - startAngle);
+    double traveledAngle = abs(odometry.getDegrees() - startAngle);
     
     double output = pid.Output(angle, traveledAngle);
 
@@ -113,7 +114,7 @@ void TankDrive::driveProfiled(double dist) {
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  Vector startPos = aon::odometry::GetPosition();
+  Vector startPos = odometry.getPosition();
   
   double now = pros::micros() / 1E6;
   double lastTime = now;
@@ -121,7 +122,7 @@ void TankDrive::driveProfiled(double dist) {
   this->motionProfile.setVelocity(this->getRPM());
   
   while (traveledDist < dist) {
-    traveledDist = (aon::odometry::GetPosition() - startPos).GetMagnitude();
+    traveledDist = (odometry.getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
@@ -150,13 +151,13 @@ void TankDrive::turnProfiled(double angle) {
   double currVelocity = 0;
   double currAccel = 0;
   double traveledAngle = 0;
-  double startAngle = aon::odometry::GetDegrees();
+  double startAngle = odometry.getDegrees();
 
   double now;
   double lastTime = pros::micros() / 1E6;
 
   while (traveledAngle < angle) {
-    traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
+    traveledAngle = abs(odometry.getDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
@@ -249,13 +250,13 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
   double dt = 0.02;
   double now = pros::micros() / 1E6;
   double lastTime = now;
-  const double rightEncStartPos = odometry::encoderRight.get_position(); //! Temporary
-  const double leftEncStartPos = odometry::encoderLeft.get_position(); //! Temporary
+  const double rightEncStartPos = odometry.encoderRight.get_position(); //! Temporary
+  const double leftEncStartPos = odometry.encoderLeft.get_position(); //! Temporary
   // const double startDist = odometry::getTraveledDistance();
   while(traveledDist < distance){
     // traveledDist = odometry::getTraveledDistance() - startDist;
-    const double rightEncDist = (std::abs(odometry::encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
-    const double leftEncDist = (std::abs(odometry::encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
+    const double rightEncDist = (std::abs(odometry.encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
+    const double leftEncDist = (std::abs(odometry.encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     traveledDist = (rightEncDist + leftEncDist) / 2; //! Temporary
     remainingDist = distance - traveledDist;
     now = pros::micros() / 1E6;
@@ -273,10 +274,10 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
 
 void TankDrive::driveInArcTo(const double &x, const double &y){
   // Get the current pose
-  Vector position = odometry::GetPosition();
-  position.SetPosition(math::inchesToMeters(position.GetX()), math::inchesToMeters(position.GetY()));
-  double heading = odometry::GetDegrees(); //? should this come in the same format as the GPS heading?
-  Vector target = Vector().SetPosition(x, y);
+  Vector position = odometry.getPosition();
+  position.setPosition(math::inchesToMeters(position.GetX()), math::inchesToMeters(position.GetY()));
+  double heading = odometry.getDegrees(); //? should this come in the same format as the GPS heading?
+  Vector target = Vector().setPosition(x, y);
 
   // Convert the heading to traditional math coordinates
   heading = (90 - heading); //? only do the `(90 - heading)` part if the heading comes in gps coordinates
@@ -295,12 +296,12 @@ void TankDrive::driveInArcTo(const double &x, const double &y){
   m_s = m_s == 0 ? DBL_MIN : m_s;
 
   // Get midpoint of the secant
-  Vector midpoint = Vector().SetPosition((position.GetX() + x) / 2, (position.GetY() + y) / 2);
+  Vector midpoint = Vector().setPosition((position.GetX() + x) / 2, (position.GetY() + y) / 2);
 
   // Calculate the position of the center of the circular path
   double centerX = (midpoint.GetY() - position.GetY() - (position.GetX() / m_t) + (midpoint.GetX() / m_s)) / ((-1 / m_t) + (1 / m_s));
   double centerY = ((-1 / m_t) * (centerX - position.GetX())) + position.GetY();
-  Vector center = Vector().SetPosition(centerX, centerY);
+  Vector center = Vector().setPosition(centerX, centerY);
 
   // Get the radius using the pythagorean theorem
   double radius = std::hypot(position.GetX() - center.GetX(), position.GetY() - center.GetY());
@@ -310,7 +311,7 @@ void TankDrive::driveInArcTo(const double &x, const double &y){
 
   // Use a projection to determine which way we are turning
   const double projectionStep = 0.001;
-  const Vector projection = Vector().SetPosition(position.GetX() + (projectionStep * std::cos(heading)),
+  const Vector projection = Vector().setPosition(position.GetX() + (projectionStep * std::cos(heading)),
                                                  position.GetY() + (projectionStep * std::sin(heading)));
   const double projectionAngle = math::getAngleInCircle(projection, center);
   
@@ -328,9 +329,10 @@ void TankDrive::driveInArcTo(const double &x, const double &y){
   this->driveAngleOfArc(math::metersToInches(radius), angle);
 }
 
-inline double calculateTurn(Vector target, Vector current) {
+inline double calculateTurn(Vector target, Pose current) {
+  Vector position = Vector().SetPos(current.x, current.y);
   // Get and change the heading to the common cartesian plane
-  double heading = 90 - odometry::gps.get_heading();
+  double heading = 90 - current.theta;
   // Limiting the heading to the 0-360 range
   if (heading < 0)
     heading += 360;
@@ -338,7 +340,7 @@ inline double calculateTurn(Vector target, Vector current) {
     heading -= 360;
   // This number is in respect to the common cartesian plane if odometry
   // position is used
-  double toTarget = (target - current).GetDegrees();
+  double toTarget = (target - position).GetDegrees();
   // Limiting the the target to the 0-360 range
   if (toTarget < 0)
     toTarget += 360;
@@ -354,19 +356,19 @@ inline double calculateTurn(Vector target, Vector current) {
 }
 
 void TankDrive::turnTo(const double &x, const double &y) {
-  Vector target = Vector().SetPosition(x, y);
+  Vector target = Vector().setPosition(x, y);
   // Determine current position
-  Vector current = odometry::gpsPosition();
+  Pose current = odometry.getPose();
   // Do the movement
   turn(-calculateTurn(target, current));
 }
 
 void TankDrive::goTo(const double &x, const double &y) {
-  Vector target = Vector().SetPosition(x, y);
+  Vector target = Vector().setPosition(x, y);
   // Determine current position
-  Vector current = odometry::gpsPosition();
+  Vector current = odometry.gpsPosition();
   // Do the movement
-  turn(-calculateTurn(target, current));
+  turn(-calculateTurn(target, odometry.getPose()));
   move(math::findDistance(target, current));
 }
 

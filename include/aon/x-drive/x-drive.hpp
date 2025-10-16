@@ -4,30 +4,21 @@
 #include "../../okapi/api.hpp"
 #include "../controls/s-curve-profile.hpp"
 #include "../math/number/number.hpp"
-#include "../sensing/odometry.hpp"
+#include "../odometry/odometry.hpp"
 #include "../math/misc/misc.hpp"
 #include "../controls/pid/pid.hpp"
 #include <cfloat>
+#include "../math/pose.hpp"
 
 namespace aon {
 
 // TODO: move this to the Odom class file
 
-class Pose {
- public:
-  /// @brief Position of the robot on the x-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double x;
-  /// @brief Position of the robot on the y-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double y;
-  /// @brief Orirentation of the robot in \b `radians` with respect to angle 90º in the VEX Field
-  double theta;
-
-  Pose(double x = 0, double y = 0, double theta = 0) : x(x), y(y), theta(theta) {}
-};
 
 // TODO: modify implementation of most methods to use holonomic motion
 class XDrive {
  private:
+  Odometry odometry;
   okapi::MotorGroup frontLeftMotors;
   okapi::MotorGroup frontRightMotors;
   okapi::MotorGroup backLeftMotors;

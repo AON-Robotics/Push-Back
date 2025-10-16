@@ -3,34 +3,26 @@
 #include "../../api.h"
 #include "../../okapi/api.hpp"
 #include "../controls/s-curve-profile.hpp"
-#include "../sensing/odometry.hpp"
+#include "../odometry/odometry.hpp"
 
 #include "../math/misc/misc.hpp"
 #include "../controls/pid/pid.hpp"
 #include <cfloat>
+#include "../math/pose.hpp"
 
 namespace aon {
 
 // TODO: move this to the Odom class file
 
-class PoseTank {
- public:
-  /// @brief Position of the robot on the x-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double x;
-  /// @brief Position of the robot on the y-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double y;
-  /// @brief Orirentation of the robot in \b `radians` with respect to angle 90º in the VEX Field
-  double theta;
 
-  PoseTank(double x = 0, double y = 0, double theta = 0) : x(x), y(y), theta(theta) {}
-};
 
 class TankDrive {
  private:
+  Odometry odometry;
   okapi::MotorGroup leftMotors;
   okapi::MotorGroup rightMotors;
   MotionProfile motionProfile;
-  PoseTank pose;
+  Pose pose;
 
   // TODO: add the odom object once it is done, use namespace temporarily
 
@@ -40,7 +32,8 @@ class TankDrive {
       : leftMotors(leftPorts),
         rightMotors(rightPorts),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
-        pose() {}
+        pose(),
+        odometry() {}
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
@@ -57,8 +50,8 @@ class TankDrive {
   /// (positive is clockwise)
   void driveWhileTurning(const double &forward, const double &turn);
 
-  PoseTank getPose() { return this->pose; }
-  void setPose(PoseTank p) { pose = p; }
+  Pose getPose() { return this->pose; }
+  void setPose(Pose p) { pose = p; }
 
   double getX() { return this->pose.x; }
   void setX(double x) { pose.x = x; }
