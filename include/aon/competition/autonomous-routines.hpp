@@ -24,17 +24,6 @@
 
 namespace aon {
 
-inline void rotateAbsolute(double targetAngle) {
-  orbit.rotateAbsolute(targetAngle);
-}
-
-inline double widthToDistance(const double &width) {
-  return orbit.widthToDistance(width);
-}
-
-inline double groundDistanceToDisk(const double &pixels) {
-  return orbit.groundDistanceToDisk(pixels);
-}
 
 // ============================================================================|
 //   ____        _       ____             _   _                
@@ -142,7 +131,7 @@ double getDistanceToRing(const Colors &color = orbit.getColor()){
 
   // Filter the distance for half a second using 100 measurements (1 every 5 milliseconds)
   for(int i = 0; i < 100; i++){
-    distance = ekf.filter(groundDistanceToDisk((orbit.getLargestObject()).width));
+    distance = ekf.filter(orbit.groundDistanceToDisk((orbit.getLargestObject()).width));
     pros::delay(5);
   }
 
@@ -319,7 +308,7 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
     //? maybe motion profile this variable
     double TURN = turnPID.Output(0, -difference) * 500;
     
-    const double distance = ekf.filter(groundDistanceToDisk(object.width));
+    const double distance = ekf.filter((orbit.getLargestObject()).width);
 
     double FORWARD = drivetrain.updateProfile(distance, dt);
 
@@ -346,7 +335,7 @@ void testDistanceFromVision(){
   while(true){
     pros::vision_object ring = orbit.getLargestObject();
     if(ring.signature == RED){
-      const double distance = groundDistanceToDisk(ring.width);
+      const double distance = (orbit.getLargestObject()).width;
       if(!std::isnormal(distance)) { continue; }
       const double avg = readingMav.update(distance);
       const double filtered = ekf.filter(distance); // this seems to be the best alternative out of the 2

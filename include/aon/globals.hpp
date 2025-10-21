@@ -103,12 +103,12 @@ enum Drivers {
 
 namespace aon {
 
-inline void ConfigureMotors(const bool opcontrol = true) {
+inline void Configure(const bool opcontrol = true) {
   // HOLD for AUTONOMOUS ||| BRAKE for OPERATOR CONTROL
   okapi::AbstractMotor::brakeMode brakeMode = opcontrol ? okapi::AbstractMotor::brakeMode::brake : okapi::AbstractMotor::brakeMode::hold;
 
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
-
+  orbit.configure();
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
   arm.setGearing(okapi::AbstractMotor::gearset::red);
   arm.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
