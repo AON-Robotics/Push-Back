@@ -1,4 +1,5 @@
 #include "../include/main.hpp"
+#include "aon/pure_pursuit.hpp"
 
 void initialize() {
   pros::Task guiTask(aon::gui::Initialize);
@@ -19,8 +20,15 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-  aon::AutonomousReader->ExecuteFunction("autonomous");
-  pros::delay(10);
+    std::vector<aon::Point> path = {
+        {0, 0},
+        {24, 0},
+        {24, 24},
+        {0, 24},
+        {0, 0}
+    };
+
+    aon::runPurePursuit(path);
 }
 
 // During development
