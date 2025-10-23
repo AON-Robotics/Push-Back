@@ -335,7 +335,7 @@ void testDistanceFromVision(){
   while(true){
     pros::vision_object ring = orbit.getLargestObject();
     if(ring.signature == RED){
-      const double distance = (orbit.getLargestObject()).width;
+      const double distance = orbit.groundDistanceToDisk(ring.width);
       if(!std::isnormal(distance)) { continue; }
       const double avg = readingMav.update(distance);
       const double filtered = ekf.filter(distance); // this seems to be the best alternative out of the 2
