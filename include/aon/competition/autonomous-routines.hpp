@@ -308,7 +308,7 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
     //? maybe motion profile this variable
     double TURN = turnPID.Output(0, -difference) * 500;
     
-    const double distance = ekf.filter((orbit.getLargestObject()).width);
+    const double distance = ekf.filter(orbit.groundDistanceToDisk((orbit.getLargestObject()).width));
 
     double FORWARD = drivetrain.updateProfile(distance, dt);
 
