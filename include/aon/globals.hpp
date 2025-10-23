@@ -168,16 +168,6 @@ void autonSafety(){
   }
 }
 
-/// @brief Starts intake scanning cycle
-void activateIntakeScan(){
-  intakeScanning = true;
-}
-
-/// @brief Ends intake scanning cycle
-void deactivateIntakeScan(){
-  intakeScanning = false;
-}
-
 }  // namespace aon
 
 #endif  // AON_GLOBALS_HPP_
