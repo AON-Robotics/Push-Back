@@ -4,14 +4,13 @@ void initialize() {
   pros::Task guiTask(aon::gui::Initialize);
   aon::logging::Initialize();
   pros::lcd::initialize();
-  aon::ConfigureMotors(false);
-  aon::ConfigureColors();
+  aon::Configure(false);
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
   pros::Task safetyTask(aon::autonSafety);
-  pros::Task turretFollowTask(aon::turretFollow);
   pros::Task intakeTask([]{intake.scan();});
-  pros::Task turretScanTask(aon::turretScan); // TODO: combine this with the follow task
+  pros::Task turretFollowTask([]{orbit.follow();});
+  pros::Task turretScanTask([]{orbit.scan();});
 }
 
 void disabled() {}
@@ -28,10 +27,10 @@ void autonomous() {
 // Program slot 2 with Planet Icon is for autonomous routine
 // Program slot 3 with Alien Icon is for tests or miscellaneous components
 void opcontrol() {
-  aon::ConfigureMotors();
+  aon::Configure();
   while (true) {
     #if TESTING_AUTONOMOUS
-    aon::ConfigureMotors(false); // Set drivetrain to hold for auton testing
+    aon::Configure(false); // Set drivetrain to hold for auton testing
 
     aon::AutonomousReader->ExecuteFunction("autonomous");
 
