@@ -1,9 +1,8 @@
 #pragma once
 
-#include "../tank-drive.hpp"
+#include "../include/aon/tank-drive/tank-drive.hpp"
 
-#include "./constants.hpp"
-#include "holonomic-motion-h.hpp" 
+#include "holonomic-motion-h.hpp"
 
 namespace aon {
 
@@ -25,37 +24,53 @@ class HDrive : public TankDrive {
  private:
   // Motor
   okapi::Motor middleMotor;
-
+  
   // Controller
-  pros::Controller mainController = pros::Controller(pros::E_CONTROLLER_MASTER);
-
+  // pros::Controller mainController = pros::Controller(pros::E_CONTROLLER_MASTER);
+  
   // Odometry
   PoseH pose;
-
- public:
+  
+  public:
+  
   // Constructor
-  HDrive(const okapi::Motor mid = {1}) : 
-    TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {-20, 19, -18},
-              const std::initializer_list<okapi::Motor> &rightPorts = {9, -8, 7}), 
-    middleMotor(mid);
+  HDrive(const okapi::Motor& mid = okapi::Motor(1))
+    : TankDrive(),
+      middleMotor(mid),
+      pose() {}
 
   // Helper functions 
-  inline double AnalogInputScaling(const double x, const double t);
+  // inline double AnalogInputScaling(const double x, const double t);
 
   // Controller function
+
   /// @brief Move robot with the controller. Holonomic motion with left joysick
   /// and turning with right.
-  void opcontrol();
+  // void opcontrol();
   
   // Movement functions
+
+  /// @brief Stop all the motors for H drive train
+  void stop() override;
+
+  /// @brief Moves mid motor the same `rpm` to move forward
+  /// @param rpm The speed in which to move all motors in \b rpm
+  void motorsMid(const double &rpm);
+
   /// @brief Use holonomic motion to move in 2 directions and turn at the same time.
   /// @param x Position in x we want to move
   /// @param y Position in y we want to move
   /// @param t Theta we want to turn
   void move2D(double x, double y, double t = aon::odometry::GetDegrees());
 
-  /// @brief Move horizontally using 
-  /// @param dist Distance to move horizontally
-  void moveHorizontal(double dist);
+  /// @brief Move horizontally to given distance using PID (default right)
+  /// @param pid The PID used for the driving
+  /// @param dist The distance to be moved in \b inches
+  /// @param MAX_REVS The maximum RPM to send to the movement
+  void moveHorizontalPID(PID pid, double dist, const double &MAX_REVS);
+
+  /// @brief Move horizontally using Motion profile (default right)
+  /// @param dist The distance to be moved in \b inches
+  void moveHorizontalProfiled(double dist);
 };
 }

@@ -7,6 +7,14 @@ void TankDrive::motors(const double &rpm) {
   this->rightMotors.moveVelocity(rpm);
 }
 
+void TankDrive::motorsLeft(const double &rpm) {
+  this->leftMotors.moveVelocity(rpm);
+}
+
+void TankDrive::motorsRight(const double &rpm) {
+  this->rightMotors.moveVelocity(rpm);
+}
+
 void TankDrive::rotate(const double &rpm) {
   this->leftMotors.moveVelocity(rpm);
   this->rightMotors.moveVelocity(-rpm);

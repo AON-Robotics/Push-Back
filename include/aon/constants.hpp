@@ -49,7 +49,7 @@
 #define GPS_INITIAL_Y -0.47 // Field
 #define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
 
-#define MAX_RPM (int)driveFull.getGearing()
+#define MAX_RPM 600 // make sure to change this for each drivetrain
 #define MAX_VELOCITY_LINEAR (double)(MAX_RPM * 2 * M_PI * (TRACKING_WHEEL_DIAMETER / 2)) / 60 // inches / sec
 #define INTAKE_VELOCITY (int)(200 * 0.8)  // move to header file. intake motor is on green (200 RPM), running it at ~80%
 #define DEFAULT_INITIAL_SPEED 0.0

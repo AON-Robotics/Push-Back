@@ -11,6 +11,8 @@
 #include "./x-drive/x-drive.hpp"
 #include "./intake/intake.hpp"
 #include "./tank-drive/tank-drive.hpp"
+#include "./h-drive/h-drive.hpp"
+#include "./controls/s-curve-profile.hpp" //! Change this, I dont like doing the include this far down and after ive done other stuff
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -22,14 +24,14 @@
 
 
 // Drivetrain
-aon::XDrive drivetrain = aon::XDrive();
-aon::TankDrive drivetrainTank = aon::TankDrive();
+// aon::XDrive drivetrain = aon::XDrive();
+aon::TankDrive drivetrain = aon::TankDrive();
+aon::HDrive drivetrainH = aon::HDrive();
 
-okapi::MotorGroup driveLeft = okapi::MotorGroup({-20, 19, -18});
-okapi::MotorGroup driveRight = okapi::MotorGroup({9, -8, 7});
-okapi::MotorGroup driveFull = okapi::MotorGroup({-20, 19, -18, 9, -8, 7});
-okapi::Motor middleMotor = okapi::Motor({1});
-#include "./controls/s-curve-profile.hpp" //! Change this, I dont like doing the include this far down and after ive done other stuff
+// okapi::MotorGroup driveLeft = okapi::MotorGroup({-20, 19, -18});
+// okapi::MotorGroup driveRight = okapi::MotorGroup({9, -8, 7});
+// okapi::MotorGroup driveFull = okapi::MotorGroup({-20, 19, -18, 9, -8, 7});
+// okapi::Motor middleMotor = okapi::Motor({1});
 
 //Intake:
 aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);

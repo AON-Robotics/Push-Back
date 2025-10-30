@@ -27,35 +27,56 @@ class PoseTank {
 
 class TankDrive {
  private:
-  okapi::MotorGroup leftMotors;
-  okapi::MotorGroup rightMotors;
-  MotionProfile motionProfile;
-  PoseTank pose;
-
-  // TODO: add the odom object once it is done, use namespace temporarily
-
+ // TODO: add the odom object once it is done, use namespace temporarily
+ PoseTank pose;
+ 
+ protected:
+ MotionProfile motionProfile;
+ 
+ okapi::MotorGroup leftMotors;
+ okapi::MotorGroup rightMotors;
+ okapi::MotorGroup driveFull;
+ 
  public:
-  TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {-20, 19, -18},
-            const std::initializer_list<okapi::Motor> &rightPorts = {9, -8, 7})
-      : leftMotors(leftPorts),
-        rightMotors(rightPorts),
-        motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
-        pose() {}
-
+ TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {-20, 19, -18},
+  const std::initializer_list<okapi::Motor> &rightPorts = {9, -8, 7},
+  const std::initializer_list<okapi::Motor> &drivePorts = {-20, 19, -18, 9, -8, 7})
+  : leftMotors(leftPorts),
+  rightMotors(rightPorts),
+  driveFull(drivePorts),
+  motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
+  pose() {}
+  
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
   void motors(const double &rpm);
 
+  /// @brief Moves left side motors the same `rpm` to move forward
+  /// @param rpm The speed in which to move all motors in \b rpm
+  void motorsLeft(const double &rpm);
+
+  /// @brief Moves right side motors the same `rpm` to move forward
+  /// @param rpm The speed in which to move all motors in \b rpm
+  void motorsRight(const double &rpm);
+  
   /// @brief Moves all motors the same `rpm` to rotate clockwise
   /// @param rpm The speed in which to move all motors in \b rpm
   void rotate(const double &rpm);
-
+  
   /// @brief Moves the robot forward while also turning
   /// @param forward The \b RPM to send to the motors for linear movement
   /// (positive is forward)
   /// @param turn The \b RPM to send to the motors for rotative movement
   /// (positive is clockwise)
   void driveWhileTurning(const double &forward, const double &turn);
+
+  /// @brief Get maximun revolutions per minute of drive train
+  /// @return Maximun revolutions per minute
+  int getMAXRPM() { return (int)driveFull.getGearing(); }
+
+  /// @brief Get maximun velocity in base on the drivetrain
+  /// @return Maximun velocity of tank drivetrain
+  int getMAXVEL() { return (double)(getMAXRPM() * 2 * M_PI * (TRACKING_WHEEL_DIAMETER / 2)) / 60; }
 
   PoseTank getPose() { return this->pose; }
   void setPose(PoseTank p) { pose = p; }
@@ -117,7 +138,7 @@ class TankDrive {
   void drive(double leftX, double leftY, double rightX, double rightY);
 
   /// @brief Stops all motors
-  void stop();
+  virtual void stop();
 
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for
