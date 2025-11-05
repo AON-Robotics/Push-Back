@@ -9,8 +9,8 @@
 #include <cmath>
 #include <algorithm>
 #include "../constants.hpp"
-#include "./trapezoid-profile/trapezoid.hpp"
-#include "./exponential-profile.hpp"
+#include "/Users/luis/Desktop/Push-Back/include/aon/controls/trapezoid-profile/trapezoid.hpp"
+#include "/Users/luis/Desktop/Push-Back/include/aon/controls/exponential-profile.hpp"
 #include "../sensing/odometry.hpp"
 #include "../globals.hpp"
 

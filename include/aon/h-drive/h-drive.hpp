@@ -2,7 +2,17 @@
 
 #include "../include/aon/tank-drive/tank-drive.hpp"
 
-#include "holonomic-motion-h.hpp"
+/**
+ * \file h-drive.hpp
+ *
+ * \brief Functions accord to a H Drive Train
+ * 
+ * \note The function move2D() is commented because its hard to make it part of
+ * the class, because it needs the drive and turn PID declare in globals.hpp. If we 
+ * include globals, it will create a dependencies problem. To use holonomic motion
+ * include the file holonomic-motion-h.hpp wherever you need it and use it function.
+ * 
+ * */
 
 namespace aon {
 
@@ -61,7 +71,7 @@ class HDrive : public TankDrive {
   /// @param x Position in x we want to move
   /// @param y Position in y we want to move
   /// @param t Theta we want to turn
-  void move2D(double x, double y, double t = aon::odometry::GetDegrees());
+  // void move2D(double x, double y, double t = aon::odometry::GetDegrees());
 
   /// @brief Move horizontally to given distance using PID (default right)
   /// @param pid The PID used for the driving
@@ -73,4 +83,4 @@ class HDrive : public TankDrive {
   /// @param dist The distance to be moved in \b inches
   void moveHorizontalProfiled(double dist);
 };
-}
+} // namespace aon

@@ -113,11 +113,11 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
   inline pros::Mutex orientation_mutex;
 
   // From the web
-  Vector changeWeb;
+  inline Vector changeWeb;
 
   // Implementing back encoder
-  Vector changeMine;
-  Vector changeVideo;
+  inline Vector changeMine;
+  inline Vector changeVideo;
 
   #if ENCODER_BACK
   //> Encoder back/mid struct instance
@@ -348,7 +348,7 @@ inline void Initialize() {
  * @details Uses changes in encoder (right and left) and gyro to calculate position
  * 
  * */
-void Update() {
+inline void Update() {
 
   /// Read encoder values, divided by 100 to convert centidegrees to degrees
   encoderRight_data.currentValue = encoderRight.get_position() / 100.0; 

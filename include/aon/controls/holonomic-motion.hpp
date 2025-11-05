@@ -72,10 +72,10 @@ void MoveHolonomicMotion(double vx, double vy, double vT,
   const double INPS2RPM = 60.0 / (M_PI * DRIVE_WHEEL_DIAMETER);
 
   // Move motors
-  drive_front_left.moveVelocity(FL * INPS2RPM);
-  drive_back_left.moveVelocity(BL * INPS2RPM);
-  drive_front_right.moveVelocity(-FR * INPS2RPM);
-  drive_back_right.moveVelocity(-BR * INPS2RPM);
+  // drive_front_left.moveVelocity(FL * INPS2RPM);
+  // drive_back_left.moveVelocity(BL * INPS2RPM);
+  // drive_front_right.moveVelocity(-FR * INPS2RPM);
+  // drive_back_right.moveVelocity(-BR * INPS2RPM);
 }
 
 inline void emptyFunction(int t) {}
