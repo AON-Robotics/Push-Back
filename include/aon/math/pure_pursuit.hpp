@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include "motor.hpp"
 
 namespace aon {
 //  STRUCTS & CONSTANTS

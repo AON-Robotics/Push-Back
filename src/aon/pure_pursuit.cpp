@@ -1,23 +1,32 @@
 #include "pure_pursuit.hpp"
-// #include "aon/tank-drive/tank-drive.hpp"   // Include TankDrive
 #include "globals.hpp"
-#include "pros/misc.h"                     // For pros::delay
-#include "pros/rtos.hpp"                   // For PROS timing
-// #include "/Users/geraldrodriguez/Development/High-Stakes/Push-Back/include/aon/globals.hpp"
+#include "pros/misc.h"
+#include "pros/rtos.hpp"
+
 using namespace aon;
+
 namespace aon {
+
+// ===========================================================
+//   Enable / Disable Simulation Mode
+// ===========================================================
+#define PURE_PURSUIT_SIMULATION 1
+// 0 = Use odometry + tank drive (real robot)
+// 1 = Use internal simulated robot model (no motors needed)
+
+// ===========================================================
+// Helpers
+// ===========================================================
 
 template <typename T>
 T clampValue(T v, T lo, T hi) {
     return (v < lo) ? lo : (v > hi) ? hi : v;
 }
 
-//  HELPER FUNCTIONS
 double distance(const Point& a, const Point& b) {
     return std::sqrt(std::pow(b.x - a.x, 2) + std::pow(b.y - a.y, 2));
 }
 
-// Overload to handle Robot–Point distance
 double distance(const Robot& r, const Point& p) {
     return std::sqrt(std::pow(p.x - r.x, 2) + std::pow(p.y - r.y, 2));
 }
@@ -26,100 +35,143 @@ double angleToPoint(const Robot& robot, const Point& target) {
     return std::atan2(target.y - robot.y, target.x - robot.x);
 }
 
-//  ADAPTIVE LOOKAHEAD FUNCTION
-// here we will see how our adaptive look ahead function works
+// ===========================================================
+// Adaptive Lookahead
+// ===========================================================
+
 double computeAdaptiveLookahead(double speed) {
     double L = MIN_LOOKAHEAD + SPEED_SCALE * speed;
     return clampValue(L, MIN_LOOKAHEAD, MAX_LOOKAHEAD);
 }
 
-//  FIND LOOKAHEAD POINT ON PATH
+// ===========================================================
+// Lookahead Point
+// ===========================================================
+
 Point findLookaheadPoint(const Robot& robot, const std::vector<Point>& path, double lookahead) {
     for (size_t i = 0; i < path.size() - 1; ++i) {
         double d1 = distance(robot, path[i]);
         double d2 = distance(robot, path[i + 1]);
+
         if (d1 < lookahead && d2 >= lookahead) {
             double t = (lookahead - d1) / (d2 - d1);
-            Point result;
-            result.x = path[i].x + t * (path[i + 1].x - path[i].x);
-            result.y = path[i].y + t * (path[i + 1].y - path[i].y);
-            return result;
+            return {
+                path[i].x + t * (path[i + 1].x - path[i].x),
+                path[i].y + t * (path[i + 1].y - path[i].y)
+            };
         }
     }
     return path.back();
 }
 
-//  UPDATE ROBOT STATE (for internal logic, not motion)
+// ===========================================================
+// Simulation Mode: Update Robot Pose Internally
+// ===========================================================
+
 void updateRobot(Robot& robot, const Point& target) {
     double targetAngle = angleToPoint(robot, target);
 
     double angleDiff = targetAngle - robot.heading;
-    while (angleDiff > M_PI)  angleDiff -= 2 * M_PI;
-    while (angleDiff < -M_PI) angleDiff += 2 * M_PI;
+    while (angleDiff >  M_PI) angleDiff -= 2*M_PI;
+    while (angleDiff < -M_PI) angleDiff += 2*M_PI;
 
-    // Limit turning rate for smoothness
-    if (angleDiff > MAX_TURN_RATE)  angleDiff = MAX_TURN_RATE;
+    if (angleDiff >  MAX_TURN_RATE) angleDiff = MAX_TURN_RATE;
     if (angleDiff < -MAX_TURN_RATE) angleDiff = -MAX_TURN_RATE;
 
     robot.heading += angleDiff;
-
-    // Update simulated position
     robot.x += robot.speed * std::cos(robot.heading);
     robot.y += robot.speed * std::sin(robot.heading);
 }
 
-//  PURE PURSUIT CONTROL LOOP (REAL ROBOT VERSION)
+// ===========================================================
+// Pure Pursuit Main Function
+// ===========================================================
+
 void runPurePursuit(const std::vector<Point>& path) {
-    Robot robot = {0, 0, 0, BASE_SPEED};
 
-    std::cout << "=== PURE PURSUIT (TankDrive + Adaptive Lookahead) ===\n";
+    Robot robot;
 
-    for (int step = 0; step < 500; ++step) {
-        double L = computeAdaptiveLookahead(robot.speed);
-        Point target = findLookaheadPoint(robot, path, L);
+#if PURE_PURSUIT_SIMULATION == 1
+    // =======================================================
+    //   SIMULATION MODE
+    // =======================================================
+    robot.x = 0;
+    robot.y = 0;
+    robot.heading = 0;
+    robot.speed = BASE_SPEED;
 
+    std::cout << "[SIMULATION MODE ON]\n";
+
+#else
+    // =======================================================
+    //   REAL ROBOT MODE (ODOMETRY + TANK DRIVE)
+    // =======================================================
+    Vector pos = odometry::GetPosition();
+    robot.x = pos.GetX();
+    robot.y = pos.GetY();
+    robot.heading = odometry::GetRadians();
+    robot.speed = BASE_SPEED;
+
+    std::cout << "[REAL ROBOT MODE]\n";
+#endif
+
+    const double END_THRESHOLD = 1.0;  // inches
+    const double LOOP_DT = 20;         // ms
+
+    while (true) {
+
+#if PURE_PURSUIT_SIMULATION == 0
+        // Update from real odometry
+        Vector pos = odometry::GetPosition();
+        robot.x = pos.GetX();
+        robot.y = pos.GetY();
+        robot.heading = odometry::GetRadians();
+#endif
+
+        // Distance to the final point
         double distToEnd = distance(robot, path.back());
-        if (distToEnd < 1.0) {
+        if (distToEnd < END_THRESHOLD) {
+#if PURE_PURSUIT_SIMULATION == 0
             drivetrainTank.stop();
-            std::cout << "Reached final destination!\n";
+#endif
+            std::cout << "Reached destination!\n";
             break;
         }
 
-        // Compute steering
+        // Compute adaptive L
+        double L = computeAdaptiveLookahead(robot.speed);
+
+        // Lookahead target
+        Point target = findLookaheadPoint(robot, path, L);
+
+        // Steering logic
         double targetAngle = angleToPoint(robot, target);
         double turnError = targetAngle - robot.heading;
-        while (turnError > M_PI)  turnError -= 2 * M_PI;
-        while (turnError < -M_PI) turnError += 2 * M_PI;
 
-        // Control signals
-        double forward = 100;              // Base RPM
-        double turn = turnError * 120;     // Steering strength
+        while (turnError >  M_PI) turnError -= 2*M_PI;
+        while (turnError < -M_PI) turnError += 2*M_PI;
 
-        // Clamp turn power
-        if (turn > 200) turn = 200;
-        if (turn < -200) turn = -200;
+        double forward = 100;               // constant forward
+        double turn = turnError * 120;      // proportional turn
+        turn = std::clamp(turn, -200.0, 200.0);
 
-        // Move robot using tank drive
-        // drivetrainTank.driveWhileTurning(forward, turn);
+#if PURE_PURSUIT_SIMULATION == 0
+        // Move actual robot
+        drivetrainTank.driveWhileTurning(forward, turn);
+#else
+        // Update simulated model
+        updateRobot(robot, target);
+#endif
 
-        // Adjust speed near goal
-        if (distToEnd < 10)
-            robot.speed = 1.0;
-        else
-            robot.speed = BASE_SPEED;
+        // Slow down near the goal
+        robot.speed = (distToEnd < 10) ? 1.0 : BASE_SPEED;
 
-        // Print debug info
-        std::cout << "Step " << step
-                  << " | Pos=(" << robot.x << ", " << robot.y << ")"
-                  << " | Target=(" << target.x << ", " << target.y << ")"
-                  << " | Lookahead=" << L
-                  << " | Heading=" << robot.heading
-                  << " | Turn=" << turn << "\n";
-
-        pros::delay(20);  // 20ms for PROS loop timing
+        pros::delay(LOOP_DT);
     }
 
+#if PURE_PURSUIT_SIMULATION == 0
     drivetrainTank.stop();
+#endif
 }
 
-}  // namespace pure_pursuit
+} // namespace aon
