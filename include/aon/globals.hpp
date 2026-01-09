@@ -21,43 +21,31 @@
 // ============================================================================
 
 
+#if USING_BIG_ROBOT
+
 // Drivetrain
-aon::XDrive drivetrain = aon::XDrive();
-aon::TankDrive drivetrainTank = aon::TankDrive();
+aon::TankDrive drivetrain = aon::TankDrive({16, -15, -14}, {-20, 19, 18});
+okapi::MotorGroup mid({17}); // Default make robot go right
 
-// Intake
-aon::Intake intake = aon::Intake({-1, 1}, {1}, {-1}, 1);
+pros::ADIDigitalOut wingsPistons('F');
+pros::ADIDigitalOut brooksPiston('H');
 
-// Big Bot
-okapi::MotorGroup elevatorB = okapi::MotorGroup({1});
-okapi::MotorGroup hoarder = okapi::MotorGroup({-1});
-okapi::MotorGroup scorerB = okapi::MotorGroup({-1});
-// End Big Bot
+aon::Intake intake = aon::Intake({1, -13, -10, 3, -6, -9}, {1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);
 
-// Small Bot
-// Drivetrain
-okapi::MotorGroup left({-7, -8, 9, 10});
-okapi::MotorGroup right({14, 12, -13, -11});
+pros::Vision vision_sensor(0);
 
-// Intake
-okapi::MotorGroup elevator({6, 3});
-okapi::MotorGroup scorer({-4});
-okapi::MotorGroup judge({2});
-pros::ADIDigitalOut topScorer ('A');
-pros::ADIDigitalOut puncher ('B');
-// End Small Bot
+#else
+
+aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
+aon::Intake intake = aon::Intake({6, -3, -2, -4}, {6, -3}, {-2}, {-4}, 'H', 'G', 'F', 5, 15);
+
+okapi::Motor arm(20);
+pros::Vision vision_sensor(8);
+
+#endif
 
 // Misc
-
-okapi::Motor arm = okapi::Motor(1);
-okapi::Motor turret = okapi::Motor(-11);
-
-// TriPort
-
-pros::ADIDigitalOut indexer ('G');
-bool indexerOut = false;
-pros::ADIDigitalOut claw ('H');
-bool clawOn = false;
+okapi::Motor turret = okapi::Motor(0);
 
 // ============================================================================
 //   ___ ___ _  _ ___  ___  ___  ___ 
@@ -68,8 +56,7 @@ bool clawOn = false;
 // ============================================================================
 
 // Encoders
-
-pros::Rotation turretEncoder(1, true);
+pros::Rotation turretEncoder(0, true);
 
 pros::ADIEncoder opticalEncoder('C', 'D');
 
@@ -79,12 +66,11 @@ pros::ADIEncoder opticalEncoder('C', 'D');
 enum Colors {
   RED = 1,
   BLUE,
-  STAKE
+  STAKE,
 };
 
 Colors COLOR = RED;
 
-pros::Vision vision_sensor(1);
 volatile bool turretFollowing = false;
 volatile bool turretBraking = true;
 volatile bool turretScanning = false;
@@ -92,31 +78,24 @@ pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8
 pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
 pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 
-// Distance
-
-pros::Distance distanceSensor(1);
-volatile bool intakeScanning = false; // TODO: remove this
-
 // Potentiometer
-
-pros::ADIPotentiometer potentiometer('F');
+pros::ADIPotentiometer potentiometer('P');
 
 /// PIDs
-
 aon::PID drivePID = aon::PID(0.02, 0, 0);
 aon::PID turnPID = aon::PID(0.002, 0, 0);
 aon::PID fastPID = aon::PID(1, 0, 0);
 aon::PID turretPID = aon::PID(0.25, 0, 0);
 
 /// Controller
-pros::Controller mainController = pros::Controller(pros::E_CONTROLLER_MASTER);
+pros::Controller mainController = pros::Controller(CONTROLLER_MASTER);
 
 namespace aon::operator_control {
 
 /// Driver profiles for all robots
 enum Drivers {
-  IAN,
-  DAVID,
+  KEVIN,
+  FABIAN,
   DEFAULT,
 };
 }  // namespace aon::operator_control
@@ -135,52 +114,27 @@ inline void ConfigureMotors(const bool opcontrol = true) {
   // HOLD for AUTONOMOUS ||| BRAKE for OPERATOR CONTROL
   okapi::AbstractMotor::brakeMode brakeMode = opcontrol ? okapi::AbstractMotor::brakeMode::brake : okapi::AbstractMotor::brakeMode::hold;
 
+  #if USING_BIG_ROBOT
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
+  
+  intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::green);
 
-  elevator.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  elevator.setGearing(okapi::AbstractMotor::gearset::green);
-  elevator.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  elevator.tarePosition();
-
-  hoarder.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  hoarder.setGearing(okapi::AbstractMotor::gearset::green);
-  hoarder.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  hoarder.tarePosition();
-
-  scorer.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  scorer.setGearing(okapi::AbstractMotor::gearset::green);
-  scorer.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  scorer.tarePosition();
-
-  left.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  left.setGearing(okapi::AbstractMotor::gearset::blue);
-  left.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  left.tarePosition();
-
-  right.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  right.setGearing(okapi::AbstractMotor::gearset::blue);
-  right.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  right.tarePosition();
-
-  scorer.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  scorer.setGearing(okapi::AbstractMotor::gearset::blue);
-  scorer.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  scorer.tarePosition();
-
-  judge.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  judge.setGearing(okapi::AbstractMotor::gearset::blue);
-  judge.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  judge.tarePosition();
-
-  elevator.setBrakeMode(okapi::AbstractMotor::brakeMode::coast);
-  elevator.setGearing(okapi::AbstractMotor::gearset::blue);
-  elevator.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  elevator.tarePosition();
+  mid.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
+  mid.setGearing(okapi::AbstractMotor::gearset::green);
+  mid.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  mid.tarePosition();
+  
+  #else
+  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
+  
+  intake.configure(okapi::AbstractMotor::brakeMode::coast, okapi::AbstractMotor::gearset::blue);
 
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
   arm.setGearing(okapi::AbstractMotor::gearset::green);
   arm.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   arm.tarePosition();
+
+  #endif
 
   turret.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
   turret.setGearing(okapi::AbstractMotor::gearset::green);
@@ -200,7 +154,9 @@ inline void ConfigureColors(){
 void STOP(){
   drivetrain.stop();
   intake.stop();
-  arm.moveVelocity(0);
+  #if USING_BIG_ROBOT
+  mid.moveVelocity(0);
+  #endif
   turret.moveVelocity(0);
 }
 

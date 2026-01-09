@@ -15,7 +15,7 @@ class Pose {
   /// @brief Position of the robot on the y-axis in \b `inches` with respect to
   /// the field using (0,0) as the center of the field
   double y;
-  /// @brief Orirentation of the robot in \b `radians` with respect to angle 90º
+  /// @brief Orientation of the robot in \b `radians` with respect to angle 90º
   /// in the VEX Field
   double theta;
 

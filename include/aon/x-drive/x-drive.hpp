@@ -25,10 +25,10 @@ class XDrive : public Drivetrain {
   // TODO: add the odom object once it is done, use namespace temporarily
 
  public:
-  XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {1},
-         const std::initializer_list<okapi::Motor> &FRPorts = {-2},
-         const std::initializer_list<okapi::Motor> &BLPorts = {-3},
-         const std::initializer_list<okapi::Motor> &BRPorts = {4})
+  XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {0},
+         const std::initializer_list<okapi::Motor> &FRPorts = {0},
+         const std::initializer_list<okapi::Motor> &BLPorts = {0},
+         const std::initializer_list<okapi::Motor> &BRPorts = {0})
       : frontLeftMotors(FLPorts),
         frontRightMotors(FRPorts),
         backLeftMotors(BLPorts),

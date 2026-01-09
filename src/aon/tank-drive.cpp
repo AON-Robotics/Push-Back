@@ -24,15 +24,23 @@ void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) 
 void TankDrive::stop() { this->motors(0); }
 
 void TankDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset){
-    leftMotors.setBrakeMode(brakeMode);
-    leftMotors.setGearing(gearset);
-    leftMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    leftMotors.tarePosition();
-    
-    rightMotors.setBrakeMode(brakeMode);
-    rightMotors.setGearing(gearset);
-    rightMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    rightMotors.tarePosition();
+  leftMotors.setBrakeMode(brakeMode);
+  leftMotors.setGearing(gearset);
+  leftMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  leftMotors.tarePosition();
+  
+  rightMotors.setBrakeMode(brakeMode);
+  rightMotors.setGearing(gearset);
+  rightMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  rightMotors.tarePosition();
+  
+  if(brakeMode == okapi::AbstractMotor::brakeMode::hold){
+    leftMotors.SetAcceleration(0);
+    rightMotors.SetAcceleration(0);
+  } else {
+    leftMotors.SetAcceleration(MAX_ACCEL);
+    rightMotors.SetAcceleration(MAX_ACCEL);
+  }
 }
 
 double TankDrive::getRPM(){
@@ -107,7 +115,7 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
 
 void TankDrive::driveProfiled(double dist) {
   if (dist == 0) { return; }
-  const int sign = dist / abs(dist);  // Getting the direction of the movement
+  const int sign = dist / abs(dist);  // Direction of the movement
   dist = abs(dist);                   // Setting the magnitude to positive
   
   double dt = 0.02;                   // (s)
@@ -126,11 +134,13 @@ void TankDrive::driveProfiled(double dist) {
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     lastTime = now;
+
+    pros::lcd::print(0, "Trav %.2f", traveledDist);
     
     currVelocity = motionProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
 
-    if (traveledDist >= dist) { break; }  // Overshoot prevention
+    if (remainingDist <= 0) { break; }  // Overshoot prevention
 
     pros::delay(20);
   }
@@ -139,6 +149,8 @@ void TankDrive::driveProfiled(double dist) {
 }
 
 void TankDrive::turnProfiled(double angle) {
+  okapi::EKFFilter ekf(3E-4, 0.04);
+  // okapi::EKFFilter ekf(3E-4, 0.06);
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
@@ -149,14 +161,18 @@ void TankDrive::turnProfiled(double angle) {
   double dt = 0.02;                     // (s)
   double currVelocity = 0;
   double currAccel = 0;
+  double currAngle;
   double traveledAngle = 0;
-  double startAngle = aon::odometry::GetDegrees();
+  double startAngle = ekf.filter(aon::odometry::gyroscope.get_rotation()); // TODO: add a function for this in the future odom class;
+  // double startAngle = aon::odometry::GetDegrees();  //! this means we need an equivalent for the odometer but for gyro
 
   double now;
   double lastTime = pros::micros() / 1E6;
 
   while (traveledAngle < angle) {
-    traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
+    currAngle = ekf.filter(aon::odometry::gyroscope.get_rotation());
+    traveledAngle = abs(currAngle - startAngle);
+    // traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
@@ -170,10 +186,8 @@ void TankDrive::turnProfiled(double angle) {
     pros::lcd::print(5, "Max Velocity: %.2f", getSpeed(MAX_VELOCITY));
     
     // Acceleration
-    // For the condition, consider half the deceleration for accuracy (there is
-    // an error of half an inch almost constant when not used, I have to
-    // investigate a bit further on that part but if works fine like this)
-    if (circumference * (remainingAngle / 360.0) <= getSpeed(currVelocity) * getSpeed(currVelocity) / (2.0 * getSpeed(MAX_DECEL * 0.5))) {
+    // For the condition, consider half the deceleration for accuracy
+    if (circumference * (remainingAngle / 360.0) <= getSpeed(currVelocity) * getSpeed(currVelocity) / (2.0 * getSpeed(MAX_DECEL * 0.4))) {
       currAccel = -MAX_DECEL;
     } else {
       currAccel = std::min(currAccel + (MAX_JERK * dt), MAX_ACCEL);

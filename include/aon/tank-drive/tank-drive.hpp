@@ -3,6 +3,7 @@
 #include "../../api.h"
 #include "../../okapi/api.hpp"
 #include "../controls/s-curve-profile.hpp"
+#include "../controls/smart_motor.hpp"
 #include "../sensing/odometry.hpp"
 
 #include "../math/misc/misc.hpp"
@@ -27,18 +28,18 @@ class PoseTank {
 
 class TankDrive {
  private:
-  okapi::MotorGroup leftMotors;
-  okapi::MotorGroup rightMotors;
+  SmartMotorGroup leftMotors;
+  SmartMotorGroup rightMotors;
   MotionProfile motionProfile;
   PoseTank pose;
 
   // TODO: add the odom object once it is done, use namespace temporarily
 
  public:
-  TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {-20, 19, -18},
-            const std::initializer_list<okapi::Motor> &rightPorts = {9, -8, 7})
-      : leftMotors(leftPorts),
-        rightMotors(rightPorts),
+  TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
+            const std::initializer_list<okapi::Motor> &rightPorts = {0})
+      : leftMotors(leftPorts, 0, MAX_ACCEL),
+        rightMotors(rightPorts, 0, MAX_ACCEL),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         pose() {}
 
