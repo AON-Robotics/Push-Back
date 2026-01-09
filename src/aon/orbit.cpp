@@ -16,6 +16,11 @@ void Orbit::configure() {
   vision_sensor.set_signature(RED, &RED_SIG);
   vision_sensor.set_signature(BLUE, &BLUE_SIG);
   vision_sensor.set_signature(STAKE, &STAKE_SIG);
+
+  motor.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  motor.setGearing(okapi::AbstractMotor::gearset::green);
+  motor.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  motor.tarePosition();
 }
 
 /// @brief Begins ORBIT following cycle
@@ -211,7 +216,7 @@ double Orbit::widthToDistance(const double &width) {
   // then the formula technically is:
   // d = K / pixels
   // where K is a constant K = |i| * (w_o / CONSTANT)
-  const double REAL_WIDTH = 7;
+  const double REAL_WIDTH = 3.25;
   const double DISTANCE_OF_IMAGE = 0.0625;  // estimated/experimental
   const double imageWidthInInches =
       pixelsToInches(width);  // also somewhat estimated/experimental

@@ -8,9 +8,10 @@ void initialize() {
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
   pros::Task safetyTask(aon::autonSafety);
-  pros::Task intakeTask([]{intake.scan();});
   pros::Task turretFollowTask([]{orbit.follow();});
-  pros::Task turretScanTask([]{orbit.scan();});
+  pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
+  pros::Task intakeScanning([]{intake.scan();});
+  pros::Task intakeSorting([]{intake.sort();});
 }
 
 void disabled() {}
@@ -32,9 +33,14 @@ void opcontrol() {
     #if TESTING_AUTONOMOUS
     aon::Configure(false); // Set drivetrain to hold for auton testing
 
-    aon::AutonomousReader->ExecuteFunction("autonomous");
+    // aon::AutonomousReader->ExecuteFunction("autonomous");
+    #if USING_BIG_ROBOT
+    aon::testBigBotRoutine();
+    #else
+    aon::testSmallBotRoutine();
+    #endif
 
-    pros::delay(3000);
+    pros::delay(5000);
     #else
     aon::operator_control::Run(aon::operator_control::DEFAULT);
     #endif

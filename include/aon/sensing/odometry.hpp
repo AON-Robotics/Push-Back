@@ -44,13 +44,23 @@
 
 namespace aon::odometry {
 
-inline pros::Rotation encoderRight(5, true);
-inline pros::Rotation encoderLeft(4, false);
-inline pros::Rotation encoderBack(11, false);
-#if GYRO_ENABLED
-inline pros::Imu gyroscope(6);
+#if USING_BIG_ROBOT
+inline pros::Rotation encoderRight(4, true);
+inline pros::Rotation encoderLeft(12, false);
+inline pros::Rotation encoderBack(2, true);
+#else
+inline pros::Rotation encoderRight(1, true);
+inline pros::Rotation encoderLeft(9, false);
+inline pros::Rotation encoderBack(21, false);
 #endif
-inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
+#if GYRO_ENABLED
+#if USING_BIG_ROBOT
+inline pros::Imu gyroscope(11);
+#else
+inline pros::Imu gyroscope(10);
+#endif
+#endif
+inline pros::Gps gps(21, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
   // ============================================================================
   //   __   __        _      _    _
@@ -382,11 +392,13 @@ inline void Update() {
   gyro_data.prevDegrees = gyro_data.currentDegrees;
   
   // Right now, confidence gyro 1.0, encoder confidence 0 (must sum 1) 
+  //# deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaDegrees;
   deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaRadians;
   #endif
   
   // Updating angle
   double previousTheta = GetRadians();
+  //# SetDegrees(GetDegrees() + deltaTheta);
   SetRadians(GetRadians() + deltaTheta);
   
   // Calculations simple trigonometry, i.e., mine :)

@@ -2,69 +2,418 @@
 
 namespace aon {
 
-Intake::Intake(const std::initializer_list<okapi::Motor> &allPorts,
-               const std::initializer_list<okapi::Motor> &railPorts,
-               const std::initializer_list<okapi::Motor> &gatePorts,
-               int distanceSensorPort)
-    : _intake(allPorts),
-      _rail(railPorts),
-      _gate(gatePorts),
-      distanceSensor(distanceSensorPort) {}
+#if USING_BIG_ROBOT
 
-void Intake::move(const int &rpm) { _intake.moveVelocity(rpm); }
+Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
+               const std::initializer_list<okapi::Motor>& elevatorPorts,
+               const std::initializer_list<okapi::Motor>& topHoarderPorts,
+               const std::initializer_list<okapi::Motor>& bottomHoarderPorts,
+               const std::initializer_list<okapi::Motor>& scorerPorts,
+               const std::initializer_list<okapi::Motor>& shotbeltPorts,
+               const std::initializer_list<okapi::Motor>& shooterPorts,
+               char shrimpPistonsPort, int distanceSensorPort,
+               int colorSensorPort)
+    : intakeMG(allMotorPorts),
+      elevatorMG(elevatorPorts),
+      topHoarderMG(topHoarderPorts),
+      bottomHoarderMG(bottomHoarderPorts),
+      scorerMG(scorerPorts),
+      shotbeltMG(shotbeltPorts),
+      shooterMG(shooterPorts),
+      shrimpPistons(shrimpPistonsPort),
+      distanceSensor(distanceSensorPort),
+      colorSensor(colorSensorPort) {}
 
-void Intake::rail(const int &rpm) { _rail.moveVelocity(rpm); }
+void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
+                       okapi::AbstractMotor::gearset gearset) {
+  intakeMG.setBrakeMode(brakeMode);
+  intakeMG.setGearing(gearset);
+  intakeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  intakeMG.tarePosition();
 
-void Intake::gate(const int &rpm) { _gate.moveVelocity(rpm); }
+  elevatorMG.setBrakeMode(brakeMode);
+  elevatorMG.setGearing(gearset);
+  elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  elevatorMG.tarePosition();
 
-void Intake::stop() { _intake.moveVelocity(0); }
+  topHoarderMG.setBrakeMode(brakeMode);
+  topHoarderMG.setGearing(gearset);
+  topHoarderMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  topHoarderMG.tarePosition();
+
+  bottomHoarderMG.setBrakeMode(brakeMode);
+  bottomHoarderMG.setGearing(gearset);
+  bottomHoarderMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  bottomHoarderMG.tarePosition();
+
+  scorerMG.setBrakeMode(brakeMode);
+  scorerMG.setGearing(gearset);
+  scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  scorerMG.tarePosition();
+
+  shotbeltMG.setBrakeMode(brakeMode);
+  shotbeltMG.setGearing(okapi::AbstractMotor::gearset::blue);
+  shotbeltMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  shotbeltMG.tarePosition();
+
+  shooterMG.setBrakeMode(brakeMode);
+  shooterMG.setGearing(gearset);
+  shooterMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  shooterMG.tarePosition();
+}
+
+void Intake::topHoarder(const int& rpm) { topHoarderMG.moveVelocity(rpm); }
+
+void Intake::bottomHoarder(const int& rpm) {
+  bottomHoarderMG.moveVelocity(rpm);
+}
+
+void Intake::shotbelt(const int& rpm) { shotbeltMG.moveVelocity(rpm); }
+
+void Intake::shooter(const int& rpm) { shooterMG.moveVelocity(rpm); }
+
+void Intake::scan() {
+  size_t stopTime = UINT32_MAX;
+  const short DELAY_PER_BALL = 2600;  // ms
+  while (true) {
+    if (scanning) {
+      if (this->isObjectDetected()) {
+        this->pickUp();
+        stopTime = pros::millis() + DELAY_PER_BALL;
+        pros::delay(
+            500);  // this is to avoid counting the same block many times
+      }
+      if (pros::millis() >= stopTime) {
+        this->elevator(0);
+        this->bottomHoarder(0);
+        this->scorer(0);
+        stopTime = INT_MAX;
+      }
+    }
+    pros::delay(50);
+  }
+}
+
+void Intake::sort() {
+  size_t checkTime = 0;
+  size_t actionTime = UINT32_MAX;
+  size_t stopTime = UINT32_MAX;
+  const short ACTION_DELAY = 5;        // ms
+  const short CHECK_DELAY = 200;       // ms
+  const short ACCEPTANCE_DELAY = 700;  // ms
+  const short REJECTION_DELAY = 450;   // ms
+  Action action;
+  while (true) {
+    if (scanning) {
+      const double hue = this->hue();
+      const bool red = isRed(hue), blue = isBlue(hue);
+
+      if (pros::millis() >= checkTime && (red || blue)) {
+        // Schedule Corresponding Action
+        if ((blue && BLUE_ALLIANCE) || (red && RED_ALLIANCE)) {
+          action = ACCEPT;
+          actionTime = pros::millis() + ACTION_DELAY;
+        } else if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
+          action = REJECT;
+          actionTime = pros::millis() + 0;
+        }
+        checkTime = pros::millis() + CHECK_DELAY;
+      }
+
+      if (pros::millis() >= actionTime) {
+        // Execute Scheduled Action
+        if (action == ACCEPT) {
+          this->topHoarder();
+          this->scorer(-INTAKE_VELOCITY);
+          this->shotbelt();
+          stopTime = pros::millis() + ACCEPTANCE_DELAY;
+        } else if (action == REJECT) {
+          this->topHoarder(-INTAKE_VELOCITY);
+          this->bottomHoarder();
+          this->scorer(-INTAKE_VELOCITY);
+          stopTime = pros::millis() + REJECTION_DELAY;
+        }
+        actionTime = UINT32_MAX;
+      }
+
+      if (pros::millis() >= stopTime) {
+        // Stop Scheduled Action after the given delay
+        this->topHoarder(0);
+        this->scorer(0);
+        this->shotbelt(0);
+        this->bottomHoarder(0);
+        stopTime = UINT32_MAX;
+      }
+    }
+    pros::delay(25);
+  }
+}
+
+void Intake::pickUp(const int& delay) {
+  this->elevator();
+  this->bottomHoarder();
+  this->scorer(-INTAKE_VELOCITY);
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->scorer(0);
+  this->bottomHoarder(0);
+  this->elevator(0);
+}
+
+void Intake::store(const int& delay) {
+  this->elevator();
+  this->scorer(-INTAKE_VELOCITY);
+  this->topHoarder();
+  this->bottomHoarder();
+  this->shotbelt();
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->elevator(0);
+  this->scorer(0);
+  this->topHoarder(0);
+  this->bottomHoarder(0);
+  this->shotbelt(0);
+}
+
+void Intake::hoard(const int& delay) {
+  this->elevator();
+  this->scorer(-INTAKE_VELOCITY);
+  this->topHoarder(-INTAKE_VELOCITY);
+  this->bottomHoarder();
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->elevator(0);
+  this->scorer(0);
+  this->topHoarder(0);
+  this->bottomHoarder(0);
+}
+
+void Intake::score(const Height& to, const Height& from, const int& delay) {
+  if (to == TOP) {
+    this->move();
+  } else if (to == BOTTOM) {
+    this->elevator(-INTAKE_VELOCITY);
+    this->scorer();
+    this->topHoarder(-INTAKE_VELOCITY);
+    this->bottomHoarder(-INTAKE_VELOCITY);
+    this->shotbelt(-INTAKE_VELOCITY);
+    this->shooter(-200);
+  } else if (to == MIDDLE) {
+    if (from == TOP) {
+      this->elevator();
+      this->scorer();
+      this->topHoarder(-INTAKE_VELOCITY);
+      this->bottomHoarder(-INTAKE_VELOCITY);
+      this->shotbelt(-INTAKE_VELOCITY);
+      this->shooter(-200);
+    } else if (from == BOTTOM) {
+      this->elevator();
+      this->scorer();
+      this->topHoarder();
+      this->bottomHoarder();
+    }
+  }
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->stop();
+}
+
+void Intake::dropShrimp() { shrimpPistons.set_value(HIGH); }
+
+void Intake::raiseShrimp() { shrimpPistons.set_value(LOW); }
+
+#else
+
+Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
+               const std::initializer_list<okapi::Motor>& elevatorPorts,
+               const std::initializer_list<okapi::Motor>& judgePorts,
+               const std::initializer_list<okapi::Motor>& scorerPorts,
+               char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
+               int distanceSensorPort, int colorSensorPort)
+    : intakeMG(allMotorPorts),
+      elevatorMG(elevatorPorts),
+      judgeMG(judgePorts),
+      scorerMG(scorerPorts),
+      scorerPiston(scorerPistonPort),
+      cartPiston(cartPistonPort),
+      trapdoorPiston(trapdoorPistonPort),
+      distanceSensor(distanceSensorPort),
+      colorSensor(colorSensorPort) {}
+
+void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
+                       okapi::AbstractMotor::gearset gearset) {
+  intakeMG.setBrakeMode(brakeMode);
+  intakeMG.setGearing(gearset);
+  intakeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  intakeMG.tarePosition();
+
+  elevatorMG.setBrakeMode(brakeMode);
+  elevatorMG.setGearing(gearset);
+  elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  elevatorMG.tarePosition();
+
+  judgeMG.setBrakeMode(brakeMode);
+  judgeMG.setGearing(gearset);
+  judgeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  judgeMG.tarePosition();
+
+  scorerMG.setBrakeMode(brakeMode);
+  scorerMG.setGearing(gearset);
+  scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  scorerMG.tarePosition();
+}
+
+void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
+
+void Intake::scan() {
+  size_t stopTime = UINT32_MAX;
+  const short DELAY_PER_BALL = 2450;  // ms
+  while (true) {
+    if (scanning) {
+      if (this->isObjectDetected()) {
+        this->pickUp();
+        stopTime = pros::millis() + DELAY_PER_BALL;
+        pros::delay(
+            500);  // this is to avoid counting the same block many times
+      }
+
+      if (pros::millis() >= stopTime) {
+        this->elevator(0);
+        stopTime = INT_MAX;
+      }
+    }
+
+    pros::delay(50);
+  }
+}
+
+void Intake::sort() {
+  size_t checkTime = 0;
+  size_t actionTime = UINT32_MAX;
+  size_t stopTime = UINT32_MAX;
+  const short ACTION_DELAY = 20;       // ms
+  const short CHECK_DELAY = 100;       // ms
+  const short ACCEPTANCE_DELAY = 800;  // ms
+  const short REJECTION_DELAY = 400;   // ms
+  Action action;
+  while (true) {
+    if (scanning) {
+      const double hue = this->hue();
+      const bool red = isRed(hue), blue = isBlue(hue);
+
+      if (pros::millis() >= checkTime && (red || blue)) {
+        // Schedule Corresponding Action
+        if ((blue && BLUE_ALLIANCE) || (red && RED_ALLIANCE)) {
+          action = ACCEPT;
+        } else if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
+          action = REJECT;
+        }
+        actionTime = pros::millis() + ACTION_DELAY;
+        checkTime = pros::millis() + CHECK_DELAY;
+      }
+
+      if (pros::millis() >= actionTime) {
+        // Execute Scheduled Action
+        if (action == ACCEPT) {
+          this->judge();
+          this->scorer();
+          stopTime = pros::millis() + ACCEPTANCE_DELAY;
+        } else if (action == REJECT) {
+          this->judge(-INTAKE_VELOCITY);
+          this->scorer();
+          stopTime = pros::millis() + REJECTION_DELAY;
+        }
+        actionTime = UINT32_MAX;
+      }
+
+      if (pros::millis() >= stopTime) {
+        // Stop Scheduled Action after the given delay
+        this->judge(0);
+        this->scorer(0);
+        stopTime = UINT32_MAX;
+      }
+    }
+    pros::delay(25);
+  }
+}
+
+void Intake::pickUp(const int& delay) {
+  this->elevator();
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->elevator(0);
+}
+
+void Intake::store(const int& delay) {
+  this->elevator();
+  this->judge();
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->elevator(0);
+  this->judge(0);
+}
+
+void Intake::reject(const int& delay) {
+  this->elevator();
+  this->judge(-INTAKE_VELOCITY);
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->elevator(0);
+  this->judge(0);
+}
+
+void Intake::score(const Height& height, const int& delay) {
+  if (height == TOP) {
+    this->move();
+  } else if (height == BOTTOM) {
+    this->move(-INTAKE_VELOCITY);
+  } else
+    return;
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->stop();
+}
+
+void Intake::setScorerHeight(const short& height) {
+  scorerPiston.set_value(height);
+}
+
+void Intake::dropCart() { cartPiston.set_value(HIGH); }
+
+void Intake::raiseCart() { cartPiston.set_value(LOW); }
+
+void Intake::openTrapdoor() { trapdoorPiston.set_value(HIGH); }
+
+void Intake::closeTrapdoor() { trapdoorPiston.set_value(LOW); }
+
+#endif
+
+void Intake::move(const int& rpm) { intakeMG.moveVelocity(rpm); }
+
+void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
+
+void Intake::scorer(const int& rpm) { scorerMG.moveVelocity(rpm); }
+
+void Intake::stop() { intakeMG.moveVelocity(0); }
 
 double Intake::distance() { return distanceSensor.get(); }
 
 bool Intake::isObjectDetected() { return this->distance() <= DISTANCE; }
 
-void Intake::scan() {
-  while (true) {
-    if (scanning && this->isObjectDetected()) {
-      this->pickUp();
-    }
-    pros::delay(20);
-  }
-}
-
 void Intake::activateScan() { scanning = true; }
 
 void Intake::stopScan() { scanning = false; }
 
-void Intake::openGate(const int &delay) {
-  this->gate(-100);
-  pros::delay(delay);
-  this->gate(0);
-}
-
-void Intake::pickUp(const int &delay) {
-  this->move(INTAKE_VELOCITY / 0.8);  // run a bit faster than our default
-  pros::delay(delay);
-  this->stop();  // stop after the delay
-}
-
-void Intake::score(const int &delay) {
-  this->rail(INTAKE_VELOCITY);
-  pros::delay(delay);
-  this->rail(0);
-}
-
-void Intake::discard() {
-  this->move(-INTAKE_VELOCITY);
-  pros::delay(1000);
+void Intake::kickBack() {
+  this->move(-100);
+  pros::delay(150);
   this->stop();
 }
 
-void Intake::kickBackRail(){
-  this->rail(-100);
-  pros::delay(150);
-  this->rail(0);
+double Intake::hue() { return colorSensor.get_hue(); }
 
-}
+bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 35; }
+
+bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 215; }
 
 }  // namespace aon

@@ -48,6 +48,14 @@ inline double nearest(const double &num, const std::pair<double, double> &values
   return std::abs(values.first - num) < std::abs(values.second - num) ? values.first : values.second;
 }
 
+/// @brief Determines whether a `num` is within a given `range`
+/// @param num The number to evaluate
+/// @param range The range to check in
+/// @return `true` if `range.first <= num` and `num <= range.second`, `false` otherwise
+inline bool within(const double &num, const std::pair<double, double> &range){
+  return range.first <= num && num <= range.second;
+}
+
 };  // namespace aon
 
 #endif  // AON_TOOLS_GENERAL_HPP_

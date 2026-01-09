@@ -33,12 +33,9 @@ class Orbit {
       STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0);
 
  public:
-  // constructor:
 
   Orbit();
   Orbit(int rotationPort, bool reversedEncoder, int visionPort, int port);
-
-  // functions:
 
 
   auto getLargestObject() {
