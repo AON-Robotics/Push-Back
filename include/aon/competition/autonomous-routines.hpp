@@ -15,7 +15,7 @@
 // TODO: for modularity we will have odometry, drivetrain, navigator, orbit, intake, and claw (the last two will most likely change with each game and modules may be added or removed as needed)
 //# Navigator will use odometry and drivetrain under the hood for auton, but drivers will use just drivetrain for driving
 // TODO: add support for a drive mode that is videogame-like (i think rocket league has it). Basically with reference to where the driver is standing on the field, the direction towards which you move the joystick is where the robot will turn to and drive to at the same time. This should greatly facilitate general directional movement if implemented correctly. Leave a toggle available for traditional driving in accordance to the chosen drivetrain for better fine grained control in tight spaces.
-// TODO: odometry should also have an traditional odometer functionality to track how much distance the robot has traveled and also use integration for all measurements as a fallbakc if sensors fail
+// TODO: odometry should also have an traditional odometer functionality to track how much distance the robot has traveled and also use integration for all measurements as a fallback if sensors fail
 
 
 /**
@@ -70,9 +70,6 @@ void strafe(double dist = TILE_WIDTH){
 #endif
 //! ------------------------ END --------------------------------
 
-void turretRotationAbsolute(double targetAngle);
-double widthToDistance(const double &width);
-double groundDistanceToDisk(const double &pixels);
 
 // ============================================================================|
 //   ____        _       ____             _   _                
@@ -81,56 +78,6 @@ double groundDistanceToDisk(const double &pixels);
 //   ___) | |_| | |_) | |  _ < (_) | |_| | |_| | | | |  __/\__ \
 //  |____/ \__,_|_.__/  |_| \_\___/ \__,_|\__|_|_| |_|\___||___/
 // ============================================================================|
-
-/**
- * \brief This small subroutine grabs a goal (stake)
- *
- * \param delay The amount of time in \b milliseconds you will be moving back (500-600 is quick and works)
- *
- * \warning You must already be very close to the goal and facing away (with the clamp towards it)
- *
- * \details This routine uses timing but ideally there would be a way of knowing when we have the goal within our grasp
- */
-void grabGoal(const int &delay = 600){
-  drivetrain.motors(-100);
-  pros::delay(delay * 5 / 6);
-  // claw.set_value(true);
-  pros::delay(delay * 1/6);
-  drivetrain.motors(100);
-  pros::delay(delay);
-  drivetrain.stop();
-}
-
-/**
- * \brief This subroutine moves toward a mobile goal IN REVERSE
- *
- * \param dist This is the absolute value of the distance the mobile goal is from the robot in \b inches
- *
- * \details The function already converts the distance to negative so the robot drives into the goal backwards
- *
- */
-void raceToGoal(const double &dist = 47){
-  drivetrain.move(-abs(dist));
-  grabGoal(300);
-}
-
-/// @brief Drops the goal by releasing the claw
-void dropGoal(){
-  // claw.set_value(false);
-}
-
-/// @brief Extends or retracts indexer to later knock down rings
-/// @param extend If true, indexer will extend, if false, it will retract
-void moveIndexer(const bool &extend = true){
-  // indexer.set_value((extend ? 1 : 0) );
-}
-
-/// @brief This small subroutine removes the top ring of a stack of two and scores the ring at top. use ONLY when the indexer is at the right side of stack.
-void RemoveTop(){
-  moveIndexer();
-  drivetrain.turn(-45);
-  moveIndexer(false);
-}
 
 /**
  * \brief Aligns ORBIT and DRIVETRAIN to the item with the set `COLOR`
@@ -157,14 +104,6 @@ void alignRobotTo(const Colors &color = orbit.getColor()){
   if(color == STAKE){
     drivetrain.turn(180);
   }
-}
-
-/// @brief Aligns front of robot and turns around to grab the stake
-/// @param dist The absolute value of the distance that the robot is from the stake when it begins alignment in \b inches
-void findAndGrabGoal(const double &dist = 8){
-  alignRobotTo(STAKE);
-  drivetrain.move(-abs(dist));
-  grabGoal();
 }
 
 
@@ -194,12 +133,6 @@ void driveTillPickUp(const double &distance = getDistanceToRing()){
   intake.activateScan();
   drivetrain.move(distance + additional_distance);
   intake.stopScan();
-}
-
-/// @brief Get a stake and scores a preload
-void grabAndScore(){
-  findAndGrabGoal(10);
-  intake.score();
 }
 
 /// @brief Aligns robot to the ring of the specified `color` and grabs it and scores it on the held stake
@@ -285,16 +218,6 @@ void testOdom(){
   pros::delay(1000);
   drivetrain.turnPID(turnPID, -45, 50.0);
   pros::delay(1000);
-}
-
-/// @brief Competition specific test to see if the indexer interacted as intended
-void testIndexer(){
-  moveIndexer();
-  drivetrain.move(40);
-  drivetrain.move(-6);
-  drivetrain.turn(180);
-  drivetrain.move(-2);
-  grabGoal();
 }
 
 /// @brief Test to ensure the concurrency is working fine, requires `intake.scan()` to be running in another thread
@@ -520,14 +443,6 @@ void testSmallBotRoutine(){
 //                                                                             |
 // ============================================================================|
 
-/// @brief This is a safety routine to at least grab one goal and score on it
-void quickMiddleScore(){
-  drivetrain.move(-3);
-  grabGoal();
-  intake.score();
-  drivetrain.move(10);
-}
-
 #if USING_BIG_ROBOT
 
 /**
@@ -540,7 +455,6 @@ void quickMiddleScore(){
 */
 int RedRingsRoutine(){
   // Secure and score the first ring in the middle stake
-  raceToGoal();
   drivetrain.move(6);
   intake.score();
   // intake.openGate();
@@ -548,7 +462,6 @@ int RedRingsRoutine(){
   // Get the next ring in our side
   drivetrain.turnTo(-.6, -1.2);
   drivetrain.move(6);
-  RemoveTop();
   drivetrain.move(-6);
   alignRobotTo(orbit.getColor());
   driveTillPickUp();
@@ -574,7 +487,6 @@ int RedRingsRoutine(){
  */
 int BlueRingsRoutine(){
   // Secure and score the first ring in the middle stake
-  raceToGoal();
   drivetrain.move(6);
   intake.score();
   // intake.openGate();
@@ -582,7 +494,6 @@ int BlueRingsRoutine(){
   // Get the next ring in our side
   drivetrain.turnTo(.6, 1.2);
   drivetrain.move(6);
-  RemoveTop();
   drivetrain.move(-6);
   alignRobotTo(orbit.getColor());
   driveTillPickUp();
@@ -630,7 +541,6 @@ int BlueRingsRoutine_JorgeGuz(){
   RED-NEGATIVE SIDE
 */
 int safeRingRoutine() {
-  findAndGrabGoal(8); // 8 inches from stake
   drivetrain.turnTo(-1.2,-1.2);
   drivetrain.goTo(-1.2,-1.2);
   driveIntoRing(RED);
@@ -644,7 +554,6 @@ int safeRingRoutine() {
 }
 
 int safeRingRoutine2() {
-  findAndGrabGoal(6); //6 inches from stake
   drivetrain.turnTo(-1.2,-1.2);
   drivetrain.goTo(-1.2,-1.2);
   driveIntoRing(RED);
@@ -672,14 +581,12 @@ int BlueRingsRoutineJorgeLuna() {
     go for negative side mobile goal, score rings, and prepare for go enemy double side
   */
   // go to the side mobile goal
-  raceToGoal();
   drivetrain.move(6);
   // intake.score(2000);
   // intake.openGate();
 
   // go to ring on the bottom
   drivetrain.goTo(1.2, -0.55);
-  RemoveTop();
   driveIntoRing(orbit.getColor());
 
   // then the one below that one
@@ -688,10 +595,8 @@ int BlueRingsRoutineJorgeLuna() {
 
   // drive into the corner and try to grab the rings
   drivetrain.goTo(1.7, -1.7);
-  RemoveTop();
   driveIntoRing(orbit.getColor());
   drivetrain.turnTo(.7, -1.7);
-  RemoveTop();
   driveIntoRing(orbit.getColor());
 
   drivetrain.move(-6);
@@ -704,7 +609,6 @@ int BlueRingsRoutineJorgeLuna() {
  */
 int SkillsBlackBotJorge(){
   // grab skate in the middle bottom
-  raceToGoal(TILE_DIAG_LENGTH);
   // grab 0, -1.2
   // grab 0.6, -1.2
   // turn to -1.4, 0
@@ -742,7 +646,6 @@ int SkillsBlackBotJorge(){
  */
 int SkillsBlackBotKevin(){
   // Grab bottom-most goal
-  raceToGoal(TILE_DIAG_LENGTH);
   
   // Grab ring in (-1.2, -1.2)
   drivetrain.turnTo(-1.2, -1.2);
@@ -779,7 +682,6 @@ int SkillsBlackBotKevin(){
 */
 int RedRingsRoutine(){
   // Secure and score the first ring in the middle stake
-  raceToGoal();
   drivetrain.move(6);
   intake.score();
   // intake.openGate();
@@ -787,7 +689,6 @@ int RedRingsRoutine(){
   // Get the next ring in our side
   drivetrain.turnTo(-.6, -1.2);
   drivetrain.move(6);
-  RemoveTop();
   drivetrain.move(-6);
   alignRobotTo(orbit.getColor());
   driveTillPickUp();
@@ -813,7 +714,6 @@ int RedRingsRoutine(){
  */
 int BlueRingsRoutine(){
   // Secure and score the first ring in the middle stake
-  raceToGoal();
   drivetrain.move(6);
   intake.score();
   // intake.openGate();
@@ -821,7 +721,6 @@ int BlueRingsRoutine(){
   // Get the next ring in our side
   drivetrain.turnTo(.6, 1.2);
   drivetrain.move(6);
-  RemoveTop();
   drivetrain.move(-6);
   alignRobotTo(orbit.getColor());
   driveTillPickUp();
@@ -869,7 +768,6 @@ int BlueRingsRoutine_JorgeGuz(){
   RED-NEGATIVE SIDE
 */
 int safeRingRoutine() {
-  findAndGrabGoal(8); // 8 inches from stake
   drivetrain.turnTo(-1.2,-1.2);
   drivetrain.goTo(-1.2,-1.2);
   driveIntoRing(RED);
@@ -883,7 +781,6 @@ int safeRingRoutine() {
 }
 
 int safeRingRoutine2() {
-  findAndGrabGoal(6); //6 inches from stake
   drivetrain.turnTo(-1.2,-1.2);
   drivetrain.goTo(-1.2,-1.2);
   driveIntoRing(RED);
@@ -911,14 +808,12 @@ int BlueRingsRoutineJorgeLuna() {
     go for negative side mobile goal, score rings, and prepare for go enemy double side
   */
   // go to the side mobile goal
-  raceToGoal();
   drivetrain.move(6);
   // intake.score(2000);
   // intake.openGate();
 
   // go to ring on the bottom
   drivetrain.goTo(1.2, -0.55);
-  RemoveTop();
   driveIntoRing(orbit.getColor());
 
   // then the one below that one
@@ -927,10 +822,8 @@ int BlueRingsRoutineJorgeLuna() {
 
   // drive into the corner and try to grab the rings
   drivetrain.goTo(1.7, -1.7);
-  RemoveTop();
   driveIntoRing(orbit.getColor());
   drivetrain.turnTo(1.7, -1.7);
-  RemoveTop();
   driveIntoRing(orbit.getColor());
 
   drivetrain.move(-6);
@@ -943,7 +836,6 @@ int BlueRingsRoutineJorgeLuna() {
  */
 int SkillsBlackBotJorge(){
   // grab skate in the middle bottom
-  raceToGoal(TILE_DIAG_LENGTH);
   // grab 0, -1.2
   // grab 0.6, -1.2
   // turn to -1.4, 0
@@ -981,7 +873,6 @@ int SkillsBlackBotJorge(){
  */
 int SkillsBlackBotKevin(){
   // Grab bottom-most goal
-  raceToGoal(TILE_DIAG_LENGTH);
   
   // Grab ring in (-1.2, -1.2)
   drivetrain.turnTo(-1.2, -1.2);
