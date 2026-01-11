@@ -8,8 +8,8 @@ void initialize() {
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
   pros::Task safetyTask(aon::autonSafety);
-  pros::Task turretFollowTask([]{orbit.follow();});
-  pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
+  // pros::Task turretFollowTask([]{orbit.follow();});
+  // pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
   pros::Task intakeScanning([]{intake.scan();});
   pros::Task intakeSorting([]{intake.sort();});
 }
@@ -35,9 +35,11 @@ void opcontrol() {
 
     // aon::AutonomousReader->ExecuteFunction("autonomous");
     #if USING_BIG_ROBOT
-    aon::testBigBotRoutine();
+    aon::safeBigBotRoutine();
+    // intake.activateScan();
     #else
     aon::testSmallBotRoutine();
+    // intake.activateScan();
     #endif
 
     pros::delay(5000);

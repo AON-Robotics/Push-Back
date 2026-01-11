@@ -38,7 +38,7 @@ pros::Vision vision_sensor(0);
 #else
 
 aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
-aon::Intake intake = aon::Intake({6, -3, -2, -4}, {6, -3}, {-2}, {-4}, 'H', 'G', 'F', 5, 15);
+aon::Intake intake = aon::Intake({6, -3, -2, -4, -7}, {6, -3}, {-2}, {-4, -7}, 'H', 'G', 'F', 5, 15);
 
 okapi::Motor arm(20);
 pros::Vision vision_sensor(8);

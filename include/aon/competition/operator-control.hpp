@@ -193,15 +193,15 @@ inline void DriveDefault() {
     intake.setScorerHeight(toggle(scorerUp) ? HIGH : LOW);
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
+  else if(mainController.get_digital_new_press(DIGITAL_A)) {
     toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
   }
   // Toggle turbo
-  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
+  else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
     toggle(turbo);
   }
   // Toggle trapdoor
-  else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
+  else if(mainController.get_digital_new_press(DIGITAL_X)) {
     toggle(trapdoorOpen) ? intake.openTrapdoor() : intake.closeTrapdoor();
   }
   #endif

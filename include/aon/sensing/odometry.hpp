@@ -41,7 +41,6 @@
  *    3. Coordinate gyro with encoder back. Make sure when turning left, they are
  *       positive.
  * */
-
 namespace aon::odometry {
 
 #if USING_BIG_ROBOT

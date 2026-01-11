@@ -128,6 +128,22 @@ class TankDrive {
   void configure(okapi::AbstractMotor::brakeMode brakeMode,
                  okapi::AbstractMotor::gearset gearset);
 
+  /// @brief Sets the brake mode for all motors of the drivetrain
+  /// @param brakeMode The new brake mode for the drivetrain
+  void setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode);
+
+  /// @brief Sets the gearset for all motors of the drivetrain
+  /// @param gearset The new gearset for the drivetrain
+  void setGearset(okapi::AbstractMotor::gearset gearset);
+
+  /// @brief Sets the units for all encoders of the motors of the drivetrain
+  /// @param units The new units for the drivetrain
+  void setEncoderUnits(okapi::AbstractMotor::encoderUnits units);
+
+  /// @brief Sets the slew rate for all motors of the drivetrain
+  /// @param slew The new slew rate for the drivetrain
+  void setSlewRate(double slew);
+
   /// @brief Calculates average RPM forward
   /// @return The RPM of the motors with respect to the front of the robot
   double getRPM();

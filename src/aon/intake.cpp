@@ -80,8 +80,7 @@ void Intake::scan() {
       if (this->isObjectDetected()) {
         this->pickUp();
         stopTime = pros::millis() + DELAY_PER_BALL;
-        pros::delay(
-            500);  // this is to avoid counting the same block many times
+        pros::delay(500);  // this is to avoid counting the same block multiple times
       }
       if (pros::millis() >= stopTime) {
         this->elevator(0);

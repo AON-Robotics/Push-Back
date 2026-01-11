@@ -387,25 +387,32 @@ void testSquare(){
 }
 
 #if USING_BIG_ROBOT
-void testBigBotRoutine(){
+void safeBigBotRoutine(){
   intake.activateScan();
-  strafe(-29.25); // Align with match loader
-  intake.dropShrimp(); // Prepare loader mechanism
-  drivetrain.move(6); // Go to match loader
-  drivetrain.motors(MAX_RPM / 2);
-  pros::delay(200);
-  drivetrain.stop();
-  pros::delay(5000); // Take up all the blocks (9);
-  drivetrain.move(-24); // Move to Long goal
-  intake.raiseShrimp(); // Reset loader mechanism
-  intake.score(Intake::TOP, Intake::BOTTOM, 2000); // Score all 9 blocks
-  //* Works till here
-  // TODO: adjust remaining distances
-  drivetrain.move(20); // Go back a little
-  drivetrain.turn(90); // Orient towards parking
-  drivetrain.move(28); // Go to parking
-  brooksPiston.set_value(HIGH); // Park
+  strafe(28.5); // Align with match loader.
+  intake.dropShrimp(); // Prepare loader mechanism.
+  drivetrain.move(6); // Move to match loader.
+  drivetrain.motors(MAX_RPM / 2); // Push into loader
+  pros::delay(200); // for a bit of time,
+  drivetrain.stop(); // then stop.
+  pros::delay(5000); // Take up all the blocks (9).
+  drivetrain.move(-23); // Move to long goal.
+  drivetrain.motors(-MAX_RPM / 2); // Push into goal
+  pros::delay(200); // for a bit of time,
+  drivetrain.stop(); // then stop.
+  intake.raiseShrimp(); // Reset loader mechanism.
+  intake.score(Intake::TOP, Intake::BOTTOM, 2000); // Score all 9 blocks.
+  drivetrain.move(15); // Go back a little.
+  drivetrain.turn(-90); // Orient towards parking.
+  drivetrain.move(12); // Move towards parking.
+  strafe(13); // Align with parking.
+  drivetrain.move(12); // Move to parking.
+  drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
+  pros::delay(1000); // for a bit of time,
+  drivetrain.stop(); // then stop.
+  brooksPiston.set_value(HIGH); // Park.
   intake.stopScan();
+  //* Works till here
 }
 #else
 

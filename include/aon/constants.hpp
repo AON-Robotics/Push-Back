@@ -64,7 +64,7 @@
 /// @brief Maximum deceleration without tipping (limited to not confuse encoders right now)
 ///
 /// @see https://www.desmos.com/calculator/f523970d6f
-#define MAX_DECEL 500 // 100 // 2413.22817284
+#define MAX_DECEL 500.0 // 100.0 // 2413.22817284
 
 #define DISTANCE 160 // This is the activation distance for the intake (the distance under which we know a ring is waiting in front of the intake)
 
