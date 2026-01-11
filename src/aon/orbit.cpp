@@ -23,6 +23,10 @@ void Orbit::configure() {
   motor.tarePosition();
 }
 
+void Orbit::stop() {
+  motor.moveVelocity(0);
+}
+
 /// @brief Begins ORBIT following cycle
 void Orbit::activateFollow() {
   following = true;
@@ -66,7 +70,7 @@ void Orbit::follow() {
 
       if (object.signature == COLOR) {
         if (abs(OBJ_CENTER - VISION_FIELD_CENTER) <= TOLERANCE) {
-          motor.moveVelocity(0);
+          this->stop();
         }
         // Limiting to protect hardware
         else if (limited && (leftLimit >= position && position >= rightLimit)) {
@@ -81,11 +85,11 @@ void Orbit::follow() {
         activateScan();
       }
     } else if (braking) {
-      motor.moveVelocity(0);
+      this->stop();
     }
     pros::delay(10);
   }
-  motor.moveVelocity(0);
+  this->stop();
 }
 
 void Orbit::rotateRelative(const double &givenAngle) {
@@ -99,7 +103,7 @@ void Orbit::rotateRelative(const double &givenAngle) {
     motor.moveVelocity(output);
     pros::delay(10);
   } while (abs(currentAngle - targetAngle) > TOLERANCE);
-  motor.moveVelocity(0);
+  this->stop();
 }
 
 /// @brief ORBIT async task scanning test function
@@ -155,7 +159,7 @@ void Orbit::rotateAbsolute(double targetAngle) {
     motor.moveVelocity(output);
     pros::delay(10);
   } while (abs(currentAngle - targetAngle) > TOLERANCE);
-  motor.moveVelocity(0);
+  this->stop();
 }
 
 bool Orbit::isAligned(const double &tolerance) {

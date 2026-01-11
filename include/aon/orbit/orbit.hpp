@@ -156,5 +156,8 @@ class Orbit {
   /// @return The filtered distance to that ring
   /// @note Takes half a second (0.5s) to complete
   double getDistanceToRing(Colors color);
+
+  /// @brief Stops the motor to avoid damage
+  void stop();
 };
 }  // namespace aon

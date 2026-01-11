@@ -147,9 +147,7 @@ void STOP(){
   #if USING_BIG_ROBOT
   mid.moveVelocity(0);
   #endif
-  orbit.deactivateFollow();
-  orbit.deactivateScan();
-  orbit.brake();
+  orbit.stop();
 }
 
 /// @brief Toggles the value of a bool
