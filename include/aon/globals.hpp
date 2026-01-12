@@ -28,7 +28,7 @@
 aon::TankDrive drivetrain = aon::TankDrive({16, -15, -14}, {-20, 19, 18});
 okapi::MotorGroup mid({17}); // Default make robot go right
 
-pros::ADIDigitalOut wingsPistons('F');
+pros::ADIDigitalOut semPiston('F');
 pros::ADIDigitalOut brooksPiston('H');
 
 aon::Intake intake = aon::Intake({1, -13, -10, 3, -6, -9}, {1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);

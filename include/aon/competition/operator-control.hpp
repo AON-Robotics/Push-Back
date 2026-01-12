@@ -75,17 +75,18 @@ inline void DriveDefault() {
   //////////// DRIVE ////////////
   const double scaledVertical = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
   const double scaledTurn = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
-  const double turn = ApplySpeed(scaledTurn, turbo ? 1 : 0.4);
   
   #if USING_BIG_ROBOT
   const double scaledHorizontal = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
   
   const double vertical = ApplySpeed(scaledVertical, turbo ? 1.41421356237 : 0.6);
   const double horizontal = ApplySpeed(scaledHorizontal, turbo ? 1.41421356237 : 0.6);
+  const double turn = ApplySpeed(scaledTurn, turbo ? 1.41421356237 : 0.4);
   
   mid.moveVelocity(horizontal);
   #else
   const double vertical = ApplySpeed(scaledVertical, turbo ? 1 : 0.6);
+  const double turn = ApplySpeed(scaledTurn, turbo ? 1 : 0.4);
   #endif
   
   drivetrain.driveWhileTurning(vertical, turn);
@@ -146,12 +147,12 @@ inline void DriveDefault() {
   if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
     brooksPiston.set_value(toggle(brooksUp) ? HIGH : LOW);
   }
-  // Toggle Wings
-  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
-    wingsPistons.set_value(toggle(wingsOut) ? HIGH : LOW);
+  // Toggle SEM
+  else if(mainController.get_digital_new_press(DIGITAL_R1)) {
+    semPiston.set_value(toggle(wingsOut) ? HIGH : LOW);
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
+  else if(mainController.get_digital_new_press(DIGITAL_L1)) {
     toggle(shrimpOut) ? intake.dropShrimp() : intake.raiseShrimp();
   }
   // Toggle turbo
