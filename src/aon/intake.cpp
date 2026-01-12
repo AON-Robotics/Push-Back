@@ -5,18 +5,18 @@ namespace aon {
 #if USING_BIG_ROBOT
 
 Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-               const std::initializer_list<okapi::Motor>& elevatorPorts,
-               const std::initializer_list<okapi::Motor>& topHoarderPorts,
-               const std::initializer_list<okapi::Motor>& bottomHoarderPorts,
+               const std::initializer_list<okapi::Motor>& frontElevatorPorts,
+               const std::initializer_list<okapi::Motor>& hoarderPorts,
+               const std::initializer_list<okapi::Motor>& backElevatorPorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
                const std::initializer_list<okapi::Motor>& shotbeltPorts,
                const std::initializer_list<okapi::Motor>& shooterPorts,
                char shrimpPistonsPort, int distanceSensorPort,
                int colorSensorPort)
     : intakeMG(allMotorPorts),
-      elevatorMG(elevatorPorts),
-      topHoarderMG(topHoarderPorts),
-      bottomHoarderMG(bottomHoarderPorts),
+      frontElevatorMG(frontElevatorPorts),
+      hoarderMG(hoarderPorts),
+      backElevatorMG(backElevatorPorts),
       scorerMG(scorerPorts),
       shotbeltMG(shotbeltPorts),
       shooterMG(shooterPorts),
@@ -31,20 +31,20 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
   intakeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   intakeMG.tarePosition();
 
-  elevatorMG.setBrakeMode(brakeMode);
-  elevatorMG.setGearing(gearset);
-  elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  elevatorMG.tarePosition();
+  frontElevatorMG.setBrakeMode(brakeMode);
+  frontElevatorMG.setGearing(gearset);
+  frontElevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  frontElevatorMG.tarePosition();
 
-  topHoarderMG.setBrakeMode(brakeMode);
-  topHoarderMG.setGearing(gearset);
-  topHoarderMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  topHoarderMG.tarePosition();
+  hoarderMG.setBrakeMode(brakeMode);
+  hoarderMG.setGearing(gearset);
+  hoarderMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  hoarderMG.tarePosition();
 
-  bottomHoarderMG.setBrakeMode(brakeMode);
-  bottomHoarderMG.setGearing(gearset);
-  bottomHoarderMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  bottomHoarderMG.tarePosition();
+  backElevatorMG.setBrakeMode(brakeMode);
+  backElevatorMG.setGearing(gearset);
+  backElevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  backElevatorMG.tarePosition();
 
   scorerMG.setBrakeMode(brakeMode);
   scorerMG.setGearing(gearset);
@@ -62,10 +62,13 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
   shooterMG.tarePosition();
 }
 
-void Intake::topHoarder(const int& rpm) { topHoarderMG.moveVelocity(rpm); }
+void Intake::frontElevator(const int& rpm) { frontElevatorMG.moveVelocity(rpm); }
 
-void Intake::bottomHoarder(const int& rpm) {
-  bottomHoarderMG.moveVelocity(rpm);
+
+void Intake::hoarder(const int& rpm) { hoarderMG.moveVelocity(rpm); }
+
+void Intake::backElevator(const int& rpm) {
+  backElevatorMG.moveVelocity(rpm);
 }
 
 void Intake::shotbelt(const int& rpm) { shotbeltMG.moveVelocity(rpm); }
@@ -83,8 +86,8 @@ void Intake::scan() {
         pros::delay(500);  // this is to avoid counting the same block multiple times
       }
       if (pros::millis() >= stopTime) {
-        this->elevator(0);
-        this->bottomHoarder(0);
+        this->frontElevator(0);
+        this->backElevator(0);
         this->scorer(0);
         stopTime = INT_MAX;
       }
@@ -122,13 +125,13 @@ void Intake::sort() {
       if (pros::millis() >= actionTime) {
         // Execute Scheduled Action
         if (action == ACCEPT) {
-          this->topHoarder();
+          this->hoarder();
           this->scorer(-INTAKE_VELOCITY);
           this->shotbelt();
           stopTime = pros::millis() + ACCEPTANCE_DELAY;
         } else if (action == REJECT) {
-          this->topHoarder(-INTAKE_VELOCITY);
-          this->bottomHoarder();
+          this->hoarder(-INTAKE_VELOCITY);
+          this->backElevator();
           this->scorer(-INTAKE_VELOCITY);
           stopTime = pros::millis() + REJECTION_DELAY;
         }
@@ -137,10 +140,10 @@ void Intake::sort() {
 
       if (pros::millis() >= stopTime) {
         // Stop Scheduled Action after the given delay
-        this->topHoarder(0);
+        this->hoarder(0);
         this->scorer(0);
         this->shotbelt(0);
-        this->bottomHoarder(0);
+        this->backElevator(0);
         stopTime = UINT32_MAX;
       }
     }
@@ -149,67 +152,67 @@ void Intake::sort() {
 }
 
 void Intake::pickUp(const int& delay) {
-  this->elevator();
-  this->bottomHoarder();
+  this->frontElevator();
+  this->backElevator();
   this->scorer(-INTAKE_VELOCITY);
   if (delay == 0) return;
   pros::delay(delay);
   this->scorer(0);
-  this->bottomHoarder(0);
-  this->elevator(0);
+  this->backElevator(0);
+  this->frontElevator(0);
 }
 
 void Intake::store(const int& delay) {
-  this->elevator();
+  this->frontElevator();
   this->scorer(-INTAKE_VELOCITY);
-  this->topHoarder();
-  this->bottomHoarder();
+  this->hoarder();
+  this->backElevator();
   this->shotbelt();
   if (delay == 0) return;
   pros::delay(delay);
-  this->elevator(0);
+  this->frontElevator(0);
   this->scorer(0);
-  this->topHoarder(0);
-  this->bottomHoarder(0);
+  this->hoarder(0);
+  this->backElevator(0);
   this->shotbelt(0);
 }
 
 void Intake::hoard(const int& delay) {
-  this->elevator();
+  this->frontElevator();
   this->scorer(-INTAKE_VELOCITY);
-  this->topHoarder(-INTAKE_VELOCITY);
-  this->bottomHoarder();
+  this->hoarder(-INTAKE_VELOCITY);
+  this->backElevator();
   if (delay == 0) return;
   pros::delay(delay);
-  this->elevator(0);
+  this->frontElevator(0);
   this->scorer(0);
-  this->topHoarder(0);
-  this->bottomHoarder(0);
+  this->hoarder(0);
+  this->backElevator(0);
 }
 
 void Intake::score(const Height& to, const Height& from, const int& delay) {
   if (to == TOP) {
     this->move();
   } else if (to == BOTTOM) {
-    this->elevator(-INTAKE_VELOCITY);
+    this->frontElevator(-INTAKE_VELOCITY);
     this->scorer();
-    this->topHoarder(-INTAKE_VELOCITY);
-    this->bottomHoarder(-INTAKE_VELOCITY);
+    this->hoarder(-INTAKE_VELOCITY);
+    this->backElevator(-INTAKE_VELOCITY);
     this->shotbelt(-INTAKE_VELOCITY);
     this->shooter(-200);
   } else if (to == MIDDLE) {
     if (from == TOP) {
-      this->elevator();
+      this->frontElevator();
       this->scorer();
-      this->topHoarder(-INTAKE_VELOCITY);
-      this->bottomHoarder(-INTAKE_VELOCITY);
+      this->hoarder(-INTAKE_VELOCITY);
+      this->backElevator(-INTAKE_VELOCITY);
       this->shotbelt(-INTAKE_VELOCITY);
       this->shooter(-200);
     } else if (from == BOTTOM) {
-      this->elevator();
+      this->frontElevator();
       this->scorer();
-      this->topHoarder();
-      this->bottomHoarder();
+      this->hoarder();
+      this->backElevator();
     }
   }
   if (delay == 0) return;
@@ -261,6 +264,8 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
 }
+
+void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
 
 void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
@@ -388,8 +393,6 @@ void Intake::closeTrapdoor() { trapdoorPiston.set_value(LOW); }
 #endif
 
 void Intake::move(const int& rpm) { intakeMG.moveVelocity(rpm); }
-
-void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
 
 void Intake::scorer(const int& rpm) { scorerMG.moveVelocity(rpm); }
 

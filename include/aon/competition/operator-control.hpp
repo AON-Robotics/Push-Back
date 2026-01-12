@@ -123,10 +123,10 @@ inline void DriveDefault() {
   }
 
   else {
-    intake.elevator(0);
+    intake.frontElevator(0);
     intake.scorer(0);
-    intake.topHoarder(0);
-    intake.bottomHoarder(0);
+    intake.hoarder(0);
+    intake.backElevator(0);
   }
 
   // Score High

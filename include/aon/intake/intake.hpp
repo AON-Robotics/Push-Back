@@ -23,9 +23,9 @@ class Intake {
 #if USING_BIG_ROBOT
  private:
   okapi::MotorGroup intakeMG;
-  okapi::MotorGroup elevatorMG;
-  okapi::MotorGroup topHoarderMG;
-  okapi::MotorGroup bottomHoarderMG;
+  okapi::MotorGroup frontElevatorMG;
+  okapi::MotorGroup hoarderMG;
+  okapi::MotorGroup backElevatorMG;
   okapi::MotorGroup scorerMG;
   okapi::MotorGroup shotbeltMG;
   okapi::MotorGroup shooterMG;
@@ -37,21 +37,25 @@ class Intake {
 
  public:
   Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-         const std::initializer_list<okapi::Motor>& elevatorPorts,
-         const std::initializer_list<okapi::Motor>& topHoarderPorts,
-         const std::initializer_list<okapi::Motor>& bottomHoarderPorts,
+         const std::initializer_list<okapi::Motor>& frontElevatorPorts,
+         const std::initializer_list<okapi::Motor>& hoarderPorts,
+         const std::initializer_list<okapi::Motor>& backElevatorPorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
          const std::initializer_list<okapi::Motor>& shotbeltPorts,
          const std::initializer_list<okapi::Motor>& shooterPorts,
          char shrimpPistonsPort, int distanceSensorPort, int colorSensorPort);
 
-  /// @brief Moves only the topHoarder at the given `rpm`
-  /// @param rpm The rpm at which to set the topHoarder
-  void topHoarder(const int& rpm = INTAKE_VELOCITY);
+  /// @brief Moves only the frontElevator at the given `rpm`
+  /// @param rpm The rpm at which to set the frontElevator
+  void frontElevator(const int& rpm = INTAKE_VELOCITY);
 
-  /// @brief Moves only the bottomHoarder at the given `rpm`
-  /// @param rpm The rpm at which to set the bottomHoarder
-  void bottomHoarder(const int& rpm = INTAKE_VELOCITY);
+  /// @brief Moves only the backElevator at the given `rpm`
+  /// @param rpm The rpm at which to set the backElevator
+  void backElevator(const int& rpm = INTAKE_VELOCITY);
+
+  /// @brief Moves only the hoarder at the given `rpm`
+  /// @param rpm The rpm at which to set the hoarder
+  void hoarder(const int& rpm = INTAKE_VELOCITY);
 
   /// @brief Moves only the shotbelt at the given `rpm`
   /// @param rpm The rpm at which to set the shotbelt
@@ -102,6 +106,10 @@ class Intake {
          char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
          int distanceSensorPort, int colorSensorPort);
 
+  /// @brief Moves only the elevator at the given `rpm`
+  /// @param rpm The rpm at which to set the elevator
+  void elevator(const int& rpm = INTAKE_VELOCITY);
+
   /// @brief Moves only the judge at the given `rpm`
   /// @param rpm The rpm at which to set the judge
   void judge(const int& rpm = INTAKE_VELOCITY);
@@ -144,10 +152,6 @@ class Intake {
   /// @brief Moves the entire intake system at the same `rpm`
   /// @param rpm The rpm to set to the motors
   void move(const int& rpm = INTAKE_VELOCITY);
-
-  /// @brief Moves only the elevator at the given `rpm`
-  /// @param rpm The rpm at which to set the elevator
-  void elevator(const int& rpm = INTAKE_VELOCITY);
 
   /// @brief Moves only the scorer at the given `rpm`
   /// @param rpm The rpm at which to set the scorer
