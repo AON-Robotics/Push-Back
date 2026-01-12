@@ -120,10 +120,7 @@ void XDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
     pros::lcd::print(2, "Gyroscope Displacement %.2f", traveledAngle);
 
     // Taking clockwise rotation as positive (to change this just flip the negative on the sign below)
-    frontLeftMotors.moveVelocity(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
-    frontRightMotors.moveVelocity(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
-    backLeftMotors.moveVelocity(-sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
-    backRightMotors.moveVelocity(-sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
+    this->rotate(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
 
     pros::delay(10);
   }
@@ -146,7 +143,7 @@ void XDrive::driveProfiled(double dist){
   double now = pros::micros() / 1E6;
   double lastTime = now;
 
-  this->motionProfile.setVelocity(getRPM());
+  this->motionProfile.setVelocity(this->getRPM());
 
   while(traveledDist < dist){
     traveledDist = (odometry::GetPosition() - startPos).GetMagnitude();

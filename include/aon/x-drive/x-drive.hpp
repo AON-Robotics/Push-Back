@@ -28,7 +28,6 @@ class Pose {
 // TODO: modify implementation of most methods to use holonomic motion
 class XDrive {
  private:
-  const int max_rpm;
   okapi::MotorGroup frontLeftMotors;
   okapi::MotorGroup frontRightMotors;
   okapi::MotorGroup backLeftMotors;
@@ -39,13 +38,11 @@ class XDrive {
   // TODO: add the odom object once it is done, use namespace temporarily
 
  public:
-  XDrive(int max_rpm = MAX_RPM,
-         const std::initializer_list<okapi::Motor> &FLPorts = {1},
+  XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {1},
          const std::initializer_list<okapi::Motor> &FRPorts = {-2},
          const std::initializer_list<okapi::Motor> &BLPorts = {-3},
          const std::initializer_list<okapi::Motor> &BRPorts = {4})
-      : max_rpm(max_rpm),
-        frontLeftMotors(FLPorts),
+      : frontLeftMotors(FLPorts),
         frontRightMotors(FRPorts),
         backLeftMotors(BLPorts),
         backRightMotors(BRPorts),
@@ -127,6 +124,7 @@ class XDrive {
   /// @brief Turns the robot by a given angle (default clockwise)
   /// @param pid The PID to be used for the turn
   /// @param angle The angle to make the robot turn in \b degrees
+  /// @param MAX_REVS The maximum RPM to send to the movement
   void turnPID(PID pid = PID(0.002, 0, 0), double angle = 90, const double &MAX_REVS = 50.0);
 
   /// @brief S-graph motion profile for linear movement

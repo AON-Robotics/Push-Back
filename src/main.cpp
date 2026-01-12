@@ -1,44 +1,28 @@
 #include "main.hpp"
+#include "aon/handler.hpp"
+#include "aon/EKF/EKFDebug.hpp"
 
 void initialize() {
-  pros::Task guiTask(aon::gui::Initialize);
-  aon::logging::Initialize();
   pros::lcd::initialize();
-  aon::ConfigureMotors(false);
-  aon::ConfigureColors();
-  aon::odometry::Initialize();
-  pros::Task odomTask(aon::odometry::Odometry);
-  pros::Task safetyTask(aon::autonSafety);
-  pros::Task turretFollowTask(aon::turretFollow);
-  pros::Task intakeTask([]{intake.scan();});
-  pros::Task turretScanTask(aon::turretScan); // TODO: combine this with the follow task
+  // aon::init();
+  sensorFeeder.applyEkfDefaults(ekf);
+  sensorFeeder.reset();
+
+  //   auto st = gps.get_status();
+  // if (std::isfinite(st.x) && std::isfinite(st.y)) {
+  //   EKF::State s = ekf.getState();
+  //   s.x_in = st.x * 39.37007874015748; // meters -> inches
+  //   s.y_in = st.y * 39.37007874015748;
+  //   s.theta_rad = EKF::normalizeAngle(imu.get_rotation() * M_PI / 180.0);
+  //   ekf.setState(s);
+  // }
 }
 
-void disabled() {}
-
-void competition_initialize() {}
-
-void autonomous() {
-  aon::AutonomousReader->ExecuteFunction("autonomous");
-  pros::delay(10);
-}
-
-// During development
-// Program slot 1 with Pizza Icon is for opcontrol
-// Program slot 2 with Planet Icon is for autonomous routine
-// Program slot 3 with Alien Icon is for tests or miscellaneous components
 void opcontrol() {
-  aon::ConfigureMotors();
   while (true) {
-    #if TESTING_AUTONOMOUS
-    aon::ConfigureMotors(false); // Set drivetrain to hold for auton testing
-
-    aon::AutonomousReader->ExecuteFunction("autonomous");
-
-    pros::delay(3000);
-    #else
-    aon::operator_control::Run(aon::operator_control::DEFAULT);
-    #endif
+    // aon::poll();
+    sensorFeeder.step(ekf);
+    DisplayDebugMenu4();
     pros::delay(10);
   }
 }
