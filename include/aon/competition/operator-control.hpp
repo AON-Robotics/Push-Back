@@ -13,6 +13,9 @@
 ///          tests for practically all of the fundamental functions except the driver
 ///          profiles and the Run function.
 namespace aon::operator_control {
+//GUI
+// When true, driver control logic is suppressed (e.g. during a GUI-triggered autonomous run)
+inline bool g_guiAutonActive = false;
 
 // ============================================================================
 //    _  _     _                 ___             _   _
