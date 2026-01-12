@@ -107,7 +107,7 @@ void Intake::sort() {
   Action action = NONE;
   while (true) {
     if (scanning) {
-      colorSensor.set_led_pwm(100);
+      colorSensor.set_led_pwm(100); // For consistent illumination in the elevator
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
@@ -304,7 +304,7 @@ void Intake::sort() {
   Action action;
   while (true) {
     if (scanning) {
-      colorSensor.set_led_pwm(100);
+      colorSensor.set_led_pwm(100); // For consistent illumination in the elevator
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
