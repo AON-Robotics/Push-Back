@@ -104,9 +104,10 @@ void Intake::sort() {
   const short CHECK_DELAY = 200;       // ms
   const short ACCEPTANCE_DELAY = 700;  // ms
   const short REJECTION_DELAY = 450;   // ms
-  Action action;
+  Action action = NONE;
   while (true) {
     if (scanning) {
+      colorSensor.set_led_pwm(100);
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
@@ -131,7 +132,6 @@ void Intake::sort() {
           stopTime = pros::millis() + ACCEPTANCE_DELAY;
         } else if (action == REJECT) {
           this->hoarder(-INTAKE_VELOCITY);
-          this->backElevator();
           this->scorer(-INTAKE_VELOCITY);
           stopTime = pros::millis() + REJECTION_DELAY;
         }
@@ -143,9 +143,11 @@ void Intake::sort() {
         this->hoarder(0);
         this->scorer(0);
         this->shotbelt(0);
-        this->backElevator(0);
         stopTime = UINT32_MAX;
       }
+    }
+    else {
+      colorSensor.set_led_pwm(0);
     }
     pros::delay(25);
   }
@@ -302,6 +304,7 @@ void Intake::sort() {
   Action action;
   while (true) {
     if (scanning) {
+      colorSensor.set_led_pwm(100);
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
@@ -336,6 +339,9 @@ void Intake::sort() {
         this->scorer(0);
         stopTime = UINT32_MAX;
       }
+    }
+    else {
+      colorSensor.set_led_pwm(0);
     }
     pros::delay(25);
   }

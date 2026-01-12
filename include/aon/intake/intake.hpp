@@ -12,6 +12,7 @@ class Intake {
   enum Action {
     ACCEPT,
     REJECT,
+    NONE,
   };
 
   enum Height {

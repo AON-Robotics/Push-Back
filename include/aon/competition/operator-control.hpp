@@ -65,7 +65,7 @@ bool turbo = false;
 #else
 bool cartOut = false;
 bool scorerUp = false;
-bool armOut = false;
+bool arrowOut = false;
 bool trapdoorOpen = false;
 bool turbo = false;
 #endif
@@ -186,10 +186,10 @@ inline void DriveDefault() {
     intake.judge(0);
   }
 
-  // Toggle Arm
+  // Toggle Arrow
   if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    arm.moveAbsolute(armOut ? 20 : 90, armOut ? 70 : 200);
-    toggle(armOut);
+    arrow.moveAbsolute(arrowOut ? 20 : 90, arrowOut ? 70 : 200);
+    toggle(arrowOut);
   }
   
   // Change Height
@@ -205,7 +205,7 @@ inline void DriveDefault() {
     toggle(turbo);
   }
   // Toggle trapdoor
-  else if(mainController.get_digital_new_press(DIGITAL_X)) {
+  else if(mainController.get_digital_new_press(DIGITAL_Y)) {
     toggle(trapdoorOpen) ? intake.openTrapdoor() : intake.closeTrapdoor();
   }
   #endif
