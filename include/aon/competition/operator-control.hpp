@@ -61,7 +61,7 @@ inline double ApplySpeed(const double& input, const double& percentage){
 bool shrimpOut = false;
 bool brooksUp = false;
 bool wingsOut = false;
-bool turbo = true; // TODO: Add this to the 24" drive
+bool turbo = false;
 #else
 bool cartOut = false;
 bool scorerUp = false;
@@ -75,21 +75,20 @@ inline void DriveDefault() {
   //////////// DRIVE ////////////
   const double scaledVertical = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
   const double scaledTurn = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
-  const double vertical = ApplySpeed(scaledVertical, turbo ? 1 : 0.6);
   const double turn = ApplySpeed(scaledTurn, turbo ? 1 : 0.4);
-  drivetrain.driveWhileTurning(vertical, turn);
-
-
+  
   #if USING_BIG_ROBOT
-  if(mainController.get_digital(DIGITAL_R1)){
-    mid.moveVelocity((int)mid.getGearing());
-  }
-  else if(mainController.get_digital(DIGITAL_L1)){
-    mid.moveVelocity(-(int)mid.getGearing());
-  } else {
-    mid.moveVelocity(0);
-  }
+  const double scaledHorizontal = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+  
+  const double vertical = ApplySpeed(scaledVertical, turbo ? 1.41421356237 : 0.6);
+  const double horizontal = ApplySpeed(scaledHorizontal, turbo ? 1.41421356237 : 0.6);
+  
+  mid.moveVelocity(horizontal);
+  #else
+  const double vertical = ApplySpeed(scaledVertical, turbo ? 1 : 0.6);
   #endif
+  
+  drivetrain.driveWhileTurning(vertical, turn);
 
   //# From now on, all drivetrains used will need to use this format for driving
   if(false){
@@ -154,6 +153,10 @@ inline void DriveDefault() {
   // Match loaders mechanism
   else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
     toggle(shrimpOut) ? intake.dropShrimp() : intake.raiseShrimp();
+  }
+  // Toggle turbo
+  else if(mainController.get_digital_new_press(DIGITAL_X)) {
+    toggle(turbo);
   }
 
   #else
