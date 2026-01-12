@@ -233,6 +233,8 @@ inline void DriveFabian() { DriveDefault(); }
 /// @param driver the name of the person driving the robot
 /// @see aon::operator_control::Drivers
 inline void Run(const Drivers driver) {
+    // Suppress driver updates while a GUI autonomous is active so it doesn't fight motor commands
+  if (g_guiAutonActive) { return; }
   switch (driver) {
     case KEVIN:
       DriveKevin();
