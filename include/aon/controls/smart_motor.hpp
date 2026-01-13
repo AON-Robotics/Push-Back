@@ -58,51 +58,35 @@ class SmartMotor : public okapi::Motor {
     acceleration = std::abs(delta_velocity);
   }
 
-  /**
-   * \brief Move motor velocity according to slew rate calculations.
-   *
-   * \param ivelocity Target velocity [rpm]
-   *
-   * \returns moveVelocity output
-   */
+  /// @brief Move motor velocity according to slew rate calculations. Slew is in \b rev/min^2
+  /// @param ivelocity – The new motor velocity in \b rpm from -+-100, +-200, or +-600 depending on the motor's gearset
+  /// @returns 1 if the operation was successful or PROS_ERR if the operation failed, setting errno.
   std::int32_t moveVelocity(std::int16_t ivelocity) {
     if (GetAcceleration() != 0) {
       now = pros::micros();
-      const double speed_difference = ivelocity - GetCurrentVelocity();
 
-      if (std::abs(speed_difference) > 0) {
-        const double sign = (speed_difference > 0) ? 1 : -1;
-        // Kinematics equation v_f = v_o + a * Δt
-        SetCurrentVelocity(GetCurrentVelocity() +
-                           GetAcceleration() * (GetNow() - previous_time) *
-                               sign / 1E6);
-        ivelocity = std::ceil(GetCurrentVelocity());
-      }
+      // Kinematics equation v_f = v_o + a * Δt
+      const double deltaTime = (GetNow() - previous_time) / 1E6;
+      SetCurrentVelocity(std::clamp((double)ivelocity, GetCurrentVelocity() - GetAcceleration() * deltaTime,  GetCurrentVelocity() + GetAcceleration() * deltaTime));
+      ivelocity = std::ceil(GetCurrentVelocity());
+
       previous_time = pros::micros();
     }
     return okapi::Motor::moveVelocity(ivelocity);
   }
 
-  /**
-   * \brief Move motor voltage according to slew rate calculations.
-   *
-   * \param ivelocity Target velocity [rpm]
-   *
-   * \returns moveVelocity output
-   */
+  /// @brief Move motor voltage according to slew rate calculations. Slew is in \b mV/s
+  /// @param ivoltage – ivoltage – The new voltage value from -12000 to 12000.
+  /// @returns 1 if the operation was successful or PROS_ERR if the operation failed, setting errno.
   std::int32_t moveVoltage(std::int16_t ivoltage) {
     if (GetDVoltage() != 0) {
       now = pros::micros();
-      const double power_difference = ivoltage - GetCurrentVoltage();
 
-      if (std::abs(power_difference) > 0) {
-        const double sign = (power_difference > 0) ? 1 : -1;
-        // Kinematics equation v_f = v_o + a * Δt
-        SetCurrentVelocity(GetCurrentVoltage() +
-                           GetDVoltage() * (GetNow() - previous_time) * sign /
-                               1E6);
-        ivoltage = std::ceil(GetCurrentVoltage());
-      }
+      // Kinematics equation v_f = v_o + a * Δt
+      const double deltaTime = (GetNow() - previous_time) / 1E6;
+      SetCurrentVoltage(std::clamp((double)ivoltage, GetCurrentVoltage() - GetDVoltage() * deltaTime, GetCurrentVoltage() + GetDVoltage() * deltaTime));
+      ivoltage = std::ceil(GetCurrentVoltage());
+
       previous_time = pros::micros();
     }
     return okapi::Motor::moveVoltage(ivoltage);
@@ -124,7 +108,7 @@ class SmartMotorGroup : public okapi::MotorGroup {
   double current_voltage;
   double current_velocity;
   int d_voltage;
-  int acceleration;
+  double acceleration;
   uint64_t now = 0;
   uint64_t previous_time = 0;
   int step = 0;
@@ -148,7 +132,7 @@ class SmartMotorGroup : public okapi::MotorGroup {
   double GetCurrentVoltage() { return current_voltage; }
   double GetCurrentVelocity() { return current_velocity; }
   int GetDVoltage() { return d_voltage; }
-  int GetAcceleration() { return acceleration; }
+  double GetAcceleration() { return acceleration; }
   uint64_t GetNow() { return now; }
 
   /// Setters
@@ -157,47 +141,41 @@ class SmartMotorGroup : public okapi::MotorGroup {
     current_velocity = current_vel;
   }
   void SetDVoltage(int delta_voltage) { d_voltage = std::abs(delta_voltage); }
-  void SetAcceleration(int delta_velocity) {
-    acceleration = std::abs(delta_velocity);
+  void SetAcceleration(double delta_velocity) {
+    acceleration = std::fabs(delta_velocity);
   }
 
-  /// Move motor velocity according to slew rate calculations.
-  /// unit: rev/min^2
-  /// \param ivelocity
+  /// @brief Move motor velocity according to slew rate calculations. Slew is in \b rev/min^2
+  /// @param ivelocity – The new motor velocity in \b rpm from -+-100, +-200, or +-600 depending on the motor's gearset
+  /// @returns 1 if the operation was successful or PROS_ERR if the operation failed, setting errno.
   std::int32_t moveVelocity(std::int16_t ivelocity) {
-    if (GetAcceleration() != 0) {
+    if (this->GetAcceleration() != 0) {
       now = pros::micros();
-      const double speed_difference = ivelocity - GetCurrentVelocity();
 
-      if (std::abs(speed_difference) > 0) {
-        const double sign = (speed_difference > 0) ? 1 : -1;
-        // Kinematics equation v_f = v_o + a * Δt
-        SetCurrentVelocity(GetCurrentVelocity() +
-                           GetAcceleration() * (GetNow() - previous_time) *
-                               sign / 1E6);
-        ivelocity = std::ceil(GetCurrentVelocity());
-      }
+      // Kinematics equation v_f = v_o + a * Δt
+      const double deltaTime = (this->GetNow() - previous_time) / 1E6;
+      const double upperLimit = this->GetCurrentVelocity() + this->GetAcceleration() * deltaTime;
+      const double lowerLimit = this->GetCurrentVelocity() - this->GetAcceleration() * deltaTime;
+      this->SetCurrentVelocity(std::clamp((double)ivelocity, lowerLimit,  upperLimit));
+      ivelocity = std::ceil(this->GetCurrentVelocity());
+
       previous_time = pros::micros();
     }
     return okapi::MotorGroup::moveVelocity(ivelocity);
   }
 
-  /// Move motor voltage according to slew rate calculations.
-  /// unit: mV/s
-  /// \param ivoltage
+  /// @brief Move motor voltage according to slew rate calculations. Slew is in \b mV/s
+  /// @param ivoltage – ivoltage – The new voltage value from -12000 to 12000.
+  /// @returns 1 if the operation was successful or PROS_ERR if the operation failed, setting errno.
   std::int32_t moveVoltage(std::int16_t ivoltage) {
     if (GetDVoltage() != 0) {
       now = pros::micros();
-      const double power_difference = ivoltage - GetCurrentVoltage();
 
-      if (std::abs(power_difference) > 0) {
-        const double sign = (power_difference > 0) ? 1 : -1;
-        // Kinematics equation v_f = v_o + a * Δt
-        SetCurrentVoltage(GetCurrentVoltage() + GetDVoltage() *
-                                                    (GetNow() - previous_time) *
-                                                    sign / 1E6);
-        ivoltage = std::ceil(GetCurrentVoltage());
-      }
+      // Kinematics equation v_f = v_o + a * Δt
+      const double deltaTime = (GetNow() - previous_time) / 1E6;
+      SetCurrentVoltage(std::clamp((double)ivoltage, GetCurrentVoltage() - GetDVoltage() * deltaTime, GetCurrentVoltage() + GetDVoltage() * deltaTime));
+      ivoltage = std::ceil(GetCurrentVoltage());
+
       previous_time = pros::micros();
     }
     return okapi::MotorGroup::moveVoltage(ivoltage);

@@ -16,6 +16,15 @@ void Orbit::configure() {
   vision_sensor.set_signature(RED, &RED_SIG);
   vision_sensor.set_signature(BLUE, &BLUE_SIG);
   vision_sensor.set_signature(STAKE, &STAKE_SIG);
+
+  motor.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  motor.setGearing(okapi::AbstractMotor::gearset::green);
+  motor.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  motor.tarePosition();
+}
+
+void Orbit::stop() {
+  motor.moveVelocity(0);
 }
 
 /// @brief Begins ORBIT following cycle
@@ -61,7 +70,7 @@ void Orbit::follow() {
 
       if (object.signature == COLOR) {
         if (abs(OBJ_CENTER - VISION_FIELD_CENTER) <= TOLERANCE) {
-          motor.moveVelocity(0);
+          this->stop();
         }
         // Limiting to protect hardware
         else if (limited && (leftLimit >= position && position >= rightLimit)) {
@@ -76,11 +85,11 @@ void Orbit::follow() {
         activateScan();
       }
     } else if (braking) {
-      motor.moveVelocity(0);
+      this->stop();
     }
     pros::delay(10);
   }
-  motor.moveVelocity(0);
+  this->stop();
 }
 
 void Orbit::rotateRelative(const double &givenAngle) {
@@ -94,7 +103,7 @@ void Orbit::rotateRelative(const double &givenAngle) {
     motor.moveVelocity(output);
     pros::delay(10);
   } while (abs(currentAngle - targetAngle) > TOLERANCE);
-  motor.moveVelocity(0);
+  this->stop();
 }
 
 /// @brief ORBIT async task scanning test function
@@ -150,7 +159,7 @@ void Orbit::rotateAbsolute(double targetAngle) {
     motor.moveVelocity(output);
     pros::delay(10);
   } while (abs(currentAngle - targetAngle) > TOLERANCE);
-  motor.moveVelocity(0);
+  this->stop();
 }
 
 bool Orbit::isAligned(const double &tolerance) {
@@ -211,7 +220,7 @@ double Orbit::widthToDistance(const double &width) {
   // then the formula technically is:
   // d = K / pixels
   // where K is a constant K = |i| * (w_o / CONSTANT)
-  const double REAL_WIDTH = 7;
+  const double REAL_WIDTH = 3.25;
   const double DISTANCE_OF_IMAGE = 0.0625;  // estimated/experimental
   const double imageWidthInInches =
       pixelsToInches(width);  // also somewhat estimated/experimental

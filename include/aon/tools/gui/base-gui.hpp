@@ -87,7 +87,7 @@ const int lower_block_2_text_x =
 const int lower_block_3_text_x = BRAIN_SCREEN_WIDTH - BRAIN_SCREEN_WIDTH / 4;
 
 /// Initial GUI Method
-static void Initialize() {
+static void STOPInitialize() {
   // store functions in reader
   AutonomousReader->AddFunction("Test", &TestSequence);
 
@@ -587,7 +587,7 @@ static void DrawButtonBlock(const std::uint32_t block_color, int block_start_x,
 static void DrawNABlock(int block_start_x, int block_start_y, int block_end_x,
                         int block_end_y, int text_x, int text_y) {
   DrawButtonBlock(COLOR_GRAY, block_start_x, block_start_y, block_end_x,
-                  block_end_y, COLOR_BLACK, TEXT_LARGE, text_x, text_y, "N/A");
+                  block_end_y, COLOR_BLACK, TEXT_LARGE, text_x, text_y, "N/A"); 
 }
 
 /// Draw a block that visualizes a press action

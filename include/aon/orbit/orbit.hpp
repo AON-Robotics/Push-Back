@@ -33,12 +33,9 @@ class Orbit {
       STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0);
 
  public:
-  // constructor:
 
   Orbit();
   Orbit(int rotationPort, bool reversedEncoder, int visionPort, int port);
-
-  // functions:
 
 
   auto getLargestObject() {
@@ -159,5 +156,8 @@ class Orbit {
   /// @return The filtered distance to that ring
   /// @note Takes half a second (0.5s) to complete
   double getDistanceToRing(Colors color);
+
+  /// @brief Stops the motor to avoid damage
+  void stop();
 };
 }  // namespace aon

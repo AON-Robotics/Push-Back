@@ -43,7 +43,6 @@
  * 
  *  By: Jorge Luna
  * */
-
 namespace aon::odometry {
 
 inline pros::Rotation encoderRight(2, true);
@@ -52,7 +51,7 @@ inline pros::Rotation encoderBack(5, true);
 #if GYRO_ENABLED
 inline pros::Imu gyroscope(4);
 #endif
-inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
+inline pros::Gps gps(21, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
   // ============================================================================
   //   __   __        _      _    _
@@ -405,6 +404,7 @@ inline void Update() {
   gyro_data.prevDegrees = gyro_data.currentDegrees;
   
   // Right now, confidence gyro 1.0, encoder confidence 0 (must sum 1) 
+  //# deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaDegrees;
   deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaRadians;
   // std::cout << "gyro delta radians: " << gyro_data.deltaRadians << "\n";
   // std::cout << "delta theta A: " << GYRO_CONFIDENCE * gyro_data.deltaRadians << "\n";
@@ -414,6 +414,7 @@ inline void Update() {
   
   // Updating angle
   double previousTheta = GetRadians();
+  //# SetDegrees(GetDegrees() + deltaTheta);
   SetRadians(GetRadians() + deltaTheta);
   
   // Calculations simple trigonometry, i.e., mine :)

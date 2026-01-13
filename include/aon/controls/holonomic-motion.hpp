@@ -1,10 +1,10 @@
-/**
- * \file holonomic_motion.hpp
- *
- * \brief Implementation of holonomic motion and some control algorithms that
- * make use of it.
- * */
-#if !USING_BLACK_ROBOT
+// /**
+//  * \file holonomic_motion.hpp
+//  *
+//  * \brief Implementation of holonomic motion and some control algorithms that
+//  * make use of it.
+//  * */
+// #if !USING_BIG_ROBOT
 
 #pragma once
 

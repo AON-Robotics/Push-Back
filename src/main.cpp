@@ -1,16 +1,16 @@
 #include "../include/main.hpp"
 
 void initialize() {
-  pros::Task guiTask(aon::gui::Initialize);
+  aon::gui::Initialize();
   aon::logging::Initialize();
-  pros::lcd::initialize();
   aon::Configure(false);
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
   pros::Task safetyTask(aon::autonSafety);
-  pros::Task intakeTask([]{intake.scan();});
-  pros::Task turretFollowTask([]{orbit.follow();});
-  pros::Task turretScanTask([]{orbit.scan();});
+  // pros::Task turretFollowTask([]{orbit.follow();});
+  // pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
+  pros::Task intakeScanning([]{intake.scan();});
+  pros::Task intakeSorting([]{intake.sort();});
 }
 
 void disabled() {}
@@ -47,7 +47,7 @@ void opcontrol() {
 
     // aon::AutonomousReader->ExecuteFunction("autonomous");
 
-    pros::delay(3000);
+    pros::delay(5000);
     #else
     aon::operator_control::Run(aon::operator_control::DEFAULT);
     #endif
