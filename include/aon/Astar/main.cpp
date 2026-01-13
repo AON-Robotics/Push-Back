@@ -239,38 +239,37 @@ int main() {
 
 
   ////////////////////////////////////////
-  // SIMPLE TEST (PARK ZONE PENALTY BEHAVIOR)
+  // SIMPLE TEST (PLANE COORDS: 0,0 IS CENTER)
   ////////////////////////////////////////
 
-  // Start on left half, near the middle, but OUTSIDE the left park zone depth
-  // left park zone covers c = 1..PARK_DEPTH, so choose c = PARK_DEPTH + 5
-  //Astar::Point start{MID, PARK_DEPTH + 5};
-  Astar::Point start{MID, 10};  
+  astar.set_robot_type(1);            // 1 = Big, 2 = Small
 
-  // Goal on right half, OUTSIDE the right park zone depth
-  // right park zone covers c = (CELLS-2-PARK_DEPTH) .. (CELLS-2)
-  // so choose something smaller than that range
-  //Astar::Point goal{MID, (astar.CELLS - 2) - (PARK_DEPTH + 5)};
-  Astar::Point goal {MID, 133};   
+  int ROBOT_W = astar.get_robot_w();
+  int ROBOT_H = astar.get_robot_h();
 
-  // Safety clamp (avoid walls)
-  start.r = std::max(start.r, 1);
-  start.c = std::max(start.c, 1);
-  goal.r  = std::min(goal.r, astar.CELLS - 2);
-  goal.c  = std::min(goal.c, astar.CELLS - 2);
+  // Plane coords (x,y): x right +, left -, y up +, down -
+  int sx = -50;                       // 50 inches left of center
+  int sy = 0;                         // same height as center
+  int gx = 50;                        // 50 inches right of center
+  int gy = 0;
+
+  // Convert plane (x,y) -> grid (r,c)
+  Astar::Point start = Astar::from_xy(sx, sy);
+  Astar::Point goal  = Astar::from_xy(gx, gy);
+
+  // Print conversion so you can verify the mapping
+  std::cout << "Start XY (" << sx << "," << sy << ") -> grid (" << start.r << "," << start.c << ")\n";
+  std::cout << "Goal  XY (" << gx << "," << gy << ") -> grid (" << goal.r  << "," << goal.c  << ")\n";
 
   // ---- Run ----
-  int ROBOT_W = astar.get_robot_w();
-  int ROBOT_H = astar.get_robot_h();                   // This match hpp and is for visualization purposes
-  astar.set_robot_type(1);            // Big robot 1 small 2
   auto path = astar.go(start, goal);
 
   if (path.empty()) {
     std::cout << "No path found.\n";
   } else {
     std::cout << "Path length: " << path.size() << "\n";
-    std::cout << "Start: (" << path.front().r << "," << path.front().c << ")\n";
-    std::cout << "Goal: (" << path.back().r << "," << path.back().c << ")\n";
+    std::cout << "Start grid: (" << path.front().r << "," << path.front().c << ")\n";
+    std::cout << "Goal  grid: (" << path.back().r  << "," << path.back().c  << ")\n";
   }
 
   // ----------------------------------------------------

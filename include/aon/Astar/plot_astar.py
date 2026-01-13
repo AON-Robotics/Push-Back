@@ -2,6 +2,8 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
+CELLS = 144
+MID = CELLS // 2  # 72
 
 def read_points_csv(path):
     pts = []
@@ -19,72 +21,88 @@ def read_boxes_csv(path):
             boxes.append((int(row["r"]), int(row["c"]), int(row["w"]), int(row["h"])))
     return boxes
 
+def rc_to_xy(r, c):
+    # x right +, y up +, centered at MID
+    x = c - MID
+    y = MID - r
+    return x, y
 
 # --------------------------
-# Read exported CSVs
+# Read CSVs
 # --------------------------
 path_pts = read_points_csv("path.csv")
 blocked_pts = read_points_csv("blocked.csv")
-robot_boxes = read_boxes_csv("robot_boxes.csv")
-
-
-# penalty.csv is new (Park Zones)
-# If you run before generating penalty.csv, you’ll get an error.
 penalty_pts = read_points_csv("penalty.csv")
 
-# --------------------------
-# Convert (r,c) -> (x,y) for plotting
-# x = c (horizontal), y = r (vertical)
-# --------------------------
-path_x = [c for r, c in path_pts]
-path_y = [r for r, c in path_pts]
+# Optional: only if you generated robot_boxes.csv
+try:
+    robot_boxes = read_boxes_csv("robot_boxes.csv")
+except FileNotFoundError:
+    robot_boxes = []
 
-blk_x = [c for r, c in blocked_pts]
-blk_y = [r for r, c in blocked_pts]
+# --------------------------
+# Convert to (x,y)
+# --------------------------
+path_xy = [rc_to_xy(r, c) for (r, c) in path_pts]
+blk_xy  = [rc_to_xy(r, c) for (r, c) in blocked_pts]
+pen_xy  = [rc_to_xy(r, c) for (r, c) in penalty_pts]
 
-pen_x = [c for r, c in penalty_pts]
-pen_y = [r for r, c in penalty_pts]
+path_x = [x for x, y in path_xy]
+path_y = [y for x, y in path_xy]
+
+blk_x = [x for x, y in blk_xy]
+blk_y = [y for x, y in blk_xy]
+
+pen_x = [x for x, y in pen_xy]
+pen_y = [y for x, y in pen_xy]
 
 plt.figure()
-
 ax = plt.gca()
 
-# Draw robot footprint rectangles
-# (r,c) is center in your grid; rectangle needs bottom-left corner
+# --------------------------
+# Draw robot footprint rectangles (in xy)
+# --------------------------
 for (r, c, w, h) in robot_boxes:
-    hw = w / 2.0
-    hh = h / 2.0
+    x, y = rc_to_xy(r, c)
 
-    # Rectangle expects (x,y) = (left, top) in data coords,
-    # but since we invert_yaxis later, we can still place it using grid coords.
-    left = c - hw
-    top  = r - hh
+    # Rectangle wants bottom-left corner
+    left = x - (w / 2.0)
+    bottom = y - (h / 2.0)
 
-    rect = Rectangle((left, top), w, h, fill=False, linewidth=1.2, label="_robot")
+    rect = Rectangle((left, bottom), w, h, fill=False, linewidth=1.2, label="_robot")
     ax.add_patch(rect)
 
-# Blocked cells (walls, goals, etc.)
+# --------------------------
+# Plot blocked / penalty / path
+# --------------------------
 if blocked_pts:
     plt.scatter(blk_x, blk_y, s=8, label="blocked")
 
-# Penalty cells (Park Zones) -> different marker so you can see them
 if penalty_pts:
     plt.scatter(pen_x, pen_y, s=12, marker="s", label="penalty")
 
-# Path line
 if path_pts:
     plt.plot(path_x, path_y, linewidth=2, label="path")
 
-    # Mark start and goal based on path endpoints
+    # Mark start and goal from path endpoints
     plt.scatter([path_x[0]], [path_y[0]], s=60, marker="o", label="start")
     plt.scatter([path_x[-1]], [path_y[-1]], s=60, marker="x", label="goal")
 else:
     print("No path points found (path.csv empty).")
 
+# --------------------------
+# Make axes match centered plane coords
+# --------------------------
 plt.gca().set_aspect("equal", adjustable="box")
-plt.gca().invert_yaxis()  # row 0 at top like a grid
-plt.title("A* path on grid (blocked + penalty)")
-plt.xlabel("c (column)")
-plt.ylabel("r (row)")
+
+# Full field visible in centered coords:
+# c=0..143 -> x = -72..71
+# r=0..143 -> y = 72..-71
+plt.xlim(-MID, MID - 1)
+plt.ylim(-(MID - 1), MID)
+
+plt.title("A* path on centered plane coords (x,y)")
+plt.xlabel("x (inches from center)")
+plt.ylabel("y (inches from center)")
 plt.legend()
 plt.show()

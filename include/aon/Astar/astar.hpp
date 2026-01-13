@@ -38,6 +38,20 @@ public:
     bool operator==(const Point& other) const { return r == other.r && c == other.c; }
   };
 
+  // Convert grid cell -> plane (x,y) where (0,0) is center.
+  // x: +right, -left
+  // y: +up, -down
+  static inline int to_x(int c) { return c - (CELLS / 2); }
+  static inline int to_y(int r) { return (CELLS / 2) - r; }
+
+  // Convert plane (x,y) -> grid cell (r,c)
+  static inline int to_c(int x) { return (CELLS / 2) + x; }
+  static inline int to_r(int y) { return (CELLS / 2) - y; }
+
+  // Convenience: build a Point from plane coords
+  static inline Point from_xy(int x, int y) { return Point{to_r(y), to_c(x)}; }
+
+
   Astar() { set_robot_type(1); } // Default Big Robot selected
 
   // (Optional helpers) so you can add obstacles/penalties from outside
