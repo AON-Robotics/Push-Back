@@ -31,8 +31,21 @@ void opcontrol() {
   while (true) {
     #if TESTING_AUTONOMOUS
     aon::Configure(false); // Set drivetrain to hold for auton testing
+    // aon::odometry::Debug();
+    // std::cout << "Robot move 12 inches to the front.";
+    // drivetrain.move(12);
+    // std::cout << "Robot moved 12 inches to the front.";
+    // drivetrain.turn(90);
+    // std::cout << "Robot moved 12 inches to the front.";
+    // drivetrain.moveHorizontalProfiled(6);
+    // std::cout << "Robot moved 6 inches to the right.";
+    drivetrain.move2D(12, 12, 90);
+    std::cout << "Robot moved 6 inches to the right, 6 inches to the front, and turn 90 degrees.";
 
-    aon::AutonomousReader->ExecuteFunction("autonomous");
+    pros::delay(5000);
+    // drivetrain.MoveHolonomicMotionH(6, 6, 90);
+
+    // aon::AutonomousReader->ExecuteFunction("autonomous");
 
     pros::delay(3000);
     #else

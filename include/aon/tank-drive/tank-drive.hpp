@@ -38,9 +38,9 @@ class TankDrive {
  okapi::MotorGroup driveFull;
  
  public:
- TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {-20, 19, -18},
-  const std::initializer_list<okapi::Motor> &rightPorts = {9, -8, 7},
-  const std::initializer_list<okapi::Motor> &drivePorts = {-20, 19, -18, 9, -8, 7})
+ TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {20, -19, -18},
+  const std::initializer_list<okapi::Motor> &rightPorts = {-16, 15, 14},
+  const std::initializer_list<okapi::Motor> &drivePorts = {20, -19, -18, -16, 15, 14})
   : leftMotors(leftPorts),
   rightMotors(rightPorts),
   driveFull(drivePorts),
@@ -145,7 +145,7 @@ class TankDrive {
   /// auton and `brake` for drivers
   /// @param gearset The gearbox the physical motors contain, they MUST be all
   /// the same
-  void configure(okapi::AbstractMotor::brakeMode brakeMode,
+  virtual void configure(okapi::AbstractMotor::brakeMode brakeMode,
                  okapi::AbstractMotor::gearset gearset);
 
   /// @brief Calculates average RPM forward

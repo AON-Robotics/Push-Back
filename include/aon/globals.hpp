@@ -27,8 +27,8 @@ aon::Orbit orbit(1,true,1,1);
 
 // Drivetrain
 // aon::XDrive drivetrain = aon::XDrive();
-aon::TankDrive drivetrain = aon::TankDrive();
-aon::HDrive drivetrainH = aon::HDrive();
+// aon::TankDrive drivetrain = aon::TankDrive();
+aon::HDrive drivetrain = aon::HDrive();
 
 // okapi::MotorGroup driveLeft = okapi::MotorGroup({-20, 19, -18});
 // okapi::MotorGroup driveRight = okapi::MotorGroup({9, -8, 7});
@@ -36,14 +36,14 @@ aon::HDrive drivetrainH = aon::HDrive();
 // okapi::Motor middleMotor = okapi::Motor({1});
 
 //Intake:
-aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);
+aon::Intake intake = aon::Intake({-21, 21}, {21}, {-21}, 21);
 
 okapi::MotorGroup bottom = okapi::MotorGroup({1});
 okapi::MotorGroup top = okapi::MotorGroup({-2});
 
 // Misc
 
-okapi::Motor arm = okapi::Motor(11);
+okapi::Motor arm = okapi::Motor(21);
 okapi::Motor turret = okapi::Motor(-15);
 
 // TriPort
@@ -114,7 +114,7 @@ inline void Configure(const bool opcontrol = true) {
   // HOLD for AUTONOMOUS ||| BRAKE for OPERATOR CONTROL
   okapi::AbstractMotor::brakeMode brakeMode = opcontrol ? okapi::AbstractMotor::brakeMode::brake : okapi::AbstractMotor::brakeMode::hold;
 
-  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
+  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::green);
   orbit.configure();
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
   arm.setGearing(okapi::AbstractMotor::gearset::red);

@@ -46,11 +46,11 @@
 
 namespace aon::odometry {
 
-inline pros::Rotation encoderRight(5, true);
-inline pros::Rotation encoderLeft(4, false);
-inline pros::Rotation encoderBack(11, false);
+inline pros::Rotation encoderRight(2, true);
+inline pros::Rotation encoderLeft(12, false);
+inline pros::Rotation encoderBack(5, true);
 #if GYRO_ENABLED
-inline pros::Imu gyroscope(6);
+inline pros::Imu gyroscope(4);
 #endif
 inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
@@ -121,7 +121,7 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
 
   #if ENCODER_BACK
   //> Encoder back/mid struct instance
-  STRUCT_encoder encoderBack_data;
+  inline STRUCT_encoder encoderBack_data;
   #endif
   //> Encoder right struct instance
   inline STRUCT_encoder encoderRight_data;
@@ -225,7 +225,7 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
   }
 
   /**
-   * \brief Get a vector with the current position
+   * \brief Get a vector with the current position in inches
    * 
    * \return Returns new vector with current position
    */
@@ -349,7 +349,6 @@ inline void Initialize() {
  * 
  * */
 inline void Update() {
-
   /// Read encoder values, divided by 100 to convert centidegrees to degrees
   encoderRight_data.currentValue = encoderRight.get_position() / 100.0; 
   encoderLeft_data.currentValue = encoderLeft.get_position() / 100.0; 
@@ -441,14 +440,14 @@ inline void Update() {
       // alteration with back encoder
       #if ENCODER_BACK
       changeMine.SetPosition(changeMine.GetX() + (2 * std::sin(deltaTheta/2) * ((encoderBack_data.deltaDistance / deltaTheta) + DISTANCE_BACK_TRACKING_WHEEL_CENTER)),
-      changeMine.GetY() + (2 * std::sin(deltaTheta/2) * (averageR)));
+                             changeMine.GetY() + (2 * std::sin(deltaTheta/2) * (averageR)));
       // FROM THE VIDEO OF THE KID
       changeVideo.SetPosition(changeVideo.GetX() + (2 * std::sin(deltaTheta/2) * ((encoderBack_data.deltaDistance / deltaTheta) + DISTANCE_BACK_TRACKING_WHEEL_CENTER)),
-      changeVideo.GetY() + (2 * std::sin(deltaTheta/2) * ((encoderRight_data.deltaDistance / deltaTheta) + DISTANCE_RIGHT_TRACKING_WHEEL_CENTER)));
+                              changeVideo.GetY() + (2 * std::sin(deltaTheta/2) * ((encoderRight_data.deltaDistance / deltaTheta) + DISTANCE_RIGHT_TRACKING_WHEEL_CENTER)));
       #endif
     }
   }
-  // ElseiIf the robot is moving straight forward or backward, average encoder values for distance    
+  // Else if the robot is moving straight forward or backward, average encoder values for distance    
   else {
     double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0; // movement in X axis
     deltaDlocal.SetPosition(deltaD, 0);
@@ -468,7 +467,7 @@ inline void Update() {
 
   // Updating global position using 2D matrix transformation (previous way to update to global coordinates)
   SetPosition(GetX() + deltaDlocal.GetX() * std::cos(GetRadians()) - deltaDlocal.GetY() * std::sin(GetRadians()), 
-              GetY() + deltaDlocal.GetX() * std::sin(GetRadians()) + deltaDlocal.GetY() * std::cos(GetRadians()));  
+              GetY() + deltaDlocal.GetX() * std::sin(GetRadians()) + deltaDlocal.GetY() * std::cos(GetRadians()));
 
 
 
@@ -490,6 +489,9 @@ inline void Update() {
 
   encoderRight_data.previousDistance = encoderRight_data.currentDistance;
   encoderLeft_data.previousDistance = encoderLeft_data.currentDistance;
+  #if ENCODER_BACK
+  encoderBack_data.previousDistance = encoderBack_data.currentDistance;
+  #endif
 
   gyro_data.prevDegrees = gyro_data.currentDegrees;
 }
@@ -519,6 +521,7 @@ inline Vector gpsPosition(){
 inline void Odometry(){
   while(true){
     Update();
+    pros::lcd::print(4, "X: %0.3f | Y: %0.3f | Theta: %0.3f", GetX(), GetY(), GetDegrees());
     pros::delay(20);
   }
 }
@@ -547,9 +550,11 @@ inline void Debug() {
     // pros::lcd::print(0, "X: %0.3f, Y: %0.3f", GetX(), GetY());
     pros::lcd::print(0, "Left : %0.3f, %0.3f, %0.3f", encoderLeft_data.currentDistance, encoderLeft_data.previousDistance, encoderLeft_data.deltaDistance);
     pros::lcd::print(1, "Right: %0.3f, %0.3f, %0.3f", encoderRight_data.currentDistance, encoderRight_data.previousDistance, encoderRight_data.deltaDistance);
-    pros::lcd::print(2, "Heading: %0.3f", GetDegrees());
-    pros::lcd::print(3, "Mine:   X: %0.3f | Y: %0.3f", GetX(), GetY());
-    pros::lcd::print(4, "Web:    X: %0.3f | Y: %0.3f", changeWeb.GetX(), changeWeb.GetY());   
+    pros::lcd::print(2, "Back: %0.3f, %0.3f, %0.3f", encoderBack_data.currentDistance, encoderBack_data.previousDistance, encoderBack_data.deltaDistance);
+    pros::lcd::print(3, "Heading: %0.3f", GetDegrees());
+    pros::lcd::print(4, "Mine:   X: %0.3f | Y: %0.3f", GetX(), GetY());
+    pros::lcd::print(5, "Web:    X: %0.3f | Y: %0.3f", changeWeb.GetX(), changeWeb.GetY());  
+    pros::lcd::print(6, "V2:    X: %0.3f | Y: %0.3f", changeMine.GetX(), changeMine.GetY());
 
     odometry::Update();
     pros::delay(20);

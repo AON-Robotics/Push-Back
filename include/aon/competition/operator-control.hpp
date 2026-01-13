@@ -60,48 +60,60 @@ inline void DriveDefault() {
   bottom.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0));
 
   //# From now on, all drivetrains used will need to use this format for driving
-  if(false){
+  if(true){
     double leftX = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X) / 127.0, SENSITIVITY);
     double leftY = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
     double rightX = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY);
     double rightY = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y) / 127.0, SENSITIVITY);
+
+    // drivetrain.drive(leftX, leftY, rightX, rightY);
     drivetrain.drive(leftX, leftY, rightX, rightY);
   }
   
   //////////// INTAKE ////////////
   
+  // if (mainController.get_digital(DIGITAL_R1)) {
+  //   intake.move(INTAKE_VELOCITY);
+  // } else if (mainController.get_digital(DIGITAL_R2)) {
+  //   intake.move(-INTAKE_VELOCITY);
+  // } else {
+  //   intake.stop();
+  // }
+
   if (mainController.get_digital(DIGITAL_R1)) {
-    intake.move(INTAKE_VELOCITY);
-  } else if (mainController.get_digital(DIGITAL_R2)) {
-    intake.move(-INTAKE_VELOCITY);
-  } else {
-    intake.stop();
+    drivetrain.motorsMid(600);
   }
-  
-  if (mainController.get_digital_new_press(DIGITAL_A)) 
-  { 
-    claw.set_value(toggle(clawOn));
+  else if (mainController.get_digital(DIGITAL_L1)) {
+    drivetrain.motorsMid(600);
   }
-  
-  if (mainController.get_digital_new_press(DIGITAL_B)) 
-  { 
-    intake.kickBackRail();
-  }
-  
-  if(mainController.get_digital(DIGITAL_Y)){
-    indexer.set_value(true);
-  } 
   else {
-    indexer.set_value(false);
+    drivetrain.motorsMid(0);
   }
+
+  // if (mainController.get_digital_new_press(DIGITAL_A)) 
+  // { 
+  //   claw.set_value(toggle(clawOn));
+  // }
   
-  if (mainController.get_digital(DIGITAL_L1)) {
-    arm.moveVelocity(INTAKE_VELOCITY);
-  } else if (mainController.get_digital(DIGITAL_L2)) {
-    arm.moveVelocity(-INTAKE_VELOCITY);
-  } else {
-    arm.moveVelocity(0);
-  }
+  // if (mainController.get_digital_new_press(DIGITAL_B)) 
+  // { 
+  //   intake.kickBackRail();
+  // }
+  
+  // if(mainController.get_digital(DIGITAL_Y)){
+  //   indexer.set_value(true);
+  // } 
+  // else {
+  //   indexer.set_value(false);
+  // }
+  
+  // if (mainController.get_digital(DIGITAL_L1)) {
+  //   arm.moveVelocity(INTAKE_VELOCITY);
+  // } else if (mainController.get_digital(DIGITAL_L2)) {
+  //   arm.moveVelocity(-INTAKE_VELOCITY);
+  // } else {
+  //   arm.moveVelocity(0);
+  // }
 }
 
 /// Ian's Operator Control configuration

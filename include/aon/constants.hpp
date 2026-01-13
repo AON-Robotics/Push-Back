@@ -11,7 +11,7 @@
 
 // NOT using black robot = Using green robot
 #define USING_BLACK_ROBOT true
-#define TESTING_AUTONOMOUS false 
+#define TESTING_AUTONOMOUS true 
 
 #define SENSITIVITY 1 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
 #define DRIVE_WHEEL_DIAMETER 3.25
@@ -19,7 +19,7 @@
 #define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 1.572
 #define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 1.572
 #define DISTANCE_BACK_TRACKING_WHEEL_CENTER 1.572
-#define ENCODER_BACK false
+#define ENCODER_BACK true
 #define MOTOR_TO_DRIVE_RATIO .8 // NumTeethMotorGear / NumTeethWheelGear
 #define GYRO_ENABLED true
 #define GYRO_CONFIDENCE 1
