@@ -10,6 +10,8 @@
 #include "./tools/vector.hpp"
 #include "./x-drive/x-drive.hpp"
 #include "./intake/intake.hpp"
+#include "./tank-drive/tank-drive.hpp"
+#include "./orbit/orbit.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -19,9 +21,11 @@
 //
 // ============================================================================
 
+aon::Orbit orbit(1,true,1,1);
 
 // Drivetrain
 aon::XDrive drivetrain = aon::XDrive();
+aon::TankDrive drivetrainTank = aon::TankDrive();
 
 
 //Intake:
@@ -52,33 +56,18 @@ bool clawOn = false;
 
 // Encoders
 
-pros::Rotation turretEncoder(14, true);
+pros::Rotation encoderRight(5, true);
+pros::Rotation encoderLeft(4, false);
+pros::Rotation encoderBack(11, false);
 
 pros::ADIEncoder opticalEncoder('A', 'B');
 
-// Vision
-
-// Colors
-enum Colors {
-  RED = 1,
-  BLUE,
-  STAKE
-};
-
-Colors COLOR = RED;
-
-pros::Vision vision_sensor(12);
-volatile bool turretFollowing = false;
-volatile bool turretBraking = true;
-volatile bool turretScanning = false;
-pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8973, 11143, 10058, -2119, -1053, -1586, 5.4, 0);
-pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
-pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
+pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
 // Distance
 
 pros::Distance distanceSensor(3);
-volatile bool intakeScanning = false;
+volatile bool intakeScanning = false; // TODO: remove this
 
 // Potentiometer
 
@@ -89,7 +78,7 @@ pros::ADIPotentiometer potentiometer('F');
 aon::PID drivePID = aon::PID(0.02, 0, 0);
 aon::PID turnPID = aon::PID(0.002, 0, 0);
 aon::PID fastPID = aon::PID(1, 0, 0);
-aon::PID turretPID = aon::PID(0.25, 0, 0);
+
 
 /// Controller
 pros::Controller mainController = pros::Controller(pros::E_CONTROLLER_MASTER);
@@ -114,12 +103,12 @@ enum Drivers {
 
 namespace aon {
 
-inline void ConfigureMotors(const bool opcontrol = true) {
+inline void Configure(const bool opcontrol = true) {
   // HOLD for AUTONOMOUS ||| BRAKE for OPERATOR CONTROL
   okapi::AbstractMotor::brakeMode brakeMode = opcontrol ? okapi::AbstractMotor::brakeMode::brake : okapi::AbstractMotor::brakeMode::hold;
 
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
-
+  orbit.configure();
   arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
   arm.setGearing(okapi::AbstractMotor::gearset::red);
   arm.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -131,22 +120,12 @@ inline void ConfigureMotors(const bool opcontrol = true) {
   turret.tarePosition();
 
 }
-
-/**
- * \brief Adds the colors to the vision sensor
-*/
-inline void ConfigureColors(){
-  vision_sensor.set_signature(RED, &RED_SIG);
-  vision_sensor.set_signature(BLUE, &BLUE_SIG);
-  vision_sensor.set_signature(STAKE, &STAKE_SIG);
-}
-
 /**
  * \brief Stops movement from robot
  */
 void STOP(){
   drivetrain.stop();
-  intake.move(0);
+  intake.stop();
   arm.moveVelocity(0);
   turret.moveVelocity(0);
 }
@@ -174,16 +153,7 @@ void testEndpoint(int speed = 100){
   STOP(); 
   intake.move(speed);
   pros::delay(1000);
-  intake.move(0);
-}
-
-/**
- * \brief Makes the rail go slightly back
- */
-void kickBackRail(){
-  intake.moveRail(-100);
-  pros::delay(150);
-  intake.moveRail(0);
+  intake.stop();
 }
 
 /**
@@ -191,54 +161,12 @@ void kickBackRail(){
  */
 void autonSafety(){
   while(true){
-    while(mainController.get_digital(DIGITAL_X)){
+    while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
       STOP();
     }
     pros::delay(50);
   }
 }
-
-/// @brief Begins ORBIT following cycle
-void activateORBITFollow(){
-  turretFollowing = true;
-  turretBraking = true;
-  turretScanning = false;
-}
-
-/// @brief Ends ORBIT following cycle
-void deactivateORBITFollow(){
-  turretFollowing = false;
-}
-
-/// @brief Begins ORBIT scanning cycle
-void activateORBITScan(){
-  turretFollowing = false;
-  turretBraking = false;
-  turretScanning = true;
-}
-
-/// @brief Ends ORBIT scanning cycle
-void deactivateORBITScan(){
-  turretScanning = false;
-}
-
-/// @brief Sets the ORBIT to brake if not scanning
-void brakeORBIT(){
-  turretBraking = true;
-}
-
-/// @brief Releases the ORBIT from braking to allow other functions to use it
-void releaseORBIT() {
-  turretBraking = false;
-}
-
-/// @brief Starts intake scanning cycle, inside intake files
-//change this as well, this can go inside the Intake.hpp and Intake.cpp files
-//so no function here, just access the file
-void activateIntakeScan(){ intake.startScan(); }
-
-/// @brief Ends intake scanning cycle
-void deactivateIntakeScan(){ intake.stopScan(); }
 
 }  // namespace aon
 

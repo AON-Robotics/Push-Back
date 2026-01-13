@@ -4,18 +4,14 @@
 #include "../constants.hpp"
 #include "../globals.hpp"
 
-/**
- * \brief Encapsulates functions and state for operator control.
- *
- * \details Practically uses Singleton design pattern, but classes would have
- * made it more complicated for beginners to understand. Also makes extensive
- * use of USING_BLACK_ROBOT global constant and preprocessor directives to
- * make switching between robots not require separate branches, which could make
- * fixes and updates to one branch not apply to the other. Finally, it includes
- * tests for practically all of the fundamental functions except the driver
- * profiles and the Run function.
- *
- */
+/// @brief Encapsulates functions and state for operator control.
+/// @details Practically uses Singleton design pattern, but classes would have
+///          made it more complicated for beginners to understand. Also makes extensive
+///          use of USING_BLACK_ROBOT global constant and preprocessor directives to
+///          make switching between robots not require separate branches, which could make
+///          fixes and updates to one branch not apply to the other. Finally, it includes
+///          tests for practically all of the fundamental functions except the driver
+///          profiles and the Run function.
 namespace aon::operator_control {
 
 // ============================================================================
@@ -26,25 +22,17 @@ namespace aon::operator_control {
 //              |_|
 // ============================================================================
 
-/**
- * \brief Scales analog joystick input for easier control.
- *
- * \details Fine joystick control can be difficult, specially for tasks like
- *     rotating. After researching the forums I found that teams scale their
- *     joystick inputs using an exponential function of sorts. This makes small
- *     inputs produce a smaller output and bigger inputs increase speed, so fine
- *     movements can be done without as much of a hassle.
- *
- * \param x The controller's user input between -1 and 1
- * \param t Sensitivity (higher is more sensible and vice-versa)
- *
- * <a href="https://www.desmos.com/calculator/uhjyivyj4r">Demonstration of
- * scaling function in Desmos.</a>
- *
- * \return double
- *
- * \warning Make sure that the input x is between -1 and 1!!!
- */
+/// @brief Scales analog joystick input for easier control.
+/// @details Fine joystick control can be difficult, specially for tasks like
+///          rotating. After researching the forums I found that teams scale their
+///          joystick inputs using an exponential function of sorts. This makes small
+///          inputs produce a smaller output and bigger inputs increase speed, so fine
+///          movements can be done without as much of a hassle.
+/// @param x The controller's user input between -1 and 1
+/// @param t Sensitivity (higher is more sensible and vice-versa)
+/// <a href="https://www.desmos.com/calculator/uhjyivyj4r">Demonstration of scaling function in Desmos.</a>
+/// @return double
+/// @warning Make sure that the input x is between -1 and 1!!!
 inline double AnalogInputScaling(const double x, const double t) {
   const double z = 127.0 * x;
   const double a = ::std::exp(-::std::fabs(t) / 10.0);
@@ -71,9 +59,6 @@ inline void DriveDefault() {
   top.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0));
   bottom.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0));
 
-  // driveLeft.moveVelocity(MAX_RPM * std::clamp(vertical + turn, -1.0, 1.0) * .9);
-  // driveRight.moveVelocity(MAX_RPM * std::clamp(vertical - turn, -1.0, 1.0) * .9);
-
   //# From now on, all drivetrains used will need to use this format for driving
   if(false){
     double leftX = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X) / 127.0, SENSITIVITY);
@@ -90,7 +75,7 @@ inline void DriveDefault() {
   } else if (mainController.get_digital(DIGITAL_R2)) {
     intake.move(-INTAKE_VELOCITY);
   } else {
-    intake.move(0);
+    intake.stop();
   }
   
   if (mainController.get_digital_new_press(DIGITAL_A)) 
@@ -100,7 +85,7 @@ inline void DriveDefault() {
   
   if (mainController.get_digital_new_press(DIGITAL_B)) 
   { 
-    kickBackRail();
+    intake.kickBackRail();
   }
   
   if(mainController.get_digital(DIGITAL_Y)){
@@ -133,17 +118,10 @@ inline void DriveDavid() { DriveDefault(); }
 //
 // ============================================================================
 
-/**
- *\brief Main function for operator control.
- *
- * \details Control configurations for the different drivers are manipulated
- * here.
- *
- * \param driver the name of the person driving the robot
- *
- * \see aon::operator_control::Drivers
- *
- */
+/// @brief Main function for operator control.
+/// @details Control configurations for the different drivers are manipulated here.
+/// @param driver the name of the person driving the robot
+/// @see aon::operator_control::Drivers
 inline void Run(const Drivers driver) {
   switch (driver) {
     case IAN:
@@ -168,15 +146,8 @@ inline void Run(const Drivers driver) {
 //
 // ============================================================================
 
-/**
- * \brief Tests for the operator_control namespace
- *
- * \details Tests helper methods and input scaling. These tests are pretty
- * manual for now, but hopefully next year we'll have automated tests with a
- * solid framework.
- *
- */
-
+/// @brief Tests for the operator_control namespace
+/// @details Tests helper methods and input scaling. These tests are pretty manual for now, but hopefully next year we'll have automated tests with a solid framework.
 namespace test {
 
 }  // namespace test
