@@ -12,6 +12,7 @@
 #include "./intake/intake.hpp"
 #include "./tank-drive/tank-drive.hpp"
 #include "./orbit/orbit.hpp"
+#include "./EKF/Sensor_Feeder.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -56,13 +57,33 @@ bool clawOn = false;
 
 // Encoders
 
-pros::Rotation encoderRight(5, true);
-pros::Rotation encoderLeft(4, false);
-pros::Rotation encoderBack(11, false);
+pros::Rotation encoderRight(4, true);
+pros::Rotation encoderLeft(12, false);
+pros::Rotation encoderLateral(2, true);
+pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
+pros::Imu imu(11);
+
+// Sensor Feeder Instance
+aon::EKFConfig sensorFeederCfg{};
+EKF::HDriveConfig ekfCfg;
+EKF ekf(ekfCfg); //IF USING HDRIVE
+
+// aon::EKFConfig sensorFeederCfg{};  // uses defaults from struct
+// EKF::TankConfig ekfCfg{};
+// EKF ekf(ekfCfg);
+
+aon::SensorFeeder sensorFeeder(
+  encoderLeft,
+  encoderRight,
+  &encoderLateral,  //&encoderLateral si HDrive
+  imu,
+  nullptr, // use nullptr if no gps
+  sensorFeederCfg
+);
+
 
 pros::ADIEncoder opticalEncoder('A', 'B');
 
-pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
 // Distance
 
