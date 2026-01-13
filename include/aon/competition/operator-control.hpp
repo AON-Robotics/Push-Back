@@ -101,16 +101,17 @@ inline void DriveDefault() {
   }
 
   #if USING_BIG_ROBOT
-  // Score Mid from Bottom
-  if(mainController.get_digital(DIGITAL_A)){
-    intake.score(Intake::MIDDLE, Intake::BOTTOM);
+
+  if(mainController.get_digital(DIGITAL_R2)){
+    intake.activateScan();
+    intake.frontElevator();
+    intake.backElevator();
+  }
+  else {
+    intake.stopScan();
   }
 
-  else if(mainController.get_digital(DIGITAL_R2)){
-    intake.store();
-  }
-
-  else if(mainController.get_digital(DIGITAL_Y)){
+  if(mainController.get_digital(DIGITAL_Y)){
     intake.hoard();
   }
 
@@ -121,8 +122,7 @@ inline void DriveDefault() {
   else if(mainController.get_digital(DIGITAL_RIGHT)){
     intake.score(Intake::MIDDLE, Intake::TOP);
   }
-
-  else {
+  else if(!intake.isScanning()){
     intake.frontElevator(0);
     intake.scorer(0);
     intake.hoarder(0);
@@ -139,7 +139,7 @@ inline void DriveDefault() {
     intake.shooter(0);
   }
 
-  if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_RIGHT) || mainController.get_digital(DIGITAL_X) || mainController.get_digital(DIGITAL_B))){
+  if(!(mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_RIGHT) || mainController.get_digital(DIGITAL_B)) && !intake.isScanning()){
     intake.shotbelt(0);
   }
 

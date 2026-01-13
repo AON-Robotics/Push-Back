@@ -187,6 +187,10 @@ class Intake {
   /// @brief Sets the flag for the scanning async task to stop runnning
   void stopScan();
 
+  /// @brief Give the flag of scanning for the intake.
+  /// @return True if the intake is scanning, False otherwise
+  bool isScanning();
+
   /// @brief This small subroutine moves the elevator such that a block is
   /// picked up
   /// @param delay The time in \b milliseconds to leave the elevator running

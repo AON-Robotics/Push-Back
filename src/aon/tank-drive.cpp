@@ -149,7 +149,7 @@ void TankDrive::driveProfiled(double dist) {
     dt = now - lastTime;
     lastTime = now;
 
-    pros::lcd::print(0, "Trav %.2f", traveledDist);
+    pros::lcd::print(1, "Traveled %.2f / %.2f", traveledDist, dist);
     
     currVelocity = motionProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
@@ -163,7 +163,7 @@ void TankDrive::driveProfiled(double dist) {
 }
 
 void TankDrive::turnProfiled(double angle) {
-  MotionProfile turningProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
+  MotionProfile turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3);
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
@@ -190,9 +190,6 @@ void TankDrive::turnProfiled(double angle) {
     
     // Debugging output to brain
     pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
-    pros::lcd::print(2, "RPM: %.2f", currVelocity);
-    pros::lcd::print(3, "Remaining: %.2f", remainingAngle);
-    pros::lcd::print(4, "Calculated Velocity: %.2f", getSpeed(currVelocity));
 
     currVelocity = turningProfile.update(circumference * (remainingAngle / 360.0), dt);
     this->rotate(sign * currVelocity);

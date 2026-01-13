@@ -107,7 +107,6 @@ void Intake::sort() {
   Action action = NONE;
   while (true) {
     if (scanning) {
-      colorSensor.set_led_pwm(100); // For consistent illumination in the elevator
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
@@ -145,9 +144,6 @@ void Intake::sort() {
         this->shotbelt(0);
         stopTime = UINT32_MAX;
       }
-    }
-    else {
-      colorSensor.set_led_pwm(0);
     }
     pros::delay(25);
   }
@@ -304,7 +300,6 @@ void Intake::sort() {
   Action action;
   while (true) {
     if (scanning) {
-      colorSensor.set_led_pwm(100); // For consistent illumination in the elevator
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
@@ -339,9 +334,6 @@ void Intake::sort() {
         this->scorer(0);
         stopTime = UINT32_MAX;
       }
-    }
-    else {
-      colorSensor.set_led_pwm(0);
     }
     pros::delay(25);
   }
@@ -408,9 +400,17 @@ double Intake::distance() { return distanceSensor.get(); }
 
 bool Intake::isObjectDetected() { return this->distance() <= DISTANCE; }
 
-void Intake::activateScan() { scanning = true; }
+bool Intake::isScanning(){ return this->scanning; }
 
-void Intake::stopScan() { scanning = false; }
+void Intake::activateScan() {
+  scanning = true;
+  colorSensor.set_led_pwm(100);
+}
+
+void Intake::stopScan() {
+  scanning = false;
+  colorSensor.set_led_pwm(0);
+}
 
 void Intake::kickBack() {
   this->move(-100);

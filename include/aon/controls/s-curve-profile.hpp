@@ -49,7 +49,7 @@ class MotionProfile {
     // Decelerate early using half the deceleration for better accuracy.
     //* Note: Without this, the system consistently overshoots by about half an
     //* inch. Needs further investigation.
-    else if (remainingDist <= getSpeed(this->currVelocity) * getSpeed(this->currVelocity) / (2 * getSpeed(this->MAX_DECELERATION * 0.5))) {
+    else if (remainingDist <= getSpeed(this->currVelocity) * getSpeed(this->currVelocity) / (2 * getSpeed(this->MAX_DECELERATION * 0.75))) {
       this->currAccel = -this->MAX_DECELERATION;
     }
     // Decelerate if the current velocity exceeds the updated `MAX_VELOCITY`.
