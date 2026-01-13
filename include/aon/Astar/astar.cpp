@@ -3,6 +3,7 @@
 #include <queue>
 #include <limits>
 #include <algorithm>
+#include <cmath>
 
 std::vector<Astar::Point>
 Astar::astar(const CostGrid& grid, const Point& start, const Point& goal) const {
@@ -121,4 +122,42 @@ Astar::astar(const CostGrid& grid, const Point& start, const Point& goal) const 
   }
   std::reverse(path.begin(), path.end());
   return path;
+}
+
+std::vector<Astar::Waypoint>
+Astar::add_headings(const std::vector<Point>& path) const {
+  std::vector<Waypoint> out;
+  if (path.empty()) return out;
+  out.reserve(path.size());
+
+  // Helper lambdas to go grid -> plane
+  auto to_x = [&](int c) { return c - (CELLS / 2); };
+  auto to_y = [&](int r) { return (CELLS / 2) - r; };
+
+  for (size_t i = 0; i < path.size(); i++) {
+    double heading = 0.0;
+
+    if (i + 1 < path.size()) {
+      int x1 = to_x(path[i].c);
+      int y1 = to_y(path[i].r);
+      int x2 = to_x(path[i + 1].c);
+      int y2 = to_y(path[i + 1].r);
+
+      int dx = x2 - x1;
+      int dy = y2 - y1;
+
+      // atan2 gives radians, convert to degrees
+      heading = std::atan2((double)dy, (double)dx) * 180.0 / 3.141592653589793;
+
+      // Normalize to [0, 360)
+      if (heading < 0) heading += 360.0;
+    } else if (!out.empty()) {
+      // last point: keep previous heading
+      heading = out.back().heading_deg;
+    }
+
+    out.push_back(Waypoint{path[i], heading});
+  }
+
+  return out;
 }

@@ -263,6 +263,13 @@ int main() {
 
   // ---- Run ----
   auto path = astar.go(start, goal);
+  // Add heading to returned path
+  auto waypoints = astar.add_headings(path);
+  // Write those heading in the ouput csv
+  for (int i = 0; i < (int)waypoints.size(); i++) {
+  std::cout << i << ": (" << waypoints[i].p.r << "," << waypoints[i].p.c
+            << ") heading=" << waypoints[i].heading_deg << " deg\n";
+  }
 
   if (path.empty()) {
     std::cout << "No path found.\n";

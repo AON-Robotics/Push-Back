@@ -51,6 +51,13 @@ public:
   // Convenience: build a Point from plane coords
   static inline Point from_xy(int x, int y) { return Point{to_r(y), to_c(x)}; }
 
+  struct Waypoint {
+    Point p;              // grid point
+    double heading_deg;   // where robot should face at this point
+  };
+
+  // Convert a path of Points into waypoints with headings (degrees)
+  std::vector<Waypoint> add_headings(const std::vector<Point>& path) const;
 
   Astar() { set_robot_type(1); } // Default Big Robot selected
 
