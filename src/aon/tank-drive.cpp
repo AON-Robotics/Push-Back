@@ -1,4 +1,5 @@
 #include "../include/aon/tank-drive/tank-drive.hpp"
+#include "../include/aon/sensing/odometry.hpp"
 
 namespace aon {
 

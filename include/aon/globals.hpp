@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #ifndef AON_GLOBALS_HPP_
 #define AON_GLOBALS_HPP_
 
@@ -57,11 +58,11 @@ bool clawOn = false;
 
 // Encoders
 
-pros::Rotation encoderRight(4, true);
-pros::Rotation encoderLeft(12, false);
+pros::Rotation encoderRight(1, false);
+pros::Rotation encoderLeft(9, true);
 pros::Rotation encoderLateral(2, true);
-pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
-pros::Imu imu(11);
+pros::Gps gps(5, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
+pros::Imu imu(10);
 
 // Sensor Feeder Instance
 aon::EKFConfig sensorFeederCfg{};
@@ -77,7 +78,7 @@ aon::SensorFeeder sensorFeeder(
   encoderRight,
   &encoderLateral,  //&encoderLateral si HDrive
   imu,
-  nullptr, // use nullptr if no gps
+  &gps, // use nullptr if no gps
   sensorFeederCfg
 );
 

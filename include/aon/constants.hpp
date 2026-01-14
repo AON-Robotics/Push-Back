@@ -43,10 +43,10 @@
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD
-#define GPS_Y_OFFSET 0.193878095306 // CAD
-#define GPS_INITIAL_X -1.42 // Field
-#define GPS_INITIAL_Y -0.47 // Field
-#define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
+#define GPS_Y_OFFSET 0 // CAD
+#define GPS_INITIAL_X 0 // Field
+#define GPS_INITIAL_Y 0 // Field
+#define GPS_INITIAL_HEADING 0 // Field (in Degrees)
 
 #define MAX_RPM 600 // For the drivetrain
 #define INTAKE_VELOCITY 600 * .8

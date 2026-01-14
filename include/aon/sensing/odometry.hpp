@@ -9,6 +9,7 @@
 #if GYRO_ENABLED
 #include "../../okapi/api.hpp"
 #endif
+#include "../../EKF/EKF.hpp"
 #include "../tools/vector.hpp"
 /**
  * \namespace aon::odometry
@@ -41,6 +42,8 @@
  *    3. Coordinate gyro with encoder back. Make sure when turning left, they are
  *       positive.
  * */
+
+extern EKF ekf;
 
 namespace aon::odometry {
 
@@ -137,7 +140,7 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    */
   inline double GetX() {
     p_mutex.take(1);
-    const double currentX = position.GetX();
+    const double currentX = ekf.getState().x_in;
     p_mutex.give();
     return currentX;
   }
@@ -149,7 +152,7 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    */
   inline double GetY() {
     p_mutex.take(1);
-    const double currentY = position.GetY();
+    const double currentY = ekf.getState().y_in;
     p_mutex.give();
     return currentY;
   }
@@ -161,8 +164,11 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    */
 
   inline void SetPosition(double x, double y) {
+    (void)x;
+    (void)y;
     p_mutex.take(1);
-    position.SetPosition(x, y);
+    const EKF::State s = ekf.getState();
+    position.SetPosition(s.x_in, s.y_in);
     p_mutex.give();
   }
 
@@ -173,7 +179,7 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    */
   inline double GetDegrees() {
     orientation_mutex.take(1);
-    const double currentDegrees = orientation.GetDegrees();
+    const double currentDegrees = -ekf.getState().theta_rad * (180.0 / M_PI);
     orientation_mutex.give();
     return currentDegrees;
   }
@@ -184,8 +190,9 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    * \param degrees Input value to set the current angle to
    */
   inline void SetDegrees(const double degrees) {
+    (void)degrees;
     orientation_mutex.take(1);
-    orientation.SetDegrees(degrees);
+    orientation.SetDegrees(-ekf.getState().theta_rad * (180.0 / M_PI));
     orientation_mutex.give();
     deltaTheta = 0.0;
   }
@@ -197,7 +204,7 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    */
   inline double GetRadians() {
     orientation_mutex.take(1);
-    const double currentRadian = orientation.GetRadians();
+    const double currentRadian = -ekf.getState().theta_rad;
     orientation_mutex.give();
     return currentRadian;
   }
@@ -210,8 +217,9 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    * \warning Sets angles in units of \b radians. INPUT MUST BE IN \b RADIANS
    */
   inline void SetRadians(const double radians) {
+    (void)radians;
     orientation_mutex.take(1);
-    orientation.SetRadians(radians);
+    orientation.SetRadians(-ekf.getState().theta_rad);
     orientation_mutex.give();
     // deltaTheta = 0.0;
   }
@@ -223,7 +231,8 @@ inline pros::Gps gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
    */
   inline Vector GetPosition() {
     p_mutex.take(1);
-    Vector pos = position;
+    const EKF::State s = ekf.getState();
+    Vector pos = Vector().SetPosition(s.x_in, s.y_in);
     p_mutex.give();
     return pos;
   }  

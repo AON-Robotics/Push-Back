@@ -143,6 +143,26 @@ void SensorFeeder::step(EKF& ekf) {
   }
 }
 
+bool SensorFeeder::initializeGpsSnapshot(EKF& ekf) {
+  if (!gps) return false;
+
+  double x_in = 0.0;
+  double y_in = 0.0;
+  double r_x_in2 = 0.0;
+  double r_y_in2 = 0.0;
+  if (!readGpsXY(x_in, y_in, r_x_in2, r_y_in2)) return false;
+
+  EKF::State s = ekf.getState();
+  s.x_in = x_in;
+  s.y_in = y_in;
+  ekf.setState(s);
+
+  last_gps_x_in_ = x_in;
+  last_gps_y_in_ = y_in;
+  last_gps_ms_ = pros::millis();
+  return true;
+}
+
 double SensorFeeder::wrapPi(double rad) {
   double wrapped = rad;
   while (wrapped > kPi) wrapped -= 2.0 * kPi;
@@ -179,50 +199,74 @@ double SensorFeeder::readYawRateRadps() {
 }
 
 bool SensorFeeder::readGpsXY(double& x_in,
-  double& y_in,
-  double& r_x_in2,
-  double& r_y_in2) {
-if (!gps) return false;
+    double& y_in,
+    double& r_x_in2,
+    double& r_y_in2) {
+  if (!gps) return false;
 
-const auto status = gps->get_status();
-if (!std::isfinite(status.x) || !std::isfinite(status.y)) return false;
+  const auto status = gps->get_status();
+  if (!std::isfinite(status.x) || !std::isfinite(status.y)) return false;
 
-double x_m = status.x;
-double y_m = status.y;
+  // Raw GPS in meters
+  double x_m = status.x;
+  double y_m = status.y;
 
-x_in = (x_m * kMetersToInches) + GPS_X_OFFSET;
-y_in = (y_m * kMetersToInches) + GPS_Y_OFFSET;
+  // Apply mounting offset in METERS (sensor position relative to robot center)
+  double x_m_center = x_m + GPS_X_OFFSET;
+  double y_m_center = y_m + GPS_Y_OFFSET;
 
-// Default/fallback variance (in^2)
-double R_in2 = cfg_.r_gps_x_default_in2;
-if (R_in2 <= 0.0) R_in2 = 16.0;
+  // Convert to inches
+  double x_in_raw = x_m_center * kMetersToInches;
+  double y_in_raw = y_m_center * kMetersToInches;
 
-if (cfg_.gps_use_rms_error) {
-const double rms_m = gps->get_error();  // meters RMS (scalar)
-if (!std::isfinite(rms_m) || rms_m <= 0.0) return false;
+  // Handle rotated GPS mounting
+  if (cfg_.gps_swap_xy) {
+  std::swap(x_in_raw, y_in_raw);
+  }
 
-// Gate out bad GPS
-if (rms_m > cfg_.gps_rms_max_m) return false;
+  // Handle flipped axes
+  x_in_raw *= static_cast<double>(cfg_.gps_x_sign);
+  y_in_raw *= static_cast<double>(cfg_.gps_y_sign);
 
-const double rms_m_clamped =
-std::fmax(cfg_.gps_rms_min_m, std::fmin(rms_m, cfg_.gps_rms_max_m));
+  // Apply final small alignment biases (inches)
+  x_in = x_in_raw + cfg_.gps_x_bias_in;
+  y_in = y_in_raw + cfg_.gps_y_bias_in;
 
-const double rms_in = rms_m_clamped * kMetersToInches;
-const double R_from_rms_in2 = rms_in * rms_in;
+  // -------------------------------
+  // Noise model (R matrix)
+  // -------------------------------
+  double R_in2 = cfg_.r_gps_x_default_in2;
+  if (R_in2 <= 0.0) R_in2 = 16.0;  // fallback = 4" RMS
 
-// Conservative: never trust GPS MORE than your baseline unless you want to.
-// If you DO want GPS to dominate, change fmax -> fmin (pero no lo recomiendo de entrada).
-R_in2 = std::fmax(R_in2, R_from_rms_in2);
+  if (cfg_.gps_use_rms_error) {
+  const double rms_m = gps->get_error();  // meters RMS (scalar)
+  if (!std::isfinite(rms_m) || rms_m <= 0.0) return false;
 
-// Clamp final
-R_in2 = std::fmax(cfg_.gps_r_floor_in2, std::fmin(R_in2, cfg_.gps_r_ceiling_in2));
-} else {
-if (cfg_.r_gps_x_fixed_in2 > 0.0) R_in2 = cfg_.r_gps_x_fixed_in2;
-}
+  // Reject bad GPS fixes
+  if (rms_m > cfg_.gps_rms_max_m) return false;
 
-r_x_in2 = R_in2;
-r_y_in2 = R_in2;
-return true;
-}
+  const double rms_m_clamped =
+  std::fmax(cfg_.gps_rms_min_m, std::fmin(rms_m, cfg_.gps_rms_max_m));
+
+  const double rms_in = rms_m_clamped * kMetersToInches;
+  const double R_from_rms_in2 = rms_in * rms_in;
+
+  // Conservative: do not trust GPS more than baseline unless explicitly desired
+  R_in2 = std::fmax(R_in2, R_from_rms_in2);
+
+  // Hard clamp
+  R_in2 = std::fmax(cfg_.gps_r_floor_in2,
+  std::fmin(R_in2, cfg_.gps_r_ceiling_in2));
+  } else {
+    if (cfg_.r_gps_x_fixed_in2 > 0.0) {
+    R_in2 = cfg_.r_gps_x_fixed_in2;
+  }
+  }
+
+  r_x_in2 = R_in2;
+  r_y_in2 = R_in2;
+  return true;
+  }
+
 
 }  // namespace aon

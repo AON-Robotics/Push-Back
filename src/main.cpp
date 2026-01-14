@@ -1,28 +1,35 @@
 #include "main.hpp"
+#include "aon/globals.hpp"
 #include "aon/handler.hpp"
 #include "aon/EKF/EKFDebug.hpp"
+#include "pros/llemu.hpp"
+
+namespace {
+void ekfTaskFn(void*) {
+  while (true) {
+    sensorFeeder.step(ekf);
+    pros::delay(10);
+  }
+}
+}  // namespace
 
 void initialize() {
-  pros::lcd::initialize();
-  // aon::init();
+  aon::gui::Initialize();
+  aon::logging::Initialize();
   sensorFeeder.applyEkfDefaults(ekf);
   sensorFeeder.reset();
-
-  //   auto st = gps.get_status();
-  // if (std::isfinite(st.x) && std::isfinite(st.y)) {
-  //   EKF::State s = ekf.getState();
-  //   s.x_in = st.x * 39.37007874015748; // meters -> inches
-  //   s.y_in = st.y * 39.37007874015748;
-  //   s.theta_rad = EKF::normalizeAngle(imu.get_rotation() * M_PI / 180.0);
-  //   ekf.setState(s);
-  // }
+  // sensorFeeder.initializeGpsSnapshot(ekf);
+  pros::Task(ekfTaskFn, nullptr, TASK_PRIORITY_DEFAULT,
+                     TASK_STACK_DEPTH_DEFAULT, "EKF");
+}
+void autonomous(){
+  drivetrainTank.move(5);
+  while (true) {
+    aon::gui::DisplayDebugMenu4();
+    pros::delay(50);
+  }
 }
 
 void opcontrol() {
-  while (true) {
-    // aon::poll();
-    sensorFeeder.step(ekf);
-    DisplayDebugMenu4();
-    pros::delay(10);
-  }
+
 }

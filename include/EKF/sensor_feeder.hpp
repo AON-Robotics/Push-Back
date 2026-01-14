@@ -34,8 +34,8 @@ struct EKFConfig {
   // ---------------------------
   // These are variances (σ²), not σ.
   // 16 in² = 4 inches RMS GPS error
-  double r_gps_x_default_in2 = 16.0;
-  double r_gps_y_default_in2 = 16.0;
+  double r_gps_x_default_in2 = 9.0;
+  double r_gps_y_default_in2 = 9.0;
   double r_theta_default_rad2 = 0.0076;   // IMU heading noise (rad²)
 
   // ---------------------------
@@ -45,8 +45,23 @@ struct EKFConfig {
   uint32_t gps_min_period_ms = 200;    // Minimum time between GPS updates (rate limit)
 
   // If >0, force GPS noise instead of RMS or default
-  double r_gps_x_fixed_in2 = 16.0;
-  double r_gps_y_fixed_in2 = 16.0;
+  double r_gps_x_fixed_in2 = 9.0;
+  double r_gps_y_fixed_in2 = 9.0;
+
+  // ---------------------------
+  // GPS coordinate correction
+  // ---------------------------
+  //  - GPS mounted normally:  x_sign=+1, y_sign=+1, swap=false
+  //  - GPS mounted backwards (180° rotated): x_sign=-1, y_sign=-1, swap=false
+  //  - GPS rotated 90°: swap=true and adjust signs accordingly
+  int  gps_x_sign = -1;         // Multiply GPS X by +1 or -1
+  int  gps_y_sign = -1;         // Multiply GPS Y by +1 or -1
+  bool gps_swap_xy = false;    // Swap X and Y axes if needed (90° rotation)
+
+  // Bias to shift GPS frame into robot frame (INCHES).
+  // Use this for small systematic alignment offsets after mounting.
+  double gps_x_bias_in = 8.5;
+  double gps_y_bias_in = 0.25;
 
   // ---------------------------
   // IMU configuration
@@ -64,7 +79,7 @@ struct EKFConfig {
   // Odometry geometry
   // ---------------------------
   // Converts encoder rotation into linear distance
-  double track_wheel_radius_in = 0.95;  // Radius of tracking wheels
+  double track_wheel_radius_in = 0.975;  // Radius of tracking wheels 0.95 for normal wheel
   double rot_to_wheel_ratio = 1.0;     // Gear ratio between encoder and wheel
 
   // For holonomic drives:
@@ -86,17 +101,17 @@ struct EKFConfig {
   // GPS RMS gating and scaling
   // ---------------------------
   // Uses gps_get_error() to decide how much to trust GPS
-  bool gps_use_rms_error = false;
+  bool gps_use_rms_error = true;
 
   // Minimum RMS allowed (prevents R → 0 which would destabilize EKF)
-  double gps_rms_min_m = 0.01;    // 1 cm
+  double gps_rms_min_m = 0.02;    // 2 cm
 
   // If RMS > this, ignore the GPS measurement
-  double gps_rms_max_m = 0.50;    // 0.5 meters
+  double gps_rms_max_m = 0.30;    // 0.3 meters
 
   // Hard limits on GPS variance (inches²)
   double gps_r_floor_in2   = 9.0;    // Minimum σ = 3 inches
-  double gps_r_ceiling_in2 = 400.0;  // Maximum σ = 20 inches
+  double gps_r_ceiling_in2 = 225.0;  // Maximum σ = 15 inches
 };
 
 
@@ -130,6 +145,8 @@ class SensorFeeder {
   // Runs one full EKF update cycle
   void step(EKF& ekf);
 
+  // Initializes EKF x/y from a single GPS snapshot, if available
+  bool initializeGpsSnapshot(EKF& ekf);
 
   // ---------------------------
   // Debug / telemetry

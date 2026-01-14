@@ -309,8 +309,8 @@
       }
     },
     "upload_options": {
-      "slot": 1,
-      "icon": "pizza",
+      "slot": 3,
+      "icon": "alien",
       "description": " "
     }
   }

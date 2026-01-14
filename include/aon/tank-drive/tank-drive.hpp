@@ -3,7 +3,6 @@
 #include "../../api.h"
 #include "../../okapi/api.hpp"
 #include "../controls/s-curve-profile.hpp"
-#include "../sensing/odometry.hpp"
 
 #include "../math/misc/misc.hpp"
 #include "../controls/pid/pid.hpp"
