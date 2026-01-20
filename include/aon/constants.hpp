@@ -55,11 +55,14 @@
 
 #define MAX_RPM 600 // For the drivetrain
 #define INTAKE_VELOCITY 600
+#define MAX_VELOCITY_LINEAR (double)(MAX_RPM * 2 * M_PI * (TRACKING_WHEEL_DIAMETER / 2)) / 60 // inches / sec 
+#define MAX_ANGULAR_VELOCITY (MAX_VELOCITY_LINEAR / AVG_DRIVETRAIN_RADIUS)
 
 /// @brief Maximum acceleration without slippage
 ///
 /// @see https://www.desmos.com/calculator/9e23f1f7b6
 #define MAX_ACCEL 4991.46340024
+#define MAX_ANGULAR_ACCEL (MAX_ACCEL / AVG_DRIVETRAIN_RADIUS)
 
 /// @brief Maximum deceleration without tipping (limited to not confuse encoders right now)
 ///

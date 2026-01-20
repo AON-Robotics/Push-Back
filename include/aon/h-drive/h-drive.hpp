@@ -42,8 +42,10 @@ class HDrive : public TankDrive {
   public:
   
   // Constructor
-  HDrive(const okapi::Motor& mid = okapi::Motor(17))
-    : TankDrive(),
+  HDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
+            const std::initializer_list<okapi::Motor> &rightPorts = {0},
+            const okapi::Motor &mid = okapi::Motor(0))
+    : TankDrive(leftPorts, rightPorts),
       middleMotor(mid),
       pose() {}
 
@@ -96,7 +98,7 @@ class HDrive : public TankDrive {
 
   /// @brief Move horizontally using Motion profile (default right)
   /// @param dist The distance to be moved in \b inches
-  void moveHorizontalProfiled(double dist);
+  void strafe(double dist);
 
   /// @brief Empty function for 
   /// @param t Time to run empty function.
@@ -131,6 +133,15 @@ class HDrive : public TankDrive {
    *  Do not use odometry when function is used just to move drive taking
    * advantage of this function's vector addition for velocities
    *
+   * \note
+   * [ Trapezoid Profile ]  →  desired velocities (feedforward)
+   *              +
+   *  [ PID on position ]   →  small velocity corrections (feedback)
+   *              ↓
+   *  [ Holonomic Kinematics ] → wheel RPMs
+   *              ↓
+   *  [ Motors ]
+   *
    * \attention
    *    Positive (+) X is to the "right" and positive (+) Y to the "top" like a
    * normal Cartesian plane
@@ -143,23 +154,24 @@ class HDrive : public TankDrive {
  * \param X Target X position
  * \param Y Target Y positionM
  * \param T Target angular position in \b degrees
- * \param timeout Maximum amount of time function will block for in \b seconds
- * \param max_accel Desired maximum acceleration for trapezoidal motion
  * \param function Function of `t` that will run once every iteration
  * \param v0 Initial speed for trapezoidal motion
  * \param vf Final speed for trapezoidal motion
  * \param max_speed Maximum speed throughout trapezoidal motion
- * \param max_accel Absolute maximum acceleration and deceleration for
-trapezoidal motion
+ * \param max_accel Desired maximum acceleration for trapezoidal motion
+ * \param max_speed_angular Desired maximum angular speed for trapezoidal motion
+ * \param max_accel_angular Desired maximum angular acceleration for trapezoidal motion
+ * \param drivePID Drive and turn PID to correct motion
  *
  *
  * */
 void MoveTrapezoidH(double X, double Y, double T,
+                   double v0 = 0,
+                   double vf = 0,
+                   double max_speed = MAX_VELOCITY_LINEAR,
                    double max_accel = MAX_ACCEL,
-                   std::function<void(int)> function = emptyFunction,
-                   double v0 = DEFAULT_INITIAL_SPEED,
-                   double vf = DEFAULT_FINAL_SPEED,
-                   double max_speed = MAX_ACCEL,
+                   double max_speed_angular = MAX_ANGULAR_VELOCITY,
+                   double max_accel_angular = MAX_ANGULAR_ACCEL,
                    PID drivePID = PID(0.02, 0, 0), PID turnPID = PID(0.002, 0, 0));
 };
 } // namespace aon

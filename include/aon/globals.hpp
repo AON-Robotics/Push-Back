@@ -27,8 +27,8 @@
 #if USING_BIG_ROBOT
 
 // Drivetrain
-aon::TankDrive drivetrain = aon::TankDrive({16, -15, -14}, {-20, 19, 18});
-okapi::MotorGroup mid({17}); // Default make robot go right
+aon::HDrive drivetrain = aon::HDrive({16, -15, -14}, {-20, 19, 18}, 17);
+// okapi::MotorGroup mid({17}); // Default make robot go right
 
 pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('H');
@@ -123,10 +123,10 @@ inline void Configure(const bool opcontrol = true) {
   intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::green);
   
   
-  mid.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
-  mid.setGearing(okapi::AbstractMotor::gearset::green);
-  mid.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  mid.tarePosition();
+  // mid.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
+  // mid.setGearing(okapi::AbstractMotor::gearset::green);
+  // mid.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  // mid.tarePosition();
   
   #else
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
@@ -147,7 +147,7 @@ void STOP(){
   drivetrain.stop();
   intake.stop();
   #if USING_BIG_ROBOT
-  mid.moveVelocity(0);
+  // mid.moveVelocity(0);
   #endif
   orbit.stop();
 }

@@ -28,10 +28,12 @@ class PoseTank {
 
 class TankDrive {
  private:
+  PoseTank pose;
+ protected:
   SmartMotorGroup leftMotors;
   SmartMotorGroup rightMotors;
   MotionProfile motionProfile;
-  PoseTank pose;
+ 
 
   // TODO: add the odom object once it is done, use namespace temporarily
 
@@ -68,7 +70,8 @@ class TankDrive {
 
   /// @brief Get maximun revolutions per minute of drive train
   /// @return Maximun revolutions per minute
-  int getMAXRPM() { return (int)driveFull.getGearing(); }
+  // int getMAXRPM() { return (int)driveFull.getGearing(); }
+  int getMAXRPM() { return MAX_RPM; }
 
   /// @brief Get maximun velocity in base on the drivetrain
   /// @return Maximun velocity of tank drivetrain

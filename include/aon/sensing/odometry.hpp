@@ -45,12 +45,24 @@
  * */
 namespace aon::odometry {
 
-inline pros::Rotation encoderRight(2, true);
+#if USING_BIG_ROBOT
+inline pros::Rotation encoderRight(4, true);
 inline pros::Rotation encoderLeft(12, false);
-inline pros::Rotation encoderBack(5, true);
-#if GYRO_ENABLED
-inline pros::Imu gyroscope(4);
+inline pros::Rotation encoderBack(2, true);
+#else
+inline pros::Rotation encoderRight(1, true);
+inline pros::Rotation encoderLeft(9, false);
+inline pros::Rotation encoderBack(21, false);
 #endif
+
+#if GYRO_ENABLED
+#if USING_BIG_ROBOT
+inline pros::Imu gyroscope(11);
+#else
+inline pros::Imu gyroscope(10);
+#endif
+#endif
+
 inline pros::Gps gps(21, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
   // ============================================================================
@@ -118,7 +130,7 @@ inline pros::Gps gps(21, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_
   inline Vector changeMine;
   inline Vector changeVideo;
 
-  #if ENCODER_BACK
+  #if USING_BIG_ROBOT
   //> Encoder back/mid struct instance
   inline STRUCT_encoder encoderBack_data;
   #endif
@@ -254,7 +266,9 @@ inline void ResetCurrent(const double x, const double y, const double theta) {
 
   const double currentAngleRight = encoderRight.get_position() / 100.0;
   const double currentAngleLeft = encoderLeft.get_position() / 100.0;
+  #if USING_BIG_ROBOT
   const double currentAngleBack = encoderBack.get_position() / 100.0;
+  #endif
   const double currentAngleGyro = gyroscope.get_heading();
 
   
@@ -273,7 +287,7 @@ inline void ResetCurrent(const double x, const double y, const double theta) {
                       currentAngleLeft * conversionFactor,    // previuos position in inches
                       0.0};                                   // delta in inches
             
-  #if ENCODER_BACK
+  #if USING_BIG_ROBOT
   encoderBack_data = {currentAngleBack,                       // current position in degrees
                       currentAngleBack,                       // previuos position in degrees
                       0,                                      // delta in degrees
@@ -301,7 +315,7 @@ inline void ResetCurrent(const double x, const double y, const double theta) {
   SetPosition(x, y);
   #if GYRO_ENABLED
   gyroscope.tare();
-  pros::delay(3000);
+  pros::delay(20);
   #endif
 
 }
@@ -329,7 +343,7 @@ inline void Initialize() {
   encoderLeft.reset();
   encoderRight.reset();
   
-  #if ENCODER_BACK
+  #if USING_BIG_ROBOT
   encoderBack.set_position(0);
   encoderBack.reset();
   #endif
@@ -364,7 +378,7 @@ inline void Update() {
   encoderLeft_data.deltaDistance = encoderLeft_data.currentDistance - encoderLeft_data.previousDistance;
   
   // Take information from the back encoder
-  #if ENCODER_BACK
+  #if USING_BIG_ROBOT
   encoderBack_data.currentValue = encoderBack.get_position() / 100.0;
   encoderBack_data.currentDistance = encoderBack_data.currentValue * conversionFactor;
   encoderBack_data.delta = encoderBack_data.currentValue - encoderBack_data.prevValue;
@@ -395,6 +409,7 @@ inline void Update() {
   // std::cout << "Current distance | Prev value | Delta\n";
   // std::cout << encoderLeft_data.currentDistance << " | " << encoderLeft_data.previousDistance << " | " << encoderLeft_data.deltaDistance << "\n";   
   // std::cout << encoderRight_data.currentDistance << " | " << encoderRight_data.previousDistance << " | " << encoderRight_data.deltaDistance << "\n";   
+  // std::cout << encoderBack_data.currentDistance << " | " << encoderBack_data.previousDistance << " | " << encoderBack_data.deltaDistance << "\n";   
   
   // std::cout << "Current angle | Prev angle | Delta\n";
   // std::cout << gyro_data.currentDegrees << " | " << gyro_data.prevDegrees << " | " << gyro_data.deltaRadians * (180/M_PI) << "\n";
@@ -414,7 +429,7 @@ inline void Update() {
   
   // Updating angle
   double previousTheta = GetRadians();
-  //# SetDegrees(GetDegrees() + deltaTheta);
+  // SetDegrees(GetDegrees() + deltaTheta);
   SetRadians(GetRadians() + deltaTheta);
   
   // Calculations simple trigonometry, i.e., mine :)
@@ -422,6 +437,17 @@ inline void Update() {
   if (std::abs(deltaTheta * (180/M_PI)) > 0.01) {
     // If turning in its own axis
     if ((encoderLeft_data.deltaDistance * encoderRight_data.deltaDistance) <= 0) {
+      #if USING_BIG_ROBOT 
+        if (abs(encoderLeft_data.deltaDistance) - abs(encoderRight_data.deltaDistance) < 0.01) {
+          // std::cout << "Its going only sideways\n";
+          deltaDlocal.SetPosition(0.0, encoderBack_data.deltaDistance);
+        }
+        else {
+          // std::cout << "Turning in its own axis!!!!!!!!!!!!!!!!!!!!!!\n";
+          deltaDlocal.SetPosition(0.0, 0.0);
+        }
+      #endif
+      // std::cout << "Turning in its own axis!!!!!!!!!!!!!!!!!!!!!!\n";
       deltaDlocal.SetPosition(0.0, 0.0);
     }
     // Else if we are going in a arc
@@ -436,10 +462,10 @@ inline void Update() {
       
       // Update position using trigonometry
       deltaDlocal.SetPosition(averageR * std::sin(deltaTheta), averageR * (1 - std::cos(deltaTheta)));
-      std::cout << "Delta: " << deltaDlocal.GetX() << ", " << deltaDlocal.GetY() << "\n";
+      // std::cout << "Delta: " << deltaDlocal.GetX() << ", " << deltaDlocal.GetY() << "????????????????????\n";
       
       // alteration with back encoder
-      #if ENCODER_BACK
+      #if USING_BIG_ROBOT
       changeMine.SetPosition(changeMine.GetX() + (2 * std::sin(deltaTheta/2) * ((encoderBack_data.deltaDistance / deltaTheta) + DISTANCE_BACK_TRACKING_WHEEL_CENTER)),
                              changeMine.GetY() + (2 * std::sin(deltaTheta/2) * (averageR)));
       // FROM THE VIDEO OF THE KID
@@ -450,11 +476,12 @@ inline void Update() {
   }
   // Else if the robot is moving straight forward or backward, average encoder values for distance    
   else {
+    // std::cout << "Not turning\n";
     double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0; // movement in X axis
     deltaDlocal.SetPosition(deltaD, 0);
     
     // If we have encoder back and using H drivertrain
-    #if ENCODER_BACK 
+    #if USING_BIG_ROBOT 
     double deltaY = encoderBack_data.deltaDistance;
     deltaDlocal.SetPosition(deltaD, deltaY);
     #endif
@@ -470,7 +497,10 @@ inline void Update() {
   SetPosition(GetX() + deltaDlocal.GetX() * std::cos(GetRadians()) - deltaDlocal.GetY() * std::sin(GetRadians()), 
               GetY() + deltaDlocal.GetX() * std::sin(GetRadians()) + deltaDlocal.GetY() * std::cos(GetRadians()));
 
-
+  // std::cout << "Mine: X: " << GetX() << ", Y: " << GetY() << ", T: " << GetDegrees() << "\n";
+  // std::cout << "Web: X: " << changeWeb.GetX() << ", Y: " << changeWeb.GetY() << "\n";
+  // std::cout << "video: X: " << changeVideo.GetX() << ", Y: " << changeVideo.GetY() << "\n";
+  // std::cout << "Mine V2: X: " << changeMine.GetX() << ", Y: " << changeMine.GetY() << "\n";
 
  // It works only if we set the initial position with GPS
 //  if (COLOR == BLUE) {
@@ -490,7 +520,7 @@ inline void Update() {
 
   encoderRight_data.previousDistance = encoderRight_data.currentDistance;
   encoderLeft_data.previousDistance = encoderLeft_data.currentDistance;
-  #if ENCODER_BACK
+  #if USING_BIG_ROBOT
   encoderBack_data.previousDistance = encoderBack_data.currentDistance;
   #endif
 
@@ -551,7 +581,9 @@ inline void Debug() {
     // pros::lcd::print(0, "X: %0.3f, Y: %0.3f", GetX(), GetY());
     pros::lcd::print(0, "Left : %0.3f, %0.3f, %0.3f", encoderLeft_data.currentDistance, encoderLeft_data.previousDistance, encoderLeft_data.deltaDistance);
     pros::lcd::print(1, "Right: %0.3f, %0.3f, %0.3f", encoderRight_data.currentDistance, encoderRight_data.previousDistance, encoderRight_data.deltaDistance);
+    #if USING_BIG_ROBOT
     pros::lcd::print(2, "Back: %0.3f, %0.3f, %0.3f", encoderBack_data.currentDistance, encoderBack_data.previousDistance, encoderBack_data.deltaDistance);
+    #endif
     pros::lcd::print(3, "Heading: %0.3f", GetDegrees());
     pros::lcd::print(4, "Mine:   X: %0.3f | Y: %0.3f", GetX(), GetY());
     pros::lcd::print(5, "Web:    X: %0.3f | Y: %0.3f", changeWeb.GetX(), changeWeb.GetY());  

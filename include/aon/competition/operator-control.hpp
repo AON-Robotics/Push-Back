@@ -86,7 +86,7 @@ inline void DriveDefault() {
   const double horizontal = ApplySpeed(scaledHorizontal, turbo ? 1.41421356237 : 0.6);
   const double turn = ApplySpeed(scaledTurn, turbo ? 1.41421356237 : 0.4);
   
-  mid.moveVelocity(horizontal);
+  drivetrain.motorsMid(horizontal);
   #else
   const double vertical = ApplySpeed(scaledVertical, turbo ? 1 : 0.6);
   const double turn = ApplySpeed(scaledTurn, turbo ? 1 : 0.4);
