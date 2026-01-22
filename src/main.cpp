@@ -1,8 +1,9 @@
 #include "../include/main.hpp"
 
 void initialize() {
-  aon::gui::Initialize();
+  pros::Task guiTask(aon::gui::Initialize);
   aon::logging::Initialize();
+  pros::lcd::initialize();
   aon::Configure(false);
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
