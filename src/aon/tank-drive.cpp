@@ -132,6 +132,10 @@ void TankDrive::driveProfiled(double dist) {
   const int sign = dist / abs(dist);  // Direction of the movement
   dist = abs(dist);                   // Setting the magnitude to positive
   
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (dist / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+  
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
@@ -142,15 +146,17 @@ void TankDrive::driveProfiled(double dist) {
   
   this->motionProfile.setVelocity(this->getRPM());
   
-  while (traveledDist < dist) {
+  while (traveledDist < dist && timeout > pros::millis()) {
     traveledDist = (aon::odometry::GetPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     lastTime = now;
 
+    // Debugging output
     pros::lcd::print(1, "Traveled %.2f / %.2f", traveledDist, dist);
-    
+    // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledDist, dist);
+
     currVelocity = motionProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
 
@@ -167,8 +173,12 @@ void TankDrive::turnProfiled(double angle) {
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
-  
-  const double circumference = DRIVE_LENGTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
+
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (std::sqrt(angle / 2)) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+
+  const double circumference = DRIVE_WIDTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
   double dt = 0.02;                     // (s)
   double currVelocity = 0;
   double currAngle;
@@ -179,7 +189,7 @@ void TankDrive::turnProfiled(double angle) {
   double now;
   double lastTime = pros::micros() / 1E6;
 
-  while (traveledAngle < angle) {
+  while (traveledAngle < angle && timeout > pros::millis()) {
     currAngle = aon::odometry::gyroscope.get_rotation();
     traveledAngle = abs(currAngle - startAngle);
     // traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
@@ -188,8 +198,9 @@ void TankDrive::turnProfiled(double angle) {
     dt = now - lastTime;
     lastTime = now;
     
-    // Debugging output to brain
+    // Debugging output
     pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
+    // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledAngle, angle);
 
     currVelocity = turningProfile.update(circumference * (remainingAngle / 360.0), dt);
     this->rotate(sign * currVelocity);

@@ -38,10 +38,15 @@ pros::Vision vision_sensor(0);
 #else
 
 aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
-aon::Intake intake = aon::Intake({6, -3, -2, -4, -7}, {6, -3}, {-2}, {-4, -7}, 'H', 'G', 'F', 5, 15);
+aon::Intake intake = aon::Intake({6, -3, -2, -4, -7}, {6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
 
-okapi::Motor arrow(20);
 pros::Vision vision_sensor(8);
+
+pros::ADIDigitalOut arrowPiston('F');
+
+void activateArrow() { arrowPiston.set_value(HIGH); }
+
+void deactivateArrow() { arrowPiston.set_value(LOW); }
 
 #endif
 
@@ -130,11 +135,6 @@ inline void Configure(const bool opcontrol = true) {
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
   
   intake.configure(okapi::AbstractMotor::brakeMode::coast, okapi::AbstractMotor::gearset::blue);
-  
-  arrow.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  arrow.setGearing(okapi::AbstractMotor::gearset::green);
-  arrow.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  arrow.tarePosition();
   
   #endif
   orbit.configure();

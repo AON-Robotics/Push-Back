@@ -77,7 +77,7 @@ void Intake::shooter(const int& rpm) { shooterMG.moveVelocity(rpm); }
 
 void Intake::scan() {
   size_t stopTime = UINT32_MAX;
-  const short DELAY_PER_BALL = 2600;  // ms
+  const short DELAY_PER_BALL = 1500;  // ms
   while (true) {
     if (scanning) {
       if (this->isObjectDetected()) {
@@ -228,7 +228,7 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
                const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
-               char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
+               char scorerPistonPort, char cartPistonPort,
                int distanceSensorPort, int colorSensorPort)
     : intakeMG(allMotorPorts),
       elevatorMG(elevatorPorts),
@@ -236,7 +236,6 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
       scorerMG(scorerPorts),
       scorerPiston(scorerPistonPort),
       cartPiston(cartPistonPort),
-      trapdoorPiston(trapdoorPistonPort),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {}
 
@@ -318,11 +317,9 @@ void Intake::sort() {
         // Execute Scheduled Action
         if (action == ACCEPT) {
           this->judge();
-          this->scorer();
           stopTime = pros::millis() + ACCEPTANCE_DELAY;
         } else if (action == REJECT) {
           this->judge(-INTAKE_VELOCITY);
-          this->scorer();
           stopTime = pros::millis() + REJECTION_DELAY;
         }
         actionTime = UINT32_MAX;
@@ -331,7 +328,6 @@ void Intake::sort() {
       if (pros::millis() >= stopTime) {
         // Stop Scheduled Action after the given delay
         this->judge(0);
-        this->scorer(0);
         stopTime = UINT32_MAX;
       }
     }
@@ -384,10 +380,6 @@ void Intake::dropCart() { cartPiston.set_value(HIGH); }
 
 void Intake::raiseCart() { cartPiston.set_value(LOW); }
 
-void Intake::openTrapdoor() { trapdoorPiston.set_value(HIGH); }
-
-void Intake::closeTrapdoor() { trapdoorPiston.set_value(LOW); }
-
 #endif
 
 void Intake::move(const int& rpm) { intakeMG.moveVelocity(rpm); }
@@ -420,8 +412,8 @@ void Intake::kickBack() {
 
 double Intake::hue() { return colorSensor.get_hue(); }
 
-bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 35; }
+bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 25; }
 
-bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 215; }
+bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 230; }
 
 }  // namespace aon

@@ -66,7 +66,6 @@ bool turbo = false;
 bool cartOut = false;
 bool scorerUp = false;
 bool arrowOut = false;
-bool trapdoorOpen = false;
 bool turbo = false;
 #endif
 
@@ -185,28 +184,22 @@ inline void DriveDefault() {
     intake.elevator(0);
     intake.judge(0);
   }
-
-  // Toggle Arrow
-  if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    arrow.moveAbsolute(arrowOut ? 20 : 90, arrowOut ? 70 : 200);
-    toggle(arrowOut);
-  }
   
   // Change Height
   if(mainController.get_digital_new_press(DIGITAL_B)) {
     intake.setScorerHeight(toggle(scorerUp) ? HIGH : LOW);
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_A)) {
+  else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
     toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
   }
   // Toggle turbo
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
     toggle(turbo);
   }
-  // Toggle trapdoor
+  // Toggle Arrow
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
-    toggle(trapdoorOpen) ? intake.openTrapdoor() : intake.closeTrapdoor();
+    toggle(arrowOut) ? activateArrow() : deactivateArrow();
   }
   #endif
 }
