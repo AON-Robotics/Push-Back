@@ -3,7 +3,7 @@
  * @author Kevin Javier Gomez Guzman @kevgom018
  * @brief S-Curve motion profiling class for smooth and precise robot movements
  * based on odometry.
- * @version 1.0
+ * @version 1.1
  * @date 2025-06-19
  *
  * This class calculates target velocities using an S-curve motion profile to
@@ -16,8 +16,9 @@
 #include <cmath>
 #include <algorithm>
 #include "../constants.hpp"
+#include "../math/misc/misc.hpp"
 
-inline double getSpeed(const double& RPM);
+namespace aon {
 
 class MotionProfile {
   double MAX_VELOCITY, MAX_ACCELERATION, MAX_DECELERATION, JERK;
@@ -49,7 +50,7 @@ class MotionProfile {
     // Decelerate early using half the deceleration for better accuracy.
     //* Note: Without this, the system consistently overshoots by about half an
     //* inch. Needs further investigation.
-    else if (remainingDist <= getSpeed(this->currVelocity) * getSpeed(this->currVelocity) / (2 * getSpeed(this->MAX_DECELERATION * 0.5))) {
+    else if (remainingDist <= math::linearSpeed(this->currVelocity) * math::linearSpeed(this->currVelocity) / (2 * math::linearSpeed(this->MAX_DECELERATION * 0.5))) {
       this->currAccel = -this->MAX_DECELERATION;
     }
     // Decelerate if the current velocity exceeds the updated `MAX_VELOCITY`.
@@ -94,16 +95,4 @@ class MotionProfile {
   void setAccel(const double& accel = 0) { this->currAccel = accel; }
 };
 
-/// @brief Determines the speed of the robot given drivetrain motors' `RPM`
-/// @param RPM The RPM for which to calculate the velocity (default max RPM)
-/// @return The speed in \b in/s at which the robot would move at the given RPM
-/// @note Test the accuracy precision of the `getActualVelocity()` method which is used as a default value,
-/// @note it may be possible to need to use `get_velocity()` from `pros::Rotation` which uses \b centidegrees.
-/// @note The distance units depend on the units used for measuring `DRIVE_WHEEL_DIAMETER`.
-// inline double getSpeed(const double &RPM = (int)driveFull.getActualVelocity()){
-double getSpeed(const double& RPM = MAX_RPM) {
-  double circumference = DRIVE_WHEEL_DIAMETER * M_PI;
-  double RPS = RPM / 60;
-  double speed = MOTOR_TO_DRIVE_RATIO * circumference * RPS;
-  return speed;
 }

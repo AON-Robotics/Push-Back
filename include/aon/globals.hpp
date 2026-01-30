@@ -12,6 +12,7 @@
 #include "./intake/intake.hpp"
 #include "./tank-drive/tank-drive.hpp"
 #include "./orbit/orbit.hpp"
+#include "./drivetrain.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -31,16 +32,14 @@ okapi::MotorGroup mid({17}); // Default make robot go right
 pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('H');
 
-aon::Intake intake = aon::Intake({1, 13, -10, 3, -6, -9}, {1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);
-
-pros::Vision vision_sensor(0);
+aon::Intake intake = aon::Intake({1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);
 
 #else
 
+// aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
 aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
-aon::Intake intake = aon::Intake({6, -3, -2, -4, -7}, {6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
 
-pros::Vision vision_sensor(8);
+aon::Intake intake = aon::Intake({6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
 
 pros::ADIDigitalOut arrowPiston('F');
 
@@ -135,7 +134,7 @@ inline void Configure(const bool opcontrol = true) {
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
   
   intake.configure(okapi::AbstractMotor::brakeMode::coast, okapi::AbstractMotor::gearset::blue);
-  
+
   #endif
   orbit.configure();
 }
@@ -148,14 +147,6 @@ void STOP(){
   mid.moveVelocity(0);
   #endif
   orbit.stop();
-}
-
-/// @brief Toggles the value of a bool
-/// @param boolean The variable to be toggled
-/// @returns The updated boolean
-inline bool toggle(bool &boolean) {
-  boolean = !boolean;
-  return boolean;
 }
 
 /// @brief Used to make sure a condition is being met or a block of code is being run

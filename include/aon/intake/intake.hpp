@@ -23,7 +23,6 @@ class Intake {
 
 #if USING_BIG_ROBOT
  private:
-  okapi::MotorGroup intakeMG;
   okapi::MotorGroup frontElevatorMG;
   okapi::MotorGroup hoarderMG;
   okapi::MotorGroup backElevatorMG;
@@ -37,8 +36,7 @@ class Intake {
   volatile bool scanning = false;
 
  public:
-  Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-         const std::initializer_list<okapi::Motor>& frontElevatorPorts,
+  Intake(const std::initializer_list<okapi::Motor>& frontElevatorPorts,
          const std::initializer_list<okapi::Motor>& hoarderPorts,
          const std::initializer_list<okapi::Motor>& backElevatorPorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
@@ -87,7 +85,6 @@ class Intake {
 
 #else
  private:
-  okapi::MotorGroup intakeMG;
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
   okapi::MotorGroup scorerMG;
@@ -99,8 +96,7 @@ class Intake {
   volatile bool scanning = true;
 
  public:
-  Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-         const std::initializer_list<okapi::Motor>& elevatorPorts,
+  Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
          char scorerPistonPort, char cartPistonPort,

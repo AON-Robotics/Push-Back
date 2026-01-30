@@ -26,17 +26,11 @@ class Pose {
 
 class Drivetrain {
  protected:
-  MotionProfile motionProfile;
-  PID verticalPid;
-  PID horizontalPid;
   Pose pose;
+  bool turbo = true;
 
  public:
-  Drivetrain()
-      : motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
-        pose(),
-        verticalPid(0, 0, 0),
-        horizontalPid(0, 0, 0) {}
+  Drivetrain() : pose(){}
 
   Pose getPose() { return this->pose; }
   void setPose(Pose p) { this->pose = p; }
@@ -49,6 +43,9 @@ class Drivetrain {
 
   double getTheta() { return this->pose.theta; }
   void setTheta(double theta) { this->pose.theta = theta; }
+
+  bool isTurbo() { return this->turbo; }
+  void setTurbo(bool turbo) { this->turbo = turbo; }
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
@@ -114,15 +111,40 @@ class Drivetrain {
                      double rightY) = 0;
 
   /// @brief Stops all motors
-  virtual void stop() = 0;
+  void stop() { this->motors(0); }
 
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for
   /// auton and `brake` for drivers
   /// @param gearset The gearbox the physical motors contain, they MUST be all
   /// the same
-  virtual void configure(okapi::AbstractMotor::brakeMode brakeMode,
-                         okapi::AbstractMotor::gearset gearset) = 0;
+  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
+    this->setBrakeMode(brakeMode);
+    this->setGearset(gearset);
+    this->setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+
+    if(brakeMode == okapi::AbstractMotor::brakeMode::hold){
+      this->setSlewRate(0);
+    } else {
+      this->setSlewRate(MAX_ACCEL);
+    }
+  }
+
+  /// @brief Sets the brake mode for all motors of the drivetrain
+  /// @param brakeMode The new brake mode for the drivetrain
+  virtual void setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode) = 0;
+
+  /// @brief Sets the gearset for all motors of the drivetrain
+  /// @param gearset The new gearset for the drivetrain
+  virtual void setGearset(okapi::AbstractMotor::gearset gearset) = 0;
+
+  /// @brief Sets the units for all encoders of the motors of the drivetrain
+  /// @param units The new units for the drivetrain
+  virtual void setEncoderUnits(okapi::AbstractMotor::encoderUnits units) = 0;
+
+  /// @brief Sets the slew rate for all motors of the drivetrain
+  /// @param slew The new slew rate for the drivetrain
+  virtual void setSlewRate(double slew) = 0;
 
   /// @brief Calculates average RPM forward
   /// @return The RPM of the motors with respect to the front of the robot
@@ -187,6 +209,14 @@ class Drivetrain {
   /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
   /// @note Uses coordinate system from GPS in \b meters
   virtual void goTo(const double &x, const double &y) = 0;
+
+  /// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
+  /// @param input The joystick input to be scaled
+  /// @param percentage The percentage of the drivetrain's `MAX_RPM` to scale to
+  /// @return The `input` scaled to the `MAX_RPM` of the drivetrain as per `percentage`
+  static double applySpeed(const double& input, const double& percentage){
+    return input * MAX_RPM * percentage;
+  }
 };
 
 }  // namespace aon

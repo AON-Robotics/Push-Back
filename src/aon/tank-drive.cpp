@@ -18,21 +18,10 @@ void TankDrive::driveWhileTurning(const double &forward, const double &turn){
 }
 
 void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-    // TODO: implement
-}
+  const double vertical = applySpeed(leftY, this->isTurbo() ? 1 : 0.6);
+  const double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.4);
 
-void TankDrive::stop() { this->motors(0); }
-
-void TankDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset){
-  this->setBrakeMode(brakeMode);
-  this->setGearset(gearset);
-  this->setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-
-  if(brakeMode == okapi::AbstractMotor::brakeMode::hold){
-    this->setSlewRate(0);
-  } else {
-    this->setSlewRate(MAX_ACCEL);
-  }
+  this->driveWhileTurning(vertical, turn);
 }
 
 void TankDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
@@ -157,7 +146,7 @@ void TankDrive::driveProfiled(double dist) {
     pros::lcd::print(1, "Traveled %.2f / %.2f", traveledDist, dist);
     // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledDist, dist);
 
-    currVelocity = motionProfile.update(remainingDist, dt);
+    currVelocity = this->motionProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
 
     if (remainingDist <= 0) { break; }  // Overshoot prevention
@@ -169,7 +158,6 @@ void TankDrive::driveProfiled(double dist) {
 }
 
 void TankDrive::turnProfiled(double angle) {
-  MotionProfile turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3);
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
@@ -202,7 +190,7 @@ void TankDrive::turnProfiled(double angle) {
     pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
     // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledAngle, angle);
 
-    currVelocity = turningProfile.update(circumference * (remainingAngle / 360.0), dt);
+    currVelocity = this->turningProfile.update(circumference * (remainingAngle / 360.0), dt);
     this->rotate(sign * currVelocity);
 
     if (traveledAngle >= angle) { break; }  // Overshoot prevention
@@ -222,11 +210,11 @@ void TankDrive::turn(const double &angle) {
 }
 
 void TankDrive::setMaxVelocity(const double &rpm){
-  motionProfile.setMaxVelocity(rpm);
+  this->motionProfile.setMaxVelocity(rpm);
 }
 
 double TankDrive::updateProfile(const double &distance, const double &dt){
-  return motionProfile.update(distance, dt);
+  return this->motionProfile.update(distance, dt);
 }
 
 void TankDrive::driveInArc(double radius, const double &midSpeed) {
@@ -281,7 +269,7 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
     remainingDist = distance - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
-    midSpeed = motionProfile.update(remainingDist, dt);
+    midSpeed = this->motionProfile.update(remainingDist, dt);
     lastTime = now;
 
     this->driveInArc(radius, sign * midSpeed);

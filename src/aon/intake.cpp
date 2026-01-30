@@ -4,8 +4,7 @@ namespace aon {
 
 #if USING_BIG_ROBOT
 
-Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-               const std::initializer_list<okapi::Motor>& frontElevatorPorts,
+Intake::Intake(const std::initializer_list<okapi::Motor>& frontElevatorPorts,
                const std::initializer_list<okapi::Motor>& hoarderPorts,
                const std::initializer_list<okapi::Motor>& backElevatorPorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
@@ -13,8 +12,7 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
                const std::initializer_list<okapi::Motor>& shooterPorts,
                char shrimpPistonsPort, int distanceSensorPort,
                int colorSensorPort)
-    : intakeMG(allMotorPorts),
-      frontElevatorMG(frontElevatorPorts),
+    : frontElevatorMG(frontElevatorPorts),
       hoarderMG(hoarderPorts),
       backElevatorMG(backElevatorPorts),
       scorerMG(scorerPorts),
@@ -24,12 +22,7 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {}
 
-void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
-                       okapi::AbstractMotor::gearset gearset) {
-  intakeMG.setBrakeMode(brakeMode);
-  intakeMG.setGearing(gearset);
-  intakeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  intakeMG.tarePosition();
+void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
 
   frontElevatorMG.setBrakeMode(brakeMode);
   frontElevatorMG.setGearing(gearset);
@@ -62,14 +55,21 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
   shooterMG.tarePosition();
 }
 
+void Intake::move(const int& rpm) {
+  this->frontElevator(rpm);
+  this->hoarder(rpm);
+  this->backElevator(rpm);
+  this->scorer(rpm);
+  this->shotbelt(rpm);
+  this->shooter(rpm);
+}
+
 void Intake::frontElevator(const int& rpm) { frontElevatorMG.moveVelocity(rpm); }
 
 
 void Intake::hoarder(const int& rpm) { hoarderMG.moveVelocity(rpm); }
 
-void Intake::backElevator(const int& rpm) {
-  backElevatorMG.moveVelocity(rpm);
-}
+void Intake::backElevator(const int& rpm) { backElevatorMG.moveVelocity(rpm); }
 
 void Intake::shotbelt(const int& rpm) { shotbeltMG.moveVelocity(rpm); }
 
@@ -224,14 +224,12 @@ void Intake::raiseShrimp() { shrimpPistons.set_value(LOW); }
 
 #else
 
-Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-               const std::initializer_list<okapi::Motor>& elevatorPorts,
+Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
                char scorerPistonPort, char cartPistonPort,
                int distanceSensorPort, int colorSensorPort)
-    : intakeMG(allMotorPorts),
-      elevatorMG(elevatorPorts),
+    : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
       scorerPiston(scorerPistonPort),
@@ -239,13 +237,7 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {}
 
-void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
-                       okapi::AbstractMotor::gearset gearset) {
-  intakeMG.setBrakeMode(brakeMode);
-  intakeMG.setGearing(gearset);
-  intakeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  intakeMG.tarePosition();
-
+void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
   elevatorMG.setGearing(gearset);
   elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -260,6 +252,12 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
   scorerMG.setGearing(gearset);
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
+}
+
+void Intake::move(const int& rpm) {
+  this->elevator(rpm);
+  this->judge(rpm);
+  this->scorer(rpm);
 }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
@@ -382,15 +380,13 @@ void Intake::raiseCart() { cartPiston.set_value(LOW); }
 
 #endif
 
-void Intake::move(const int& rpm) { intakeMG.moveVelocity(rpm); }
-
 void Intake::scorer(const int& rpm) { scorerMG.moveVelocity(rpm); }
 
-void Intake::stop() { intakeMG.moveVelocity(0); }
+void Intake::stop() { this->move(0); }
 
 double Intake::distance() { return distanceSensor.get(); }
 
-bool Intake::isObjectDetected() { return this->distance() <= DISTANCE; }
+bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
 
 bool Intake::isScanning(){ return this->scanning; }
 
