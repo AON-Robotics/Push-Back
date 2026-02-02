@@ -153,9 +153,9 @@ inline void DriveDefault() {
   else if(mainController.get_digital_new_press(DIGITAL_L1)) {
     toggle(shrimpOut) ? intake.dropShrimp() : intake.raiseShrimp();
   }
-  // Toggle turbo
+
   else if(mainController.get_digital_new_press(DIGITAL_X)) {
-    drivetrain.setTurbo(!drivetrain.isTurbo());
+    drivetrain.toggleTurbo();
   }
 
   #else
@@ -193,9 +193,9 @@ inline void DriveDefault() {
   else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
     toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
   }
-  // Toggle turbo
+
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
-    drivetrain.setTurbo(!drivetrain.isTurbo());
+    drivetrain.toggleTurbo();
   }
   // Toggle Arrow
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {

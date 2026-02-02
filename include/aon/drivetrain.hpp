@@ -46,6 +46,7 @@ class Drivetrain {
 
   bool isTurbo() { return this->turbo; }
   void setTurbo(bool turbo) { this->turbo = turbo; }
+  void toggleTurbo() { this->turbo = !this->turbo; }
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
