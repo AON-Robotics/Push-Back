@@ -8,32 +8,19 @@
 
 #include "../math/misc/misc.hpp"
 #include "../controls/pid/pid.hpp"
+#include "../drivetrain.hpp"
 #include <cfloat>
 
 namespace aon {
 
-// TODO: move this to the Odom class file
-
-class PoseTank {
- public:
-  /// @brief Position of the robot on the x-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double x;
-  /// @brief Position of the robot on the y-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double y;
-  /// @brief Orirentation of the robot in \b `radians` with respect to angle 90º in the VEX Field
-  double theta;
-
-  PoseTank(double x = 0, double y = 0, double theta = 0) : x(x), y(y), theta(theta) {}
-};
-
-class TankDrive {
+class TankDrive : public Drivetrain {
  private:
-  PoseTank pose;
+  Pose pose;
  protected:
   SmartMotorGroup leftMotors;
   SmartMotorGroup rightMotors;
   MotionProfile motionProfile;
- 
+  MotionProfile turningProfile;
 
   // TODO: add the odom object once it is done, use namespace temporarily
 
@@ -43,51 +30,23 @@ class TankDrive {
       : leftMotors(leftPorts, 0, MAX_ACCEL),
         rightMotors(rightPorts, 0, MAX_ACCEL),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
-        pose() {}
+        turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
+        Drivetrain() {}
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
   void motors(const double &rpm);
 
-  /// @brief Moves left side motors the same `rpm` to move forward
-  /// @param rpm The speed in which to move all motors in \b rpm
-  void motorsLeft(const double &rpm);
-
-  /// @brief Moves right side motors the same `rpm` to move forward
-  /// @param rpm The speed in which to move all motors in \b rpm
-  void motorsRight(const double &rpm);
-  
   /// @brief Moves all motors the same `rpm` to rotate clockwise
   /// @param rpm The speed in which to move all motors in \b rpm
-  void rotate(const double &rpm);
-  
+  void rotate(const double &rpm) override;
+
   /// @brief Moves the robot forward while also turning
   /// @param forward The \b RPM to send to the motors for linear movement
   /// (positive is forward)
   /// @param turn The \b RPM to send to the motors for rotative movement
   /// (positive is clockwise)
-  void driveWhileTurning(const double &forward, const double &turn);
-
-  /// @brief Get maximun revolutions per minute of drive train
-  /// @return Maximun revolutions per minute
-  // int getMAXRPM() { return (int)driveFull.getGearing(); }
-  int getMAXRPM() { return MAX_RPM; }
-
-  /// @brief Get maximun velocity in base on the drivetrain
-  /// @return Maximun velocity of tank drivetrain
-  int getMAXVEL() { return (double)(getMAXRPM() * 2 * M_PI * (TRACKING_WHEEL_DIAMETER / 2)) / 60; }
-
-  PoseTank getPose() { return this->pose; }
-  void setPose(PoseTank p) { pose = p; }
-
-  double getX() { return this->pose.x; }
-  void setX(double x) { pose.x = x; }
-
-  double getY() { return this->pose.y; }
-  void setY(double y) { pose.y = y; }
-
-  double getTheta() { return this->pose.theta; }
-  void setTheta(double theta) { pose.theta = theta; }
+  void driveWhileTurning(const double &forward, const double &turn) override;
 
   /// @brief Makes the robot drive in an arc motion based on a given `radius`
   /// @param radius The radius of the arc of the motion in \b inches measured
@@ -98,7 +57,7 @@ class TankDrive {
   /// @note A positive `radius` will cause a clockwise rotation, while a
   /// negative `radius` will cause a counter-clockwise rotation
   /// @see https://www.desmos.com/calculator/91cbd82e8b
-  void driveInArc(double radius, const double &midSpeed = 200);
+  void driveInArc(double radius, const double &midSpeed = 200) override;
 
   /// @brief Makes the robot drive in an arc motion based on a given `radius`
   /// for a given `angle`
@@ -114,7 +73,7 @@ class TankDrive {
   /// `angle` will cause a backwards movement
   /// @see https://www.desmos.com/calculator/91cbd82e8b
   void driveAngleOfArc(const double &radius = DRIVE_WIDTH,
-                       const double &angle = 90);
+                       const double &angle = 90) override;
 
   /// @brief Makes the robot drive in an arc motion to a specified point in the
   /// field
@@ -122,7 +81,7 @@ class TankDrive {
   /// @param y The y coordinate of the point we want to go to in \b meters
   /// @note Odometry must be working for global positioning on the field
   /// @see https://www.desmos.com/calculator/5abb373276
-  void driveInArcTo(const double &x, const double &y);
+  void driveInArcTo(const double &x, const double &y) override;
 
   /// @brief Drives the robot in the direction of the left joystick while
   /// turning it with the right joystick
@@ -134,90 +93,79 @@ class TankDrive {
   /// [-1, 1]
   /// @param rightY The value of the right joystick on the y-axis in the range
   /// [-1, 1]
-  void drive(double leftX, double leftY, double rightX, double rightY);
-
-  /// @brief Stops all motors
-  virtual void stop();
-
-  /// @brief Configures the general settings for the motors
-  /// @param brakeMode The braking paradigm we will use, usually `holding` for
-  /// auton and `brake` for drivers
-  /// @param gearset The gearbox the physical motors contain, they MUST be all
-  /// the same
-  virtual void configure(okapi::AbstractMotor::brakeMode brakeMode,
-                 okapi::AbstractMotor::gearset gearset);
+  void drive(double leftX, double leftY, double rightX, double rightY) override;
 
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain
-  void setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode);
+  void setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode) override;
 
   /// @brief Sets the gearset for all motors of the drivetrain
   /// @param gearset The new gearset for the drivetrain
-  void setGearset(okapi::AbstractMotor::gearset gearset);
+  void setGearset(okapi::AbstractMotor::gearset gearset) override;
 
   /// @brief Sets the units for all encoders of the motors of the drivetrain
   /// @param units The new units for the drivetrain
-  void setEncoderUnits(okapi::AbstractMotor::encoderUnits units);
+  void setEncoderUnits(okapi::AbstractMotor::encoderUnits units) override;
 
   /// @brief Sets the slew rate for all motors of the drivetrain
   /// @param slew The new slew rate for the drivetrain
-  void setSlewRate(double slew);
+  void setSlewRate(double slew) override;
 
   /// @brief Calculates average RPM forward
   /// @return The RPM of the motors with respect to the front of the robot
-  double getRPM();
+  double getRPM() override;
 
   /// @brief Moves the robot a given distance (default forward)
   /// @param pid The PID used for the driving
   /// @param dist The distance to be moved in \b inches
   /// @param MAX_REVS The maximum RPM to send to the movement
   void drivePID(PID pid = PID(0.02, 0, 0), double dist = TILE_WIDTH,
-                const double &MAX_REVS = 100.0);
+                const double &MAX_REVS = 100.0) override;
 
   /// @brief Turns the robot by a given angle (default clockwise)
   /// @param pid The PID to be used for the turn
   /// @param angle The angle to make the robot turn in \b degrees
   /// @param MAX_REVS The maximum RPM to send to the movement
   void turnPID(PID pid = PID(0.002, 0, 0), double angle = 90,
-               const double &MAX_REVS = 50.0);
+               const double &MAX_REVS = 50.0) override;
 
   /// @brief S-graph motion profile for linear movement
   /// @param dist The distance to be moved in \b inches, positive values will
   /// move forward and negative values backwards
-  void driveProfiled(double dist = TILE_WIDTH);
+  void driveProfiled(double dist = TILE_WIDTH) override;
 
   /// @brief S-graph motion profile for rotations
   /// @param angle The angle in \b degrees we wish to rotate the robot, positive
   /// is clockwise and negative is counter-clockwise
-  void turnProfiled(double angle = 90);
+  void turnProfiled(double angle = 90) override;
 
   /// @brief Moves the robot a given distance
   /// @param dist The distance to move in \b inches
   /// @details A positive `dist` makes the robot go forward while a negative
   /// `dist` makes the robot go backwards
-  void move(const double &dist = TILE_WIDTH);
+  void move(const double &dist = TILE_WIDTH) override;
 
   /// @brief Turn the robot a given angle (default is clockwise)
   /// @param angle The angle to turn in \b degrees
   /// @details Clockwise is positive and counter-clockwise is negative
-  void turn(const double &angle = 90);
+  void turn(const double &angle = 90) override;
 
   /// @brief Sets the max velocity for the drivetrains motion profile
   /// @param rpm The max velocity in \b RPM to pass to the motion profile
-  void setMaxVelocity(const double &rpm);
+  void setMaxVelocity(const double &rpm) override;
 
   /// @brief Calculates the target velocity to send to the motors for smooth and
   /// precise movements using an S-curve profile.
   /// @param distance The remaining distance to the target in \b inches.
   /// @param dt The time elapsed since the last function call in \b seconds.
   /// @return The updated velocity in \b RPM.
-  double updateProfile(const double &distance, const double &dt);
+  double updateProfile(const double &distance, const double &dt) override;
 
   /// @brief Turns the robot towards a specific direction
   /// @param x The x component of the point we wish to face
   /// @param y The y component of the point we wish to face
   /// @note Uses coordinate system from GPS in \b meters
-  void turnTo(const double &x, const double &y);
+  void turnTo(const double &x, const double &y) override;
 
   /// @brief Goes to the target point
   /// @param x The x component of the place where we want to go using the gps
@@ -225,6 +173,6 @@ class TankDrive {
   /// @param y The y component of the place where we want to go using the gps
   /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
   /// @note Uses coordinate system from GPS in \b meters
-  void goTo(const double &x, const double &y);
+  void goTo(const double &x, const double &y) override;
 };
 }  // namespace aon

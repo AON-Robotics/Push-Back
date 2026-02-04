@@ -12,8 +12,7 @@
 #include "./intake/intake.hpp"
 #include "./tank-drive/tank-drive.hpp"
 #include "./orbit/orbit.hpp"
-#include "./h-drive/h-drive.hpp"
-#include "./controls/s-curve-profile.hpp" //! Change this, I dont like doing the include this far down and after ive done other stuff
+#include "./drivetrain.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -33,17 +32,20 @@ aon::HDrive drivetrain = aon::HDrive({-1, -2, 3}, {4, -5, 6}, 7);
 pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('H');
 
-aon::Intake intake = aon::Intake({1, 13, -10, 3, -6, -9}, {1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);
-
-pros::Vision vision_sensor(0);
+aon::Intake intake = aon::Intake({1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);
 
 #else
 
+// aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
 aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
-aon::Intake intake = aon::Intake({6, -3, -2, -4, -7}, {6, -3}, {-2}, {-4, -7}, 'H', 'G', 'F', 5, 15);
 
-okapi::Motor arrow(20);
-pros::Vision vision_sensor(8);
+aon::Intake intake = aon::Intake({6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
+
+pros::ADIDigitalOut arrowPiston('F');
+
+void activateArrow() { arrowPiston.set_value(HIGH); }
+
+void deactivateArrow() { arrowPiston.set_value(LOW); }
 
 #endif
 
@@ -132,12 +134,7 @@ inline void Configure(const bool opcontrol = true) {
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
   
   intake.configure(okapi::AbstractMotor::brakeMode::coast, okapi::AbstractMotor::gearset::blue);
-  
-  arrow.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  arrow.setGearing(okapi::AbstractMotor::gearset::green);
-  arrow.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  arrow.tarePosition();
-  
+
   #endif
   orbit.configure();
 }
@@ -150,14 +147,6 @@ void STOP(){
   // mid.moveVelocity(0);
   #endif
   orbit.stop();
-}
-
-/// @brief Toggles the value of a bool
-/// @param boolean The variable to be toggled
-/// @returns The updated boolean
-inline bool toggle(bool &boolean) {
-  boolean = !boolean;
-  return boolean;
 }
 
 /// @brief Used to make sure a condition is being met or a block of code is being run

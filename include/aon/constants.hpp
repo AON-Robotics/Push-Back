@@ -92,7 +92,7 @@
 /// @see https://www.desmos.com/calculator/f523970d6f
 #define MAX_DECEL 500.0 // 100.0 // 2413.22817284
 
-#define DISTANCE 160 // This is the activation distance for the intake (the distance under which we know a ring is waiting in front of the intake)
+#define INTAKE_ACTIVATION_DISTANCE 160
 
 #define ORBIT_HEIGHT 12.5
 // ORBIT Limiting to protect when it does not have 360° of freedom
@@ -104,19 +104,21 @@
 
 #define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
 #define DRIVE_WHEEL_DIAMETER 2.75
+// #define DRIVE_WHEEL_DIAMETER 3.25 // X-Drive
 #define TRACKING_WHEEL_DIAMETER 2
 #define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 1.125
 #define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 1.125
 #define DISTANCE_BACK_TRACKING_WHEEL_CENTER 1.572
-#define MOTOR_TO_DRIVE_RATIO 0.6 // NumTeethMotorGear / NumTeethWheelGear
+#define MOTOR_TO_DRIVE_RATIO 0.75 // NumTeethMotorGear / NumTeethWheelGear
+// #define MOTOR_TO_DRIVE_RATIO 0.6 // NumTeethMotorGear / NumTeethWheelGear // X-Drive
 #define GYRO_ENABLED true
 #define GYRO_CONFIDENCE 1
 #define GYRO_FILTER_LENGTH 1
 #define ENCODER_CONFIDENCE 0
 #define OFFSET_X_ENCODER_MID 3.250
 
-#define DRIVE_WIDTH 11.2 // distance between front wheels
-#define DRIVE_LENGTH 9 // distance from back wheel to front wheel
+#define DRIVE_WIDTH 11.0625 // distance between front wheels
+#define DRIVE_LENGTH 10.5 // distance from back wheel to front wheel
 #define DISTANCE_FRONT_LEFT_DRIVE_WHEEL_CENTER 7.77817459305
 #define DISTANCE_BACK_LEFT_DRIVE_WHEEL_CENTER 7.77817459305
 #define DISTANCE_FRONT_RIGHT_DRIVE_WHEEL_CENTER 7.77817459305 //PYTHAG
@@ -155,7 +157,7 @@
 /// @see https://www.desmos.com/calculator/f523970d6f
 #define MAX_DECEL 200 // 2413.22817284
 
-#define DISTANCE 120 // This is the activation distance for the intake (the distance under which we know a ring is waiting in front of the intake)
+#define INTAKE_ACTIVATION_DISTANCE 120
 
 #define ORBIT_HEIGHT 12.5
 // ORBIT Limiting to protect when it does not have 360° of freedom

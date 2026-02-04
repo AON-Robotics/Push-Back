@@ -1,8 +1,10 @@
 #include "../include/main.hpp"
+#include "../include/aon/drivetrain.hpp"
 
 void initialize() {
-  aon::gui::Initialize();
+  pros::Task guiTask(aon::gui::Initialize);
   aon::logging::Initialize();
+  pros::lcd::initialize();
   aon::Configure(false);
   aon::odometry::Initialize();
   pros::Task odomTask(aon::odometry::Odometry);
@@ -18,7 +20,13 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-  aon::AutonomousReader->ExecuteFunction("autonomous");
+  aon::Configure(false); // Set drivetrain to hold for auton
+  #if USING_BIG_ROBOT
+  aon::safeBigBotRoutine();
+  #else
+  aon::testSmallBotRoutine();
+  #endif
+  // aon::AutonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
 }
 
@@ -31,21 +39,15 @@ void opcontrol() {
   while (true) {
     #if TESTING_AUTONOMOUS
     aon::Configure(false); // Set drivetrain to hold for auton testing
-    // aon::odometry::Debug();
-    // std::cout << "Robot move 12 inches to the front.";
-    // drivetrain.move(12);
-    // std::cout << "Robot moved 12 inches to the front.";
-    // drivetrain.turn(90);
-    // std::cout << "Robot moved 12 inches to the front.";
-    // drivetrain.moveHorizontalProfiled(6);
-    // std::cout << "Robot moved 6 inches to the right.";
-    drivetrain.move2D(12, 12, 90);
-    std::cout << "Robot moved 6 inches to the right, 6 inches to the front, and turn 90 degrees.";
-
-    pros::delay(5000);
-    // drivetrain.MoveHolonomicMotionH(6, 6, 90);
 
     // aon::AutonomousReader->ExecuteFunction("autonomous");
+    #if USING_BIG_ROBOT
+    aon::safeBigBotRoutine();
+    // intake.activateScan();
+    #else
+    aon::testSmallBotRoutine();
+    // intake.activateScan();
+    #endif
 
     pros::delay(5000);
     #else

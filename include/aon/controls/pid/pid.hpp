@@ -48,9 +48,7 @@ class PID {
 
     if (-start_integral < error && error < start_integral) {
       if (last_error != 0) {  // If we're NOT in our first iteration
-        if (delta_integral + integral > anti_windup) delta_integral = 0;
-        if (delta_integral + integral < -anti_windup) delta_integral = 0;
-        integral = integral + delta_integral;
+        integral = std::clamp(integral + delta_integral, -anti_windup, anti_windup);
       }
     }
   }

@@ -328,18 +328,22 @@ int testMultiple(){
 }
 
 void testTurns(){
-  for (int i = 0; i < 4; i++){drivetrain.turn();}
-  for (int i = 0; i < 4; i++){drivetrain.turn(-90);}
+  for (int i = 0; i < 4; i++){drivetrain.turn(); pros::delay(750);}
+  for (int i = 0; i < 4; i++){drivetrain.turn(-90); pros::delay(750);}
 }
 
 void testSquare(){
   for (int i = 0; i < 4; i++){
     drivetrain.move();
+    pros::delay(750);
     drivetrain.turn();
+    pros::delay(750);
   }
 }
 
 #if USING_BIG_ROBOT
+
+/// @brief Starting position is the left side of the parking facing towards the drive team, placed paralele to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
 void safeBigBotRoutine(){
   intake.activateScan();
   drivetrain.strafe(28.5); // Align with match loader.
@@ -348,13 +352,13 @@ void safeBigBotRoutine(){
   drivetrain.motors(MAX_RPM / 2); // Push into loader
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
-  pros::delay(5000); // Take up all the blocks (9).
-  drivetrain.move(-23); // Move to long goal.
+  pros::delay(8000); // Take up all the blocks (9).
+  drivetrain.move(-22); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2); // Push into goal
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
   intake.raiseShrimp(); // Reset loader mechanism.
-  intake.score(Intake::TOP, Intake::BOTTOM, 2000); // Score all 9 blocks.
+  intake.score(Intake::TOP, Intake::BOTTOM, 8000); // Score all 9 blocks.
   drivetrain.move(15); // Go back a little.
   drivetrain.turn(-90); // Orient towards parking.
   drivetrain.move(12); // Move towards parking.
@@ -367,32 +371,121 @@ void safeBigBotRoutine(){
   intake.stopScan();
   //* Works till here
 }
+
+void BigBotSkillsRoutine(){
+  drivetrain.strafe(28.5);
+  intake.dropShrimp(); 
+  drivetrain.move(6); 
+  drivetrain.motors(MAX_RPM / 2); 
+  pros::delay(200); 
+  drivetrain.stop(); 
+  pros::delay(8000); 
+  drivetrain.move(-22); 
+  drivetrain.motors(-MAX_RPM / 2);
+  drivetrain.move(22);
+  drivetrain.turn(180);
+  drivetrain.strafe(-10.5);
+  drivetrain.move(50);
+  drivetrain.strafe(10.5);
+  intake.dropShrimp(); 
+  drivetrain.move(6); 
+  drivetrain.motors(MAX_RPM / 2); 
+  pros::delay(200); 
+  drivetrain.stop(); 
+  pros::delay(8000); 
+  drivetrain.strafe(10); 
+  drivetrain.turn(90);
+  drivetrain.motors(MAX_RPM);
+  pros::delay(1000); 
+  drivetrain.stop(); 
+  brooksPiston.set_value(HIGH); 
+  //empy the match loader 
+  //empty match loader across 
+  //Park
+}
+
+
 #else
 
 void testSmallBotRoutine(){
-  intake.activateScan();
-  drivetrain.move(32); // Align with match loader
-  drivetrain.turn(-90);
+  drivetrain.move(31); // Align with match loader
+  drivetrain.turn(86);
   intake.dropCart(); // Prepare loader mechanism
-  drivetrain.move(6); // Go to match loader
-  pros::delay(5000); // Take up all the blocks (9); // TODO: corroborate timing
-  drivetrain.move(-13); // Move to Long goal
-  drivetrain.turn(180);
-  intake.raiseCart(); // Reset loader mechanism
+  pros::delay(200);  
+  drivetrain.move(4); // Go to match loader
+  intake.activateScan(); 
+  drivetrain.motors(-MAX_RPM / 2); // Push into loader
+  pros::delay(100); // for a bit of time,
+  drivetrain.motors(MAX_RPM / 2); // Push into loader
+  pros::delay(400); // for a bit of time,
+  drivetrain.stop(); // then stop.
+  pros::delay(5000); // Take up some blocks (6);
   intake.stopScan();
-  drivetrain.move(10);
+  drivetrain.move(-13); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  drivetrain.turn(85);
+  drivetrain.turn(85);
   intake.setScorerHeight(HIGH);
-  intake.score(Intake::TOP, 2000); // Score all 9 blocks // TODO: corroborate timing
+  drivetrain.move(6.5);
+  intake.score(Intake::TOP, 3000); // Score all blocks
   drivetrain.move(-23); // Go back a little
-  drivetrain.turn(90); // Orient towards parking
-  drivetrain.move(30.1); // Go to parking
-  //* Distances work until here consistently
-  drivetrain.motors(-MAX_RPM); // Wheelie into parking
-  pros::delay(250);
+  drivetrain.turn(-93); // Orient towards parking
+  drivetrain.move(20); // Go to parking
   drivetrain.motors(MAX_RPM);
-  pros::delay(1500);
-  drivetrain.stop();
+  pros::delay(1200);
+  drivetrain.stop(); 
+  //* Works till here
 }
+
+void testXDriveRoutine(){
+  // drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
+  // drivetrain.goToPose(Pose(0, 12, 0));
+  // drivetrain.goToPose(Pose(-12, 12, 0));
+  // drivetrain.goToPose(Pose(0, 0, 90));
+  // drivetrain.goToPose(Pose(-12, 18, 0));
+  // drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
+  // drivetrain.goToPose(Pose(0, 0, 0));
+}
+
+void smallbotjorgeg(){
+   drivetrain.move(31); // Align with match loader
+  drivetrain.turn(87);
+  intake.dropCart(); // Prepare loader mechanism
+  pros::delay(200);  
+  drivetrain.move(5); // Go to match loader
+  intake.activateScan(); 
+  drivetrain.motors(-MAX_RPM / 2); // Push into loader
+  pros::delay(100); // for a bit of time,
+  drivetrain.motors(MAX_RPM / 2); // Push into loader
+  pros::delay(300); // for a bit of time,
+  drivetrain.stop(); // then stop.
+  pros::delay(5000); // Take up some blocks (6);
+  intake.stopScan();
+  drivetrain.move(-13); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  // drivetrain.turn(173);
+  drivetrain.turn(85);
+  drivetrain.move(1);
+  drivetrain.turn(85);
+  intake.setScorerHeight(HIGH);
+  drivetrain.move(6.5);
+  intake.score(Intake::TOP, 1000); // Score all blocks
+  drivetrain.move(-6.5); // reset long goal distance
+  drivetrain.turn(-45); // face bottom middle goal
+  drivetrain.move(-31); // going backward
+  // intake.setScorerHeight(LOW);// prepare for middle-middle goal
+  // intake.move(); //score in bottom goal
+  drivetrain.move(3);
+  drivetrain.turn(90); // allign for middle-middle
+  drivetrain.move(20);
+  drivetrain.turn(-45);
+  drivetrain.move();
+
+  
+
+  
+}
+
 #endif
 
 // ============================================================================|

@@ -23,7 +23,6 @@ class Intake {
 
 #if USING_BIG_ROBOT
  private:
-  okapi::MotorGroup intakeMG;
   okapi::MotorGroup frontElevatorMG;
   okapi::MotorGroup hoarderMG;
   okapi::MotorGroup backElevatorMG;
@@ -37,8 +36,7 @@ class Intake {
   volatile bool scanning = false;
 
  public:
-  Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-         const std::initializer_list<okapi::Motor>& frontElevatorPorts,
+  Intake(const std::initializer_list<okapi::Motor>& frontElevatorPorts,
          const std::initializer_list<okapi::Motor>& hoarderPorts,
          const std::initializer_list<okapi::Motor>& backElevatorPorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
@@ -87,24 +85,21 @@ class Intake {
 
 #else
  private:
-  okapi::MotorGroup intakeMG;
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
   okapi::MotorGroup scorerMG;
   pros::ADIDigitalOut scorerPiston;
   pros::ADIDigitalOut cartPiston;
-  pros::ADIDigitalOut trapdoorPiston;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
 
   volatile bool scanning = true;
 
  public:
-  Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-         const std::initializer_list<okapi::Motor>& elevatorPorts,
+  Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
-         char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
+         char scorerPistonPort, char cartPistonPort,
          int distanceSensorPort, int colorSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
@@ -135,12 +130,6 @@ class Intake {
 
   /// @brief Raises the cart by deactivating its pistons
   void raiseCart();
-
-  /// @brief Opens the trapdoor by activating its pistons
-  void openTrapdoor();
-
-  /// @brief Closes the trapdoor by deactivating its pistons
-  void closeTrapdoor();
 
 #endif
 
@@ -186,6 +175,10 @@ class Intake {
 
   /// @brief Sets the flag for the scanning async task to stop runnning
   void stopScan();
+
+  /// @brief Give the flag of scanning for the intake.
+  /// @return True if the intake is scanning, False otherwise
+  bool isScanning();
 
   /// @brief This small subroutine moves the elevator such that a block is
   /// picked up
