@@ -7,6 +7,7 @@
 #include "../constants.hpp"
 #include "../controls/trapezoid-profile/trapezoid.hpp"
 #include "../controls/exponential-profile.hpp"
+#include "../controls/s-curve-profile.hpp"
 
 /**
  * \file h-drive.hpp
@@ -49,8 +50,18 @@ class HDrive : public TankDrive {
       middleMotor(mid),
       pose() {}
 
+  PoseH getPose() { return this->pose; }
+  void setPose(PoseH p) { pose = p; }
 
-  // Controller function
+  double getX() { return this->pose.x; }
+  void setX(double x) { pose.x = x; }
+
+  double getY() { return this->pose.y; }
+  void setY(double y) { pose.y = y; }
+
+  double getTheta() { return this->pose.theta; }
+  void setTheta(double theta) { pose.theta = theta; }
+
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for
   /// auton and `brake` for drivers
@@ -65,30 +76,14 @@ class HDrive : public TankDrive {
   /// @param vertical Velocity in vertical motion 
   /// @param turn Velocity for turning
   /// @param nothing A fill parameter
-  void drive(double horizontal, double vertical, double turn, double nothing);
-
-  /// @brief Move robot with the controller. Holonomic motion with left joysick
-  /// and turning with right.
-  /// @param horizontal Velocity in horizontal motion
-  /// @param vertical Velocity in vertical motion 
-  /// @param turn Velocity for turning
-  /// @param nothing A fill parameter
-  void driveV2(double horizontal, double vertical, double turn, double nothing, bool middleRight, bool middleLeft);
-  
-  // Movement functions
+  void drive(double leftX, double leftY, double rightX, double rightY);
 
   /// @brief Stop all the motors for H drive train
   void stop() override;
 
-  /// @brief Moves mid motor the same `rpm` to move forward
+  /// @brief Moves mid motor the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm
   void motorsMid(const double &rpm);
-
-  /// @brief Move robot in 2 directions at the same time and turn.
-  /// @param x Movement in x axis in inches.
-  /// @param y Movement in y axis in inches.
-  /// @param theta Turn in degrees.
-  void move2D(double x, double y, double theta);
 
   /// @brief Move horizontally to given distance using PID (default right)
   /// @param pid The PID used for the driving
@@ -100,78 +95,41 @@ class HDrive : public TankDrive {
   /// @param dist The distance to be moved in \b inches
   void strafe(double dist);
 
-  /// @brief Empty function for 
-  /// @param t Time to run empty function.
-  static void emptyFunction(int t);
-
-  /// @brief Determines the speed of the robot given drivetrain motors' `RPM`
-  /// @param RPM The RPM for which to calculate the velocity (default max RPM)
-  /// @return The speed in \b in/s at which the robot would move at the given RPM
-  /// @note Test the accuracy precision of the `getActualVelocity()` method which is used as a default value,
-  /// @note it may be possible to need to use `get_velocity()` from `pros::Rotation` which uses \b centidegrees.
-  /// @note The distance units depend on the units used for measuring `DRIVE_WHEEL_DIAMETER`.
-  // inline double getSpeed(const double &RPM = (int)driveFull.getActualVelocity()){
-  double getSpeed(const double &RPM = MAX_RPM);
-
-  /// @brief Helper function to calculate the time limit
-  double computeTimeout(double distance, double maxVel, double maxAccel);
-
   /**
-   * \brief Move drive at desired velocity with respect to plane of reference
-   *
-   * \details When used with odometry, moves the drive in the corresponding X or Y
-   * component and rotates it using the field as a plane of reference. Therefore,
-   * motions only depend on the plane and it's coordinates, not on the current
-   * orientation
-   *
-   * \param vx Linear velocity in the X component (relative to reference plane)
-   * \param vy Linear velocity in the Y component (relative to reference plane)
-   * \param vT Angular velocity with respect to the robot's center of rotation
-   * \param use_odom Use odometry for external reference plane
-   *
-   * \note
-   *  Do not use odometry when function is used just to move drive taking
-   * advantage of this function's vector addition for velocities
-   *
-   * \note
-   * [ Trapezoid Profile ]  →  desired velocities (feedforward)
-   *              +
-   *  [ PID on position ]   →  small velocity corrections (feedback)
-   *              ↓
-   *  [ Holonomic Kinematics ] → wheel RPMs
-   *              ↓
-   *  [ Motors ]
-   *
-   * \attention
-   *    Positive (+) X is to the "right" and positive (+) Y to the "top" like a
-   * normal Cartesian plane
-   */
-  void MoveHolonomicMotionH(double vx, double vy, double vT, bool use_odom = true);
+  * \brief Holonomic motion with motion profile. Move in x, y and theta at the same time.
+  *
+  * \param X Target X position
+  * \param Y Target Y positionM
+  * \param T Target angular position in \b degrees
+  * \param max_speed Maximum speed throughout trapezoidal motion
+  * \param max_accel Desired maximum acceleration for trapezoidal motion
+  * \param max_speed_angular Desired maximum angular speed for trapezoidal motion
+  * \param max_accel_angular Desired maximum angular acceleration for trapezoidal motion
+  * \param drivePID Drive PID to correct motion
+  * \param turnPID Turn PID to correct motion
+  *
+  * */
+  void HolonomicMotion(
+    double X, double Y, double T,
+    double max_speed = MAX_RPM, // in/s to RPM
+    double max_accel = MAX_ACCEL, // RPM/s
+    double max_deccel = MAX_DECEL,
+    PID drivePID = PID(0.02, 0, 0), PID turnPID = PID(0.002, 0, 0)
+  );
+  // void HolonomicMotion(
+  //   double X, double Y, double T,
+  //   double max_speed = (MAX_LINEAR_VELOCITY * 60) / (M_PI / (DRIVE_WHEEL_DIAMETER / 2)), // in/s to RPM
+  //   double max_accel = MAX_ACCEL, // RPM/s
+  //   double max_ang_speed = MAX_ANGULAR_VELOCITY * (60 / (2 * M_PI)), // rad/s to RPM 
+  //   double max_ang_accel = MAX_ANGULAR_ACCEL * (60 / (2 * M_PI)), // rad/s^2 to RPM/s
+  //   PID drivePID = PID(0.02, 0, 0), PID turnPID = PID(0.002, 0, 0)
+  // );
 
-  /**
- * \brief Move drive using Trapezoid Speed Profile
- *
- * \param X Target X position
- * \param Y Target Y positionM
- * \param T Target angular position in \b degrees
- * \param function Function of `t` that will run once every iteration
- * \param v0 Initial speed for trapezoidal motion
- * \param vf Final speed for trapezoidal motion
- * \param max_speed Maximum speed throughout trapezoidal motion
- * \param max_accel Desired maximum acceleration for trapezoidal motion
- * \param max_speed_angular Desired maximum angular speed for trapezoidal motion
- * \param max_accel_angular Desired maximum angular acceleration for trapezoidal motion
- * \param drivePID Drive and turn PID to correct motion
- *
- *
- * */
-void MoveTrapezoidH(double X, double Y, double T,
-                   double v0 = 0,
-                   double vf = 0,
-                   double max_speed = MAX_VELOCITY_LINEAR,
-                   double max_accel = MAX_ACCEL,
-                   double max_speed_angular = MAX_ANGULAR_VELOCITY,
-                   double max_accel_angular = MAX_ANGULAR_ACCEL,
-                   PID drivePID = PID(0.02, 0, 0), PID turnPID = PID(0.002, 0, 0));
+  /// @brief Move robot in 2 directions at the same time and turn.
+  /// @param x Movement in x axis in inches.
+  /// @param y Movement in y axis in inches.
+  /// @param theta Turn in degrees.
+  void goToPose(double x, double y, double theta);
+
 };
 } // namespace aon

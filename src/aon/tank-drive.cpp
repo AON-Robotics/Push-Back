@@ -165,10 +165,10 @@ void TankDrive::driveProfiled(double dist) {
 
     pros::delay(20);
   }
-
+  currVelocity=0;
   this->stop();
-  std::cout << "Robot move to front\n";
-  pros::delay(5000);
+  // std::cout << "Robot move to front\n";
+  // pros::delay(5000);
 }
 
 void TankDrive::turnProfiled(double angle) {
@@ -210,10 +210,10 @@ void TankDrive::turnProfiled(double angle) {
 
     pros::delay(20);
   }
-  
+  currVelocity=0;
   this->stop();
-  std::cout << "Turn do\n";
-  pros::delay(5000);
+  // std::cout << "Turn do\n";
+  // pros::delay(5000);
 }
 
 

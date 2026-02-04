@@ -27,7 +27,7 @@
 #if USING_BIG_ROBOT
 
 // Drivetrain
-aon::HDrive drivetrain = aon::HDrive({16, -15, -14}, {-20, 19, 18}, 17);
+aon::HDrive drivetrain = aon::HDrive({-1, -2, 3}, {4, -5, 6}, 7);
 // okapi::MotorGroup mid({17}); // Default make robot go right
 
 pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism

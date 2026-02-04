@@ -27,37 +27,41 @@ void HDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
 
 }
 
-void HDrive::drive(double horizontal, double vertical, double turn, double nothing) {
-  //////////// DRIVE ////////////
-  // const double horizontal = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X) / 127.0, SENSITIVITY);
-  // const double vertical = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
-  // const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY) * .8;
-  
-  leftMotors.moveVelocity(600 * std::clamp(vertical + turn, -1.0, 1.0));
-  rightMotors.moveVelocity(600 * std::clamp(vertical - turn, -1.0, 1.0));
-  middleMotor.moveVelocity(600 * std::clamp(horizontal, -1.0, 1.0));
+// ASK WHERE THIS FUNCTIONS SHOULD GO
+/// @brief Scales analog joystick input for easier control.
+/// @details Fine joystick control can be difficult, specially for tasks like
+///          rotating. After researching the forums I found that teams scale their
+///          joystick inputs using an exponential function of sorts. This makes small
+///          inputs produce a smaller output and bigger inputs increase speed, so fine
+///          movements can be done without as much of a hassle.
+/// @param x The controller's user input between -127 and 127
+/// @param t Sensitivity (higher is a steeper curve and vice-versa)
+/// @return double between -1 and 1
+///
+/// @see Demonstration of scaling function in Desmos. https://www.desmos.com/calculator/kq9hgbxbwp
+/// @warning Make sure that the input `x` is between -127 and 127!!!
+inline double AnalogInputScaling(const double& x, const double& t) {
+  const double a = ::std::exp(-::std::fabs(t) / 10.0);
+  const double b = ::std::exp((::std::fabs(x) - 127.0) / 10.0);
+
+  return (a + b * (1 - a)) * x / 127.0;
 }
 
-void HDrive::driveV2(double horizontal, double vertical, double turn, double nothing, bool middleRight, bool middleLeft) {
-  //////////// DRIVE ////////////
-  // const double horizontal = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X) / 127.0, SENSITIVITY);
-  // const double vertical = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y) / 127.0, SENSITIVITY);
-  // const double turn = AnalogInputScaling(mainController.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X) / 127.0, SENSITIVITY) * .8;
-  
-  leftMotors.moveVelocity(600 * std::clamp(vertical + turn, -1.0, 1.0));
-  rightMotors.moveVelocity(600 * std::clamp(vertical - turn, -1.0, 1.0));
-  if (middleRight){
-    middleMotor.moveVelocity(600);
-  }
-  if (middleLeft) {
-    middleMotor.moveVelocity(-600);
-  }
-  if (!middleRight && !middleLeft) {
-    middleMotor.moveVelocity(0);
-  }
-  // else
-  //   middleMotor.moveVelocity(0);
+/// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
+/// @param input The joystick input to be scaled
+/// @param percentage The percentage of the drivetrain's `MAX_RPM` to scale to
+/// @return The `input` scaled to the `MAX_RPM` of the drivetrain as per `percentage`
+inline double ApplySpeed(const double& input, const double& percentage){
+  return input * MAX_RPM * percentage;
+}
 
+void HDrive::drive(double leftX, double leftY, double rightX, double nothing) {
+  const double forward = ApplySpeed(leftY , 0.6);
+  const double horizontal = ApplySpeed(leftX, 0.6);
+  const double turn = ApplySpeed(rightX, 0.4);
+  
+  driveWhileTurning(forward, turn);
+  middleMotor.moveVelocity(horizontal);
 }
 
 // ============================================================================
@@ -129,7 +133,7 @@ void HDrive::strafe(double dist) {
     
     pros::lcd::print(0, "Trav %.2f", traveledDist);
 
-    currVelocity = motionProfile.update(remainingDist, dt);
+    currVelocity = this->motionProfile.update(remainingDist, dt);
     this->motorsMid(sign * currVelocity);
 
     if (traveledDist >= dist) { break; }  // Overshoot prevention
@@ -137,278 +141,197 @@ void HDrive::strafe(double dist) {
     pros::delay(20);
   }
 
+  currVelocity=0;
   this->motorsMid(0);
-  std::cout << "Strafe\n";
-  pros::delay(5000);
 }
 
-// double timeoutX = computeTimeout(std::abs(dx), max_vx, max_ax);
-  // double timeoutY = computeTimeout(std::abs(dy), max_vy, max_ay);
-  // // double timeoutTheta = computeTimeout(std::abs(dT), max_vt, max_accel); /// FIND MAX FOR THETA
-  // double timeoutTheta = 1.0; /// FIND MAX FOR THETA
-  
-  // double max_vx = max_speed * dir_x;
-  // double max_vy = max_speed * dir_y;
-  // double max_ax = max_accel * fabs(dir_x);
-  // double max_ay = max_accel * fabs(dir_y);
-  
-  // pick the largest
-  // double timeout = std::max({timeoutX, timeoutY, timeoutTheta});
-  // double timeout = 1.0;
-  // std::cout << "Timeout: " << timeout << "\n";
-  
-  
-
-  // pros::lcd::print(2, "Before Loop");
-  // Run loop while time hasn't run out
-  // while (t < timeout) {
-  //   t = pros::millis() / 1000.0 - start_time;
-  //   double dt = t - last_t;
-  //   last_t = t;
-
-  //   // Current remaining distances
-  //   Vector current_position = aon::odometry::GetPosition();
-  //   double current_dx = X - current_position.GetX(); // remaining X
-  //   double current_dy = Y - current_position.GetY(); // remaining Y
-  //   double current_dT = T - (-aon::odometry::GetRadians()); // remaining rotation
-  //   // Normalize angle error to [-π, π]
-  //   // This prevents long rotations the wrong way
-  //   while (current_dT >  M_PI) current_dT -= 2.0 * M_PI;
-  //   while (current_dT < -M_PI) current_dT += 2.0 * M_PI;
-
-  //   std::cout << "Remaining: " << current_dx << ", " << current_dy << ", " << current_dT <<"\n";
-
-  //   // Convert degrees → linear inches for one side of the drivetrain
-  //   // current_dT = current_dT * (M_PI * (DRIVE_WIDTH / 2.0) / 180.0);
-
-  //   // Update S-curve profiles
-  //   double vx_ff = xMotionProfile.update(current_dx, dt);
-  //   double vy_ff = yMotionProfile.update(current_dy, dt);
-  //   // MotionProfile must be configured with angular limits:
-  //   //   max_omega (rad/s)
-  //   //   max_alpha (rad/s^2)
-  //   double vT_ff = TMotionProfile.update(current_dT, dt); // CHECK MOTION PROFILE FOR ROTATION
-
-  //   // PID corrections
-  //   double vx_corr = vxPID.OutputDt(0, current_dx, dt);
-  //   double vy_corr = vyPID.OutputDt(0, current_dy, dt);
-  //   double vT_corr = thetaPID.OutputDt(0, current_dT, dt);
-
-  //   std::cout << "Velocity in RPM before moving: " << vx_ff << ", " << vy_ff << ", " << vT_ff << "\n";
-
-  //   // Send to motors
-  //   MoveHolonomicMotionH(vx_ff + vx_corr,
-  //                        vy_ff + vy_corr,
-  //                        vT_ff + vT_corr,
-  //                        true);
-
-  //   function(t * 1000);
-  //   pros::delay(10);
-  // }
-
-void HDrive::MoveHolonomicMotionH(double vx, double vy, double vT, bool use_odom) {
-  // ================= UNIT CONTRACT =================
-  // vx, vy : inches / second (field-relative)
-  // vT     : radians / second (CCW positive)
-  // ================================================
-
-  const double d = DRIVE_WIDTH / 2.0;               // inches
-  const double wheel_diam = DRIVE_WHEEL_DIAMETER;   // inches
-
-  // Robot heading (field → robot transform)
-  // Odometry uses CW positive, so we negate it
-  const double theta = use_odom ? -aon::odometry::GetRadians() : 0.0;
-
-  // ============ FIELD → ROBOT TRANSFORM ============
-  //
-  // Rotate field-relative velocity into robot frame
-  //
-  // [ vx_r ]   [  cosθ   sinθ ] [ vx_f ]
-  // [ vy_r ] = [ -sinθ   cosθ ] [ vy_f ]
-  //
-  const double vx_robot =  vx * std::cos(theta) + vy * std::sin(theta);
-  const double vy_robot =  vy * std::cos(theta) - vx * std::sin(theta);
-
-  // =============== ROTATION CONTRIBUTION ===========
-  //
-  // Convert angular velocity into linear velocity at wheels
-  //
-  // v = ω * r
-  //
-  const double v_rot = vT * d;   // inches / second
-
-  // Wheel linear velocities
-  const double v_left  = vy_robot + v_rot;
-  const double v_right = vy_robot - v_rot;
-  const double v_mid   = vx_robot;
-
-  // ============ LINEAR VELOCITY → RPM ==============
-  //
-  // Wheel circumference = π * D
-  // inches/sec → rev/sec → RPM
-  //
-  const double INPS_TO_RPM = 60.0 / (M_PI * wheel_diam);
-
-  this->motorsLeft (v_left  * INPS_TO_RPM);
-  this->motorsRight(v_right * INPS_TO_RPM);
-  this->motorsMid  (v_mid   * INPS_TO_RPM);
+/// @brief Determines the linear speed of the robot given drivetrain motors' RPM
+/// @param rpm The RPM for which to calculate the velocity (default current RPM)
+/// @returns The speed in \b in/s at which the robot would move at the given RPM
+/// @note Test the accuracy precision of the `getActualVelocity()` method,
+/// @note it may be possible to need to use `get_velocity()` from `pros::Rotation` which uses \b centidegrees.
+/// @note The distance units depend on the units used for measuring `DRIVE_WHEEL_DIAMETER`.
+inline double linearSpeed(const double &rpm = MAX_RPM){
+  double circumference = DRIVE_WHEEL_DIAMETER * M_PI;
+  double rps = rpm / 60;
+  double speed = MOTOR_TO_DRIVE_RATIO * circumference * rps;
+  return speed;
 }
 
+/// @brief Determines the rotational speed of the robot given drivetrain motors' RPM
+/// @param rpm The RPM for which to calculate the velocity (default current RPM)
+/// @return The speed in \b deg/s at which the robot would move at the given RPM
+inline double rotationalSpeed(const double &rpm){
+  const double drive_width = 10.5;
+  const double drive_length = 8.25;
+  const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
+  double wheelCircumference = DRIVE_WHEEL_DIAMETER * M_PI;
+  double rps = rpm / 60;
+  double tangentialSpeed = MOTOR_TO_DRIVE_RATIO * wheelCircumference * rps;
+  return (tangentialSpeed * 180 / M_PI) / ROBOT_RADIUS;
+}
 
-void HDrive::MoveTrapezoidH(double X, double Y, double T,
-                   double v0,
-                   double vf,
-                   double max_speed,
-                   double max_accel,
-                   double max_speed_angular,
-                   double max_accel_angular,
-                   PID drivePID, PID turnPID) {
-  std::cout << "it enters move trapezoidH";
+/*
+THINGS TO DO:
+- change to Pose class, the x, y and theta
+- test with PID
+- check constant
+- put the motion profile and pid as part of the class
 
-  const double d = DRIVE_WIDTH / 2.0; // Half the width of the robot
-  const double target_theta = T * M_PI / 180;
-  const double dt = 0.02;
-  
-  // Store initial conditions
-  const double start_x = aon::odometry::GetX();
-  const double start_y = aon::odometry::GetY();
-  const double start_theta = -aon::odometry::GetRadians();   // Odometry uses CW as positive, but we want CCW to be positive
-  const double start_time = pros::millis() / 1000.0;
-  double last_t = start_time;
-  
-  // Determine how much base should move in each component
-  const double dx = X - start_x;
-  const double dy = Y - start_y;
-  const double dT = target_theta - start_theta; // radians
-  
-  // Decompose max_speed and max_accel magnitudes into x and y components
-  // using angle made by dx and dy as angle for the vector
-  double h = std::hypot(dx, dy);
-  double dir_x = 0.0;
-  double dir_y = 0.0;
+*/
+void HDrive::HolonomicMotion(
+  double X, double Y, double T,
+  double max_speed, double max_accel, double max_deccel,
+  PID drivePID, PID turnPID
+) {
+  this->setX(0);
+  this->setY(0);
+  this->setTheta(0);
+  // ---------- Constants ----------
+  const double dt = 0.02; 
+  const double d = DRIVE_WIDTH / 2; // inches
+  const double drive_width = 17.5;
+  const double drive_length = 17.5;
+  const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
+  const double circumference = M_TWOPI * ROBOT_RADIUS;
 
-  // Dont divide by 0
-  if (h > 1e-6) {
-    dir_x = dx / h;
-    dir_y = dy / h;
-  }
-  
-  std::cout << "it enters move trapezoidH profile";
-  
-  // Create trapezoid profiles
-  TrapezoidProfile xProfile(
-      h,                     // total distance (in)
-      max_speed,             // max velocity (in/s)
-      max_accel,             // accel (in/s^2)
-      max_accel              // decel (in/s^2)
-  );
+  // Declaration of motion profile (Change this into the tank class or H)
+  MotionProfile xProfile(max_speed, max_accel, max_deccel, max_accel); // limit all movement because mid motor is slower than the rest of the base
+  MotionProfile yProfile(max_speed * 0.8, max_accel * 0.8, max_deccel * 0.8, max_accel * 0.8);
+  MotionProfile turnProfile(max_speed, max_accel * 0.3, max_deccel * 0.8, max_accel * 0.3);
 
-  TrapezoidProfile thetaProfile(
-      dT,                    // radians
-      max_speed_angular,     // rad/s
-      max_accel_angular,     // rad/s^2
-      max_accel_angular
-  );
-
-  // Reset PID before creating the objects
+  // Test if accuracy improve with PID
   drivePID.Reset();
   turnPID.Reset();
-  std::cout << "it enters move trapezoidH PID";
-  // Instantiate PID objects
-  PID vxPID = drivePID;
-  PID vyPID = drivePID;
-  PID thetaPID = turnPID;
-  
-  while (true) {
-    std::cout << "it enters move trapezoidH loop";
-    double t = pros::millis() / 1000.0 - start_time;
 
-    // Scalar speed along the path
-    double v_path = xProfile.SpeedProfile(t);   // in/s
+  double remainingX = abs(X - this->getX());
+  double remainingY = abs(Y - this->getY());
+  double remainingAngle = abs(T - this->getTheta());
 
-    // Decompose into X and Y
-    double vx_ff = v_path * dir_x;
-    double vy_ff = v_path * dir_y;
+  std::cout << "Reamining X: " << remainingX << "\n"; 
+  std::cout << "Reamining Y: " << remainingY << "\n"; 
+  std::cout << "Reamining T: " << remainingAngle << "\n"; 
 
-    // Angular velocity
-    double vT_ff = thetaProfile.SpeedProfile(t); // rad/s
+  // double remainingX = abs(X - aon::odometry::GetX());
+  // double remainingY = abs(Y - aon::odometry::GetY());
+  // double remainingAngle = abs(T - aon::odometry::GetDegrees());
 
-    // PID correction
-    Vector pos = aon::odometry::GetPosition();
-    double theta = -aon::odometry::GetRadians();
+  double lastTime = pros::micros() / 1E6;
 
-    auto wrapAngle = [](double a) {
-      while (a > M_PI)  a -= 2 * M_PI;
-      while (a < -M_PI) a += 2 * M_PI;
-      return a;
-    };
+  double delay = 20;
 
-    // Position errors
-    double ex = X - pos.GetX();
-    double ey = Y - pos.GetY();
-    double e_theta = wrapAngle(target_theta - theta);
+  while (remainingX > 0.01 || remainingY > 0.01 || remainingAngle > 3) {
+    double now = pros::micros() / 1E6;
+    double dt_loop = now - lastTime;
+    lastTime = now;
 
-    // PID correction
-    double vx_corr = vxPID.OutputDt(X, ex, dt);
-    double vy_corr = vyPID.OutputDt(Y, ey, dt);
-    double vT_corr = thetaPID.OutputDt(target_theta, e_theta, dt);
+    // ---- Actual position ----
+    double x = this->getX();
+    double y = this->getY();
+    double t = this->getTheta();
+
+    std::cout << "current X: " << x << "\n"; 
+    std::cout << "current Y: " << y << "\n"; 
+    std::cout << "current T: " << t << "\n"; 
+
+    // double x = aon::odometry::GetX();
+    // double y = aon::odometry::GetY();
+    // double t = aon::odometry::GetDegrees();
+
+    // --- Remaining Distance ---
+    remainingX = X - x;
+    remainingY = Y - y;
+    remainingAngle = T - t;
+
+    constexpr double EPS_XY = 1e-4;   // inches
+    constexpr double EPS_T  = 1e-2;   // degrees
+
+    remainingX = fabs(remainingX) < EPS_XY ? 0 : remainingX;
+    remainingY = fabs(remainingY) < EPS_XY ? 0 : remainingY;
+    remainingAngle = fabs(remainingAngle) < EPS_T ? 0 : remainingAngle;
+
+    std::cout << "Reamining X: " << remainingX << "\n"; 
+    std::cout << "Reamining Y: " << remainingY << "\n"; 
+    std::cout << "Reamining T: " << remainingAngle << "\n"; 
+
+    // ----- Correct sign for motion profile ----
+    int signX = (remainingX == 0) ? 1 : remainingX / abs(remainingX);
+    int signY = (remainingY == 0) ? 1 : remainingY / abs(remainingY);
+    int signT = (remainingAngle == 0) ? 1 : remainingAngle / abs(remainingAngle);
+
+
+    remainingX = abs(remainingX);
+    remainingY = abs(remainingY);
+    remainingAngle = abs(remainingAngle);
+
+    // --- Motion profile update ---
+    double vx = xProfile.update(remainingX, dt_loop) * signX;
+    double vy = yProfile.update(remainingY, dt_loop) * signY;
+    double vT = turnProfile.update(circumference * (remainingAngle / 360.0), dt_loop) * signT;
+
+    std::cout << "velocity X: " << vx << "\n"; 
+    std::cout << "velocity Y: " << vy << "\n"; 
+    std::cout << "velocity T: " << vT << "\n";
     
-    // Apply corrections
-    double vx = vx_ff + vx_corr;
-    double vy = vy_ff + vy_corr;
-    double vT = vT_ff + vT_corr;
-
-    // Save last velocity so the PID maintain realistic results
-    static double last_vT = 0.0;
-
-    double max_dvT = max_accel_angular * dt;
-    vT = std::clamp(
-      vT,
-      last_vT - max_dvT,
-      last_vT + max_dvT
-    );
-
-    vT = std::clamp(vT,
-      -max_speed_angular,
-      max_speed_angular
-    );
-
-    last_vT = vT;
-
-    if (T == 0) vT = 0;
-
-    std::cout << "vx: " << vx_ff << ", vy: " << vy_ff << "vt: " << vT_ff << "\n";
-    std::cout << "vx: " << vx_corr << ", vy: " << vy_corr << "vt: " << vT_corr << "\n";
+    // TEST IF MORE ACCURACY WITH PID
+    // double vx_profile = xProfile.update(remainingX, dt_loop) * signX;
+    // double vy_profile = yProfile.update(remainingY, dt_loop) * signY;
+    // double vT_profile = turnProfile.update(circumference * (remainingAngle / 360.0), dt_loop) * signT;
     
-    // Termination condition
-    const double POS_EPS = 0.25;        // inches
-    const double ANG_EPS = 1.0 * M_PI / 180.0; // 1 degree
+    // double vx_pid = drivePID.OutputDt(X, x, dt_loop);
+    // double vy_pid = drivePID.OutputDt(Y, y, dt_loop);
+    // double vt_pid = drivePID.OutputDt(T, t, dt_loop);
+    
+    // double vx = vx_profile + vx_pid;
+    // double vy = vx_profile + vy_pid;
+    // double vT = vx_profile + vt_pid;
+    
+    
+    // ============ FIELD → ROBOT TRANSFORM ============
+    //
+    // Rotate field-relative velocity into robot frame
+    //
+    // [ vx_r ]   [  cosθ   sinθ ] [ vx_f ]
+    // [ vy_r ] = [ -sinθ   cosθ ] [ vy_f ]
+    //
+    // const double vx_robot =  vx * std::cos(aon::odometry::GetDegrees()) + vy * std::sin(aon::odometry::GetDegrees());
+    // const double vy_robot = -vx * std::sin(aon::odometry::GetDegrees()) + vy * std::cos(aon::odometry::GetDegrees());
 
-    bool pos_done = std::hypot(ex, ey) < POS_EPS;
-    bool ang_done = std::abs(e_theta) < ANG_EPS;
+    double thetaRad = this->getTheta() * M_PI / 180.0;
 
-    if (pos_done && ang_done) {
-        std::cout << "DONE" << ex << ", " << ey << "\n";
-        break;
-    }
+    const double vx_robot = vx * std::cos(thetaRad) + vy * std::sin(thetaRad);
+    const double vy_robot = -vx * std::sin(thetaRad) + vy * std::cos(thetaRad);
 
-    if (std::abs(e_theta) < ANG_EPS) {
-      vT = 0;
-    }
+    
+    std::cout << "velocity robot X: " << vx_robot << "\n"; 
+    std::cout << "velocity robot Y: " << vy_robot << "\n"; 
+    std::cout << "velocity T: " << vT << "\n";
 
-    MoveHolonomicMotionH(vx, vy, vT, true);
+    // ----- Move motors ------
+    this->motorsLeft (vy_robot + vT);
+    this->motorsRight(vy_robot - vT);
+    this->motorsMid  (vx_robot);
 
-    pros::delay(10);
+    pros::delay(delay);
+
+    std::cout << "X: " << this->getX() << "\n"; 
+    std::cout << "X: " << this->getY() << "\n"; 
+    std::cout << "X: " << this->getTheta() << "\n"; 
+
+    this->setX(this->getX() + linearSpeed(vx_robot + vT) * (delay / 1000)); //# in case of odom failure
+    this->setY(this->getY() + linearSpeed(vy_robot - vT) * (delay / 1000)); //# in case of odom failure
+    this->setTheta(this->getTheta() + rotationalSpeed(vT) * delay / 1000); //# in case of odom failure
   }
-  
-  pros::lcd::print(4, "After Loop");
-  MoveHolonomicMotionH(0, 0, 0, false);
+
+  std::cout << "Stop because remaining is: " << remainingX << ", " <<  remainingY << ", " << remainingAngle << "\n";
+
+  this->stop();
 }
 
-void HDrive::move2D(double x, double y, double theta) {
-  std::cout << "It enters in move2d";
-  if (x == 0 && y == 0) this->turn(theta);
-  HDrive::MoveTrapezoidH(x, y, theta);
+void HDrive::goToPose(double x, double y, double theta) {
+  // if (x == 0 && y == 0) this->turn(theta);
+  // const double timeout = std::max({x / MININUM_VELOCITY_LINEAR, y / MININUM_VELOCITY_LINEAR, theta / MININUM_VELOCITY_ANGULAR});
+  HDrive::HolonomicMotion(x, y, theta);
 }
 
 } // aon namespace

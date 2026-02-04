@@ -10,7 +10,7 @@
 #define TILE_DIAG_LENGTH 33.4066195836 // Calculated with the Pythagorean theorem
 
 // NOT using big robot = Using small robot
-#define USING_BIG_ROBOT false
+#define USING_BIG_ROBOT true
 #define TESTING_AUTONOMOUS false
 
 #define RED_ALLIANCE true
@@ -45,6 +45,7 @@
 #define INITIAL_ODOMETRY_X 0.0
 #define INITIAL_ODOMETRY_Y 0.0
 #define INITIAL_ODOMETRY_THETA 0.0
+#define TURNING_THRESHOLD 0.1
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD
@@ -53,16 +54,38 @@
 #define GPS_INITIAL_Y -0.47 // Field
 #define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
 
-#define MAX_RPM 600 // For the drivetrain
+#define MAX_RPM 600.0 // For the drivetrain
 #define INTAKE_VELOCITY 600
-#define MAX_VELOCITY_LINEAR (double)(MAX_RPM * 2 * M_PI * (TRACKING_WHEEL_DIAMETER / 2)) / 60 // inches / sec 
 #define MAX_ANGULAR_VELOCITY (MAX_VELOCITY_LINEAR / AVG_DRIVETRAIN_RADIUS)
 
-/// @brief Maximum acceleration without slippage
+/// @brief Maximum linear acceleration without slippage
+/// @note vmax = wmax * r
+/// @note Unit: in/s (not RPM for now)
+#define MAX_LINEAR_VELOCITY (double) MAX_RPM * ((2 * M_PI) / 60) * (DRIVE_WHEEL_DIAMETER / 2)
+
+/// @brief Maximum linear acceleration without slippage
+/// @note Unit: rad/s (not RPM for now)
+#define MAX_ANGULAR_VELOCITY (double)(MAX_LINEAR_VELOCITY / AVG_DRIVETRAIN_RADIUS)
+
+/// @brief Maximum linear acceleration without slippage
+///
+/// @see https://www.desmos.com/calculator/mctysmxspb
+/// @note Why not the normal MAX_ACCEL? The function used assumes
+///       is turning in its own axis. With holonomic motion that 
+///       that doesn't work.
+/// @note Unit: in/s^2 (not RPM for now)
+#define MAX_LINEAR_ACCEL 424.69659155
+
+/// @brief Maximum angular acceleration without slippage
+///
+/// @see https://www.desmos.com/calculator/mctysmxspb
+/// @note Unit: rad/s^2 (Not RPM for now)
+#define MAX_ANGULAR_ACCEL (MAX_LINEAR_ACCEL / AVG_DRIVETRAIN_RADIUS) 
+
+/// @brief Maximum acceleration without slippage in RPM/s
 ///
 /// @see https://www.desmos.com/calculator/9e23f1f7b6
 #define MAX_ACCEL 4991.46340024
-#define MAX_ANGULAR_ACCEL (MAX_ACCEL / AVG_DRIVETRAIN_RADIUS)
 
 /// @brief Maximum deceleration without tipping (limited to not confuse encoders right now)
 ///
@@ -106,6 +129,7 @@
 #define INITIAL_ODOMETRY_X 0.0
 #define INITIAL_ODOMETRY_Y 0.0
 #define INITIAL_ODOMETRY_THETA 0.0
+#define TURNING_THRESHOLD 0.01
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD

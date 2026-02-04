@@ -76,30 +76,30 @@ bool turbo = false;
 /// Default Operator Control configuration
 inline void DriveDefault() { 
   //////////// DRIVE ////////////
-  const double scaledVertical = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
-  const double scaledTurn = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
+  // const double scaledVertical = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+  // const double scaledTurn = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
   
-  #if USING_BIG_ROBOT
-  const double scaledHorizontal = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+  // #if USING_BIG_ROBOT
+  // const double scaledHorizontal = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
   
-  const double vertical = ApplySpeed(scaledVertical, turbo ? 1.41421356237 : 0.6);
-  const double horizontal = ApplySpeed(scaledHorizontal, turbo ? 1.41421356237 : 0.6);
-  const double turn = ApplySpeed(scaledTurn, turbo ? 1.41421356237 : 0.4);
+  // const double vertical = ApplySpeed(scaledVertical, turbo ? 1.41421356237 : 0.6);
+  // const double horizontal = ApplySpeed(scaledHorizontal, turbo ? 1.41421356237 : 0.6);
+  // const double turn = ApplySpeed(scaledTurn, turbo ? 1.41421356237 : 0.4);
   
-  drivetrain.motorsMid(horizontal);
-  #else
-  const double vertical = ApplySpeed(scaledVertical, turbo ? 1 : 0.6);
-  const double turn = ApplySpeed(scaledTurn, turbo ? 1 : 0.4);
-  #endif
+  // drivetrain.motorsMid(horizontal);
+  // #else
+  // const double vertical = ApplySpeed(scaledVertical, turbo ? 1 : 0.6);
+  // const double turn = ApplySpeed(scaledTurn, turbo ? 1 : 0.4);
+  // #endif
   
-  drivetrain.driveWhileTurning(vertical, turn);
+  // drivetrain.driveWhileTurning(vertical, turn);
 
   //# From now on, all drivetrains used will need to use this format for driving
-  if(false){
-    double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY) * MAX_RPM;
-    double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY) * MAX_RPM;
-    double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY) * MAX_RPM;
-    double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY) * MAX_RPM;
+  if(true){
+    double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+    double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+    double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
+    double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
     drivetrain.drive(leftX, leftY, rightX, rightY);
   }
 
