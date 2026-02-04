@@ -438,7 +438,7 @@ int main(){
 
    * \endcode
    */
-  Vector setPosition(double x, double y) {
+  Vector SetPosition(double x, double y) {
     this->x = x;
     this->y = y;
     magnitude = std::hypot(x, y);
@@ -447,8 +447,8 @@ int main(){
     return *this;
   }
 
-  //> Shorthand for Vector::setPosition()
-  Vector SetPos(double x, double y) { return setPosition(x, y); }
+  //> Shorthand for Vector::SetPosition()
+  Vector SetPos(double x, double y) { return SetPosition(x, y); }
 
   /**
    * \brief Set the vector's magnitude and update the X and Y components.
@@ -663,7 +663,7 @@ int main(){
    * \endcode
    */
   Vector operator+(Vector rhs) {
-    return Vector().setPosition(x + rhs.GetX(), y + rhs.GetY());
+    return Vector().SetPosition(x + rhs.GetX(), y + rhs.GetY());
   }
 
   /**
@@ -689,7 +689,7 @@ int main(){
    * \endcode
    */
   Vector operator-(Vector rhs) {
-    return Vector().setPosition(x - rhs.GetX(), y - rhs.GetY());
+    return Vector().SetPosition(x - rhs.GetX(), y - rhs.GetY());
   }
 
   /**

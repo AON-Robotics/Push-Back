@@ -47,7 +47,24 @@ namespace aon {
     };
 
     class Odometry{
-    
+
+    private:
+        double deltaTheta;
+        Vector deltaDlocal;
+        Angle orientation;
+        Vector position;
+        Vector changeWeb;
+        const double conversionFactor;
+
+        ENCODER encoderBack_data;
+        ENCODER encoderRight_data;
+        ENCODER encoderLeft_data;
+        GYRO gyro_data;
+
+
+        pros::Mutex p_mutex;
+        pros::Mutex orientation_mutex;
+
     public: 
         Odometry(); //constructor
 
@@ -57,7 +74,7 @@ namespace aon {
         double getY();
 
         Vector getPosition();
-        void setPosition(double x, double y);
+        void SetPosition(double x, double y);
 
         double getDegrees();
         void setDegrees(double degrees);
@@ -90,22 +107,7 @@ namespace aon {
         pros::Imu gyroscope;
         #endif
 
-    private:
-        double deltaTheta;
-        Vector deltaDlocal;
-        Angle orientation;
-        Vector position;
-        Vector changeWeb;
-        const double conversionFactor;
-
-        ENCODER encoderBack_data;
-        ENCODER encoderRight_data;
-        ENCODER encoderLeft_data;
-        GYRO gyro_data;
-
-
-        pros::Mutex p_mutex;
-        pros::Mutex orientation_mutex;
+    
 
     };
 }

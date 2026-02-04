@@ -1,14 +1,5 @@
 #pragma once
 
-#include "../../api.h"
-#include "../../okapi/api.hpp"
-#include "../controls/s-curve-profile.hpp"
-#include "../odometry/odometry.hpp"
-
-#include "../math/misc/misc.hpp"
-#include "../controls/pid/pid.hpp"
-#include <cfloat> 
-
 namespace aon{
     class Pose {
  public:
