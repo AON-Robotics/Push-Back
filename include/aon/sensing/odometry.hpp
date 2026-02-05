@@ -512,22 +512,10 @@ inline void Update() {
 
   // SetPosition(changeMine.GetX(), changeMine.GetY());
 
-  // std::cout << "Mine: X: " << GetX() << ", Y: " << GetY() << ", T: " << GetDegrees() << "\n";
-  // std::cout << "noma: X: " << changeMine.GetX() << ", Y: " << changeMine.GetY() << ", T: " << GetDegrees() <<  "\n";
-  // std::cout << "Matr: X: " << changeWeb.GetX() << ", Y: " << changeWeb.GetY() << ", T: " << GetDegrees() << "\n";
-  // std::cout << "vide: X: " << changeVideo.GetX() << ", Y: " << changeVideo.GetY() << ", T: " << GetDegrees() << "\n";
-
- // It works only if we set the initial position with GPS
-//  if (COLOR == BLUE) {
-//   if (GetY() > -10) {
-//     pros::lcd::print(7, "IT SUPER CLOSE TO SURPASS THE AUTONOMOUS LINE");
-//   }
-//  }
-//  else if (COLOR == RED) {
-//   if (GetY() < 10) {
-//     pros::lcd::print(7, "IT SUPER CLOSE TO SURPASS THE AUTONOMOUS LINE");
-//   }
-//  }
+  std::cout << "Mine: X: " << GetX() << ", Y: " << GetY() << ", T: " << GetDegrees() << "\n";
+  std::cout << "noma: X: " << changeMine.GetX() << ", Y: " << changeMine.GetY() << ", T: " << GetDegrees() <<  "\n";
+  std::cout << "Matr: X: " << changeWeb.GetX() << ", Y: " << changeWeb.GetY() << ", T: " << GetDegrees() << "\n";
+  std::cout << "vide: X: " << changeVideo.GetX() << ", Y: " << changeVideo.GetY() << ", T: " << GetDegrees() << "\n";
 
   // Save current values as previous for future updates
   encoderLeft_data.prevValue = encoderLeft_data.currentValue;

@@ -41,13 +41,19 @@ void opcontrol() {
     aon::Configure(false); // Set drivetrain to hold for auton testing
 
     // aon::AutonomousReader->ExecuteFunction("autonomous");
-    #if USING_BIG_ROBOT
-    aon::safeBigBotRoutine();
-    // intake.activateScan();
-    #else
-    aon::testSmallBotRoutine();
-    // intake.activateScan();
-    #endif
+    drivetrain.move(12);
+    drivetrain.turn(90);
+    drivetrain.strafe(12);
+
+    aon::Pose target = aon::Pose(12, 12, 90);
+    drivetrain.goToPose(target);
+    // #if USING_BIG_ROBOT
+    // aon::safeBigBotRoutine();
+    // // intake.activateScan();
+    // #else
+    // aon::testSmallBotRoutine();
+    // // intake.activateScan();
+    // #endif
 
     pros::delay(5000);
     #else

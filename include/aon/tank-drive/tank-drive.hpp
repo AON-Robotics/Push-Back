@@ -45,7 +45,6 @@ class TankDrive : public Drivetrain {
   /// @param rpm The speed in which to move all motors in \b rpm
   void motorsLeft(const double &rpm);
 
-
   /// @brief Moves all motors the same `rpm` to rotate clockwise
   /// @param rpm The speed in which to move all motors in \b rpm
   void rotate(const double &rpm) override;

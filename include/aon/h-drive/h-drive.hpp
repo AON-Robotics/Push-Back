@@ -16,6 +16,13 @@
  * 
  * */
 
+/**
+ * Things to ask:
+ * 1. How is Pose suppose to work, i still dont understand
+ * 2. What is slew rate?
+ * 3. The override for 
+ */
+
 namespace aon {
 
 // TODO: move this to the Odom class file
@@ -36,9 +43,10 @@ class HDrive : public TankDrive {
  private:
   // Motor
   okapi::Motor middleMotor;
-  
-  // Odometry
-  PoseH pose;
+  MotionProfile xProfile;
+  MotionProfile yProfile;
+  MotionProfile thetaProfile;
+  Pose pose;
   
   public:
   
@@ -48,10 +56,13 @@ class HDrive : public TankDrive {
             const okapi::Motor &mid = okapi::Motor(0))
     : TankDrive(leftPorts, rightPorts),
       middleMotor(mid),
+      xProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
+      yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
+      thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
       pose() {}
 
-  PoseH getPose() { return this->pose; }
-  void setPose(PoseH p) { pose = p; }
+  Pose getPose() { return this->pose; }
+  void setPose(Pose p) { pose = p; }
 
   double getX() { return this->pose.x; }
   void setX(double x) { pose.x = x; }
@@ -103,9 +114,6 @@ class HDrive : public TankDrive {
   * */
   void HolonomicMotion(
     double X, double Y, double T,
-    double max_speed = MAX_RPM, // in/s to RPM
-    double max_accel = MAX_ACCEL, // RPM/s
-    double max_deccel = MAX_DECEL,
     PID drivePID = PID(0.02, 0, 0), PID turnPID = PID(0.002, 0, 0)
   );
   // void HolonomicMotion(
@@ -121,7 +129,12 @@ class HDrive : public TankDrive {
   /// @param x Movement in x axis in inches.
   /// @param y Movement in y axis in inches.
   /// @param theta Turn in degrees.
-  void goToPose(double x, double y, double theta);
+  // void goToH(const double &x, const double &y, const double &theta);
 
+  /// @brief Move robot in 2 directions at the same time and turn.
+  /// @param x Movement in x axis in inches.
+  /// @param y Movement in y axis in inches.
+  /// @param theta Turn in degrees.
+  void goToPose(Pose &target);
 };
 } // namespace aon
