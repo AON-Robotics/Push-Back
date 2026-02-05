@@ -35,7 +35,7 @@ class PID {
    *
    * \details Using the error and the last error as the upper and lower sums
    * of the graph and the kT gain as the difference between them one can
-     establish and obtain an oproximate defined integral (delta_integral). When
+     establish and obtain an approximate defined integral (delta_integral). When
     start_integral is out of the error range and our integral value added with
     our defined value is greater than then anti_windup we will reset our
     delta_integral and add that *value to the integral until the program
@@ -46,11 +46,9 @@ class PID {
   void calculate_integral() {
     double delta_integral = ((error + last_error) / 2.0) * kT;
 
-    if (error > -start_integral && error < start_integral) {
+    if (-start_integral < error && error < start_integral) {
       if (last_error != 0) {  // If we're NOT in our first iteration
-        if (delta_integral + integral > anti_windup) delta_integral = 0;
-        if (delta_integral + integral < -anti_windup) delta_integral = 0;
-        integral = integral + delta_integral;
+        integral = std::clamp(integral + delta_integral, -anti_windup, anti_windup);
       }
     }
   }
@@ -76,7 +74,7 @@ class PID {
     anti_windup = anti_windup_;
   }
 
-  /// Retrieves the proprtioanl gain.
+  /// Retrieves the proportional gain.
   double GetKP() { return kP; }
   /// Retrieves the integral gain.
   double GetKI() { return kI; }

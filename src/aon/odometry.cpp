@@ -61,9 +61,9 @@ namespace aon{
      *
      * \param value Input value to set current Y
      */
-    void Odometry::setPosition(double x, double y){
+    void Odometry::SetPosition(double x, double y){
         p_mutex.take(1);
-        position.setPosition(x, y);
+        position.SetPosition(x, y);
         p_mutex.give();
     }
 
@@ -224,7 +224,7 @@ namespace aon{
         if (std::abs(deltaTheta * (180/M_PI)) > 0.01) {
             // If turning in its own axis
             if ((encoderLeft_data.deltaDistance * encoderRight_data.deltaDistance) <= 0) {
-            deltaDlocal.setPosition(0.0, 0.0);
+            deltaDlocal.SetPosition(0.0, 0.0);
             }
             // If we are going in a arc
             else {
@@ -237,24 +237,24 @@ namespace aon{
             double averageR = (radiusLeft + radiusRight) / 2;
 
             // Update position using trigonometry
-            deltaDlocal.setPosition(averageR * std::sin(deltaTheta), averageR * (1 - std::cos(deltaTheta)));
+            deltaDlocal.SetPosition(averageR * std::sin(deltaTheta), averageR * (1 - std::cos(deltaTheta)));
             }
         }
         // If the robot is moving straight forward or backward, average encoder values for distance
         else {
             double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0;
-            deltaDlocal.setPosition(deltaD, 0);
+            deltaDlocal.SetPosition(deltaD, 0);
         }
 
         // Odometry copy from https://medium.com/%40nahmed3536/wheel-odometry-model-for-differential-drive-robotics-91b85a012299
         // Super accurate and use less calculations, but mine seems cooler :)
         double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0;
-        changeWeb.setPosition(changeWeb.GetX() + (deltaD * cos(previousTheta + deltaTheta / 2)),
+        changeWeb.SetPosition(changeWeb.GetX() + (deltaD * cos(previousTheta + deltaTheta / 2)),
                                 changeWeb.GetY() + (deltaD * sin(previousTheta + deltaTheta / 2)));
 
 
         // Updating global position using 2D matrix transformation (previous way to update to global coordinates)
-        setPosition(getX() + deltaDlocal.GetX() * std::cos(getRadians()) - deltaDlocal.GetY() * std::sin(getRadians()),
+        SetPosition(getX() + deltaDlocal.GetX() * std::cos(getRadians()) - deltaDlocal.GetY() * std::sin(getRadians()),
                     getY() + deltaDlocal.GetX() * std::sin(getRadians()) + deltaDlocal.GetY() * std::cos(getRadians()));
 
 
@@ -288,41 +288,41 @@ namespace aon{
 
         // Reset encoder's struct variables
         encoderRight_data = {currentAngleRight,                     // current position in degrees
-                            currentAngleRight,                     // previuos position in degrees
+                            currentAngleRight,                     // previous position in degrees
                             0,                                     // delta in degrees
                             currentAngleRight * conversionFactor,  // current position in inches 
-                            currentAngleRight * conversionFactor,  // previuos position in inches
+                            currentAngleRight * conversionFactor,  // previous position in inches
                             0.0};                                  // delta in inches
 
         encoderLeft_data = {currentAngleLeft,                       // current position in degrees
-                            currentAngleLeft,                       // previuos position in degrees
+                            currentAngleLeft,                       // previous position in degrees
                             0,                                      // delta in degrees
                             currentAngleLeft * conversionFactor,    // current position in inches 
-                            currentAngleLeft * conversionFactor,    // previuos position in inches
+                            currentAngleLeft * conversionFactor,    // previous position in inches
                             0.0};                                   // delta in inches
 
         encoderBack_data = {currentAngleBack,                       // current position in degrees
-                            currentAngleBack,                       // previuos position in degrees
+                            currentAngleBack,                       // previous position in degrees
                             0,                                      // delta in degrees
                             currentAngleBack * conversionFactor,    // current position in inches 
-                            currentAngleBack * conversionFactor,    // previuos position in inches
+                            currentAngleBack * conversionFactor,    // previous position in inches
                             0.0};                                   // delta in inches
 
         gyro_data = {0,                                             // current value degrees
-                    0,                                             // prevuios value degrees
+                    0,                                             // previous value degrees
                     0,                                             // current radians
                     0.0,                                           // delta degrees
                     0.0};                                          // delta radians
 
         // Preset odometry values
         deltaTheta = 0.0;
-        deltaDlocal.setPosition(0.0, 0.0);
+        deltaDlocal.SetPosition(0.0, 0.0);
 
         // Other odometry we could use, less calculations
-        changeWeb.setPosition(0.0, 0.0);
+        changeWeb.SetPosition(0.0, 0.0);
 
         setDegrees(theta);
-        setPosition(x, y);
+        SetPosition(x, y);
         #if GYRO_ENABLED
         gyroscope.tare();
         pros::delay(3000);
@@ -335,7 +335,7 @@ namespace aon{
     Vector Odometry::gpsPosition(){
       pros::delay(2000);
         pros::c::gps_status_s_t status = gps.get_status();
-        Vector current = Vector().setPosition(status.x, status.y);
+        Vector current = Vector().SetPosition(status.x, status.y);
 
         return current;
     }

@@ -11,6 +11,8 @@
 #include "./x-drive/x-drive.hpp"
 #include "./intake/intake.hpp"
 #include "./tank-drive/tank-drive.hpp"
+#include "./orbit/orbit.hpp"
+#include "./drivetrain.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -21,28 +23,34 @@
 // ============================================================================
 
 
+#if USING_BIG_ROBOT
+
 // Drivetrain
-aon::XDrive drivetrain = aon::XDrive();
-aon::TankDrive drivetrainTank = aon::TankDrive();
+aon::TankDrive drivetrain = aon::TankDrive({16, -15, -14}, {-20, 19, 18});
+okapi::MotorGroup mid({17}); // Default make robot go right
 
+pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
+pros::ADIDigitalOut brooksPiston('H');
 
-//Intake:
-aon::Intake intake = aon::Intake({-16, 17}, {17}, {-16}, 3);
+aon::Intake intake = aon::Intake({1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);
 
-okapi::MotorGroup bottom = okapi::MotorGroup({1});
-okapi::MotorGroup top = okapi::MotorGroup({-2});
+#else
+
+// aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
+aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
+
+aon::Intake intake = aon::Intake({6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
+
+pros::ADIDigitalOut arrowPiston('F');
+
+void activateArrow() { arrowPiston.set_value(HIGH); }
+
+void deactivateArrow() { arrowPiston.set_value(LOW); }
+
+#endif
 
 // Misc
-
-okapi::Motor arm = okapi::Motor(11);
-okapi::Motor turret = okapi::Motor(-15);
-
-// TriPort
-
-pros::ADIDigitalOut indexer ('G');
-bool indexerOut = false;
-pros::ADIDigitalOut claw ('H');
-bool clawOn = false;
+aon::Orbit orbit(1,true,1,1);
 
 // ============================================================================
 //   ___ ___ _  _ ___  ___  ___  ___ 
@@ -53,10 +61,9 @@ bool clawOn = false;
 // ============================================================================
 
 // Encoders
+pros::Rotation turretEncoder(0, true);
 
-pros::Rotation turretEncoder(14, true);
-
-pros::ADIEncoder opticalEncoder('A', 'B');
+pros::ADIEncoder opticalEncoder('C', 'D');
 
 // Vision
 
@@ -64,12 +71,11 @@ pros::ADIEncoder opticalEncoder('A', 'B');
 enum Colors {
   RED = 1,
   BLUE,
-  STAKE
+  STAKE,
 };
 
 Colors COLOR = RED;
 
-pros::Vision vision_sensor(12);
 volatile bool turretFollowing = false;
 volatile bool turretBraking = true;
 volatile bool turretScanning = false;
@@ -77,31 +83,24 @@ pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8
 pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
 pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 
-// Distance
-
-pros::Distance distanceSensor(3);
-volatile bool intakeScanning = false; // TODO: remove this
-
 // Potentiometer
-
-pros::ADIPotentiometer potentiometer('F');
+pros::ADIPotentiometer potentiometer('P');
 
 /// PIDs
-
 aon::PID drivePID = aon::PID(0.02, 0, 0);
 aon::PID turnPID = aon::PID(0.002, 0, 0);
 aon::PID fastPID = aon::PID(1, 0, 0);
-aon::PID turretPID = aon::PID(0.25, 0, 0);
+
 
 /// Controller
-pros::Controller mainController = pros::Controller(pros::E_CONTROLLER_MASTER);
+pros::Controller mainController = pros::Controller(CONTROLLER_MASTER);
 
 namespace aon::operator_control {
 
 /// Driver profiles for all robots
 enum Drivers {
-  IAN,
-  DAVID,
+  KEVIN,
+  FABIAN,
   DEFAULT,
 };
 }  // namespace aon::operator_control
@@ -116,62 +115,43 @@ enum Drivers {
 
 namespace aon {
 
-inline void ConfigureMotors(const bool opcontrol = true) {
+inline void Configure(const bool opcontrol = true) {
   // HOLD for AUTONOMOUS ||| BRAKE for OPERATOR CONTROL
   okapi::AbstractMotor::brakeMode brakeMode = opcontrol ? okapi::AbstractMotor::brakeMode::brake : okapi::AbstractMotor::brakeMode::hold;
 
+  #if USING_BIG_ROBOT
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
+  
+  intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::green);
+  
+  
+  mid.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
+  mid.setGearing(okapi::AbstractMotor::gearset::green);
+  mid.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  mid.tarePosition();
+  
+  #else
+  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
+  
+  intake.configure(okapi::AbstractMotor::brakeMode::coast, okapi::AbstractMotor::gearset::blue);
 
-  arm.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  arm.setGearing(okapi::AbstractMotor::gearset::red);
-  arm.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  arm.tarePosition();
-
-  turret.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
-  turret.setGearing(okapi::AbstractMotor::gearset::green);
-  turret.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  turret.tarePosition();
-
+  #endif
+  orbit.configure();
 }
 
-/**
- * \brief Adds the colors to the vision sensor
-*/
-inline void ConfigureColors(){
-  vision_sensor.set_signature(RED, &RED_SIG);
-  vision_sensor.set_signature(BLUE, &BLUE_SIG);
-  vision_sensor.set_signature(STAKE, &STAKE_SIG);
-}
-
-/**
- * \brief Stops movement from robot
- */
+/// @brief Stops movement from robot
 void STOP(){
   drivetrain.stop();
   intake.stop();
-  arm.moveVelocity(0);
-  turret.moveVelocity(0);
+  #if USING_BIG_ROBOT
+  mid.moveVelocity(0);
+  #endif
+  orbit.stop();
 }
 
-/**
- * \brief Toggles the value of a bool
- * 
- * \param boolean The variable to be toggled
- * 
- * \returns The updated boolean
- */
-inline bool toggle(bool &boolean) {
-  boolean = !boolean;
-  return boolean;
-}
-
-/**
- * \brief Used to make sure a condition is being met or a block of code is being run
- * 
- * \param speed The speed with which to spin the intake to differentiate between multiple tests
- * 
- * \note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
-*/
+/// @brief Used to make sure a condition is being met or a block of code is being run
+/// @param speed The speed with which to spin the intake to differentiate between multiple tests
+/// @note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
 void testEndpoint(int speed = 100){
   STOP(); 
   intake.move(speed);
@@ -179,9 +159,7 @@ void testEndpoint(int speed = 100){
   intake.stop();
 }
 
-/**
- * \brief Task to stop all motors during auton testing if something goes wrong
- */
+/// @brief Task to stop all motors during auton testing if something goes wrong
 void autonSafety(){
   while(true){
     while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
@@ -189,40 +167,6 @@ void autonSafety(){
     }
     pros::delay(50);
   }
-}
-
-/// @brief Begins ORBIT following cycle
-void activateORBITFollow(){
-  turretFollowing = true;
-  turretBraking = true;
-  turretScanning = false;
-}
-
-/// @brief Ends ORBIT following cycle
-void deactivateORBITFollow(){
-  turretFollowing = false;
-}
-
-/// @brief Begins ORBIT scanning cycle
-void activateORBITScan(){
-  turretFollowing = false;
-  turretBraking = false;
-  turretScanning = true;
-}
-
-/// @brief Ends ORBIT scanning cycle
-void deactivateORBITScan(){
-  turretScanning = false;
-}
-
-/// @brief Sets the ORBIT to brake if not scanning
-void brakeORBIT(){
-  turretBraking = true;
-}
-
-/// @brief Releases the ORBIT from braking to allow other functions to use it
-void releaseORBIT() {
-  turretBraking = false;
 }
 
 }  // namespace aon

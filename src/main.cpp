@@ -1,4 +1,5 @@
 #include "../include/main.hpp"
+#include "../include/aon/drivetrain.hpp"
 
 #include "aon/odometry/odometry.hpp"
 aon::Odometry odometry;
@@ -7,14 +8,14 @@ void initialize() {
   pros::Task guiTask(aon::gui::Initialize);
   aon::logging::Initialize();
   pros::lcd::initialize();
-  aon::ConfigureMotors(false);
-  aon::ConfigureColors();
+  aon::Configure(false);
   odometry.initialize();
   pros::Task odomTask([]{odometry.odometryThread();});
   pros::Task safetyTask(aon::autonSafety);
-  pros::Task turretFollowTask(aon::turretFollow);
-  pros::Task intakeTask([]{intake.scan();});
-  pros::Task turretScanTask(aon::turretScan); // TODO: combine this with the follow task
+  // pros::Task turretFollowTask([]{orbit.follow();});
+  // pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
+  pros::Task intakeScanning([]{intake.scan();});
+  pros::Task intakeSorting([]{intake.sort();});
 }
 
 void disabled() {}
@@ -22,7 +23,13 @@ void disabled() {}
 void competition_initialize() {}
 
 void autonomous() {
-  aon::AutonomousReader->ExecuteFunction("autonomous");
+  aon::Configure(false); // Set drivetrain to hold for auton
+  #if USING_BIG_ROBOT
+  aon::safeBigBotRoutine();
+  #else
+  aon::testSmallBotRoutine();
+  #endif
+  // aon::AutonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
 }
 
@@ -31,14 +38,19 @@ void autonomous() {
 // Program slot 2 with Planet Icon is for autonomous routine
 // Program slot 3 with Alien Icon is for tests or miscellaneous components
 void opcontrol() {
-  aon::ConfigureMotors();
+  aon::Configure();
   while (true) {
     #if TESTING_AUTONOMOUS
-    aon::ConfigureMotors(false); // Set drivetrain to hold for auton testing
+    aon::Configure(false); // Set drivetrain to hold for auton testing
 
-    aon::AutonomousReader->ExecuteFunction("autonomous");
+    #if USING_BIG_ROBOT
+    aon::safeBigBotRoutine();
+    #else
+    aon::testSmallBotRoutine();
+    // aon::testXDriveRoutine();
+    #endif
 
-    pros::delay(3000);
+    pros::delay(5000);
     #else
     aon::operator_control::Run(aon::operator_control::DEFAULT);
     #endif

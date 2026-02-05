@@ -19,21 +19,32 @@ void TankDrive::driveWhileTurning(const double &forward, const double &turn){
 }
 
 void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-    // TODO: implement
+  const double vertical = applySpeed(leftY, this->isTurbo() ? 1 : 0.6);
+  const double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.4);
+
+  this->driveWhileTurning(vertical, turn);
 }
 
-void TankDrive::stop() { this->motors(0); }
+void TankDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
+  leftMotors.setBrakeMode(brakeMode);
+  rightMotors.setBrakeMode(brakeMode);
+}
 
-void TankDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset){
-    leftMotors.setBrakeMode(brakeMode);
-    leftMotors.setGearing(gearset);
-    leftMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    leftMotors.tarePosition();
-    
-    rightMotors.setBrakeMode(brakeMode);
-    rightMotors.setGearing(gearset);
-    rightMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    rightMotors.tarePosition();
+void TankDrive::setGearset(okapi::AbstractMotor::gearset gearset){
+  leftMotors.setGearing(gearset);
+  rightMotors.setGearing(gearset);
+}
+
+void TankDrive::setEncoderUnits(okapi::AbstractMotor::encoderUnits units){
+  leftMotors.setEncoderUnits(units);
+  leftMotors.tarePosition();
+  rightMotors.setEncoderUnits(units);
+  rightMotors.tarePosition();
+}
+
+void TankDrive::setSlewRate(double slew){
+  leftMotors.SetAcceleration(slew);
+  rightMotors.SetAcceleration(slew);
 }
 
 double TankDrive::getRPM(){
@@ -108,8 +119,12 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
 
 void TankDrive::driveProfiled(double dist) {
   if (dist == 0) { return; }
-  const int sign = dist / abs(dist);  // Getting the direction of the movement
+  const int sign = dist / abs(dist);  // Direction of the movement
   dist = abs(dist);                   // Setting the magnitude to positive
+  
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (dist / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
   
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
@@ -120,18 +135,23 @@ void TankDrive::driveProfiled(double dist) {
   double lastTime = now;
   
   this->motionProfile.setVelocity(this->getRPM());
-  
-  while (traveledDist < dist) {
+
+
+  while (traveledDist < dist && timeout > pros::millis()) {
     traveledDist = (odometry.getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     lastTime = now;
-    
-    currVelocity = motionProfile.update(remainingDist, dt);
+
+    // Debugging output
+    pros::lcd::print(1, "Traveled %.2f / %.2f", traveledDist, dist);
+    // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledDist, dist);
+
+    currVelocity = this->motionProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
 
-    if (traveledDist >= dist) { break; }  // Overshoot prevention
+    if (remainingDist <= 0) { break; }  // Overshoot prevention
 
     pros::delay(20);
   }
@@ -143,46 +163,38 @@ void TankDrive::turnProfiled(double angle) {
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
-  
-  const double circumference = DRIVE_LENGTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
-  const double MAX_VELOCITY = MAX_RPM;  // (RPM)
-  const double MAX_JERK = MAX_ACCEL;    // (RPM/s^2)
+
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (std::sqrt(angle / 2)) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+
+  const double circumference = DRIVE_WIDTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
   double dt = 0.02;                     // (s)
   double currVelocity = 0;
-  double currAccel = 0;
+  double currAngle;
   double traveledAngle = 0;
-  double startAngle = odometry.getDegrees();
+
+  double startAngle = odometry.gyroscope.get_rotation(); // TODO: add a function for this in the future odom class
+  // double startAngle = aon::odometry::GetDegrees();  //! this means we need an equivalent for the odometer but for gyro
 
   double now;
   double lastTime = pros::micros() / 1E6;
 
-  while (traveledAngle < angle) {
-    traveledAngle = abs(odometry.getDegrees() - startAngle);
+
+  while (traveledAngle < angle && timeout > pros::millis()) {
+    currAngle = odometry.gyroscope.get_rotation();
+    traveledAngle = abs(currAngle - startAngle);
+    // traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     lastTime = now;
     
-    // Debugging output to brain
+    // Debugging output
     pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
-    pros::lcd::print(2, "RPM: %.2f, Accel: %.2f", currVelocity, currAccel);
-    pros::lcd::print(3, "Remaining: %.2f", remainingAngle);
-    pros::lcd::print(4, "Calculated Velocity: %.2f", getSpeed(currVelocity));
-    pros::lcd::print(5, "Max Velocity: %.2f", getSpeed(MAX_VELOCITY));
-    
-    // Acceleration
-    // For the condition, consider half the deceleration for accuracy (there is
-    // an error of half an inch almost constant when not used, I have to
-    // investigate a bit further on that part but if works fine like this)
-    if (circumference * (remainingAngle / 360.0) <= getSpeed(currVelocity) * getSpeed(currVelocity) / (2.0 * getSpeed(MAX_DECEL * 0.5))) {
-      currAccel = -MAX_DECEL;
-    } else {
-      currAccel = std::min(currAccel + (MAX_JERK * dt), MAX_ACCEL);
-    }
+    // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledAngle, angle);
 
-    currVelocity += currAccel * dt;
-    currVelocity = std::min(currVelocity, MAX_VELOCITY);
-
+    currVelocity = this->turningProfile.update(circumference * (remainingAngle / 360.0), dt);
     this->rotate(sign * currVelocity);
 
     if (traveledAngle >= angle) { break; }  // Overshoot prevention
@@ -202,11 +214,11 @@ void TankDrive::turn(const double &angle) {
 }
 
 void TankDrive::setMaxVelocity(const double &rpm){
-  motionProfile.setMaxVelocity(rpm);
+  this->motionProfile.setMaxVelocity(rpm);
 }
 
 double TankDrive::updateProfile(const double &distance, const double &dt){
-  return motionProfile.update(distance, dt);
+  return this->motionProfile.update(distance, dt);
 }
 
 void TankDrive::driveInArc(double radius, const double &midSpeed) {
@@ -261,7 +273,7 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
     remainingDist = distance - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
-    midSpeed = motionProfile.update(remainingDist, dt);
+    midSpeed = this->motionProfile.update(remainingDist, dt);
     lastTime = now;
 
     this->driveInArc(radius, sign * midSpeed);
