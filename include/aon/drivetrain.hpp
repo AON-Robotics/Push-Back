@@ -112,7 +112,7 @@ class Drivetrain {
                      double rightY) = 0;
 
   /// @brief Stops all motors
-  void stop() { this->motors(0); }
+  virtual void stop() { this->motors(0); }
 
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for

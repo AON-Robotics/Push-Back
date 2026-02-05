@@ -65,7 +65,7 @@
 
 /// @brief Maximum linear acceleration without slippage
 /// @note Unit: rad/s (not RPM for now)
-#define MAX_ANGULAR_VELOCITY (double)(MAX_LINEAR_VELOCITY / AVG_DRIVETRAIN_RADIUS)
+// #define MAX_ANGULAR_VELOCITY (double)(MAX_LINEAR_VELOCITY / AVG_DRIVETRAIN_RADIUS)
 
 /// @brief Maximum linear acceleration without slippage
 ///

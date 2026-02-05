@@ -11,6 +11,7 @@
 #include "./x-drive/x-drive.hpp"
 #include "./intake/intake.hpp"
 #include "./tank-drive/tank-drive.hpp"
+#include "./h-drive/h-drive.hpp"
 #include "./orbit/orbit.hpp"
 #include "./drivetrain.hpp"
 

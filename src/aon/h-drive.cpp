@@ -9,24 +9,6 @@ namespace aon {
 //
 // ============================================================================
 
-void HDrive::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset){
-    leftMotors.setBrakeMode(brakeMode);
-    leftMotors.setGearing(gearset);
-    leftMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    leftMotors.tarePosition();
-    
-    rightMotors.setBrakeMode(brakeMode);
-    rightMotors.setGearing(gearset);
-    rightMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    rightMotors.tarePosition();
-
-    this->middleMotor.setBrakeMode(brakeMode);
-    this->middleMotor.setGearing(okapi::AbstractMotor::gearset::green);
-    this->middleMotor.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-    this->middleMotor.tarePosition();
-
-}
-
 // ASK WHERE THIS FUNCTIONS SHOULD GO
 /// @brief Scales analog joystick input for easier control.
 /// @details Fine joystick control can be difficult, specially for tasks like
@@ -77,7 +59,7 @@ void HDrive::stop(){
   this->middleMotor.moveVelocity(0);
 }
 
-void HDrive::motorsMid(const double &rpm) {
+void HDrive::motorMid(const double &rpm) {
   this->middleMotor.moveVelocity(rpm);
 }
 
@@ -134,7 +116,7 @@ void HDrive::strafe(double dist) {
     pros::lcd::print(0, "Trav %.2f", traveledDist);
 
     currVelocity = this->motionProfile.update(remainingDist, dt);
-    this->motorsMid(sign * currVelocity);
+    this->motorMid(sign * currVelocity);
 
     if (traveledDist >= dist) { break; }  // Overshoot prevention
 
@@ -142,7 +124,7 @@ void HDrive::strafe(double dist) {
   }
 
   currVelocity=0;
-  this->motorsMid(0);
+  this->motorMid(0);
 }
 
 /// @brief Determines the linear speed of the robot given drivetrain motors' RPM
@@ -310,7 +292,7 @@ void HDrive::HolonomicMotion(
     // ----- Move motors ------
     this->motorsLeft (vy_robot + vT);
     this->motorsRight(vy_robot - vT);
-    this->motorsMid  (vx_robot);
+    this->motorMid   (vx_robot);
 
     pros::delay(delay);
 

@@ -83,7 +83,7 @@ inline void DriveDefault() {
   const double turn = ApplySpeed(scaledTurn, drivetrain.isTurbo() ? 1.41421356237 : 0.4);
   
   drivetrain.driveWhileTurning(vertical, turn);
-  mid.moveVelocity(horizontal);
+  drivetrain.motorMid(horizontal);
 
   #else
 

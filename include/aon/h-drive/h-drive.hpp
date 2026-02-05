@@ -62,14 +62,6 @@ class HDrive : public TankDrive {
   double getTheta() { return this->pose.theta; }
   void setTheta(double theta) { pose.theta = theta; }
 
-  /// @brief Configures the general settings for the motors
-  /// @param brakeMode The braking paradigm we will use, usually `holding` for
-  /// auton and `brake` for drivers
-  /// @param gearset The gearbox the physical motors contain, they MUST be all
-  /// the same
-  void configure(okapi::AbstractMotor::brakeMode brakeMode,
-                 okapi::AbstractMotor::gearset gearset) override;
-
   /// @brief Move robot with the controller. Holonomic motion with left joysick
   /// and turning with right.
   /// @param horizontal Velocity in horizontal motion
@@ -83,7 +75,7 @@ class HDrive : public TankDrive {
 
   /// @brief Moves mid motor the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm
-  void motorsMid(const double &rpm);
+  void motorMid(const double &rpm);
 
   /// @brief Move horizontally to given distance using PID (default right)
   /// @param pid The PID used for the driving
