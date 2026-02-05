@@ -10,9 +10,9 @@ namespace aon {
 // ============================================================================
 
 void HDrive::drive(double leftX, double leftY, double rightX, double nothing) {
-  const double forward = applySpeed(leftY , 0.6);
-  const double horizontal = applySpeed(leftX, 0.6);
-  const double turn = applySpeed(rightX, 0.4);
+  const double forward = applySpeed(leftY , isTurbo() ? 1.41421356237 : 0.6);
+  const double horizontal = applySpeed(leftX, isTurbo() ? 1.41421356237 : 0.6);
+  const double turn = applySpeed(rightX, isTurbo() ? 1.41421356237 : 0.6);
   
   driveWhileTurning(forward, turn);
   middleMotor.moveVelocity(horizontal);
