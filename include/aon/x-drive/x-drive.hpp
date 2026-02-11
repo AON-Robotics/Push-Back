@@ -35,6 +35,13 @@ class XDrive : public Drivetrain {
         backRightMotors(BRPorts),
         Drivetrain() {}
 
+  /// @brief Robot-centric drivetrain command for autonomous (normalized inputs)
+  /// @param vx Forward command in [-1, 1] (positive forward)
+  /// @param vy Strafe command in [-1, 1] (positive right)
+  /// @param omega Turn command in [-1, 1] (positive clockwise)
+  /// @param percentage Scales to MAX_RPM (1.0 = full speed)
+  void driveRobotCentric(const double vx, const double vy, const double omega, const double percentage = 0.7);
+  
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
   void motors(const double &rpm) override;

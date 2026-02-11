@@ -242,6 +242,8 @@ void testAlignment(){
   }
 }
 
+void testHPPRoutine();
+
 /// @brief Checks the output of an optical shaft encoder
 void testADIEncoder(){
   pros::lcd::print(1, "Encoder value: %d", opticalEncoder.get_value());

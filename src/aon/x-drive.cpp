@@ -1,6 +1,38 @@
 #include "../include/aon/x-drive/x-drive.hpp"
 
+#include <algorithm> // std::max, std::min, std::clamp
+#include <cmath>     // std::abs
+
 namespace aon {
+
+// =========================
+// Local helpers (no headers)
+// =========================
+
+// Convert robot-centric (vx, vy) into X-drive diagonal normalized commands.
+// Returns Vector(x = topRightDiag, y = topLeftDiag), each roughly in [-2, 2] before normalization.
+static Vector xyToDiagonals(double vx, double vy) {
+  // Keep inputs sane
+  vx = std::clamp(vx, -1.0, 1.0);
+  vy = std::clamp(vy, -1.0, 1.0);
+
+  // 45° transform for X-drive diagonals:
+  // diagTR responds to (vx + vy)
+  // diagTL responds to (vy - vx)
+  const double diagTR = vx + vy;
+  const double diagTL = vy - vx;
+
+  // Normalize so neither diagonal exceeds [-1, 1]
+  const double maxMag = std::max(1.0, std::max(std::abs(diagTR), std::abs(diagTL)));
+  return Vector().SetPosition(diagTR / maxMag, diagTL / maxMag);
+}
+
+// Scale a normalized command [-1,1] to RPM using MAX_RPM and a [0,1] percentage.
+static double toRPM(double normalized, double percentage) {
+  normalized = std::clamp(normalized, -1.0, 1.0);
+  percentage = std::clamp(percentage, 0.0, 1.0);
+  return normalized * MAX_RPM * percentage;
+}
 
 void XDrive::motors(const double &rpm) {
   this->frontLeftMotors.moveVelocity(rpm);
@@ -24,9 +56,31 @@ void XDrive::driveWhileTurning(const double &forward, const double &turn){
 }
 
 void XDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-  // Convert the left X and Y from their reference plane to the 45º degree
-  // angled lines of the X-Drive using matrix conversions like angel taught me
-  // TODO: implement
+  (void)rightY; // unused
+  // Driver control default speed scaling:
+  // 1.0 = full MAX_RPM, 0.5 = half speed
+  const double pct = 0.5;
+  driveRobotCentric(leftX, leftY, rightX, pct);
+}
+
+void XDrive::driveRobotCentric(const double vx, const double vy, const double omega, const double percentage) {
+  const double clampedVX    = std::clamp(vx, -1.0, 1.0);
+  const double clampedVY    = std::clamp(vy, -1.0, 1.0);
+  const double clampedOmega = std::clamp(omega, -1.0, 1.0);
+
+  // Convert XY to diagonal commands (normalized)
+  Vector diags = xyToDiagonals(clampedVX, clampedVY);
+
+  // Convert to RPM
+  const double topRightDiagRPM = toRPM(diags.GetX(), percentage);
+  const double topLeftDiagRPM  = toRPM(diags.GetY(), percentage);
+  const double turnRPM         = toRPM(clampedOmega, percentage);
+
+  // Motor mixing matches your earlier pattern
+  this->frontLeftMotors.moveVelocity(topRightDiagRPM + turnRPM);
+  this->frontRightMotors.moveVelocity(topLeftDiagRPM - turnRPM);
+  this->backLeftMotors.moveVelocity(topLeftDiagRPM + turnRPM);
+  this->backRightMotors.moveVelocity(topRightDiagRPM - turnRPM);
 }
 
 void XDrive::stop() { this->motors(0); }

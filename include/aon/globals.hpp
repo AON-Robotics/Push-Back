@@ -25,7 +25,7 @@
 #if USING_BIG_ROBOT
 
 // Drivetrain
-aon::TankDrive drivetrain = aon::TankDrive({16, -15, -14}, {-20, 19, 18});
+aon::XDrive drivetrain = aon::XDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
 okapi::MotorGroup mid({17}); // Default make robot go right
 
 pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
@@ -37,7 +37,8 @@ pros::Vision vision_sensor(0);
 
 #else
 
-aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
+//To do before testing hpp, find correct port #'s!!!
+aon::XDrive drivetrain = aon::XDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
 aon::Intake intake = aon::Intake({6, -3, -2, -4, -7}, {6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
 
 pros::Vision vision_sensor(8);
