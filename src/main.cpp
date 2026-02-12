@@ -1,7 +1,7 @@
 #include "../include/main.hpp"
 
 void initialize() {
-  aon::gui::Initialize();
+  aon::InitializeGui();
   aon::logging::Initialize();
   aon::Configure(false);
   aon::odometry::Initialize();

@@ -13,9 +13,6 @@
 ///          tests for practically all of the fundamental functions except the driver
 ///          profiles and the Run function.
 namespace aon::operator_control {
-//GUI
-// When true, driver control logic is suppressed (e.g. during a GUI-triggered autonomous run)
-inline bool g_guiAutonActive = false;
 
 // ============================================================================
 //    _  _     _                 ___             _   _
@@ -233,8 +230,6 @@ inline void DriveFabian() { DriveDefault(); }
 /// @param driver the name of the person driving the robot
 /// @see aon::operator_control::Drivers
 inline void Run(const Drivers driver) {
-    // Suppress driver updates while a GUI autonomous is active so it doesn't fight motor commands
-  if (g_guiAutonActive) { return; }
   switch (driver) {
     case KEVIN:
       DriveKevin();
