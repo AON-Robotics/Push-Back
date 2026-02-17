@@ -1,13 +1,16 @@
 #include "../include/main.hpp"
 #include "../include/aon/drivetrain.hpp"
 
+#include "aon/odometry/odometry.hpp"
+aon::Odometry odometry;
+
 void initialize() {
   pros::Task guiTask(aon::gui::Initialize);
   aon::logging::Initialize();
   pros::lcd::initialize();
   aon::Configure(false);
-  aon::odometry::Initialize();
-  pros::Task odomTask(aon::odometry::Odometry);
+  odometry.initialize();
+  pros::Task odomTask([]{odometry.sense();});
   pros::Task safetyTask(aon::autonSafety);
   // pros::Task turretFollowTask([]{orbit.follow();});
   // pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
