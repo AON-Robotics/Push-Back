@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "../constants.hpp"
 #include "../globals.hpp"
-#include "../sensing/odometry.hpp"
+#include "../odometry/odometry.hpp"
 #include "../controls/pid/pid.hpp"
 #include "../controls/s-curve-profile.hpp"
 #include "../tools/logging.hpp"
@@ -31,6 +31,8 @@ namespace aon {
 //   ___) | |_| | |_) | |  _ < (_) | |_| | |_| | | | |  __/\__ \
 //  |____/ \__,_|_.__/  |_| \_\___/ \__,_|\__|_|_| |_|\___||___/
 // ============================================================================|
+
+
 
 /**
  * \brief Aligns ORBIT and DRIVETRAIN to the item with the set `COLOR`
@@ -288,7 +290,7 @@ void testEKFWithGyro(){
   okapi::EKFFilter ekf4(4E-4, 0.04);
   okapi::EKFFilter ekf5(5E-4, 0.04);
   while(true){
-    const double pos = odometry::gyroscope.get_heading();
+    const double pos = odometry.gyroscope.get_heading();
     pros::lcd::print(0, "Raw Heading = %.2f", pos);
     pros::lcd::print(1, "Default Filter = %.2f", ekf1.filter(pos));
     pros::lcd::print(2, "Tweaked Filter 2 = %.2f", ekf2.filter(pos)); // this one is slower which might mean i want to tweak the values for the ekf

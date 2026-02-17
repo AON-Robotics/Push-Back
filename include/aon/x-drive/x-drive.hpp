@@ -4,7 +4,7 @@
 #include "../../okapi/api.hpp"
 #include "../controls/s-curve-profile.hpp"
 #include "../math/number/number.hpp"
-#include "../sensing/odometry.hpp"
+#include "../odometry/odometry.hpp"
 #include "../math/misc/misc.hpp"
 #include "../controls/pid/pid.hpp"
 #include <cfloat>
@@ -12,11 +12,13 @@
 #include "../controls/smart_motor.hpp"
 #include "../tools/general.hpp"
 
+#include "../math/pose.hpp"
 
 namespace aon {
 
 class XDrive : public Drivetrain {
  private:
+  Odometry odometry;
   SmartMotorGroup frontLeftMotors;
   SmartMotorGroup frontRightMotors;
   SmartMotorGroup backLeftMotors;
