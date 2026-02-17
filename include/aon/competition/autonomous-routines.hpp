@@ -485,17 +485,17 @@ void testSmallBotRoutine(){
 }
 
 void testXDriveRoutine(){
-  // drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
-  // drivetrain.goToPose(Pose(0, 12, 0));
-  // drivetrain.goToPose(Pose(-12, 12, 0));
-  // drivetrain.goToPose(Pose(0, 0, 90));
-  // drivetrain.goToPose(Pose(-12, 18, 0));
-  // drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
-  // drivetrain.goToPose(Pose(0, 0, 0));
+  drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
+  drivetrain.goToPose(Pose(0, 12, 0));
+  drivetrain.goToPose(Pose(-12, 12, 0));
+  drivetrain.goToPose(Pose(0, 0, 90));
+  drivetrain.goToPose(Pose(-12, 18, 0));
+  drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
+  drivetrain.goToPose(Pose(0, 0, 0));
 }
 
 void smallbotjorgeg(){
-   drivetrain.move(31); // Align with match loader
+  drivetrain.move(31); // Align with match loader
   drivetrain.turn(87);
   intake.dropCart(); // Prepare loader mechanism
   pros::delay(200);  

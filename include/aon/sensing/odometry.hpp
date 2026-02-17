@@ -48,18 +48,18 @@ inline pros::Rotation encoderRight(4, true);
 inline pros::Rotation encoderLeft(12, false);
 inline pros::Rotation encoderBack(2, true);
 #else
-inline pros::Rotation encoderRight(1, true);
-inline pros::Rotation encoderLeft(9, false);
+inline pros::Rotation encoderRight(1, false);
+inline pros::Rotation encoderLeft(9, true);
 inline pros::Rotation encoderBack(21, false);
 #endif
 #if GYRO_ENABLED
 #if USING_BIG_ROBOT
 inline pros::Imu gyroscope(11);
 #else
-inline pros::Imu gyroscope(10);
+inline pros::Imu gyroscope(20);
 #endif
 #endif
-inline pros::Gps gps(21, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
+inline pros::Gps gps(0, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET);
 
   // ============================================================================
   //   __   __        _      _    _
@@ -512,5 +512,179 @@ inline void Debug() {
 }
 
 }  // namespace aon::odometry
+
+
+namespace aon {
+
+class Pose {
+ public:
+  /// @brief Position of the robot on the x-axis in \b `inches` with respect to
+  /// the field using (0,0) as the center of the field
+  double x;
+  /// @brief Position of the robot on the y-axis in \b `inches` with respect to
+  /// the field using (0,0) as the center of the field
+  double y;
+  /// @brief Orientation of the robot in \b `degrees` with respect to angle 0º
+  /// in the VEX Field
+  double theta;
+
+  Pose(double x = 0, double y = 0, double theta = 0)
+      : x(x), y(y), theta(theta) {}
+
+  double distanceTo(Pose other) {
+    return std::hypot(other.x - this->x, other.y - this->y);
+  }
+
+  double angleTo(Pose other) { return this->theta - other.theta; }
+
+  Vector pathTo(Pose other) {
+    return Vector().SetPosition(other.x - this->x,
+                                other.y - this->y);
+  }
+};
+
+/// @brief The sensing system for the position of the robot on the VEX field,
+/// the reference pose (0,0,0) is located in the center of the field facing
+/// towards the 0º marked wall of the field. A positive x change means going
+/// towards that 0º marked wall; a positive y change means going towards the red
+/// alliance, or the 270º marked wall; and a positive theta change means
+/// rotating counterclockwise.
+class Odometry {
+
+  /// @brief Struct that contains current, previous and delta distances in \b inches from encoders
+  struct EncoderData {
+    double currentDistance;
+    double previousDistance;
+    double deltaDistance;
+  };
+
+/// @brief Struct that contains current, previous and delta distances in \b degrees from gryo
+  struct GyroData {
+    double currentDegrees;
+    double prevDegrees;
+    double deltaDegrees;
+  };
+
+ private:
+  /// @brief To convert from degrees to inches (or whatever unit `TRACKING_WHEEL_DIAMETER` uses)
+  const double conversionFactor = M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+  
+  pros::Rotation rightEncoder;
+  pros::Rotation leftEncoder;
+  pros::Rotation backEncoder;
+  pros::IMU gyroscope;
+  Pose pose;
+
+  EncoderData rightData;
+  EncoderData leftData;
+  EncoderData backData;
+
+  GyroData gyroData;
+
+ public:
+  Odometry(const short& rightPort = 0, const short& leftPort = 0,
+           const short& backPort = 0, const short& gyroPort = 0)
+      : rightEncoder(rightPort),
+        leftEncoder(leftPort),
+        backEncoder(backPort),
+        gyroscope(gyroPort) {}
+
+  Pose getPose() { return this->pose; }
+  double getX() { return this->pose.x; }
+  double getY() { return this->pose.y; }
+  double getTheta() { return this->pose.theta; }
+
+  void reset(const double& x, const double& y, const double& theta) {
+    const double currentAngleRight = rightEncoder.get_position() / 100.0;
+    const double currentAngleLeft = leftEncoder.get_position() / 100.0;
+    const double currentAngleBack = backEncoder.get_position() / 100.0;
+    const double currentAngleGyro = gyroscope.get_heading();
+
+    // Reset encoder's struct variables
+    rightData = {
+        currentAngleRight * conversionFactor,  // current position in inches
+        currentAngleRight * conversionFactor,  // previous position in inches
+        0.0};                                  // delta in inches
+
+    leftData = {
+        currentAngleLeft * conversionFactor,  // current position in inches
+        currentAngleLeft * conversionFactor,  // previous position in inches
+        0.0};                                 // delta in inches
+
+    backData = {
+        currentAngleBack * conversionFactor,  // current position in inches
+        currentAngleBack * conversionFactor,  // previous position in inches
+        0.0};                                 // delta in inches
+
+    gyroData = {0,      // current value degrees
+                 0,     // previous value degrees
+                 0.0};  // delta degrees
+
+    this->pose = Pose(x, y, theta);
+    gyroscope.reset(true);
+  }
+
+  void initialize() {
+    this->reset(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y, INITIAL_ODOMETRY_THETA);
+    while (true) {
+      this->update();
+      pros::delay(10);
+    }
+  }
+  
+  void update() {
+    pros::lcd::print(1, "X: %.2f", this->getX());
+    pros::lcd::print(2, "Y: %.2f", this->getY());
+    pros::lcd::print(3, "Theta: %.2f", this->getTheta());
+    // Read encoder values, divided by 100 to convert centidegrees to degrees and convert to distances
+    rightData.currentDistance = rightEncoder.get_position() / 100 * conversionFactor;
+    leftData.currentDistance = leftEncoder.get_position() / 100 * conversionFactor;
+    backData.currentDistance = backEncoder.get_position() / 100 * conversionFactor;
+    
+    // Calculate deltas
+    rightData.deltaDistance = rightData.currentDistance - rightData.previousDistance;
+    leftData.deltaDistance = leftData.currentDistance - leftData.previousDistance;
+    backData.deltaDistance = backData.currentDistance - backData.previousDistance;
+    
+    const double deltaThetaEncoders = ((backData.deltaDistance / DISTANCE_BACK_TRACKING_WHEEL_CENTER) + (rightData.deltaDistance / DISTANCE_RIGHT_TRACKING_WHEEL_CENTER) - (leftData.deltaDistance / DISTANCE_LEFT_TRACKING_WHEEL_CENTER)) / 3;
+    
+    //? The -1 is to flip for our convention of positive rotation being counterclockwise
+    // TODO: check that that -1 does what it is supposed to
+    gyroData.currentDegrees = -1 * gyroscope.get_rotation();
+    gyroData.deltaDegrees = gyroData.currentDegrees - gyroData.prevDegrees;
+    
+    // Overall idea, displacement in x and displacement in y form a vector, which we rotate by the new heading, then we make that heading our current heading and add the x and y to the current position.
+    const double xChange = (rightData.deltaDistance + leftData.deltaDistance) / 2;
+    const double yChange = backData.deltaDistance;
+    Vector change = Vector().SetPosition(xChange, yChange);
+    
+    //? is this line even needed
+    const double deltaHeading = (gyroData.deltaDegrees * GYRO_CONFIDENCE) + (deltaThetaEncoders * (1 - GYRO_CONFIDENCE));
+    
+    change.SetDegrees(gyroData.currentDegrees);
+    
+    this->pose.x += change.GetX();
+    this->pose.y += change.GetY();
+    this->pose.theta = gyroData.currentDegrees;
+    
+    // Save current values as previous for future updates
+    rightData.previousDistance = rightData.currentDistance;
+    leftData.previousDistance = leftData.currentDistance;
+    backData.previousDistance = backData.currentDistance;
+
+    gyroData.prevDegrees = gyroData.currentDegrees;
+  }
+
+  long double averageDistanceForward() {
+    return (rightEncoder.get_position() + leftEncoder.get_position()) / 2;
+  }
+
+  long double rotation() { return gyroscope.get_rotation(); }
+
+  long double averageDistanceSideways() { return backEncoder.get_position(); }
+};
+
+}  // namespace aon
+
 
 #endif  // AON_SENSING_ODOMETRY_HPP_

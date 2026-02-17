@@ -370,6 +370,7 @@ void TankDrive::turnTo(const double &x, const double &y) {
   turn(-calculateTurn(target, current));
 }
 
+// TODO: refactor so it uses `Pose()`
 void TankDrive::goTo(const double &x, const double &y) {
   Vector target = Vector().SetPosition(x, y);
   // Determine current position

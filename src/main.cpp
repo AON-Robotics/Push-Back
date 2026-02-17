@@ -3,11 +3,13 @@
 
 void initialize() {
   pros::Task guiTask(aon::gui::Initialize);
-  aon::logging::Initialize();
+  // aon::logging::Initialize();
   pros::lcd::initialize();
   aon::Configure(false);
-  aon::odometry::Initialize();
-  pros::Task odomTask(aon::odometry::Odometry);
+  // aon::odometry::Initialize();
+  // pros::Task odomTask(aon::odometry::Odometry);
+  pros::Task odomTask([]{drivetrain.odom.initialize();});
+  pros::delay(3000);
   pros::Task safetyTask(aon::autonSafety);
   // pros::Task turretFollowTask([]{orbit.follow();});
   // pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
@@ -43,8 +45,8 @@ void opcontrol() {
     #if USING_BIG_ROBOT
     aon::safeBigBotRoutine();
     #else
-    aon::testSmallBotRoutine();
-    // aon::testXDriveRoutine();
+    // aon::testSmallBotRoutine();
+    aon::testXDriveRoutine();
     #endif
 
     pros::delay(5000);

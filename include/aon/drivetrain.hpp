@@ -3,45 +3,58 @@
 #include "./okapi/api.hpp"
 #include "./controls/s-curve-profile.hpp"
 #include "./controls/pid/pid.hpp"
+#include "./sensing/odometry.hpp"
 
 namespace aon {
 
 // TODO: remove once odom PR is incorporated
-class Pose {
- public:
-  /// @brief Position of the robot on the x-axis in \b `inches` with respect to
-  /// the field using (0,0) as the center of the field
-  double x;
-  /// @brief Position of the robot on the y-axis in \b `inches` with respect to
-  /// the field using (0,0) as the center of the field
-  double y;
-  /// @brief Orientation of the robot in \b `radians` with respect to angle 90º
-  /// in the VEX Field
-  double theta;
+// class Pose {
+//  public:
+//   /// @brief Position of the robot on the x-axis in \b `inches` with respect to
+//   /// the field using (0,0) as the center of the field
+//   double x;
+//   /// @brief Position of the robot on the y-axis in \b `inches` with respect to
+//   /// the field using (0,0) as the center of the field
+//   double y;
+//   /// @brief Orientation of the robot in \b `radians` with respect to angle 90º
+//   /// in the VEX Field
+//   double theta;
 
-  Pose(double x = 0, double y = 0, double theta = 0)
-      : x(x), y(y), theta(theta) {}
-};
+//   Pose(double x = 0, double y = 0, double theta = 0)
+//       : x(x), y(y), theta(theta) {}
+// };
 // TODO end
 
 class Drivetrain {
  protected:
   Pose pose;
   bool turbo = true;
+  
+  public:
+  Odometry odom;
 
- public:
-  Drivetrain() : pose(){}
+  Drivetrain() : pose(), odom(1, 9, 21, 20) {}
+  
 
   Pose getPose() { return this->pose; }
   void setPose(Pose p) { this->pose = p; }
 
-  double getX() { return this->pose.x; }
+  double getX() { 
+    return this->odom.getX();
+    // return this->pose.x;
+  }
   void setX(double x) { this->pose.x = x; }
 
-  double getY() { return this->pose.y; }
+  double getY() { 
+    return this->odom.getY();
+    // return this->pose.y;
+  }
   void setY(double y) { this->pose.y = y; }
 
-  double getTheta() { return this->pose.theta; }
+  double getTheta() { 
+    return this->odom.getTheta();
+    // return this->pose.theta;
+  }
   void setTheta(double theta) { this->pose.theta = theta; }
 
   bool isTurbo() { return this->turbo; }
