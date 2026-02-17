@@ -93,7 +93,7 @@ namespace aon {
 
         //Threading
 
-        void odometryThread();
+        void sense();
 
         //Debugging/Testing
         void debug();
