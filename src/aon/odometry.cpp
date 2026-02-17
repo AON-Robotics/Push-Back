@@ -345,7 +345,7 @@ namespace aon{
     /**
      * \brief Function for odometry thread
      */
-    void Odometry::odometryThread(){
+    void Odometry::sense(){
         while(true){
             update();
             pros::delay(20);
