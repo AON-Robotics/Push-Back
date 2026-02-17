@@ -54,6 +54,11 @@ namespace aon {
         Angle orientation;
         Vector position;
         Vector changeWeb;
+
+        Vector changeMine;
+        Vector changeVideo;
+        Vector changeEasy;
+        
         const double conversionFactor;
 
         ENCODER encoderBack_data;

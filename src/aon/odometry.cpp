@@ -59,7 +59,8 @@ namespace aon{
     /**
      * \brief Set Y position in \b inches
      *
-     * \param value Input value to set current Y
+     * \param x Value on X to set new position
+     * \param y Value on Y to set new position
      */
     void Odometry::SetPosition(double x, double y){
         p_mutex.take(1);
@@ -162,110 +163,185 @@ namespace aon{
     }
 
 
+    static double max = 0;
+    static double min = 10000;
+
     /**
-     * \brief Fundamental function for Odometry.
+     * @brief Fundamental function for Odometry, use encoders and gyro to calculate position and orientation.
      *
-     * \details Uses changes in encoder (right and left) and gyro to calculate position
+     * @details Uses changes in encoder (right and left) and gyro to calculate position
      * 
      * */
-    void Odometry::update(){
-        /// Read encoder values, divided by 100 to convert centidegrees to degrees
-        encoderRight_data.currentValue = encoderRight.get_position() / 100.0; 
-        encoderLeft_data.currentValue = encoderLeft.get_position() / 100.0; 
-        // encoderBack_data.currentValue = encoderBack.get_position() / 100.0;
+    void Odometry::update() {
+    /// Read encoder values, divided by 100 to convert centidegrees to degrees
+    encoderRight_data.currentValue = encoderRight.get_position() / 100.0; 
+    encoderLeft_data.currentValue = encoderLeft.get_position() / 100.0; 
+    
+    // Convert to distances
+    encoderRight_data.currentDistance = encoderRight_data.currentValue * conversionFactor;
+    encoderLeft_data.currentDistance = encoderLeft_data.currentValue * conversionFactor;
+    
+    // Calculate deltas
+    encoderRight_data.delta = encoderRight_data.currentValue - encoderRight_data.prevValue;
+    encoderLeft_data.delta = encoderLeft_data.currentValue - encoderLeft_data.prevValue;
+    
+    encoderRight_data.deltaDistance = encoderRight_data.currentDistance - encoderRight_data.previousDistance;
+    encoderLeft_data.deltaDistance = encoderLeft_data.currentDistance - encoderLeft_data.previousDistance;
+    
+    // Take information from the back encoder
+    #if USING_BIG_ROBOT
+    encoderBack_data.currentValue = encoderBack.get_position() / 100.0;
+    encoderBack_data.currentDistance = encoderBack_data.currentValue * conversionFactor;
+    encoderBack_data.delta = encoderBack_data.currentValue - encoderBack_data.prevValue;
+    encoderBack_data.deltaDistance = encoderBack_data.currentDistance - encoderBack_data.previousDistance;
+    #endif
 
-        // Convert to distances
-        encoderRight_data.currentDistance = encoderRight_data.currentValue * conversionFactor;
-        encoderLeft_data.currentDistance = encoderLeft_data.currentValue * conversionFactor;
-        // encoderBack_data.currentDistance = encoderBack_data.currentValue * conversionFactor;
+    // Calculate delta theta if we dont have gyro
+    double deltaTheta = (encoderLeft_data.deltaDistance - encoderRight_data.deltaDistance) / (DISTANCE_RIGHT_TRACKING_WHEEL_CENTER + DISTANCE_LEFT_TRACKING_WHEEL_CENTER);
 
-        // Calculate deltas
-        encoderRight_data.delta = encoderRight_data.currentValue - encoderRight_data.prevValue;
-        encoderLeft_data.delta = encoderLeft_data.currentValue - encoderLeft_data.prevValue;
-        // encoderBack_data.delta = encoderBack_data.currentValue - encoderBack_data.prevValue;
+    // If we have gyro, get value and calculate delta
+    #if GYRO_ENABLED 
+    // Read gyro value
+    gyro_data.currentDegrees = gyroscope.get_heading();
+    gyro_data.currentRadians = gyro_data.currentDegrees * (M_PI / 180);
 
-        encoderRight_data.deltaDistance = encoderRight_data.currentDistance - encoderRight_data.previousDistance;
-        encoderLeft_data.deltaDistance = encoderLeft_data.currentDistance - encoderLeft_data.previousDistance;
-        // encoderBack_data.deltaDistance = encoderBack_data.currentDistance - encoderBack_data.previousDistance;
+    
+    // Normalize angle to prevent overshoot when using turn function
+    if (gyro_data.currentDegrees > 180) {
+        gyro_data.currentDegrees -= 360;
+    }
+    else if (gyro_data.currentDegrees <= -180) {
+        gyro_data.currentDegrees += 360;
+    }
 
-        // Calculate delta theta if we dont have gyro
-        double deltaTheta = (encoderLeft_data.deltaDistance - encoderRight_data.deltaDistance) / (DISTANCE_RIGHT_TRACKING_WHEEL_CENTER + DISTANCE_LEFT_TRACKING_WHEEL_CENTER);
+    if (max < gyro_data.currentDegrees) max = gyro_data.currentDegrees;
+    if (min > gyro_data.currentDegrees) min = gyro_data.currentDegrees;
+        
+    // std::cout << "Max: " << max << "\n";
+    // std::cout << "Min: " << min << "\n";
+    // Calculate delta
+    gyro_data.deltaDegrees = gyro_data.currentDegrees - gyro_data.prevDegrees;  
+    gyro_data.deltaRadians = gyro_data.deltaDegrees * (M_PI / 180.0);
 
-        // If we have gyro, get value and calculate delta
-        #if GYRO_ENABLED
-        // Read gyro value
-        gyro_data.currentDegrees = gyroscope.get_heading();
-        gyro_data.currentRadians = gyro_data.currentDegrees * (M_PI / 180);
+    // std::cout << "Current distance | Prev value | Delta\n";
+    // std::cout << encoderLeft_data.currentDistance << " | " << encoderLeft_data.previousDistance << " | " << encoderLeft_data.deltaDistance << "\n";   
+    // std::cout << encoderRight_data.currentDistance << " | " << encoderRight_data.previousDistance << " | " << encoderRight_data.deltaDistance << "\n";   
+    // std::cout << encoderBack_data.currentDistance << " | " << encoderBack_data.previousDistance << " | " << encoderBack_data.deltaDistance << "\n";   
+    
+    // std::cout << "Current angle | Prev angle | Delta\n";
+    // std::cout << gyro_data.currentDegrees << " | " << gyro_data.prevDegrees << " | " << gyro_data.deltaRadians * (180/M_PI) << "\n";
+    // std::cout << "Delta by encoders: " << deltaThetaA << ", Total: " << backTracker << "\n";
 
-        // Normalize angle to prevent overshoot when using turn function
-        if (gyro_data.currentDegrees > 180) {
-            gyro_data.currentDegrees -= 360;
-        }
-        else if (gyro_data.currentDegrees <= -180) {
-            gyro_data.currentDegrees += 360;
-        }
-         // Calculate delta
-        gyro_data.deltaDegrees = gyro_data.currentDegrees - gyro_data.prevDegrees;
-        gyro_data.deltaRadians = gyro_data.deltaDegrees * (M_PI / 180.0);
+    // Save current data for future calculations
+    gyro_data.prevDegrees = gyro_data.currentDegrees;
+    
+    // Right now, confidence gyro 1.0, encoder confidence 0 (must sum 1) 
+    //# deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaDegrees;
+    deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaRadians;
+    // std::cout << "gyro delta radians: " << gyro_data.deltaRadians << "\n";
+    // std::cout << "delta theta A: " << GYRO_CONFIDENCE * gyro_data.deltaRadians << "\n";
+    // std::cout << "Delta Theta: " << deltaTheta * (180/M_PI) << "\n";
+    // std::cout << "\n";
+    #endif
+    
+    /* ------------------ no math ------------------ */
+    #if USING_BIG_ROBOT
+    double dx = encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance / 2;
+    double dy = encoderBack_data.deltaDistance - gyro_data.deltaRadians * DISTANCE_BACK_TRACKING_WHEEL_CENTER; // delete the contribution from the back encoder in the turning
+    #else 
+    changeMine.SetPosition(encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance / 2, 
+                            0.0);
+    #endif
 
-        // Save current data for future calculations
-        gyro_data.prevDegrees = gyro_data.currentDegrees;
+    double theta_mid = getRadians() + gyro_data.deltaRadians / 2.0;
+    changeMine.SetPosition(changeMine.GetX() + (dx * cos(theta_mid) - dy * sin(theta_mid)), 
+                            changeMine.GetY() + (dx * sin(theta_mid) + dy * cos(theta_mid)));
 
-        // Right now, confidence gyro 1.0, encoder confidence 0 (must sum 1)
-        deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaRadians;
+
+    // Updating angle
+    double previousTheta = getRadians();
+    setRadians(getRadians() + deltaTheta);
+
+    // Calculations simple trigonometry, i.e., mine :)
+    // If we are rotating
+    if (std::abs(deltaTheta * (180/M_PI)) > 0.01) {
+        // If turning in its own axis
+        // if ((encoderLeft_data.deltaDistance * encoderRight_data.deltaDistance) <= 0) {
+        //   deltaDlocal.SetPosition(0.0, 0.0);
+        // }
+        // Calculate change as an arc
+        // else {
+        // Calculate the radius of rotation for each wheel
+        double sign = (deltaTheta > 0) ? 1 : -1; 
+        double radiusLeft  = (encoderLeft_data.deltaDistance / deltaTheta)  - sign * DISTANCE_LEFT_TRACKING_WHEEL_CENTER;
+        double radiusRight = (encoderRight_data.deltaDistance / deltaTheta) + sign * DISTANCE_RIGHT_TRACKING_WHEEL_CENTER;
+        
+        // Calculate radius
+        double averageR = (radiusLeft + radiusRight) / 2;
+        
+        // Update position using trigonometry
+        deltaDlocal.SetPosition(averageR * std::sin(deltaTheta), averageR * (1 - std::cos(deltaTheta)));
+        changeWeb.SetPosition(changeWeb.GetX() + averageR * std::sin((previousTheta + deltaTheta) / 2), changeWeb.GetY() * averageR * (1 - std::cos(previousTheta + deltaTheta) / 2));
+        // std::cout << "Delta: " << deltaDlocal.GetX() << ", " << deltaDlocal.GetY() << "????????????????????\n";
+        
+        // changeMine.SetPosition(changeMine.GetX() + (2 * std::sin(deltaTheta/2) * ((encoderBack_data.deltaDistance / deltaTheta) + DISTANCE_BACK_TRACKING_WHEEL_CENTER)),
+        //                        changeMine.GetY() + (2 * std::sin(deltaTheta/2) * (averageR)));
+
+        #if USING_BIG_ROBOT
+        /* ------------------ FROM THE VIDEO OF THE KID ------------------ */
+        changeVideo.SetPosition(changeVideo.GetX() + (2 * std::sin(deltaTheta/2) * ((encoderBack_data.deltaDistance / deltaTheta) + DISTANCE_BACK_TRACKING_WHEEL_CENTER)),
+                                changeVideo.GetY() + (2 * std::sin(deltaTheta/2) * ((encoderRight_data.deltaDistance / deltaTheta) + DISTANCE_RIGHT_TRACKING_WHEEL_CENTER)));
         #endif
-
-        // Updating angle
-        double previousTheta = getRadians();
-        setRadians(getRadians() + deltaTheta);
-
-        // Calculations simple trigonometry, i.e., mine :)
-        // If we are rotating
-        if (std::abs(deltaTheta * (180/M_PI)) > 0.01) {
-            // If turning in its own axis
-            if ((encoderLeft_data.deltaDistance * encoderRight_data.deltaDistance) <= 0) {
-            deltaDlocal.SetPosition(0.0, 0.0);
-            }
-            // If we are going in a arc
-            else {
-            // Calculate the radius of rotation for each wheel
-            double sign = (deltaTheta > 0) ? 1 : -1; 
-            double radiusLeft  = (encoderLeft_data.deltaDistance / deltaTheta)  - sign * DISTANCE_LEFT_TRACKING_WHEEL_CENTER;
-            double radiusRight = (encoderRight_data.deltaDistance / deltaTheta) + sign * DISTANCE_RIGHT_TRACKING_WHEEL_CENTER;
-
-            // Calculate radius
-            double averageR = (radiusLeft + radiusRight) / 2;
-
-            // Update position using trigonometry
-            deltaDlocal.SetPosition(averageR * std::sin(deltaTheta), averageR * (1 - std::cos(deltaTheta)));
-            }
-        }
-        // If the robot is moving straight forward or backward, average encoder values for distance
-        else {
-            double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0;
-            deltaDlocal.SetPosition(deltaD, 0);
-        }
-
-        // Odometry copy from https://medium.com/%40nahmed3536/wheel-odometry-model-for-differential-drive-robotics-91b85a012299
-        // Super accurate and use less calculations, but mine seems cooler :)
-        double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0;
-        changeWeb.SetPosition(changeWeb.GetX() + (deltaD * cos(previousTheta + deltaTheta / 2)),
-                                changeWeb.GetY() + (deltaD * sin(previousTheta + deltaTheta / 2)));
+        // }
+    }
+    // Else if the robot is moving straight forward or backward or sideways, average encoder values for distance    
+    else {
+        // std::cout << "Not turning\n";
+        double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0; // movement in X axis
+        deltaDlocal.SetPosition(deltaD, 0);
+        changeWeb.SetPosition(changeWeb.GetX() + deltaD, 0);
+        
+        // If we have encoder back
+        #if USING_BIG_ROBOT 
+        double deltaY = encoderBack_data.deltaDistance;
+        deltaDlocal.SetPosition(deltaD, deltaY);
+        changeWeb.SetPosition(changeWeb.GetX() + deltaD, changeWeb.GetY() + deltaY);
+        changeVideo.SetPosition(changeVideo.GetX() + deltaD, changeVideo.GetY() + deltaY);
+        #endif
+    }
+    
+    // Odometry copy from https://medium.com/%40nahmed3536/wheel-odometry-model-for-differential-drive-robotics-91b85a012299
+    // Just for Tank drive
+    // double deltaD = (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0;
+    // changeWeb.SetPosition(changeWeb.GetX() + (deltaD * cos(previousTheta + deltaTheta / 2)),
+    //                       changeWeb.GetY() + (deltaD * sin(previousTheta + deltaTheta / 2)));
 
 
-        // Updating global position using 2D matrix transformation (previous way to update to global coordinates)
-        SetPosition(getX() + deltaDlocal.GetX() * std::cos(getRadians()) - deltaDlocal.GetY() * std::sin(getRadians()),
-                    getY() + deltaDlocal.GetX() * std::sin(getRadians()) + deltaDlocal.GetY() * std::cos(getRadians()));
+    // Updating global position using 2D matrix transformation (previous way to update to global coordinates)
+    SetPosition(getX() + deltaDlocal.GetX() * std::cos(getRadians()) - deltaDlocal.GetY() * std::sin(getRadians()), 
+                getY() + deltaDlocal.GetX() * std::sin(getRadians()) + deltaDlocal.GetY() * std::cos(getRadians()));
+    
+    changeWeb.SetPosition(getX() + deltaDlocal.GetX() * std::cos((previousTheta + deltaTheta) / 2) - deltaDlocal.GetY() * std::sin((previousTheta + deltaTheta) / 2), 
+                          getY() + deltaDlocal.GetX() * std::sin((previousTheta + deltaTheta) / 2) + deltaDlocal.GetY() * std::cos((previousTheta + deltaTheta) / 2));
 
+    // SetPosition(changeMine.GetX(), changeMine.GetY());
 
-        // Save current values as previous for future updates
-        encoderLeft_data.prevValue = encoderLeft_data.currentValue;
-        encoderRight_data.prevValue = encoderRight_data.currentValue;
+    std::cout << "Mine: X: " << getX() << ", Y: " << getY() << ", T: " << getDegrees() << "\n";
+    std::cout << "noma: X: " << changeMine.GetX() << ", Y: " << changeMine.GetY() << ", T: " << getDegrees() <<  "\n";
+    std::cout << "Matr: X: " << changeWeb.GetX() << ", Y: " << changeWeb.GetY() << ", T: " << getDegrees() << "\n";
+    std::cout << "vide: X: " << changeVideo.GetX() << ", Y: " << changeVideo.GetY() << ", T: " << getDegrees() << "\n";
 
-        encoderRight_data.previousDistance = encoderRight_data.currentDistance;
-        encoderLeft_data.previousDistance = encoderLeft_data.currentDistance;
+    // Save current values as previous for future updates
+    encoderLeft_data.prevValue = encoderLeft_data.currentValue;
+    encoderRight_data.prevValue = encoderRight_data.currentValue;
 
-        gyro_data.prevDegrees = gyro_data.currentDegrees;
+    encoderRight_data.previousDistance = encoderRight_data.currentDistance;
+    encoderLeft_data.previousDistance = encoderLeft_data.currentDistance;
+    #if USING_BIG_ROBOT
+    encoderBack_data.previousDistance = encoderBack_data.currentDistance;
+    #endif
+
+    gyro_data.prevDegrees = gyro_data.currentDegrees;
     }
 
 
@@ -320,6 +396,9 @@ namespace aon{
 
         // Other odometry we could use, less calculations
         changeWeb.SetPosition(0.0, 0.0);
+        changeMine.SetPosition(0.0, 0.0);
+        changeVideo.SetPosition(0.0, 0.0);
+        changeEasy.SetPosition(0.0, 0.0);
 
         setDegrees(theta);
         SetPosition(x, y);
