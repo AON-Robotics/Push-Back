@@ -4,17 +4,19 @@
 #include "../../okapi/api.hpp"
 #include "../controls/s-curve-profile.hpp"
 #include "../controls/smart_motor.hpp"
-#include "../sensing/odometry.hpp"
+#include "../odometry/odometry.hpp"
 
 #include "../math/misc/misc.hpp"
 #include "../controls/pid/pid.hpp"
 #include "../drivetrain.hpp"
 #include <cfloat>
+#include "../math/pose.hpp"
 
 namespace aon {
 
 class TankDrive : public Drivetrain {
  private:
+  Odometry odometry;
   SmartMotorGroup leftMotors;
   SmartMotorGroup rightMotors;
   MotionProfile motionProfile;
@@ -29,7 +31,8 @@ class TankDrive : public Drivetrain {
         rightMotors(rightPorts, 0, MAX_ACCEL),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain() {}
+        Drivetrain(),
+        odometry() {}
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm

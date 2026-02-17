@@ -91,7 +91,7 @@ static void Initialize() {
   // store functions in reader
   AutonomousReader->AddFunction("Test", &TestSequence);
 
-  std::cout << "Initialitzing SAPI GUI" << std::endl;
+  std::cout << "Initializing SAPI GUI" << std::endl;
 
   // Necessary for the Simplified Brain Screen API to work
   pros::delay(20);
