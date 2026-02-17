@@ -91,10 +91,6 @@ namespace aon {
         Pose getPose();
 
 
-        //Threading
-
-        void sense();
-
         //Debugging/Testing
         void debug();
 

@@ -6,8 +6,6 @@ void initialize() {
   // aon::logging::Initialize();
   pros::lcd::initialize();
   aon::Configure(false);
-  // aon::odometry::Initialize();
-  // pros::Task odomTask(aon::odometry::Odometry);
   pros::Task odomTask([]{drivetrain.odom.initialize();});
   pros::delay(3000);
   pros::Task safetyTask(aon::autonSafety);

@@ -159,6 +159,11 @@ namespace aon{
         // INITIAL_ODOMETRY_X = gps.get_x_position();
         // INITIAL_ODOMETRY_Y = gps.get_y_position();
         resetInitial();
+
+        while(true){
+            update();
+            pros::delay(20);
+        }
     }
 
 
@@ -340,19 +345,8 @@ namespace aon{
         return current;
     }
 
-    //Threading
 
-    /**
-     * \brief Function for odometry thread
-     */
-    void Odometry::sense(){
-        while(true){
-            update();
-            pros::delay(20);
-        }
-    }
-
-    //testing 
+    // Testing 
 
 
     /**
