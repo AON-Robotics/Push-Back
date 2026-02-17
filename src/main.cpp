@@ -10,7 +10,7 @@ void initialize() {
   pros::lcd::initialize();
   aon::Configure(false);
   odometry.initialize();
-  pros::Task odomTask([]{odometry.odometryThread();});
+  pros::Task odomTask([]{odometry.sense();});
   pros::Task safetyTask(aon::autonSafety);
   // pros::Task turretFollowTask([]{orbit.follow();});
   // pros::Task turretScanTask([]{orbit.scan();}); // TODO: combine this with the follow task
