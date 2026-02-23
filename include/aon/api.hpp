@@ -20,7 +20,7 @@
 
 #include "./controls/trapezoid-profile/trapezoid.hpp"
 #include "./controls/exponential-profile.hpp"
-#include "./sensing/odometry.hpp"
+#include "./odometry/odometry.hpp"
 
 #if !USING_BLACK_ROBOT
 #include "./controls/holonomic-motion.hpp"

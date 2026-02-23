@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "../constants.hpp"
 #include "../globals.hpp"
-#include "../sensing/odometry.hpp"
+#include "../odometry/odometry.hpp"
 #include "../controls/pid/pid.hpp"
 #include "../controls/s-curve-profile.hpp"
 #include "../tools/logging.hpp"
@@ -24,6 +24,7 @@
 
 namespace aon {
 
+
 //! ------------------ TODO: TAKE TO H-DRIVE CLASS -------- START
 #if USING_BIG_ROBOT
 /// @brief Strafes the robot a given distance
@@ -31,7 +32,7 @@ namespace aon {
 /// @details A positive `dist` makes the robot go right while a negative
 /// `dist` makes the robot go left
 void strafe(double dist = TILE_WIDTH){
-  MotionProfile motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
+  MotionProfile motionProfile(200, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
   if (dist == 0) { return; }
   const int sign = dist / abs(dist);  // Direction of the movement
   dist = abs(dist);                   // Setting the magnitude to positive
@@ -39,7 +40,7 @@ void strafe(double dist = TILE_WIDTH){
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  double startPos = aon::odometry::encoderBack.get_position();
+  double startPos = odometry.encoderBack.get_position();
   // Vector startPos = aon::odometry::GetPosition();
   
   double now = pros::micros() / 1E6;
@@ -48,7 +49,7 @@ void strafe(double dist = TILE_WIDTH){
   motionProfile.setVelocity(mid.getActualVelocity());
   
   while (traveledDist < dist) {
-    traveledDist = (std::abs(aon::odometry::encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+    traveledDist = (std::abs(odometry.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
     // traveledDist = (aon::odometry::GetPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
@@ -78,6 +79,8 @@ void strafe(double dist = TILE_WIDTH){
 //   ___) | |_| | |_) | |  _ < (_) | |_| | |_| | | | |  __/\__ \
 //  |____/ \__,_|_.__/  |_| \_\___/ \__,_|\__|_|_| |_|\___||___/
 // ============================================================================|
+
+
 
 /**
  * \brief Aligns ORBIT and DRIVETRAIN to the item with the set `COLOR`
@@ -332,10 +335,10 @@ void testEKFWithGyro(){
   okapi::EKFFilter ekf1;
   okapi::EKFFilter ekf2(2.6E-4, 0.04);
   okapi::EKFFilter ekf3(3E-4, 0.04);
-  okapi::EKFFilter ekf4(4E-4, 0.04);
+  okapi::EKFFilter ekf4(4E-4, 0.04); 
   okapi::EKFFilter ekf5(5E-4, 0.04);
   while(true){
-    const double pos = odometry::gyroscope.get_heading();
+    const double pos = drivetrain.odom.gyroscope.get_heading();
     pros::lcd::print(0, "Raw Heading = %.2f", pos);
     pros::lcd::print(1, "Default Filter = %.2f", ekf1.filter(pos));
     pros::lcd::print(2, "Tweaked Filter 2 = %.2f", ekf2.filter(pos)); // this one is slower which might mean i want to tweak the values for the ekf
@@ -375,18 +378,22 @@ int testMultiple(){
 }
 
 void testTurns(){
-  for (int i = 0; i < 4; i++){drivetrain.turn();}
-  for (int i = 0; i < 4; i++){drivetrain.turn(-90);}
+  for (int i = 0; i < 4; i++){drivetrain.turn(); pros::delay(750);}
+  for (int i = 0; i < 4; i++){drivetrain.turn(-90); pros::delay(750);}
 }
 
 void testSquare(){
   for (int i = 0; i < 4; i++){
     drivetrain.move();
+    pros::delay(750);
     drivetrain.turn();
+    pros::delay(750);
   }
 }
 
 #if USING_BIG_ROBOT
+
+/// @brief Starting position is the left side of the parking facing towards the drive team, placed paralele to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
 void safeBigBotRoutine(){
   intake.activateScan();
   strafe(28.5); // Align with match loader.
@@ -395,18 +402,18 @@ void safeBigBotRoutine(){
   drivetrain.motors(MAX_RPM / 2); // Push into loader
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
-  pros::delay(5000); // Take up all the blocks (9).
-  drivetrain.move(-23); // Move to long goal.
+  pros::delay(8000); // Take up all the blocks (9).
+  drivetrain.move(-22); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2); // Push into goal
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
   intake.raiseShrimp(); // Reset loader mechanism.
-  intake.score(Intake::TOP, Intake::BOTTOM, 2000); // Score all 9 blocks.
+  intake.score(Intake::TOP, Intake::BOTTOM, 8000); // Score all 9 blocks.
   drivetrain.move(15); // Go back a little.
   drivetrain.turn(-90); // Orient towards parking.
   drivetrain.move(12); // Move towards parking.
-  strafe(13); // Align with parking.
-  drivetrain.move(12); // Move to parking.
+  strafe(12); // Align with parking.
+  drivetrain.move(11); // Move to parking.
   drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
   pros::delay(1000); // for a bit of time,
   drivetrain.stop(); // then stop.
@@ -414,32 +421,121 @@ void safeBigBotRoutine(){
   intake.stopScan();
   //* Works till here
 }
+
+void BigBotSkillsRoutine(){
+  strafe(28.5);
+  intake.dropShrimp(); 
+  drivetrain.move(6); 
+  drivetrain.motors(MAX_RPM / 2); 
+  pros::delay(200); 
+  drivetrain.stop(); 
+  pros::delay(8000); 
+  drivetrain.move(-22); 
+  drivetrain.motors(-MAX_RPM / 2);
+  drivetrain.move(22);
+  drivetrain.turn(180);
+  strafe(-10.5);
+  drivetrain.move(50);
+  strafe(10.5);
+  intake.dropShrimp(); 
+  drivetrain.move(6); 
+  drivetrain.motors(MAX_RPM / 2); 
+  pros::delay(200); 
+  drivetrain.stop(); 
+  pros::delay(8000); 
+  strafe(10); 
+  drivetrain.turn(90);
+  drivetrain.motors(MAX_RPM);
+  pros::delay(1000); 
+  drivetrain.stop(); 
+  brooksPiston.set_value(HIGH); 
+  //empy the match loader 
+  //empty match loader across 
+  //Park
+}
+
+
 #else
 
 void testSmallBotRoutine(){
-  intake.activateScan();
-  drivetrain.move(32); // Align with match loader
-  drivetrain.turn(-90);
+  drivetrain.move(31); // Align with match loader
+  drivetrain.turn(86);
   intake.dropCart(); // Prepare loader mechanism
-  drivetrain.move(6); // Go to match loader
-  pros::delay(5000); // Take up all the blocks (9); // TODO: corroborate timing
-  drivetrain.move(-13); // Move to Long goal
-  drivetrain.turn(180);
-  intake.raiseCart(); // Reset loader mechanism
+  pros::delay(200);  
+  drivetrain.move(4); // Go to match loader
+  intake.activateScan(); 
+  drivetrain.motors(-MAX_RPM / 2); // Push into loader
+  pros::delay(100); // for a bit of time,
+  drivetrain.motors(MAX_RPM / 2); // Push into loader
+  pros::delay(400); // for a bit of time,
+  drivetrain.stop(); // then stop.
+  pros::delay(5000); // Take up some blocks (6);
   intake.stopScan();
-  drivetrain.move(10);
+  drivetrain.move(-13); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  drivetrain.turn(85);
+  drivetrain.turn(85);
   intake.setScorerHeight(HIGH);
-  intake.score(Intake::TOP, 2000); // Score all 9 blocks // TODO: corroborate timing
+  drivetrain.move(6.5);
+  intake.score(Intake::TOP, 3000); // Score all blocks
   drivetrain.move(-23); // Go back a little
-  drivetrain.turn(90); // Orient towards parking
-  drivetrain.move(30.1); // Go to parking
-  //* Distances work until here consistently
-  drivetrain.motors(-MAX_RPM); // Wheelie into parking
-  pros::delay(250);
+  drivetrain.turn(-93); // Orient towards parking
+  drivetrain.move(20); // Go to parking
   drivetrain.motors(MAX_RPM);
-  pros::delay(1500);
-  drivetrain.stop();
+  pros::delay(1200);
+  drivetrain.stop(); 
+  //* Works till here
 }
+
+void testXDriveRoutine(){
+  drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
+  drivetrain.goToPose(Pose(0, 12, 0));
+  drivetrain.goToPose(Pose(-12, 12, 0));
+  drivetrain.goToPose(Pose(0, 0, 90));
+  drivetrain.goToPose(Pose(-12, 18, 0));
+  drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
+  drivetrain.goToPose(Pose(0, 0, 0));
+}
+
+void smallbotjorgeg(){
+  drivetrain.move(31); // Align with match loader
+  drivetrain.turn(87);
+  intake.dropCart(); // Prepare loader mechanism
+  pros::delay(200);  
+  drivetrain.move(5); // Go to match loader
+  intake.activateScan(); 
+  drivetrain.motors(-MAX_RPM / 2); // Push into loader
+  pros::delay(100); // for a bit of time,
+  drivetrain.motors(MAX_RPM / 2); // Push into loader
+  pros::delay(300); // for a bit of time,
+  drivetrain.stop(); // then stop.
+  pros::delay(5000); // Take up some blocks (6);
+  intake.stopScan();
+  drivetrain.move(-13); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  // drivetrain.turn(173);
+  drivetrain.turn(85);
+  drivetrain.move(1);
+  drivetrain.turn(85);
+  intake.setScorerHeight(HIGH);
+  drivetrain.move(6.5);
+  intake.score(Intake::TOP, 1000); // Score all blocks
+  drivetrain.move(-6.5); // reset long goal distance
+  drivetrain.turn(-45); // face bottom middle goal
+  drivetrain.move(-31); // going backward
+  // intake.setScorerHeight(LOW);// prepare for middle-middle goal
+  // intake.move(); //score in bottom goal
+  drivetrain.move(3);
+  drivetrain.turn(90); // allign for middle-middle
+  drivetrain.move(20);
+  drivetrain.turn(-45);
+  drivetrain.move();
+
+  
+
+  
+}
+
 #endif
 
 // ============================================================================|

@@ -61,56 +61,55 @@ inline double ApplySpeed(const double& input, const double& percentage){
 bool shrimpOut = false;
 bool brooksUp = false;
 bool wingsOut = false;
-bool turbo = false;
 #else
 bool cartOut = false;
 bool scorerUp = false;
 bool arrowOut = false;
-bool trapdoorOpen = false;
 bool turbo = false;
 #endif
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
   //////////// DRIVE ////////////
+  
+  #if USING_BIG_ROBOT
+  
   const double scaledVertical = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+  const double scaledHorizontal = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
   const double scaledTurn = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
   
-  #if USING_BIG_ROBOT
-  const double scaledHorizontal = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
-  
-  const double vertical = ApplySpeed(scaledVertical, turbo ? 1.41421356237 : 0.6);
-  const double horizontal = ApplySpeed(scaledHorizontal, turbo ? 1.41421356237 : 0.6);
-  const double turn = ApplySpeed(scaledTurn, turbo ? 1.41421356237 : 0.4);
-  
-  mid.moveVelocity(horizontal);
-  #else
-  const double vertical = ApplySpeed(scaledVertical, turbo ? 1 : 0.6);
-  const double turn = ApplySpeed(scaledTurn, turbo ? 1 : 0.4);
-  #endif
+  const double vertical = ApplySpeed(scaledVertical, drivetrain.isTurbo() ? 1.41421356237 : 0.6);
+  const double horizontal = ApplySpeed(scaledHorizontal, drivetrain.isTurbo() ? 1.41421356237 : 0.6);
+  const double turn = ApplySpeed(scaledTurn, drivetrain.isTurbo() ? 1.41421356237 : 0.4);
   
   drivetrain.driveWhileTurning(vertical, turn);
+  mid.moveVelocity(horizontal);
+
+  #else
 
   //# From now on, all drivetrains used will need to use this format for driving
-  if(false){
-    double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY) * MAX_RPM;
-    double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY) * MAX_RPM;
-    double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY) * MAX_RPM;
-    double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY) * MAX_RPM;
-    drivetrain.drive(leftX, leftY, rightX, rightY);
-  }
+  double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+  double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+  double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
+  double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
+  drivetrain.drive(leftX, leftY, rightX, rightY);
+  
+  #endif
+  
+
 
   #if USING_BIG_ROBOT
-  // Score Mid from Bottom
-  if(mainController.get_digital(DIGITAL_A)){
-    intake.score(Intake::MIDDLE, Intake::BOTTOM);
+
+  if(mainController.get_digital(DIGITAL_R2)){
+    intake.activateScan();
+    intake.frontElevator();
+    intake.backElevator();
+  }
+  else {
+    intake.stopScan();
   }
 
-  else if(mainController.get_digital(DIGITAL_R2)){
-    intake.store();
-  }
-
-  else if(mainController.get_digital(DIGITAL_Y)){
+  if(mainController.get_digital(DIGITAL_Y)){
     intake.hoard();
   }
 
@@ -121,8 +120,7 @@ inline void DriveDefault() {
   else if(mainController.get_digital(DIGITAL_RIGHT)){
     intake.score(Intake::MIDDLE, Intake::TOP);
   }
-
-  else {
+  else if(!intake.isScanning()){
     intake.frontElevator(0);
     intake.scorer(0);
     intake.hoarder(0);
@@ -139,7 +137,7 @@ inline void DriveDefault() {
     intake.shooter(0);
   }
 
-  if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_RIGHT) || mainController.get_digital(DIGITAL_X) || mainController.get_digital(DIGITAL_B))){
+  if(!(mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_RIGHT) || mainController.get_digital(DIGITAL_B)) && !intake.isScanning()){
     intake.shotbelt(0);
   }
 
@@ -155,19 +153,16 @@ inline void DriveDefault() {
   else if(mainController.get_digital_new_press(DIGITAL_L1)) {
     toggle(shrimpOut) ? intake.dropShrimp() : intake.raiseShrimp();
   }
-  // Toggle turbo
+
   else if(mainController.get_digital_new_press(DIGITAL_X)) {
-    toggle(turbo);
+    drivetrain.toggleTurbo();
   }
 
   #else
+
   // Storing
   if(mainController.get_digital(DIGITAL_R2)) {
     intake.store();
-  }
-  // Score Top
-  if(mainController.get_digital(DIGITAL_R1)) {
-    intake.scorer();
   }
   // Reject
   else if(mainController.get_digital(DIGITAL_L2)) {
@@ -177,19 +172,17 @@ inline void DriveDefault() {
   else if(mainController.get_digital(DIGITAL_L1)) {
     intake.score(Intake::BOTTOM);
   }
-  else {
-    intake.scorer(0);
+  // Score Top
+  if(mainController.get_digital(DIGITAL_R1)) {
+    intake.scorer();
   }
   
+  if(!(mainController.get_digital(DIGITAL_R1) || mainController.get_digital(DIGITAL_L1))){
+    intake.scorer(0);
+  }
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
     intake.elevator(0);
     intake.judge(0);
-  }
-
-  // Toggle Arrow
-  if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    arrow.moveAbsolute(arrowOut ? 20 : 90, arrowOut ? 70 : 200);
-    toggle(arrowOut);
   }
   
   // Change Height
@@ -197,17 +190,18 @@ inline void DriveDefault() {
     intake.setScorerHeight(toggle(scorerUp) ? HIGH : LOW);
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_A)) {
+  else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
     toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
   }
-  // Toggle turbo
+
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
-    toggle(turbo);
+    drivetrain.toggleTurbo();
   }
-  // Toggle trapdoor
+  // Toggle Arrow
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
-    toggle(trapdoorOpen) ? intake.openTrapdoor() : intake.closeTrapdoor();
+    toggle(arrowOut) ? activateArrow() : deactivateArrow();
   }
+
   #endif
 }
 

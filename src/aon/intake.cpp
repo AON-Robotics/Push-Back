@@ -4,8 +4,7 @@ namespace aon {
 
 #if USING_BIG_ROBOT
 
-Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-               const std::initializer_list<okapi::Motor>& frontElevatorPorts,
+Intake::Intake(const std::initializer_list<okapi::Motor>& frontElevatorPorts,
                const std::initializer_list<okapi::Motor>& hoarderPorts,
                const std::initializer_list<okapi::Motor>& backElevatorPorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
@@ -13,8 +12,7 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
                const std::initializer_list<okapi::Motor>& shooterPorts,
                char shrimpPistonsPort, int distanceSensorPort,
                int colorSensorPort)
-    : intakeMG(allMotorPorts),
-      frontElevatorMG(frontElevatorPorts),
+    : frontElevatorMG(frontElevatorPorts),
       hoarderMG(hoarderPorts),
       backElevatorMG(backElevatorPorts),
       scorerMG(scorerPorts),
@@ -24,12 +22,7 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {}
 
-void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
-                       okapi::AbstractMotor::gearset gearset) {
-  intakeMG.setBrakeMode(brakeMode);
-  intakeMG.setGearing(gearset);
-  intakeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  intakeMG.tarePosition();
+void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
 
   frontElevatorMG.setBrakeMode(brakeMode);
   frontElevatorMG.setGearing(gearset);
@@ -62,14 +55,21 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
   shooterMG.tarePosition();
 }
 
+void Intake::move(const int& rpm) {
+  this->frontElevator(rpm);
+  this->hoarder(rpm);
+  this->backElevator(rpm);
+  this->scorer(rpm);
+  this->shotbelt(rpm);
+  this->shooter(rpm);
+}
+
 void Intake::frontElevator(const int& rpm) { frontElevatorMG.moveVelocity(rpm); }
 
 
 void Intake::hoarder(const int& rpm) { hoarderMG.moveVelocity(rpm); }
 
-void Intake::backElevator(const int& rpm) {
-  backElevatorMG.moveVelocity(rpm);
-}
+void Intake::backElevator(const int& rpm) { backElevatorMG.moveVelocity(rpm); }
 
 void Intake::shotbelt(const int& rpm) { shotbeltMG.moveVelocity(rpm); }
 
@@ -77,7 +77,7 @@ void Intake::shooter(const int& rpm) { shooterMG.moveVelocity(rpm); }
 
 void Intake::scan() {
   size_t stopTime = UINT32_MAX;
-  const short DELAY_PER_BALL = 2600;  // ms
+  const short DELAY_PER_BALL = 1500;  // ms
   while (true) {
     if (scanning) {
       if (this->isObjectDetected()) {
@@ -107,7 +107,6 @@ void Intake::sort() {
   Action action = NONE;
   while (true) {
     if (scanning) {
-      colorSensor.set_led_pwm(100); // For consistent illumination in the elevator
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
@@ -145,9 +144,6 @@ void Intake::sort() {
         this->shotbelt(0);
         stopTime = UINT32_MAX;
       }
-    }
-    else {
-      colorSensor.set_led_pwm(0);
     }
     pros::delay(25);
   }
@@ -228,29 +224,20 @@ void Intake::raiseShrimp() { shrimpPistons.set_value(LOW); }
 
 #else
 
-Intake::Intake(const std::initializer_list<okapi::Motor>& allMotorPorts,
-               const std::initializer_list<okapi::Motor>& elevatorPorts,
+Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
-               char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
+               char scorerPistonPort, char cartPistonPort,
                int distanceSensorPort, int colorSensorPort)
-    : intakeMG(allMotorPorts),
-      elevatorMG(elevatorPorts),
+    : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
       scorerPiston(scorerPistonPort),
       cartPiston(cartPistonPort),
-      trapdoorPiston(trapdoorPistonPort),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {}
 
-void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
-                       okapi::AbstractMotor::gearset gearset) {
-  intakeMG.setBrakeMode(brakeMode);
-  intakeMG.setGearing(gearset);
-  intakeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  intakeMG.tarePosition();
-
+void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
   elevatorMG.setGearing(gearset);
   elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -265,6 +252,12 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode,
   scorerMG.setGearing(gearset);
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
+}
+
+void Intake::move(const int& rpm) {
+  this->elevator(rpm);
+  this->judge(rpm);
+  this->scorer(rpm);
 }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
@@ -304,7 +297,6 @@ void Intake::sort() {
   Action action;
   while (true) {
     if (scanning) {
-      colorSensor.set_led_pwm(100); // For consistent illumination in the elevator
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
@@ -323,11 +315,9 @@ void Intake::sort() {
         // Execute Scheduled Action
         if (action == ACCEPT) {
           this->judge();
-          this->scorer();
           stopTime = pros::millis() + ACCEPTANCE_DELAY;
         } else if (action == REJECT) {
           this->judge(-INTAKE_VELOCITY);
-          this->scorer();
           stopTime = pros::millis() + REJECTION_DELAY;
         }
         actionTime = UINT32_MAX;
@@ -336,12 +326,8 @@ void Intake::sort() {
       if (pros::millis() >= stopTime) {
         // Stop Scheduled Action after the given delay
         this->judge(0);
-        this->scorer(0);
         stopTime = UINT32_MAX;
       }
-    }
-    else {
-      colorSensor.set_led_pwm(0);
     }
     pros::delay(25);
   }
@@ -392,25 +378,27 @@ void Intake::dropCart() { cartPiston.set_value(HIGH); }
 
 void Intake::raiseCart() { cartPiston.set_value(LOW); }
 
-void Intake::openTrapdoor() { trapdoorPiston.set_value(HIGH); }
-
-void Intake::closeTrapdoor() { trapdoorPiston.set_value(LOW); }
-
 #endif
-
-void Intake::move(const int& rpm) { intakeMG.moveVelocity(rpm); }
 
 void Intake::scorer(const int& rpm) { scorerMG.moveVelocity(rpm); }
 
-void Intake::stop() { intakeMG.moveVelocity(0); }
+void Intake::stop() { this->move(0); }
 
 double Intake::distance() { return distanceSensor.get(); }
 
-bool Intake::isObjectDetected() { return this->distance() <= DISTANCE; }
+bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
 
-void Intake::activateScan() { scanning = true; }
+bool Intake::isScanning(){ return this->scanning; }
 
-void Intake::stopScan() { scanning = false; }
+void Intake::activateScan() {
+  scanning = true;
+  colorSensor.set_led_pwm(100);
+}
+
+void Intake::stopScan() {
+  scanning = false;
+  colorSensor.set_led_pwm(0);
+}
 
 void Intake::kickBack() {
   this->move(-100);
@@ -420,8 +408,8 @@ void Intake::kickBack() {
 
 double Intake::hue() { return colorSensor.get_hue(); }
 
-bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 35; }
+bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 25; }
 
-bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 215; }
+bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 230; }
 
 }  // namespace aon
