@@ -1,7 +1,9 @@
 #include "../../../../../include/aon/tools/gui/gui-v2-debug.hpp"
-#include "../../../../../include/aon/sensing/odometry.hpp"
+#include "../../../../../src/aon/odometry.cpp"
 
 namespace aon {
+
+aon::Odometry odometry;
 
 // Forward declaration for Variables menu navigation
 void DisplayVariablesMenu(GuiDebug* gui);
@@ -46,7 +48,7 @@ void DisplayDataMenu(GuiDebug* gui) {
   // Seed data entries if needed
   // Ensure odometry is initialized before registering / reading values
   if (!odomInitializedFromDataMenu) {
-    aon::odometry::Initialize();
+    aon::odometry.initialize();
     odomInitializedFromDataMenu = true;
   }
 
@@ -167,24 +169,18 @@ void HandleDataMenuTouch(GuiDebug* gui) {
     const int resetX2 = resetX1 + 80, resetY2 = resetY1 + 28;
     if (x >= resetX1 && x <= resetX2 && y >= resetY1 && y <= resetY2) {
       // Reset encoder positions
-      aon::odometry::encoderRight.set_position(0);
-      aon::odometry::encoderLeft.set_position(0);
-      aon::odometry::encoderBack.set_position(0);
+      aon::odometry.SetPosition(0, 0);
+      aon::odometry.encoderLeft.set_position(0);
+      aon::odometry.encoderBack.set_position(0);
 
       // Reset encoder struct data to prevent position jumps
-      aon::odometry::encoderRight_data = {0, 0, 0, 0, 0, 0};
-      aon::odometry::encoderLeft_data = {0, 0, 0, 0, 0, 0};
-      aon::odometry::encoderBack_data = {0, 0, 0, 0, 0, 0};
-      aon::odometry::gyro_data = {0, 0, 0, 0, 0};
-      aon::odometry::deltaTheta = 0.0;
-      aon::odometry::deltaDlocal.SetPosition(0.0, 0.0);
-      aon::odometry::changeWeb.SetPosition(0.0, 0.0);
+      aon::odometry.resetCurrent(0,0,0);
 
       // Reset position and heading to initial values
-      aon::odometry::SetPosition(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y);
-      aon::odometry::SetDegrees(INITIAL_ODOMETRY_THETA);
+      aon::odometry.SetPosition(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y);
+      aon::odometry.setDegrees(INITIAL_ODOMETRY_THETA);
 
-      aon::odometry::gyroscope.tare();
+      aon::odometry.gyroscope.tare();
 
       DisplayDataMenu(gui);
       lastTouchMs = now;
