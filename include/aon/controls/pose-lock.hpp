@@ -7,6 +7,7 @@
 #include "../tank-drive/tank-drive.hpp"
 #include "../x-drive/x-drive.hpp"
 #include "../odometry/odometry.hpp"
+#include "../tools/vector.hpp"
 
 namespace aon {
 
@@ -21,12 +22,6 @@ namespace aon {
 
 // ============================= Enums ========================================
 
-/// @brief The type of drivetrain the PoseLock will control
-enum class DriveType {
-  TANK,       ///< Differential (tank) drive — 2 DOF: forward + turn
-  HOLONOMIC   ///< Holonomic (X-drive) — 3 DOF: forward + strafe + turn
-};
-
 /// @brief The internal state of the PoseLock state machine
 enum class PoseLockState {
   IDLE,       ///< Not active, waiting for setTarget()
@@ -40,6 +35,7 @@ enum class PoseLockState {
 ///          in three sequential phases: face the target, drive to it, then
 ///          correct the final heading.
 enum class TankStage {
+  IDLE,             ///< Not actively settling
   ALIGN_HEADING,    ///< Turn to face the target position
   DRIVE_TO_TARGET,  ///< Drive toward the target while maintaining heading
   FINAL_HEADING,    ///< Correct to the desired final heading
@@ -122,7 +118,6 @@ struct PoseLockConfig {
 class PoseLock {
  private:
   // === Configuration ===
-  DriveType driveType;
   PoseLockState state;
   PoseLockConfig config;
 
@@ -134,17 +129,14 @@ class PoseLock {
   // === Target ===
   Pose targetPose;
 
-  // === Drive References (one is active based on DriveType) ===
+  // === Drive References (one is active) ===
   TankDrive* tankDrive = nullptr;
   XDrive* holonomicDrive = nullptr;
-
-  // === Odometry Reference (obtained from the active drive) ===
-  Odometry* odometry = nullptr;
 
   // === State Tracking ===
   int settledCounter = 0;
   uint32_t startTime = 0;
-  TankStage tankStage = TankStage::ALIGN_HEADING;
+  TankStage tankStage = TankStage::IDLE;
 
   // === Internal Helpers ===
 
@@ -162,7 +154,9 @@ class PoseLock {
   /// @brief Normalize an angle to the range [-PI, PI]
   /// @param angle Input angle in radians
   /// @return Equivalent angle in [-PI, PI]
-  static double normalizeAngle(double angle);
+  static inline double normalizeAngle(double angle) {
+    return aon::Angle::normalize(angle);
+  }
 
   /// @brief Compute and apply motor commands for tank drive (sequential FSM)
   void updateTank();
@@ -205,8 +199,8 @@ class PoseLock {
   void setTarget(const Pose& target);
 
   /// @brief Update the PoseLock — call once per control loop iteration
-  /// @details Reads odometry, computes PID outputs, applies motor commands,
-  ///          and advances the state machine. Also calls `odometry::Update()`.
+  /// @details Computes PID outputs, applies motor commands,
+  ///          and advances the state machine.
   void update();
 
   /// @brief Check if the PoseLock has finished settling
@@ -225,8 +219,8 @@ class PoseLock {
   /// @brief Get the current tank settling stage (only meaningful for tank drive)
   TankStage getTankStage() const;
 
-  /// @brief Get the active drive type
-  DriveType getDriveType() const;
+  /// @brief Returns true if this PoseLock controls a holonomic drive
+  bool isHolonomic() const;
 };
 
 }  // namespace aon

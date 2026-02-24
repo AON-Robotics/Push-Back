@@ -12,29 +12,25 @@ namespace aon {
 
 PoseLock::PoseLock(TankDrive& drive, PID linearPid, PID headingPid,
                    PoseLockConfig config)
-    : driveType(DriveType::TANK),
-      state(PoseLockState::IDLE),
+    : state(PoseLockState::IDLE),
       config(config),
       linearPid(linearPid),
       strafePid(0, 0, 0),  // unused for tank drive
       headingPid(headingPid),
       targetPose(),
       tankDrive(&drive),
-      holonomicDrive(nullptr),
-      odometry(&drive.odom) {}
+      holonomicDrive(nullptr) {}
 
 PoseLock::PoseLock(XDrive& drive, PID linearPid, PID strafePid,
                    PID headingPid, PoseLockConfig config)
-    : driveType(DriveType::HOLONOMIC),
-      state(PoseLockState::IDLE),
+    : state(PoseLockState::IDLE),
       config(config),
       linearPid(linearPid),
       strafePid(strafePid),
       headingPid(headingPid),
       targetPose(),
       tankDrive(nullptr),
-      holonomicDrive(&drive),
-      odometry(&drive.odom) {}
+      holonomicDrive(&drive) {}
 
 // ============================================================================
 //    ___       _    _ _        __  __     _   _            _
@@ -67,17 +63,11 @@ void PoseLock::update() {
     return;
   }
 
-  // Refresh odometry before computing errors
-  odometry->update();
-
   // Dispatch to drive-specific update logic
-  switch (driveType) {
-    case DriveType::TANK:
-      updateTank();
-      break;
-    case DriveType::HOLONOMIC:
-      updateHolonomic();
-      break;
+  if (holonomicDrive != nullptr) {
+    updateHolonomic();
+  } else {
+    updateTank();
   }
 }
 
@@ -89,7 +79,7 @@ void PoseLock::reset() {
   stopMotors();
   state = PoseLockState::IDLE;
   settledCounter = 0;
-  tankStage = TankStage::ALIGN_HEADING;
+  tankStage = TankStage::IDLE;
   linearPid.Reset();
   strafePid.Reset();
   headingPid.Reset();
@@ -99,7 +89,7 @@ PoseLockState PoseLock::getState() const { return state; }
 
 TankStage PoseLock::getTankStage() const { return tankStage; }
 
-DriveType PoseLock::getDriveType() const { return driveType; }
+bool PoseLock::isHolonomic() const { return holonomicDrive != nullptr; }
 
 // ============================================================================
 //    ___     _                  _   _  _     _
@@ -129,24 +119,19 @@ double PoseLock::clampOutput(double output) const {
   return output;
 }
 
-double PoseLock::normalizeAngle(double angle) {
-  while (angle > M_PI) angle -= 2.0 * M_PI;
-  while (angle < -M_PI) angle += 2.0 * M_PI;
-  return angle;
-}
 
 void PoseLock::stopMotors() {
-  if (driveType == DriveType::TANK && tankDrive != nullptr) {
+  if (tankDrive != nullptr) {
     tankDrive->stop();
-  } else if (driveType == DriveType::HOLONOMIC && holonomicDrive != nullptr) {
+  } else if (holonomicDrive != nullptr) {
     holonomicDrive->stop();
   }
 }
 
 bool PoseLock::checkTolerance() const {
-  const double currentX = odometry->getX();
-  const double currentY = odometry->getY();
-  const double currentTheta = odometry->getRadians();
+  const double currentX = tankDrive != nullptr ? tankDrive->getX() : holonomicDrive->getX();
+  const double currentY = tankDrive != nullptr ? tankDrive->getY() : holonomicDrive->getY();
+  const double currentTheta = tankDrive != nullptr ? tankDrive->getTheta() : holonomicDrive->getTheta();
 
   const double dx = targetPose.x - currentX;
   const double dy = targetPose.y - currentY;
@@ -168,10 +153,10 @@ bool PoseLock::checkTolerance() const {
 // ============================================================================
 
 void PoseLock::updateTank() {
-  // --- Read current pose from odometry ---
-  const double currentX = odometry->getX();
-  const double currentY = odometry->getY();
-  const double currentTheta = odometry->getRadians();
+  // --- Read current pose from drivetrain ---
+  const double currentX = tankDrive->getX();
+  const double currentY = tankDrive->getY();
+  const double currentTheta = tankDrive->getTheta();
 
   // --- Compute field-frame errors ---
   const double dx = targetPose.x - currentX;
@@ -183,6 +168,9 @@ void PoseLock::updateTank() {
   const double angleToTarget = std::atan2(dy, dx);
 
   switch (tankStage) {
+    case TankStage::IDLE:
+      break;
+
     // -----------------------------------------------------------------------
     //  Stage 1: Turn to face the target position
     // -----------------------------------------------------------------------

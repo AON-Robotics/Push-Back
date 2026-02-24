@@ -297,6 +297,15 @@ int main(){
   operator float() { return static_cast<float>(GetDegrees()); }
   //> Double conversion operator for Angle object. Returns degrees.
   operator double() { return GetDegrees(); }
+
+  /// @brief Normalize an angle in radians to the range [-PI, PI]
+  /// @param radians Input angle in radians
+  /// @return Equivalent angle in [-PI, PI]
+  static double normalize(double radians) {
+    while (radians <= -M_PI) radians += 2.0 * M_PI;
+    while (radians > M_PI) radians -= 2.0 * M_PI;
+    return radians;
+  }
 };
 
 /**
