@@ -1,9 +1,6 @@
 #include "../../../../../include/aon/tools/gui/gui-v2-debug.hpp"
-#include "../../../../../src/aon/odometry.cpp"
 
 namespace aon {
-
-aon::Odometry odometry;
 
 // Forward declaration for Variables menu navigation
 void DisplayVariablesMenu(GuiDebug* gui);
@@ -11,8 +8,6 @@ void DisplayVariablesMenu(GuiDebug* gui);
 // Pagination state for data menu
 static int dataPage = 0;
 static constexpr int DATA_PER_PAGE = 6;
-// Ensure odometry is initialized once when Data menu is first shown
-static bool odomInitializedFromDataMenu = false;
 
 void DisplayDataMenu(GuiDebug* gui) {
   pros::screen::set_eraser(COLOR_BLACK);
@@ -44,13 +39,6 @@ void DisplayDataMenu(GuiDebug* gui) {
   pros::screen::erase_rect(resetX1, resetY1, resetX2, resetY2);
   pros::screen::set_pen(COLOR_WHITE);
   pros::screen::print(pros::E_TEXT_MEDIUM, resetX1 + 6, resetY1 + 6, "RESET");
-
-  // Seed data entries if needed
-  // Ensure odometry is initialized before registering / reading values
-  if (!odomInitializedFromDataMenu) {
-    aon::odometry.initialize();
-    odomInitializedFromDataMenu = true;
-  }
 
   if (gui->dataEntries.empty() && gui->dataRegister) gui->dataRegister();
 
@@ -169,18 +157,18 @@ void HandleDataMenuTouch(GuiDebug* gui) {
     const int resetX2 = resetX1 + 80, resetY2 = resetY1 + 28;
     if (x >= resetX1 && x <= resetX2 && y >= resetY1 && y <= resetY2) {
       // Reset encoder positions
-      aon::odometry.SetPosition(0, 0);
-      aon::odometry.encoderLeft.set_position(0);
-      aon::odometry.encoderBack.set_position(0);
+      gui->odometry.SetPosition(0, 0);
+      gui->odometry.encoderLeft.set_position(0);
+      gui->odometry.encoderBack.set_position(0);
 
       // Reset encoder struct data to prevent position jumps
-      aon::odometry.resetCurrent(0,0,0);
+      gui->odometry.resetCurrent(0,0,0);
 
       // Reset position and heading to initial values
-      aon::odometry.SetPosition(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y);
-      aon::odometry.setDegrees(INITIAL_ODOMETRY_THETA);
+      gui->odometry.SetPosition(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y);
+      gui->odometry.setDegrees(INITIAL_ODOMETRY_THETA);
 
-      aon::odometry.gyroscope.tare();
+      gui->odometry.gyroscope.tare();
 
       DisplayDataMenu(gui);
       lastTouchMs = now;

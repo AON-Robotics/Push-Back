@@ -10,7 +10,6 @@
 #include "../../../api.h"
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
-#include "../../odometry/odometry.hpp"
 
 namespace aon {
   class Gui;

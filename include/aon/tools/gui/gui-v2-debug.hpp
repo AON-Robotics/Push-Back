@@ -2,6 +2,7 @@
 #ifndef AON_TOOLS_GUI_V2_DEBUG_HPP_
 #define AON_TOOLS_GUI_V2_DEBUG_HPP_
 #include "gui-v2.hpp"
+#include "../../odometry/odometry.hpp"
 
 
 namespace aon {
@@ -9,6 +10,8 @@ namespace aon {
 // Debug-specific GUI class - extends Gui with debug functionality
 class GuiDebug : public Gui {
 public:
+  Odometry odometry; // Odometry instance for data display and resetting
+
   // Debug-specific state
   // NOTE: autonRunning, autonCompleted, and selectedAutonInvoker are inherited
   // from the base Gui class - do NOT redeclare them here!
