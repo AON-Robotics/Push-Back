@@ -117,7 +117,7 @@ void HandleDataMenuTouch(GuiDebug* gui) {
   if (touch.touch_status <= 0) return;
 
   uint32_t now = pros::millis();
-  if (now - lastTouchMs < 300) return; // Debounce touch input
+  if (now - lastTouchMs < 300) return;
 
   int x = touch.x;
   int y = touch.y;
@@ -151,7 +151,7 @@ void HandleDataMenuTouch(GuiDebug* gui) {
     }
   }
 
-  // RESET button - resets odometry sensors and gyro
+  // RESET button - resets set variable to indicated value (if user has registered a handler for this)
   {
     const int resetX1 = BRAIN_SCREEN_WIDTH - 90, resetY1 = 10;
     const int resetX2 = resetX1 + 80, resetY2 = resetY1 + 28;

@@ -1,9 +1,4 @@
 #include "../../../include/aon/tools/gui/gui-v2-debug.hpp"
-
-// Define the GUI-owned operator control flag here so the operator-control
-// header doesn't need to define a GUI symbol. This keeps GUI-related linkage
-// in the GUI module and avoids multiple-definition issues.
-
 namespace aon {
 
 // Forward declarations for debug subsystem functions
@@ -354,12 +349,8 @@ void GuiDebug::DisplayMainMenu() {
   // Ensure the screen is cleared at the start of each display function
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
-  #if TESTING_AUTONOMOUS
-    // aon::drawDebugBackground();
-  #else
-    // Draw the AON logo higher at the top center
-    aon::DrawAONLogo((BRAIN_SCREEN_WIDTH - 225) / 2, (BRAIN_SCREEN_HEIGHT - 225) / 4);
-  #endif
+
+  aon::DrawAONLogo((BRAIN_SCREEN_WIDTH - 225) / 2, (BRAIN_SCREEN_HEIGHT - 225) / 4);
 
   // Display the current selected autonomous routine at the top center
   pros::screen::set_pen(COLOR_WHITE); // Default color for "NO AUTON"

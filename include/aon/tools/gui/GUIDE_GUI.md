@@ -493,6 +493,37 @@ The Data screen (Debug Menu → "Data") shows live numeric values registered by 
   - calling `aon::odometry::SetPosition(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y)` and `aon::odometry::SetDegrees(INITIAL_ODOMETRY_THETA)`.
   - If `GYRO_ENABLED` is defined, the gyroscope is tared as part of the reset.
 
+### Using the RESET Button
+
+The Data screen's `RESET` button invokes a user-registered reset handler (if one exists). The GUI provides a small API to register one or more named reset handlers; the active handler is invoked when the button is pressed.
+
+How it works (implementation notes):
+- The GUI calls `gui->InvokeResetHandler()` when the RESET button is tapped (see `src/aon/tools/gui/gui-debug/data.cpp`).
+- On `GuiDebug`, call `RegisterResetHandler(name, callback)` to register a handler. The last-registered handler with the provided name becomes the active handler.
+- On the base `Gui` (competition mode) these calls are no-ops, so register safely in all builds.
+
+Quick tutorial — register a reset handler (example you can put in `initialize()` or your `data.cpp` registration file):
+
+```cpp
+// Example: register a reset handler that reinitializes odometry
+// Put this in your initialization code (e.g. main.cpp or data.cpp)
+aon::gui.RegisterResetHandler("ResetOdom", []{
+  // Reset odometry to origin (example API; adapt to your odometry API)
+  drivetrain.odom.resetCurrent(0.0, 0.0, 0.0);
+  // Optionally tare encoders or gyro here as well:
+  // LEFT_MOTORS->tare_position(); RIGHT_MOTORS->tare_position();
+});
+
+// If you register multiple handlers, calling RegisterResetHandler again
+// with a different name will make that new handler the active one.
+```
+
+Notes and tips:
+- Call `RegisterResetHandler(...)` before `aon::InitializeGui()` if you want the handler to be available immediately when the Data screen is opened.
+- You can register handlers from any translation unit (main, a dedicated `data.cpp`, etc.). The GUI will invoke the active handler regardless of where it was registered.
+- If you need multiple reset options, register them under different names; the GUI's debug UI currently uses the most recently-registered name as the active handler.
+- For safety: ensure your reset handler runs quickly and avoids blocking the GUI thread (do minimal work or post to a background task if needed).
+
 ### Example: register data entries
 ```cpp
 aon::gui.SetDataRegister([]{

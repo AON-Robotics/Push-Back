@@ -3,14 +3,7 @@
 #include <cmath>
 #include <string>
 
-// Drivetrain is a global defined in globals.hpp (not in aon namespace)
-extern aon::TankDrive drivetrain;
-
 namespace aon {
-
-// Forward declarations for functions defined in globals.hpp
-void Configure(const bool opcontrol);
-void STOP();
 
 // This invokes whatever test function is currently selected in the GUI
 int InvokeSelectedTestFunction() {
@@ -152,7 +145,7 @@ void DisplayAutonRunner(GuiDebug* gui) {
   pros::screen::set_pen(COLOR_BLACK);
   pros::screen::print(pros::E_TEXT_MEDIUM, vcX1 + 18, vcY1 + 8, "VARS");
 
-  // Bottom RUN/STOP button - centered
+  // Bottom RUN/MOV button - centered
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 70;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 20;
   const int btnWidth = 125;
@@ -165,7 +158,7 @@ void DisplayAutonRunner(GuiDebug* gui) {
 
   // Button color based on state
   if (gui->autonRunning) {
-    pros::screen::set_eraser(COLOR_RED);  // Red STOP button when running
+    pros::screen::set_eraser(COLOR_RED);  // Red MOV button when running
   } else if (hasAuton) {
     pros::screen::set_eraser(COLOR_GREEN);  // Green RUN button when ready
   } else {
@@ -173,9 +166,9 @@ void DisplayAutonRunner(GuiDebug* gui) {
   }
   pros::screen::erase_rect(runX1, btnY1, runX2, btnY2);
 
-  // RUN/STOP text
+  // RUN/MOV text
   pros::screen::set_pen(COLOR_WHITE);
-  const char* runBtnText = gui->autonRunning ? "STOP" : "RUN";
+  const char* runBtnText = gui->autonRunning ? "MOV" : "RUN";
   const int runTextX = runX1 + (btnWidth / 2) - (gui->autonRunning ? 25 : 29);
   pros::screen::print(pros::E_TEXT_LARGE, runTextX, btnY1 + 13, runBtnText);
 }
@@ -283,7 +276,7 @@ void HandleAutonRunnerTouch(GuiDebug* gui) {
     }
   }
 
-  // Bottom RUN/STOP button coordinates (must match display)
+  // Bottom RUN/MOV button coordinates (must match display)
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 70;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 20;
   const int btnWidth = 150;
@@ -295,30 +288,11 @@ void HandleAutonRunnerTouch(GuiDebug* gui) {
     return;  // Not in button row
   }
 
-  // Check RUN/STOP button
+  // Check RUN/MOV button
   if (x < runX1 || x > runX2) {
     return;  // Not on RUN button
   }
 
-  // Button was pressed - handle based on current state
-  if (gui->autonRunning) {
-
-    gui->autonRunning = false;
-    gui->autonCompleted = false;
-    
-    // Clear the AutonomousReader registration by adding an empty function
-    // This prevents ExecuteFunction("autonomous") from running anything
-    AutonomousReader->AddFunction("autonomous", []() -> int { return 0; });
-    
-    // Reconfigure motors for opcontrol and stop all movement
-    aon::Configure(true);
-    aon::STOP();
-    
-    // Refresh the display
-    DisplayAutonRunner(gui);
-    pros::delay(300);
-    return;
-  }
 
   // RUN button pressed - register the auton for execution
   // Check if an auton is selected
@@ -333,7 +307,7 @@ void HandleAutonRunnerTouch(GuiDebug* gui) {
   gui->autonRunning = true;
   
   // Register the selected test function to AutonomousReader
-  // The opcontrol loop will call ExecuteFunction("autonomous") to run it
+  // The loop will call ExecuteFunction("autonomous") to run it
   AutonomousReader->AddFunction("autonomous", &InvokeSelectedTestFunction);
   
   // Update display to show running state

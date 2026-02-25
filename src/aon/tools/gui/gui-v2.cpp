@@ -6,8 +6,6 @@
 
 namespace aon {
 
-// Button layout constants are provided by Gui-V2-Layout.hpp / Gui-V2-Layout.cpp
-
 // Select concrete GUI implementation based on TESTING_AUTONOMOUS flag.
 // TESTING_AUTONOMOUS = true  -> GuiDebug (full debug features)
 // TESTING_AUTONOMOUS = false -> Gui (competition mode, no debug menu)
@@ -31,7 +29,7 @@ std::unique_ptr<FunctionReader<int>> AutonomousReader =
     pros::screen::set_eraser(COLOR_BLACK);
     pros::screen::erase();
 
-    // Typewriter-style primary message (shows debug text when built for testing)
+    // Typewriter-style primary message (shows debug text when enabled for testing)
   #if TESTING_AUTONOMOUS
     const char* msg = "Initializing Debug...";
   #else
@@ -331,9 +329,6 @@ void Gui::Initialize() {
   DisplayMainMenu();
 
   ApplyPreselectedAuton();
-
-  // Ensure gui has the default selected-invoker behavior available.
-  // The base `Gui` implementation uses `selectedAutonRoutine`.
 
   // Launch GUI loop task
   if (!guiLoopTask) {

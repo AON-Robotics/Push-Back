@@ -11,7 +11,6 @@ void Gui::DisplayMainMenu() {
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
 
-  // Draw the AON logo higher at the top center
   aon::DrawAONLogo((BRAIN_SCREEN_WIDTH - 225) / 2, (BRAIN_SCREEN_HEIGHT - 225) / 4);
 
   // Display the current selected autonomous routine at the top center

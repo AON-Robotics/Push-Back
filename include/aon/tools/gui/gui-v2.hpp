@@ -8,6 +8,7 @@
 #include <vector>
 #include <functional>
 #include "../../../api.h"
+#include "aon/constants.hpp"
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
 
@@ -21,9 +22,6 @@ namespace aon {
   int BlueRingsRoutine();
     
   // Add other auton routine declarations as needed
-
-
-// namespace aon {
 
 
 // Forward declaration of FunctionReader for autonomous routines
