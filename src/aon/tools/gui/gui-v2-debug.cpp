@@ -175,7 +175,7 @@ void GuiDebug::DisplayDebugMenu() {
 // ============================================================================
 
 void GuiDebug::HandleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) {
-  if (debugEnabled) {
+  if (TESTING_AUTONOMOUS) {
     // Debug mode: buttons split in half
     // Check if the "AUTONS" button is pressed (bottom-left corner)
     if (touchStatus.x < BRAIN_SCREEN_WIDTH / 2 && touchStatus.y > BRAIN_SCREEN_HEIGHT - 50) {
@@ -370,7 +370,7 @@ void GuiDebug::DisplayMainMenu() {
     pros::screen::print(pros::E_TEXT_LARGE_CENTER, 1, selectedAutonName.c_str());
   }
 
-  if (debugEnabled) {
+  if (TESTING_AUTONOMOUS) {
     // Debug mode: split button bar in half
     // Draw the "AUTONS" button in the bottom-left corner (half width)
     pros::screen::set_eraser(COLOR_GREEN);

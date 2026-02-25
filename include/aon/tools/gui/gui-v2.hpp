@@ -75,7 +75,6 @@ public:
   // Screen management
   GuiScreen CurrentScreen = MainMenu;
   GuiScreen PreviousScreen = MainMenu;
-  bool debugEnabled = false;
 
   // Persistent GUI loop task handle
   std::unique_ptr<pros::Task> guiLoopTask{nullptr};
@@ -99,8 +98,6 @@ public:
     {"Skills AUT3", aon::RedRingsRoutine},
   };
 
-  // Constructor
-  Gui() : debugEnabled(false) {}
 
   // Main initialization method
   virtual void Initialize();
@@ -131,6 +128,8 @@ public:
   virtual void SetGraphDataProviders(std::function<double()> /*getX*/, std::function<double()> /*getY*/) {}
   virtual void RegisterDataEntry(const std::string& /*name*/, std::function<double()> /*getter*/) {}
   virtual void SetDataRegister(const std::function<void()>& /*Register*/) {}
+  virtual void RegisterResetHandler(const std::string& /*name*/, const std::function<void()>& /*cb*/) {}
+  virtual void InvokeResetHandler() {}
 
   // Auton selection helper
   void SelectAutonByList(Alliance alliance, int index1Based);

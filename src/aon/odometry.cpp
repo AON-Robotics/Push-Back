@@ -5,12 +5,12 @@ namespace aon{
     Odometry::Odometry() 
     :
     conversionFactor(M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION),
-    encoderRight(5, true),
-    encoderLeft(4, false),
-    encoderBack(11, false),
+    encoderRight(1, true),
+    encoderLeft(7, false),
+    encoderBack(21, false),
     gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET)
     #if GYRO_ENABLED
-    , gyroscope(6)
+    , gyroscope(20)
     #endif
     {}
 

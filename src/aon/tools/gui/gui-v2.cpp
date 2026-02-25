@@ -91,6 +91,7 @@ std::unique_ptr<FunctionReader<int>> AutonomousReader =
     if (TESTING_AUTONOMOUS) {
       aon::drawDebugCleaner();
     } else {
+      return 0;
     }
 
     return 0;

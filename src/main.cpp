@@ -2,6 +2,17 @@
 
 
 void initialize() {
+ 
+ 
+aon::gui.SetDataRegister([]{  
+  aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
+  aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
+  aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+});
+aon::gui.RegisterResetHandler("ResetOdom", []{
+    drivetrain.odom.resetCurrent(0.0, 0.0, 0.0);
+  });
+
   aon::InitializeGui();
   aon::logging::Initialize();
   aon::Configure(false);
@@ -43,7 +54,7 @@ void opcontrol() {
     aon::safeBigBotRoutine();
     #else
     // aon::testSmallBotRoutine();
-    aon::testXDriveRoutine();
+    //aon::testXDriveRoutine();
     #endif
 
     pros::delay(5000);

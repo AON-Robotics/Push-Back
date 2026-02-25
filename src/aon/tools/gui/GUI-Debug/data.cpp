@@ -156,19 +156,8 @@ void HandleDataMenuTouch(GuiDebug* gui) {
     const int resetX1 = BRAIN_SCREEN_WIDTH - 90, resetY1 = 10;
     const int resetX2 = resetX1 + 80, resetY2 = resetY1 + 28;
     if (x >= resetX1 && x <= resetX2 && y >= resetY1 && y <= resetY2) {
-      // Reset encoder positions
-      gui->odometry.SetPosition(0, 0);
-      gui->odometry.encoderLeft.set_position(0);
-      gui->odometry.encoderBack.set_position(0);
-
-      // Reset encoder struct data to prevent position jumps
-      gui->odometry.resetCurrent(0,0,0);
-
-      // Reset position and heading to initial values
-      gui->odometry.SetPosition(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y);
-      gui->odometry.setDegrees(INITIAL_ODOMETRY_THETA);
-
-      gui->odometry.gyroscope.tare();
+      // Invoke the user-registered reset handler if available
+      gui->InvokeResetHandler();
 
       DisplayDataMenu(gui);
       lastTouchMs = now;

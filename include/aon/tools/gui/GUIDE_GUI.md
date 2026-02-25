@@ -82,9 +82,9 @@ aon::gui.SetVariableRegister([]{
 ### [Data Menu](#data-menu)
 ```cpp
 aon::gui.SetDataRegister([]{  
-  aon::gui.RegisterDataEntry("X", [](){ return aon::odometry::GetX(); });
-  aon::gui.RegisterDataEntry("Y", [](){ return aon::odometry::GetY(); });
-  aon::gui.RegisterDataEntry("Heading", [](){ return aon::odometry::GetDegrees(); });
+  aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
+  aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
+  aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
 });
 ```
 
@@ -201,15 +201,15 @@ void initialize() {
   
   // Register data entries (optional)
   aon::gui.SetDataRegister([]{  
-    aon::gui.RegisterDataEntry("X", [](){ return aon::odometry::GetX(); });
-    aon::gui.RegisterDataEntry("Y", [](){ return aon::odometry::GetY(); });
-    aon::gui.RegisterDataEntry("Heading", [](){ return aon::odometry::GetDegrees(); });
+    aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
+    aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
+    aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
   });
   
   // Set up live graph (optional)
   aon::gui.SetGraphDataProviders(
-    []() { return aon::odometry::GetX(); },
-    []() { return aon::odometry::GetY(); }
+    []() { return drivetrain.odom.getX(); },
+    []() { return drivetrain.odom.getY(); }
   );
   
   // NOW initialize the GUI (this eagerly seeds all registers above)
@@ -450,8 +450,8 @@ void initialize() {
   
   // Graph odometry (X/Y position)
   aon::gui.SetGraphDataProviders(
-    []() { return aon::odometry::GetX(); },
-    []() { return aon::odometry::GetY(); }
+    []() { return drivetrain.odom.getX(); },
+    []() { return drivetrain.odom.getY(); }
   );
 }
 ```
@@ -496,9 +496,9 @@ The Data screen (Debug Menu → "Data") shows live numeric values registered by 
 ### Example: register data entries
 ```cpp
 aon::gui.SetDataRegister([]{
-  aon::gui.RegisterDataEntry("X", [](){ return aon::odometry::GetX(); });
-  aon::gui.RegisterDataEntry("Y", [](){ return aon::odometry::GetY(); });
-  aon::gui.RegisterDataEntry("Heading", [](){ return aon::odometry::GetDegrees(); });
+  aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
+  aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
+  aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
 });
 ```
 
@@ -568,15 +568,15 @@ void initialize() {
   
   // Register data entries
   aon::gui.SetDataRegister([]{  
-    aon::gui.RegisterDataEntry("X", [](){ return aon::odometry::GetX(); });
-    aon::gui.RegisterDataEntry("Y", [](){ return aon::odometry::GetY(); });
-    aon::gui.RegisterDataEntry("Heading", [](){ return aon::odometry::GetDegrees(); });
+    aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
+    aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
+    aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
   });
   
   // Set up live graph (odometry)
   aon::gui.SetGraphDataProviders(
-    []() { return aon::odometry::GetX(); },
-    []() { return aon::odometry::GetY(); }
+    []() { return drivetrain.odom.getX(); },
+    []() { return drivetrain.odom.getY(); }
   );
 }
 
@@ -730,7 +730,7 @@ void opcontrol() {
      aon::gui.VariableChanger(aon::DRIVE_KP, "Drive kP");
    });
    aon::gui.SetDataRegister([]{
-     aon::gui.RegisterDataEntry("X", [](){ return aon::odometry::GetX(); });
+    aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
    });
    aon::InitializeGui();
    ```

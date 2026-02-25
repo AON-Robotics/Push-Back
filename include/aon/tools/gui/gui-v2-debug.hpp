@@ -3,6 +3,8 @@
 #define AON_TOOLS_GUI_V2_DEBUG_HPP_
 #include "gui-v2.hpp"
 #include "../../odometry/odometry.hpp"
+#include <map>
+#include <string>
 
 
 namespace aon {
@@ -55,8 +57,18 @@ public:
   std::function<double()> graphGetX = nullptr;
   std::function<double()> graphGetY = nullptr;
 
-  // Constructor - automatically enables debug mode
-  GuiDebug() { debugEnabled = true; }
+  // Named reset handler registry; user registers handlers and picks active one
+  std::map<std::string, std::function<void()>> resetHandlers;
+  std::string activeResetHandlerName;
+
+  // Register a named reset handler (overwrites existing with same name)
+  void RegisterResetHandler(const std::string& name, const std::function<void()>& cb) { resetHandlers[name] = cb; activeResetHandlerName = name; }
+
+  // Invoke the active reset handler (no-op if not set or not found)
+  void InvokeResetHandler() { auto it = resetHandlers.find(activeResetHandlerName); if (it != resetHandlers.end()) it->second(); }
+
+  // Constructor
+  GuiDebug() = default;
   virtual ~GuiDebug() = default;
 
   // Override Initialize to include debug setup
