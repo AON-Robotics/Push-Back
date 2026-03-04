@@ -41,10 +41,10 @@ void opcontrol() {
     aon::Configure(false); // Set drivetrain to hold for auton testing
 
     #if USING_BIG_ROBOT
-    //aon::safeBigBotRoutine();
+    aon::safeBigBotRoutine();
     #else
-    //aon::testSmallBotRoutine();
-    //aon::testXDriveRoutine();
+    // aon::testSmallBotRoutine();
+    aon::testXDriveRoutine();
     #endif
 
     pros::delay(5000);
