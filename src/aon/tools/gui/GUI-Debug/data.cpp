@@ -1,15 +1,12 @@
-#include "../../../../../include/aon/tools/gui/gui-v2-debug.hpp"
+#include "../../../../../include/aon/tools/gui/gui-debug.hpp"
 
 namespace aon {
-
-// Forward declaration for Variables menu navigation
-void DisplayVariablesMenu(GuiDebug* gui);
 
 // Pagination state for data menu
 static int dataPage = 0;
 static constexpr int DATA_PER_PAGE = 6;
 
-void DisplayDataMenu(GuiDebug* gui) {
+void GuiDebug::DisplayDataMenu() {
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
 
@@ -40,9 +37,9 @@ void DisplayDataMenu(GuiDebug* gui) {
   pros::screen::set_pen(COLOR_WHITE);
   pros::screen::print(pros::E_TEXT_MEDIUM, resetX1 + 6, resetY1 + 6, "RESET");
 
-  if (gui->dataEntries.empty() && gui->dataRegister) gui->dataRegister();
+  if (dataEntries.empty() && dataRegister) dataRegister();
 
-  if (gui->dataEntries.empty()) {
+  if (dataEntries.empty()) {
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_MEDIUM_CENTER, 3, "No Data Registered");
     return;
@@ -51,16 +48,16 @@ void DisplayDataMenu(GuiDebug* gui) {
   // Display total number of entries
   pros::screen::set_pen(COLOR_LIGHT_GRAY);
   char totalEntriesText[32];
-  snprintf(totalEntriesText, sizeof(totalEntriesText), "Total Entries: %d", (int)gui->dataEntries.size());
+  snprintf(totalEntriesText, sizeof(totalEntriesText), "Total Entries: %d", (int)dataEntries.size());
   pros::screen::print(pros::E_TEXT_SMALL, 10, 50, totalEntriesText);
 
   // Calculate pagination
-  int totalPages = ((int)gui->dataEntries.size() + DATA_PER_PAGE - 1) / DATA_PER_PAGE;
+  int totalPages = ((int)dataEntries.size() + DATA_PER_PAGE - 1) / DATA_PER_PAGE;
   if (dataPage >= totalPages) dataPage = totalPages - 1;
   if (dataPage < 0) dataPage = 0;
 
   int startIdx = dataPage * DATA_PER_PAGE;
-  int endIdx = std::min(startIdx + DATA_PER_PAGE, (int)gui->dataEntries.size());
+  int endIdx = std::min(startIdx + DATA_PER_PAGE, (int)dataEntries.size());
 
   // Page indicator
   if (totalPages > 1) {
@@ -73,7 +70,7 @@ void DisplayDataMenu(GuiDebug* gui) {
   // Display data entries
   int y = 70; // Adjusted to avoid overlap with total entries text
   for (int i = startIdx; i < endIdx; ++i) {
-    const auto& entry = gui->dataEntries[i];
+    const auto& entry = dataEntries[i];
     double value = entry.getter ? entry.getter() : 0.0;
 
     // Build display strings via snprintf (matches VariableAdjuster pattern)
@@ -111,7 +108,7 @@ void DisplayDataMenu(GuiDebug* gui) {
   }
 }
 
-void HandleDataMenuTouch(GuiDebug* gui) {
+void GuiDebug::HandleDataMenuTouch() {
   static uint32_t lastTouchMs = 0;
   const auto touch = pros::screen::touch_status();
   if (touch.touch_status <= 0) return;
@@ -126,8 +123,8 @@ void HandleDataMenuTouch(GuiDebug* gui) {
   {
     const int backX1 = 10, backY1 = 10, backX2 = 80, backY2 = 38;
     if (x >= backX1 && x <= backX2 && y >= backY1 && y <= backY2) {
-      gui->DisplayDebugMenu();
-      gui->CurrentScreen = DebugMenu;
+      DisplayDebugMenu();
+      CurrentScreen = DebugMenu;
       dataPage = 0;
       lastTouchMs = now + 300; // Add extra delay to prevent double-click
       pros::delay(300);
@@ -140,12 +137,12 @@ void HandleDataMenuTouch(GuiDebug* gui) {
     const int varsX1 = BRAIN_SCREEN_WIDTH - 180, varsY1 = 10;
     const int varsX2 = varsX1 + 70, varsY2 = varsY1 + 28;
     if (x >= varsX1 && x <= varsX2 && y >= varsY1 && y <= varsY2) {
-      if (gui->variableEntries.empty() && gui->variableRegister) {
-        gui->variableRegister();
+      if (variableEntries.empty() && variableRegister) {
+        variableRegister();
       }
-      gui->PreviousScreen = DATA;
-      DisplayVariablesMenu(gui);
-      gui->CurrentScreen = VARS;
+      PreviousScreen = DATA;
+      DisplayVariablesMenu();
+      CurrentScreen = VARS;
       lastTouchMs = now;
       return;
     }
@@ -157,17 +154,16 @@ void HandleDataMenuTouch(GuiDebug* gui) {
     const int resetX2 = resetX1 + 80, resetY2 = resetY1 + 28;
     if (x >= resetX1 && x <= resetX2 && y >= resetY1 && y <= resetY2) {
       // Invoke the user-registered reset handler if available
-      gui->InvokeResetHandler();
+      InvokeResetHandler();
 
-      DisplayDataMenu(gui);
+      DisplayDataMenu();
       lastTouchMs = now;
       return;
     }
   }
-
   // Pagination - PREV/NEXT
   {
-    int totalPages = ((int)gui->dataEntries.size() + DATA_PER_PAGE - 1) / DATA_PER_PAGE;
+    int totalPages = ((int)dataEntries.size() + DATA_PER_PAGE - 1) / DATA_PER_PAGE;
 
     // PREV button
     if (dataPage > 0) {
@@ -175,7 +171,7 @@ void HandleDataMenuTouch(GuiDebug* gui) {
       const int prevX2 = prevX1 + 80, prevY2 = prevY1 + 30;
       if (x >= prevX1 && x <= prevX2 && y >= prevY1 && y <= prevY2) {
         dataPage--;
-        DisplayDataMenu(gui);
+        DisplayDataMenu();
         lastTouchMs = now;
         return;
       }
@@ -187,7 +183,7 @@ void HandleDataMenuTouch(GuiDebug* gui) {
       const int nextX2 = nextX1 + 80, nextY2 = nextY1 + 30;
       if (x >= nextX1 && x <= nextX2 && y >= nextY1 && y <= nextY2) {
         dataPage++;
-        DisplayDataMenu(gui);
+        DisplayDataMenu();
         lastTouchMs = now;
         return;
       }

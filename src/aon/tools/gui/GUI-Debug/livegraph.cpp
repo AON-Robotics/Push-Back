@@ -1,9 +1,9 @@
-#include "../../../../../include/aon/tools/gui/gui-v2-debug.hpp"
+#include "../../../../../include/aon/tools/gui/gui-debug.hpp"
 #include <algorithm>
 
 namespace aon {
 
-void DisplayLiveGraph(GuiDebug* gui) {
+void GuiDebug::DisplayLiveGraph() {
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
 
@@ -39,24 +39,24 @@ void DisplayLiveGraph(GuiDebug* gui) {
   }
 
   // Draw data points
-  if (gui->graphBuffer[0].x != 0 || gui->graphBuffer[0].y != 0) {
+  if (graphBuffer[0].x != 0 || graphBuffer[0].y != 0) {
     pros::screen::set_pen(COLOR_GREEN);
     
     for (int i = 1; i < GuiDebug::GRAPH_BUFFER_SIZE; i++) {
       int prevIdx = (i - 1);
-      double prevX = gui->graphBuffer[prevIdx].x;
-      double prevY = gui->graphBuffer[prevIdx].y;
+      double prevX = graphBuffer[prevIdx].x;
+      double prevY = graphBuffer[prevIdx].y;
       
-      double currX = gui->graphBuffer[i].x;
-      double currY = gui->graphBuffer[i].y;
+      double currX = graphBuffer[i].x;
+      double currY = graphBuffer[i].y;
       
-      if (gui->graphMaxX - gui->graphMinX < 0.001 || gui->graphMaxY - gui->graphMinY < 0.001) continue;
+      if (graphMaxX - graphMinX < 0.001 || graphMaxY - graphMinY < 0.001) continue;
       
-      int screenPrevX = graphX1 + (int)((prevX - gui->graphMinX) / (gui->graphMaxX - gui->graphMinX) * graphW);
-      int screenPrevY = graphY2 - (int)((prevY - gui->graphMinY) / (gui->graphMaxY - gui->graphMinY) * graphH);
+      int screenPrevX = graphX1 + (int)((prevX - graphMinX) / (graphMaxX - graphMinX) * graphW);
+      int screenPrevY = graphY2 - (int)((prevY - graphMinY) / (graphMaxY - graphMinY) * graphH);
       
-      int screenCurrX = graphX1 + (int)((currX - gui->graphMinX) / (gui->graphMaxX - gui->graphMinX) * graphW);
-      int screenCurrY = graphY2 - (int)((currY - gui->graphMinY) / (gui->graphMaxY - gui->graphMinY) * graphH);
+      int screenCurrX = graphX1 + (int)((currX - graphMinX) / (graphMaxX - graphMinX) * graphW);
+      int screenCurrY = graphY2 - (int)((currY - graphMinY) / (graphMaxY - graphMinY) * graphH);
       
       screenPrevX = std::max(graphX1, std::min(graphX2, screenPrevX));
       screenPrevY = std::max(graphY1, std::min(graphY2, screenPrevY));
@@ -69,19 +69,19 @@ void DisplayLiveGraph(GuiDebug* gui) {
 
   // Display axis labels
   pros::screen::set_pen(COLOR_WHITE);
-  pros::screen::print(pros::E_TEXT_SMALL, graphX1 - 35, graphY1 - 5, "%.1f", gui->graphMaxY);
-  pros::screen::print(pros::E_TEXT_SMALL, graphX1 - 35, graphY2 - 5, "%.1f", gui->graphMinY);
-  pros::screen::print(pros::E_TEXT_SMALL, graphX1 - 5, graphY2 + 8, "%.1f", gui->graphMinX);
-  pros::screen::print(pros::E_TEXT_SMALL, graphX2 - 20, graphY2 + 8, "%.1f", gui->graphMaxX);
+  pros::screen::print(pros::E_TEXT_SMALL, graphX1 - 35, graphY1 - 5, "%.1f", graphMaxY);
+  pros::screen::print(pros::E_TEXT_SMALL, graphX1 - 35, graphY2 - 5, "%.1f", graphMinY);
+  pros::screen::print(pros::E_TEXT_SMALL, graphX1 - 5, graphY2 + 8, "%.1f", graphMinX);
+  pros::screen::print(pros::E_TEXT_SMALL, graphX2 - 20, graphY2 + 8, "%.1f", graphMaxX);
 
   // Display current values
   pros::screen::print(pros::E_TEXT_SMALL, 40, BRAIN_SCREEN_HEIGHT - 40, "X: %.2f", 
-    gui->graphBuffer[gui->graphBufferIndex > 0 ? gui->graphBufferIndex - 1 : GuiDebug::GRAPH_BUFFER_SIZE - 1].x);
+    graphBuffer[graphBufferIndex > 0 ? graphBufferIndex - 1 : GuiDebug::GRAPH_BUFFER_SIZE - 1].x);
   pros::screen::print(pros::E_TEXT_SMALL, BRAIN_SCREEN_WIDTH / 2 + 20, BRAIN_SCREEN_HEIGHT - 40, "Y: %.2f", 
-    gui->graphBuffer[gui->graphBufferIndex > 0 ? gui->graphBufferIndex - 1 : GuiDebug::GRAPH_BUFFER_SIZE - 1].y);
+    graphBuffer[graphBufferIndex > 0 ? graphBufferIndex - 1 : GuiDebug::GRAPH_BUFFER_SIZE - 1].y);
 }
 
-void HandleLiveGraphTouch(GuiDebug* gui) {
+void GuiDebug::HandleLiveGraphTouch() {
   pros::screen_touch_status_s_t touch = pros::screen::touch_status();
   if (touch.touch_status > 0) {
     int x = touch.x;
@@ -89,8 +89,8 @@ void HandleLiveGraphTouch(GuiDebug* gui) {
 
     // BACK button
     if (x >= 10 && x <= 90 && y >= 10 && y <= 40) {
-      gui->DisplayDebugMenu();
-      gui->CurrentScreen = DebugMenu;
+      DisplayDebugMenu();
+      CurrentScreen = DebugMenu;
       pros::delay(300);
       return;
     }

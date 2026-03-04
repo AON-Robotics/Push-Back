@@ -15,8 +15,8 @@
 
 #include "./tools/logging.hpp"
 #include "./tools/json.hpp"
-#include "./tools/gui/gui-v2.hpp"
-#include "./tools/gui/gui-v2-debug.hpp"
+#include "./tools/gui/gui.hpp"
+#include "./tools/gui/gui-debug.hpp"
 
 #include "./controls/trapezoid-profile/trapezoid.hpp"
 #include "./controls/exponential-profile.hpp"

@@ -1,8 +1,7 @@
-#include "../../../include/aon/tools/gui/gui-v2.hpp"
-#include "../../../include/aon/tools/gui/gui-v2-debug.hpp"
+#include "../../../include/aon/tools/gui/gui.hpp"
+#include "../../../include/aon/tools/gui/gui-debug.hpp"
 #include "../../../include/aon/constants.hpp"
-#include "../../../include/aon/tools/gui/ui/button.hpp"
-#include "../../../include/aon/tools/gui/ui/gui-v2-layout.hpp"
+#include "../../../include/aon/tools/gui/ui/gui-layout.hpp"
 
 namespace aon {
 
@@ -23,7 +22,7 @@ void Gui::DisplayMainMenu() {
   }
 
   // Draw the "AUTONS" button using UI helper
-  ui::drawButton(AutonsBtn, pros::E_TEXT_LARGE);
+  AutonsBtn.draw(pros::E_TEXT_LARGE);
 }
 
 void Gui::DisplayAutonMenu() {
@@ -42,10 +41,10 @@ void Gui::DisplayAutonMenu() {
   }
 
   // Draw navigation buttons using UI helpers
-  ui::drawButton(BackBtnGray);
-  ui::drawButton(BlueBtn, pros::E_TEXT_LARGE);
-  ui::drawButton(RedBtn, pros::E_TEXT_LARGE);
-  ui::drawButton(SkillsBtn, pros::E_TEXT_LARGE);
+  BackBtnGray.draw();
+  BlueBtn.draw(pros::E_TEXT_LARGE);
+  RedBtn.draw(pros::E_TEXT_LARGE);
+  SkillsBtn.draw(pros::E_TEXT_LARGE);
 }
 
 void Gui::DisplayRedAutonMenu() {
@@ -58,7 +57,7 @@ void Gui::DisplayRedAutonMenu() {
   pros::screen::erase();
 
   // Draw BACK button
-  ui::drawButton(BackBtnRed);
+  BackBtnRed.draw();
 
   // Display the current selected autonomous routine at the top center
   pros::screen::set_pen(COLOR_WHITE);
@@ -75,9 +74,9 @@ void Gui::DisplayRedAutonMenu() {
   ui::Button aut1 = Aut1Btn; aut1.bg = COLOR_LIGHT_PINK;
   ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_CRIMSON;
   ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_RED;
-  ui::drawButton(aut1, pros::E_TEXT_LARGE);
-  ui::drawButton(aut2, pros::E_TEXT_LARGE);
-  ui::drawButton(aut3, pros::E_TEXT_LARGE);
+  aut1.draw(pros::E_TEXT_LARGE);
+  aut2.draw(pros::E_TEXT_LARGE);
+  aut3.draw(pros::E_TEXT_LARGE);
 }
 
 void Gui::DisplayBlueAutonMenu() {
@@ -90,7 +89,7 @@ void Gui::DisplayBlueAutonMenu() {
   pros::screen::erase();
 
   // Draw BACK button
-  ui::drawButton(BackBtnBlue);
+  BackBtnBlue.draw();
 
   // Display the current selected autonomous routine at the top center
   pros::screen::set_pen(COLOR_WHITE);
@@ -107,9 +106,9 @@ void Gui::DisplayBlueAutonMenu() {
   ui::Button aut1 = Aut1Btn; aut1.bg = COLOR_SKY_BLUE;
   ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_STEEL_BLUE;
   ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_BLUE;
-  ui::drawButton(aut1, pros::E_TEXT_LARGE);
-  ui::drawButton(aut2, pros::E_TEXT_LARGE);
-  ui::drawButton(aut3, pros::E_TEXT_LARGE);
+  aut1.draw(pros::E_TEXT_LARGE);
+  aut2.draw(pros::E_TEXT_LARGE);
+  aut3.draw(pros::E_TEXT_LARGE);
 }
 
 void Gui::DisplaySkillsMenu() {
@@ -125,7 +124,7 @@ void Gui::DisplaySkillsMenu() {
   pros::delay(300);
 
   // Draw BACK button
-  ui::drawButton(BackBtnGreen);
+  BackBtnGreen.draw();
 
   // Display the current selected autonomous routine at the top center
   pros::screen::set_pen(COLOR_WHITE);
@@ -142,9 +141,9 @@ void Gui::DisplaySkillsMenu() {
   ui::Button aut1 = Aut1Btn; aut1.bg = COLOR_LIGHT_GREEN;
   ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_YELLOW_GREEN;
   ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_GREEN;
-  ui::drawButton(aut1, pros::E_TEXT_LARGE);
-  ui::drawButton(aut2, pros::E_TEXT_LARGE);
-  ui::drawButton(aut3, pros::E_TEXT_LARGE);
+  aut1.draw(pros::E_TEXT_LARGE);
+  aut2.draw(pros::E_TEXT_LARGE);
+  aut3.draw(pros::E_TEXT_LARGE);
 }
 
 }  // namespace aon

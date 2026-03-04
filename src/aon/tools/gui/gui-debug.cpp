@@ -1,21 +1,5 @@
-#include "../../../include/aon/tools/gui/gui-v2-debug.hpp"
+#include "../../../include/aon/tools/gui/gui-debug.hpp"
 namespace aon {
-
-// Forward declarations for debug subsystem functions
-void DisplayRegisteredAutonsMenu(GuiDebug* gui);
-void DisplayAutonRunner(GuiDebug* gui);
-
-void HandleRegisteredAutonsMenuTouch(GuiDebug* gui);
-void HandleAutonRunnerTouch(GuiDebug* gui);
-
-void DisplayVariablesMenu(GuiDebug* gui);
-void HandleVariablesMenuTouch(GuiDebug* gui);
-
-void DisplayDataMenu(GuiDebug* gui);
-void HandleDataMenuTouch(GuiDebug* gui);
-
-void DisplayLiveGraph(GuiDebug* gui);
-void HandleLiveGraphTouch(GuiDebug* gui);
 
 // ============================================================================
 // Debug Registration Methods
@@ -47,11 +31,14 @@ void GuiDebug::RegisterTestFunction(void (*func)(), const std::string& name) {
 }
 
 void GuiDebug::VariableChanger(double& variableRef, const std::string& name) {
-  // Prevent duplicate names
   for (const auto& e : variableEntries) {
     if (e.name == name) return;
   }
-  variableEntries.push_back({name, &variableRef});
+  variableEntries.push_back({
+    name,
+    [&variableRef]() -> double { return variableRef; },
+    [&variableRef](double delta) { variableRef += delta; }
+  });
 }
 
 void GuiDebug::SetVariableRegister(const std::function<void()>& Register) {
@@ -241,11 +228,11 @@ void GuiDebug::HandleDebugMenuTouch() {
       
       if (x >= btnX && x <= btnX + btnWidth && y >= btnY && y <= btnY + btnHeight) {
         switch (buttons[i].index) {
-          case 0: ::aon::DisplayRegisteredAutonsMenu(this); CurrentScreen = RegisteredFunctions; break;
-          case 1: ::aon::DisplayLiveGraph(this); CurrentScreen = LiveGraph; break;
-          case 2: ::aon::DisplayAutonRunner(this); CurrentScreen = AutonRunner; break;
-          case 3: PreviousScreen = DebugMenu; ::aon::DisplayVariablesMenu(this); CurrentScreen = VARS; break;
-          case 4: ::aon::DisplayDataMenu(this); CurrentScreen = DATA; break;
+          case 0: DisplayRegisteredAutonsMenu(); CurrentScreen = RegisteredFunctions; break;
+          case 1: DisplayLiveGraph(); CurrentScreen = LiveGraph; break;
+          case 2: DisplayAutonRunner(); CurrentScreen = AutonRunner; break;
+          case 3: PreviousScreen = DebugMenu; DisplayVariablesMenu(); CurrentScreen = VARS; break;
+          case 4: DisplayDataMenu(); CurrentScreen = DATA; break;
         }
         pros::delay(400);
         return;
@@ -287,19 +274,19 @@ void GuiDebug::RunGuiLoop() {
           HandleDebugMenuTouch();
           break;
         case RegisteredFunctions:
-          ::aon::HandleRegisteredAutonsMenuTouch(this);
+          HandleRegisteredAutonsMenuTouch();
           break;
         case AutonRunner:
-          ::aon::HandleAutonRunnerTouch(this);
+          HandleAutonRunnerTouch();
           break;
         case VARS:
-          ::aon::HandleVariablesMenuTouch(this);
+          HandleVariablesMenuTouch();
           break;
         case DATA:
-          ::aon::HandleDataMenuTouch(this);
+          HandleDataMenuTouch();
           break;
         case LiveGraph:
-          ::aon::HandleLiveGraphTouch(this);
+          HandleLiveGraphTouch();
           break;
         default:
           break;
@@ -321,7 +308,7 @@ void GuiDebug::RunGuiLoop() {
       lastAutonState = autonRunning;
       // Redraw AutonRunner when auton state changes
       if (CurrentScreen == AutonRunner) {
-        ::aon::DisplayAutonRunner(this);
+        DisplayAutonRunner();
       }
     }
     
@@ -329,9 +316,9 @@ void GuiDebug::RunGuiLoop() {
     static int refreshCounter = 0;
     if (++refreshCounter >= 10) {  // Every 300ms
       if (CurrentScreen == DATA) {
-        ::aon::DisplayDataMenu(this);
+        DisplayDataMenu();
       } else if (CurrentScreen == LiveGraph) {
-        ::aon::DisplayLiveGraph(this);
+        DisplayLiveGraph();
         if (graphGetX && graphGetY) {
           AddGraphPoint(graphGetX(), graphGetY());
         }

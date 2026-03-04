@@ -3,6 +3,7 @@
 
 void initialize() {
   aon::InitializeGui();
+  pros::Task guiLoopTask([]{aon::gui.RunLoop();});
   aon::logging::Initialize();
   aon::Configure(false);
   pros::Task odomTask([]{drivetrain.odom.initialize();});
@@ -40,9 +41,9 @@ void opcontrol() {
     aon::Configure(false); // Set drivetrain to hold for auton testing
 
     #if USING_BIG_ROBOT
-    aon::safeBigBotRoutine();
+    //aon::safeBigBotRoutine();
     #else
-    // aon::testSmallBotRoutine();
+    //aon::testSmallBotRoutine();
     //aon::testXDriveRoutine();
     #endif
 

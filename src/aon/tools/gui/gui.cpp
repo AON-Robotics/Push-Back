@@ -1,8 +1,7 @@
-#include "../../../include/aon/tools/gui/gui-v2.hpp"
-#include "../../../include/aon/tools/gui/gui-v2-debug.hpp"
+#include "../../../include/aon/tools/gui/gui.hpp"
+#include "../../../include/aon/tools/gui/gui-debug.hpp"
 #include "../../../include/aon/constants.hpp"
-#include "../../../include/aon/tools/gui/ui/button.hpp"
-#include "../../../include/aon/tools/gui/ui/gui-v2-layout.hpp"
+#include "../../../include/aon/tools/gui/ui/gui-layout.hpp"
 
 namespace aon {
 
@@ -329,13 +328,6 @@ void Gui::Initialize() {
   DisplayMainMenu();
 
   ApplyPreselectedAuton();
-
-  // Launch GUI loop task
-  if (!guiLoopTask) {
-    guiLoopTask = std::make_unique<pros::Task>([this] {
-      this->RunGuiLoop();
-    });
-  }
 }
 
 int Gui::InvokeSelectedAuton() {

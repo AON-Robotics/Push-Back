@@ -1,22 +1,18 @@
-#include "../../../../../include/aon/tools/gui/gui-v2-debug.hpp"
+#include "../../../../../include/aon/tools/gui/gui-debug.hpp"
 #include "../../../../../include/aon/tank-drive/tank-drive.hpp"
 #include <cmath>
 #include <string>
 
-namespace aon {
+// Plain function pointer adapter required by FunctionReader::AddFunction.
+static int InvokeSelectedAutonAdapter() { return aon::gui.InvokeSelectedAuton(); }
 
-// This invokes whatever test function is currently selected in the GUI
-int InvokeSelectedTestFunction() {
-  // Use the GUI's invoker abstraction so debug-only members aren't
-  // referenced directly here.
-  return aon::gui.InvokeSelectedAuton();
-}
+namespace aon {
 
 // ============================================================================
 // DISPLAY FUNCTIONS
 // ============================================================================
 
-void DisplayRegisteredAutonsMenu(GuiDebug* gui) {
+void GuiDebug::DisplayRegisteredAutonsMenu() {
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
 
@@ -45,11 +41,11 @@ void DisplayRegisteredAutonsMenu(GuiDebug* gui) {
   pros::screen::erase_rect(0, 42, BRAIN_SCREEN_WIDTH, 44);
 
   // Seed test functions if needed
-  if (gui->testFunctions.empty() && gui->testRegister) {
-    gui->testRegister();
+  if (testFunctions.empty() && testRegister) {
+    testRegister();
   }
 
-  if (gui->testFunctions.empty()) {
+  if (testFunctions.empty()) {
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_MEDIUM_CENTER, 3,
                         "No Test Functions Registered");
@@ -58,8 +54,8 @@ void DisplayRegisteredAutonsMenu(GuiDebug* gui) {
 
   // Display buttons for each registered test function
   int yOffset = 70;
-  for (size_t i = 0; i < gui->testFunctions.size(); ++i) {
-    const auto& [name, _] = gui->testFunctions[i];
+  for (size_t i = 0; i < testFunctions.size(); ++i) {
+    const auto& [name, _] = testFunctions[i];
 
     pros::screen::set_eraser(COLOR_LIGHT_GRAY);
     pros::screen::erase_rect(50, yOffset, BRAIN_SCREEN_WIDTH - 50,
@@ -72,7 +68,7 @@ void DisplayRegisteredAutonsMenu(GuiDebug* gui) {
 }
 
 
-void DisplayAutonRunner(GuiDebug* gui) {
+void GuiDebug::DisplayAutonRunner() {
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
   // aon::drawSafeCourners();
@@ -102,8 +98,8 @@ void DisplayAutonRunner(GuiDebug* gui) {
   pros::screen::erase_rect(0, 42, BRAIN_SCREEN_WIDTH, 44);
 
   // Selected auton panel - check both debug test functions AND normal autons
-  const bool hasDebugAuton = static_cast<bool>(gui->selectedAutonInvoker);
-  const bool hasNormalAuton = (gui->selectedAuton.routine != nullptr);
+  const bool hasDebugAuton = static_cast<bool>(selectedAutonInvoker);
+  const bool hasNormalAuton = (selectedAuton.routine != nullptr);
   const bool hasAuton = hasDebugAuton || hasNormalAuton;
   const int cardX1 = 16, cardY1 = 50, cardX2 = BRAIN_SCREEN_WIDTH - 160,
             cardY2 = 145;
@@ -122,18 +118,18 @@ void DisplayAutonRunner(GuiDebug* gui) {
                       "Selected:");
 
   // Show different states: running, completed, or selected/none
-  if (gui->autonRunning) {
+  if (autonRunning) {
     pros::screen::set_pen(COLOR_ORANGE);
     pros::screen::print(pros::E_TEXT_LARGE, cardX1 + 14, cardY1 + 48,
-                        gui->selectedAutonName.c_str());
-  } else if (gui->autonCompleted) {
+                        selectedAutonName.c_str());
+  } else if (autonCompleted) {
     pros::screen::set_pen(COLOR_CYAN);
     pros::screen::print(pros::E_TEXT_LARGE, cardX1 + 14, cardY1 + 48,
                         "COMPLETED");
   } else {
     pros::screen::set_pen(hasAuton ? COLOR_GREEN : COLOR_RED);
     const char* nameText =
-        hasAuton ? gui->selectedAutonName.c_str() : "NO AUTON";
+        hasAuton ? selectedAutonName.c_str() : "NO AUTON";
     pros::screen::print(pros::E_TEXT_LARGE, cardX1 + 14, cardY1 + 48, nameText);
   }
 
@@ -157,7 +153,7 @@ void DisplayAutonRunner(GuiDebug* gui) {
   pros::screen::erase_rect(runX1 - 2, btnY1 - 2, runX2 + 2, btnY2 + 2);
 
   // Button color based on state
-  if (gui->autonRunning) {
+  if (autonRunning) {
     pros::screen::set_eraser(COLOR_RED);  // Red MOV button when running
   } else if (hasAuton) {
     pros::screen::set_eraser(COLOR_GREEN);  // Green RUN button when ready
@@ -168,8 +164,8 @@ void DisplayAutonRunner(GuiDebug* gui) {
 
   // RUN/MOV text
   pros::screen::set_pen(COLOR_WHITE);
-  const char* runBtnText = gui->autonRunning ? "MOV" : "RUN";
-  const int runTextX = runX1 + (btnWidth / 2) - (gui->autonRunning ? 25 : 29);
+  const char* runBtnText = autonRunning ? "MOV" : "RUN";
+  const int runTextX = runX1 + (btnWidth / 2) - (autonRunning ? 25 : 29);
   pros::screen::print(pros::E_TEXT_LARGE, runTextX, btnY1 + 13, runBtnText);
 }
 
@@ -178,7 +174,7 @@ void DisplayAutonRunner(GuiDebug* gui) {
 // TOUCH HANDLERS
 // ============================================================================
 
-void HandleRegisteredAutonsMenuTouch(GuiDebug* gui) {
+void GuiDebug::HandleRegisteredAutonsMenuTouch() {
   pros::screen_touch_status_s_t touch = pros::screen::touch_status();
 
   if (touch.touch_status <= 0) return;
@@ -190,8 +186,8 @@ void HandleRegisteredAutonsMenuTouch(GuiDebug* gui) {
   {
     int backX1 = 10, backY1 = 6, backX2 = backX1 + 80, backY2 = backY1 + 28;
     if (x >= backX1 && x <= backX2 && y >= backY1 && y <= backY2) {
-      gui->DisplayDebugMenu();
-      gui->CurrentScreen = DebugMenu;
+      DisplayDebugMenu();
+      CurrentScreen = DebugMenu;
       pros::delay(300);
       return;
     }
@@ -201,28 +197,26 @@ void HandleRegisteredAutonsMenuTouch(GuiDebug* gui) {
   int nextY1 = 6, nextY2 = nextY1 + 28;
   int nextX1 = BRAIN_SCREEN_WIDTH - 120, nextX2 = BRAIN_SCREEN_WIDTH - 40;
   if (x >= nextX1 && x <= nextX2 && y >= nextY1 && y <= nextY2) {
-    DisplayAutonRunner(gui);
-    gui->CurrentScreen = AutonRunner;
+    DisplayAutonRunner();
+    CurrentScreen = AutonRunner;
     pros::delay(300);
     return;
   }
 
   // Check which test function button is pressed
   int yOffset = 70;
-  for (size_t i = 0; i < gui->testFunctions.size(); ++i) {
+  for (size_t i = 0; i < testFunctions.size(); ++i) {
     if (x >= 50 && x <= BRAIN_SCREEN_WIDTH - 50 && y >= yOffset &&
         y <= yOffset + 40) {
-      const auto& [name, fn] = gui->testFunctions[i];
-      gui->selectedAutonName = name;
-      gui->selectedAutonInvoker = fn;
-      gui->autonCompleted = false;  // Reset completed flag on new selection
+      const auto& [name, fn] = testFunctions[i];
+      selectedAutonName = name;
+      selectedAutonInvoker = fn;
+      autonCompleted = false;  // Reset completed flag on new selection
       
-      // Register the static wrapper to AutonomousReader so opcontrol
-      // can execute it via ExecuteFunction("autonomous")
-      AutonomousReader->AddFunction("autonomous", &InvokeSelectedTestFunction);
+      AutonomousReader->AddFunction("autonomous", InvokeSelectedAutonAdapter);
 
-      DisplayAutonRunner(gui);
-      gui->CurrentScreen = AutonRunner;
+      DisplayAutonRunner();
+      CurrentScreen = AutonRunner;
       pros::delay(300);
       return;
     }
@@ -230,7 +224,7 @@ void HandleRegisteredAutonsMenuTouch(GuiDebug* gui) {
   }
 }
 
-void HandleAutonRunnerTouch(GuiDebug* gui) {
+void GuiDebug::HandleAutonRunnerTouch() {
   const auto touchStatus = pros::screen::touch_status();
   if (touchStatus.touch_status <= 0) return;
 
@@ -242,8 +236,8 @@ void HandleAutonRunnerTouch(GuiDebug* gui) {
     const int backX1 = 10, backY1 = 6, backX2 = backX1 + 80,
               backY2 = backY1 + 28;
     if (x >= backX1 && x <= backX2 && y >= backY1 && y <= backY2) {
-      gui->DisplayDebugMenu();
-      gui->CurrentScreen = DebugMenu;
+      DisplayDebugMenu();
+      CurrentScreen = DebugMenu;
       pros::delay(300);
       return;
     }
@@ -254,8 +248,8 @@ void HandleAutonRunnerTouch(GuiDebug* gui) {
     const int menuY1 = 6, menuY2 = menuY1 + 28;
     const int menuX1 = BRAIN_SCREEN_WIDTH - 120, menuX2 = BRAIN_SCREEN_WIDTH - 40;
     if (x >= menuX1 && x <= menuX2 && y >= menuY1 && y <= menuY2) {
-      gui->DisplayMainMenu();
-      gui->CurrentScreen = MainMenu;
+      DisplayMainMenu();
+      CurrentScreen = MainMenu;
       pros::delay(300);
       return;
     }
@@ -266,11 +260,12 @@ void HandleAutonRunnerTouch(GuiDebug* gui) {
     const int vcY1 = 70, vcY2 = vcY1 + 40;
     const int vcX1 = BRAIN_SCREEN_WIDTH - 140, vcX2 = BRAIN_SCREEN_WIDTH - 40;
     if (x >= vcX1 && x <= vcX2 && y >= vcY1 && y <= vcY2) {
-      if (gui->variableEntries.empty() && gui->variableRegister) {
-        gui->variableRegister();
+      if (variableEntries.empty() && variableRegister) {
+        variableRegister();
       }
-      gui->PreviousScreen = AutonRunner;
-      gui->CurrentScreen = VARS;
+      PreviousScreen = AutonRunner;
+      DisplayVariablesMenu();
+      CurrentScreen = VARS;
       pros::delay(300);
       return;
     }
@@ -294,24 +289,21 @@ void HandleAutonRunnerTouch(GuiDebug* gui) {
   }
 
 
-  // RUN button pressed - register the auton for execution
-  // Check if an auton is selected
-  bool hasAuton = (gui->selectedAuton.routine != nullptr) ||
-                  static_cast<bool>(gui->selectedAutonInvoker);
-  if (!hasAuton) {
-    return;  // No auton selected, ignore
-  }
+  // RUN/MOV button
+  bool hasAuton = (selectedAuton.routine != nullptr) ||
+                  static_cast<bool>(selectedAutonInvoker);
+  if (!hasAuton) return;
 
-  // Reset flags and mark as ready to run
-  gui->autonCompleted = false;
-  gui->autonRunning = true;
-  
-  // Register the selected test function to AutonomousReader
-  // The loop will call ExecuteFunction("autonomous") to run it
-  AutonomousReader->AddFunction("autonomous", &InvokeSelectedTestFunction);
-  
-  // Update display to show running state
-  DisplayAutonRunner(gui);
+  AutonomousReader->AddFunction("autonomous", InvokeSelectedAutonAdapter);
+  autonRunning = true;
+  autonCompleted = false;
+  DisplayAutonRunner();  // show orange running state
+
+  AutonomousReader->ExecuteFunction("autonomous");
+
+  autonRunning = false;
+  autonCompleted = true;
+  DisplayAutonRunner();  // show cyan completed state
 
   pros::delay(300);
 }

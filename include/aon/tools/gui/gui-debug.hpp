@@ -1,9 +1,10 @@
 
-#ifndef AON_TOOLS_GUI_V2_DEBUG_HPP_
-#define AON_TOOLS_GUI_V2_DEBUG_HPP_
-#include "gui-v2.hpp"
+#ifndef AON_TOOLS_GUI_DEBUG_HPP_
+#define AON_TOOLS_GUI_DEBUG_HPP_
+#include "gui.hpp"
 #include <map>
 #include <string>
+#include <type_traits>
 
 
 namespace aon {
@@ -17,10 +18,11 @@ public:
   // Optional lazy register that user code can set to seed tests on demand
   std::function<void()> testRegister = nullptr;
 
-  // Variable changer registry: name + pointer to double to modify live
+  // Variable changer registry: type-erased so any T supporting + and - can be stored
   struct VariableEntry {
     std::string name;
-    double* ptr;
+    std::function<double()> get;         // read current value as double
+    std::function<void(double)> apply;   // add a delta to the variable
   };
   std::vector<VariableEntry> variableEntries;
   std::function<void()> variableRegister = nullptr;
@@ -54,7 +56,7 @@ public:
   std::string activeResetHandlerName;
 
   // Register a named reset handler (overwrites existing with same name)
-  void RegisterResetHandler(const std::string& name, const std::function<void()>& cb) { resetHandlers[name] = cb; activeResetHandlerName = name; }
+  void RegisterResetHandler(const std::string& name, const std::function<void()>& handler) { resetHandlers[name] = handler; activeResetHandlerName = name; }
 
   // Invoke the active reset handler (no-op if not set or not found)
   void InvokeResetHandler() { auto it = resetHandlers.find(activeResetHandlerName); if (it != resetHandlers.end()) it->second(); }
@@ -72,10 +74,10 @@ public:
   // Debug menu display methods (delegated to subsystems)
   void DisplayDebugMenu();
   void DisplayRegisteredAutonsMenu();
-  void DisplayDebugMenu2();
-  void DisplayDebugMenu3();
-  void DisplayDebugMenu4();
+  void DisplayAutonRunner();
   void DisplayLiveGraph();
+  void DisplayVariablesMenu();
+  void DisplayDataMenu();
 
   // Override main menu touch handler to handle DEBUG button
   virtual void HandleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) override;
@@ -83,14 +85,32 @@ public:
   // Debug touch handler methods (delegated to subsystems)
   void HandleDebugMenuTouch();
   void HandleRegisteredAutonsMenuTouch();
-  void HandleDebugMenu2Touch();
-  void HandleDebugMenu3Touch();
-  void HandleDebugMenu4Touch();
+  void HandleAutonRunnerTouch();
   void HandleLiveGraphTouch();
-  void DisplayVariablesMenu();
+  void HandleVariablesMenuTouch();
+  void HandleDataMenuTouch();
 
-  // API: register a variable to be editable in Debug Menu 3
-  void VariableChanger(double& variableRef, const std::string& name);
+  // API: register a variable to be editable in Debug Menu 3.
+  // T must support + and - (detected via std::void_t).
+  void VariableChanger(double& variableRef, const std::string& name) override;
+
+  template <
+    typename T,
+    typename = std::void_t<
+      decltype(std::declval<T>() + std::declval<T>()),
+      decltype(std::declval<T>() - std::declval<T>())
+    >
+  >
+  void VariableChanger(T& variableRef, const std::string& name) {
+    for (const auto& e : variableEntries) {
+      if (e.name == name) return;
+    }
+    variableEntries.push_back({
+      name,
+      [&variableRef]() -> double { return static_cast<double>(variableRef); },
+      [&variableRef](double delta) { variableRef += static_cast<T>(delta); }
+    });
+  }
 
   // Allow user code to provide a register
   void SetVariableRegister(const std::function<void()>& Register);
@@ -126,4 +146,4 @@ protected:
 
 }  // namespace aon
 
-#endif  // AON_TOOLS_GUI_V2_DEBUG_HPP_
+#endif  // AON_TOOLS_GUI_DEBUG_HPP_

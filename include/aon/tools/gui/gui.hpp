@@ -1,6 +1,6 @@
 #pragma once
-#ifndef AON_TOOLS_GUI_V2_HPP_
-#define AON_TOOLS_GUI_V2_HPP_
+#ifndef AON_TOOLS_GUI_HPP_
+#define AON_TOOLS_GUI_HPP_
 
 #include <iostream>
 #include <memory>
@@ -74,9 +74,6 @@ public:
   GuiScreen CurrentScreen = MainMenu;
   GuiScreen PreviousScreen = MainMenu;
 
-  // Persistent GUI loop task handle
-  std::unique_ptr<pros::Task> guiLoopTask{nullptr};
-
   // Auton routines for each alliance
   AutonOption RedAutonOptions[AutonOptionsCount] = {
     {"Red AUT1", aon::RedRingsRoutine},
@@ -97,8 +94,11 @@ public:
   };
 
 
-  // Main initialization method
+  // Main initialization method (does not start the GUI loop task)
   virtual void Initialize();
+
+  // Starts the GUI loop; call this once from main to spawn the task explicitly
+  void RunLoop() { RunGuiLoop(); }
 
   // Screen display methods
   virtual void DisplayMainMenu();
@@ -149,4 +149,4 @@ protected:
   void InitializeGui();
 }
 
-#endif  // AON_TOOLS_GUI_V2_HPP_
+#endif  // AON_TOOLS_GUI_HPP_
