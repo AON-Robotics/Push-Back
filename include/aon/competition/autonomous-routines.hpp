@@ -992,9 +992,7 @@ int SkillsBlackBotKevin(){
   drivetrain.goTo(-.9, -.9);
   driveIntoRing();
   drivetrain.move(-24);
-
-  -
-      // Grab ring in (0, --1.2)
+  // Grab ring in (0, --1.2)
   drivetrain.turnTo(0, -1.2);
   
   return 0;
