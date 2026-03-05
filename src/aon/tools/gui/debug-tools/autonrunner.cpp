@@ -4,7 +4,7 @@
 #include <string>
 
 // Plain function pointer adapter required by FunctionReader::AddFunction.
-static int InvokeSelectedAutonAdapter() { return aon::gui.InvokeSelectedAuton(); }
+int InvokeSelectedAutonAdapter() { return aon::gui.InvokeSelectedAuton(); }
 
 namespace aon {
 
