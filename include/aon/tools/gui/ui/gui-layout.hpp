@@ -3,6 +3,7 @@
 #define AON_TOOLS_GUI_LAYOUT_HPP_
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include "../../../../api.h"
 #include "aon/constants.hpp"
@@ -16,6 +17,7 @@ class Button {
   std::string label;
   std::uint32_t bg;
   std::uint32_t fg;
+  std::function<void()> onPress = nullptr;
 
   void draw(int textFmt = pros::E_TEXT_MEDIUM) const {
     pros::screen::set_eraser(bg);

@@ -2,8 +2,7 @@
 
 
 void initialize() {
-  aon::InitializeGui();
-  pros::Task guiLoopTask([]{aon::gui.RunLoop();});
+  pros::Task guiLoopTask([]{aon::InitializeGui(); aon::gui.RunLoop();});
   aon::logging::Initialize();
   aon::Configure(false);
   pros::Task odomTask([]{drivetrain.odom.initialize();});

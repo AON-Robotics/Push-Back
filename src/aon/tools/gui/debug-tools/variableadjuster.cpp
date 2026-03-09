@@ -1,8 +1,7 @@
 #include "../../../../../include/aon/tools/gui/gui-debug.hpp"
+#include "../../../../../include/aon/tools/gui/ui/gui-layout.hpp"
 
 namespace aon {
-
-struct Btn { int x1, y1, x2, y2; const char* text; double delta; };
 
 // Pagination state for variables menu
 static int variablesPage = 0;
@@ -81,27 +80,17 @@ void GuiDebug::DisplayVariablesMenu() {
     pros::screen::print(pros::E_TEXT_MEDIUM, 20, y, e.name.c_str());
     pros::screen::print(pros::E_TEXT_MEDIUM, BRAIN_SCREEN_WIDTH - 140, y, "%0.3f", e.get());
 
-    // Buttons: -10, -1, -0.1 | +0.1, +1, +10
-    Btn btns[6];
     int bx = 20, by = y + 20, bw = 70, bh = 30, gap = 10;
-    
-    // Left side (decrements)
-    btns[0] = {bx, by, bx + bw, by + bh, "-10", -10.0}; bx += bw + gap;
-    btns[1] = {bx, by, bx + bw, by + bh, "-1", -1.0}; bx += bw + gap;
-    btns[2] = {bx, by, bx + bw, by + bh, "-0.1", -0.1};
-    
-    // Right side (increments)
+    ui::Button btns[6];
+    btns[0] = {bx, by, bx+bw, by+bh, "-10",  COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-10.0); }}; bx += bw + gap;
+    btns[1] = {bx, by, bx+bw, by+bh, "-1",   COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-1.0); }};  bx += bw + gap;
+    btns[2] = {bx, by, bx+bw, by+bh, "-0.1", COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.1); }};
     bx = BRAIN_SCREEN_WIDTH - (bw * 3 + gap * 2) - 20;
-    btns[3] = {bx, by, bx + bw, by + bh, "+0.1", +0.1}; bx += bw + gap;
-    btns[4] = {bx, by, bx + bw, by + bh, "+1", +1.0}; bx += bw + gap;
-    btns[5] = {bx, by, bx + bw, by + bh, "+10", +10.0};
+    btns[3] = {bx, by, bx+bw, by+bh, "+0.1", COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.1); }};  bx += bw + gap;
+    btns[4] = {bx, by, bx+bw, by+bh, "+1",   COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+1.0); }};  bx += bw + gap;
+    btns[5] = {bx, by, bx+bw, by+bh, "+10",  COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+10.0); }};
 
-    for (int b = 0; b < 6; ++b) {
-      pros::screen::set_eraser(btns[b].delta < 0 ? COLOR_DARK_RED : COLOR_DARK_GREEN);
-      pros::screen::erase_rect(btns[b].x1, btns[b].y1, btns[b].x2, btns[b].y2);
-      pros::screen::set_pen(COLOR_WHITE);
-      pros::screen::print(pros::E_TEXT_MEDIUM, btns[b].x1 + 10, btns[b].y1 + 8, btns[b].text);
-    }
+    for (auto& btn : btns) btn.draw();
 
     y += 70;
   }
@@ -179,26 +168,21 @@ void GuiDebug::HandleVariablesMenuTouch() {
   int y = 50;
   for (int i = startIdx; i < endIdx; ++i) {
     auto& e = variableEntries[i];
-    Btn btns[6];
     int bx = 20, by = y + 20, bw = 70, bh = 30, gap = 10;
-    
-    btns[0] = {bx, by, bx + bw, by + bh, "-10", -10.0}; bx += bw + gap;
-    btns[1] = {bx, by, bx + bw, by + bh, "-1",  -1.0};  bx += bw + gap;
-    btns[2] = {bx, by, bx + bw, by + bh, "-0.1", -0.1};
-    
+    ui::Button btns[6];
+    btns[0] = {bx, by, bx+bw, by+bh, "-10",  COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-10.0); }}; bx += bw + gap;
+    btns[1] = {bx, by, bx+bw, by+bh, "-1",   COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-1.0); }};  bx += bw + gap;
+    btns[2] = {bx, by, bx+bw, by+bh, "-0.1", COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.1); }};
     bx = BRAIN_SCREEN_WIDTH - (bw * 3 + gap * 2) - 20;
-    btns[3] = {bx, by, bx + bw, by + bh, "+0.1", +0.1};  bx += bw + gap;
-    btns[4] = {bx, by, bx + bw, by + bh, "+1",   +1.0};  bx += bw + gap;
-    btns[5] = {bx, by, bx + bw, by + bh, "+10",  +10.0};
+    btns[3] = {bx, by, bx+bw, by+bh, "+0.1", COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.1); }};  bx += bw + gap;
+    btns[4] = {bx, by, bx+bw, by+bh, "+1",   COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+1.0); }};  bx += bw + gap;
+    btns[5] = {bx, by, bx+bw, by+bh, "+10",  COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+10.0); }};
 
-    for (int b = 0; b < 6; ++b) {
-      if (touch.x >= btns[b].x1 && touch.x <= btns[b].x2 && 
-          touch.y >= btns[b].y1 && touch.y <= btns[b].y2) {
-        if (e.apply) {
-          e.apply(btns[b].delta);
-          DisplayVariablesMenu();
-          lastTouchMs = now;
-        }
+    for (auto& btn : btns) {
+      if (btn.isHit(touch.x, touch.y)) {
+        if (btn.onPress) btn.onPress();
+        DisplayVariablesMenu();
+        lastTouchMs = now;
         return;
       }
     }
