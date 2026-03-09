@@ -13,6 +13,8 @@ static GuiDebug gui_impl;
 #else
 static Gui gui_impl;
 #endif
+
+// Global reference to the GUI instance
 Gui& gui = gui_impl;
 
 // Define the AutonomousReader unique_ptr
