@@ -4,8 +4,6 @@
 #include <cmath>
 #include "./pid/pid.hpp"
 #include "../drivetrain.hpp"
-#include "../tank-drive/tank-drive.hpp"
-#include "../x-drive/x-drive.hpp"
 #include "../odometry/odometry.hpp"
 #include "../tools/vector.hpp"
 
@@ -47,7 +45,7 @@ enum class TankStage {
 /// @brief Configuration for PoseLock tolerances and motor limits
 ///
 /// @details Tune these values per-robot to match physical characteristics.
-///          `minPower` is critical — set it to the minimum RPM that
+///          `minVelocity` is critical — set it to the minimum RPM that
 ///          reliably overcomes static friction on your drivetrain.
 struct PoseLockConfig {
   /// Position tolerance in \b inches — below this, position is "settled"
@@ -59,12 +57,12 @@ struct PoseLockConfig {
   /// Consecutive `update()` cycles within tolerance before declaring finished
   int settledCycles = 10;
 
-  /// Minimum motor power in \b RPM to overcome static friction
+  /// Minimum motor velocity in \b RPM to overcome static friction
   /// @note Set this to the lowest RPM that reliably moves your specific robot
-  double minPower = 15.0;
+  double minVelocity = 15.0;
 
-  /// Maximum motor power in \b RPM to clamp PID output
-  double maxPower = 200.0;
+  /// Maximum motor velocity in \b RPM to clamp PID output
+  double maxVelocity = 200.0;
 
   /// PID output below this threshold (in RPM) is treated as zero
   double deadband = 3.0;
@@ -96,8 +94,8 @@ struct PoseLockConfig {
 /// @code{.cpp}
 /// // === Tank Drive ===
 /// aon::PoseLock lock(drivetrain,
-///                    aon::PID(2.0, 0, 0.1),   // linear PID
-///                    aon::PID(1.5, 0, 0.05));  // heading PID
+///                    aon::PID(2.0, 0, 0.1),   // xPid
+///                    aon::PID(1.5, 0, 0.05));  // thetaPid
 /// lock.setTarget(aon::Pose(24.0, 48.0, M_PI / 2));
 /// while (!lock.isFinished()) {
 ///   lock.update();
@@ -106,9 +104,9 @@ struct PoseLockConfig {
 ///
 /// // === Holonomic (X-Drive) ===
 /// aon::PoseLock lock(xdrive,
-///                    aon::PID(2.0, 0, 0.1),   // forward PID
-///                    aon::PID(2.0, 0, 0.1),   // strafe PID
-///                    aon::PID(1.5, 0, 0.05)); // heading PID
+///                    aon::PID(2.0, 0, 0.1),   // xPid
+///                    aon::PID(2.0, 0, 0.1),   // yPid
+///                    aon::PID(1.5, 0, 0.05)); // thetaPid
 /// lock.setTarget(aon::Pose(24.0, 48.0, M_PI / 2));
 /// while (!lock.isFinished()) {
 ///   lock.update();
@@ -122,16 +120,15 @@ class PoseLock {
   PoseLockConfig config;
 
   // === PID Controllers ===
-  PID linearPid;    ///< Distance (tank) or forward-axis (holonomic)
-  PID strafePid;    ///< Strafe-axis (holonomic only, unused in tank)
-  PID headingPid;   ///< Angular correction
+  PID xPid;       ///< Distance (tank) or forward-axis (holonomic)
+  PID yPid;       ///< Strafe-axis (holonomic only, unused in tank)
+  PID thetaPid;   ///< Angular correction
 
   // === Target ===
   Pose targetPose;
 
-  // === Drive References (one is active) ===
-  TankDrive* tankDrive = nullptr;
-  XDrive* holonomicDrive = nullptr;
+  // === Drive Reference ===
+  Drivetrain* drive = nullptr;
 
   // === State Tracking ===
   int settledCounter = 0;
@@ -140,23 +137,16 @@ class PoseLock {
 
   // === Internal Helpers ===
 
-  /// @brief Apply minimum power threshold to overcome motor static friction
-  /// @param output Raw PID output in RPM
-  /// @return Adjusted output — zero if within deadband, bumped to minPower
+  /// @brief Apply minimum velocity threshold to overcome motor static friction
+  /// @param velocity Raw PID output in RPM
+  /// @return Adjusted velocity — zero if within deadband, bumped to minVelocity
   ///         if below the friction threshold, otherwise unchanged
-  double applyMinPower(double output) const;
+  double applyMinVelocity(double velocity) const;
 
-  /// @brief Clamp output magnitude to the configured max power
-  /// @param output Raw or adjusted PID output in RPM
-  /// @return Output clamped to [-maxPower, maxPower]
-  double clampOutput(double output) const;
-
-  /// @brief Normalize an angle to the range [-PI, PI]
-  /// @param angle Input angle in radians
-  /// @return Equivalent angle in [-PI, PI]
-  static inline double normalizeAngle(double angle) {
-    return aon::Angle::normalize(angle);
-  }
+  /// @brief Clamp velocity magnitude to the configured max velocity
+  /// @param velocity Raw or adjusted PID output in RPM
+  /// @return Velocity clamped to [-maxVelocity, maxVelocity]
+  double clampVelocity(double velocity) const;
 
   /// @brief Compute and apply motor commands for tank drive (sequential FSM)
   void updateTank();
@@ -174,21 +164,21 @@ class PoseLock {
  public:
   // === Constructors ===
 
-  /// @brief Construct a PoseLock for a **tank drive**
-  /// @param drive   Reference to the TankDrive instance
-  /// @param linearPid  PID controller for linear distance correction
-  /// @param headingPid PID controller for heading correction
-  /// @param config  Configuration for tolerances and motor limits
-  PoseLock(TankDrive& drive, PID linearPid, PID headingPid,
+  /// @brief Construct a PoseLock for a **tank drive** (non-holonomic)
+  /// @param drive      Reference to the non-holonomic Drivetrain instance
+  /// @param xPid      PID controller for linear distance correction
+  /// @param thetaPid  PID controller for heading correction
+  /// @param config    Configuration for tolerances and motor limits
+  PoseLock(Drivetrain& drive, PID xPid, PID thetaPid,
            PoseLockConfig config = {});
 
-  /// @brief Construct a PoseLock for a **holonomic (X-Drive)** drive
-  /// @param drive      Reference to the XDrive instance
-  /// @param linearPid  PID controller for the forward axis
-  /// @param strafePid  PID controller for the strafe axis
-  /// @param headingPid PID controller for heading correction
-  /// @param config     Configuration for tolerances and motor limits
-  PoseLock(XDrive& drive, PID linearPid, PID strafePid, PID headingPid,
+  /// @brief Construct a PoseLock for a **holonomic** drive
+  /// @param drive      Reference to the holonomic Drivetrain instance
+  /// @param xPid      PID controller for the forward axis
+  /// @param yPid      PID controller for the strafe axis
+  /// @param thetaPid  PID controller for heading correction
+  /// @param config    Configuration for tolerances and motor limits
+  PoseLock(Drivetrain& drive, PID xPid, PID yPid, PID thetaPid,
            PoseLockConfig config = {});
 
   // === Core Interface ===
@@ -216,11 +206,8 @@ class PoseLock {
   /// @brief Get the current state of the outer state machine
   PoseLockState getState() const;
 
-  /// @brief Get the current tank settling stage (only meaningful for tank drive)
+  /// @brief Get the current tank settling stage (only meaningful for non-holonomic drives)
   TankStage getTankStage() const;
-
-  /// @brief Returns true if this PoseLock controls a holonomic drive
-  bool isHolonomic() const;
 };
 
 }  // namespace aon

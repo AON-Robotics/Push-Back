@@ -10,27 +10,25 @@ namespace aon {
 //
 // ============================================================================
 
-PoseLock::PoseLock(TankDrive& drive, PID linearPid, PID headingPid,
+PoseLock::PoseLock(Drivetrain& drive, PID xPid, PID thetaPid,
                    PoseLockConfig config)
     : state(PoseLockState::IDLE),
       config(config),
-      linearPid(linearPid),
-      strafePid(0, 0, 0),  // unused for tank drive
-      headingPid(headingPid),
+      xPid(xPid),
+      yPid(0, 0, 0),  // unused for non-holonomic drives
+      thetaPid(thetaPid),
       targetPose(),
-      tankDrive(&drive),
-      holonomicDrive(nullptr) {}
+      drive(&drive) {}
 
-PoseLock::PoseLock(XDrive& drive, PID linearPid, PID strafePid,
-                   PID headingPid, PoseLockConfig config)
+PoseLock::PoseLock(Drivetrain& drive, PID xPid, PID yPid,
+                   PID thetaPid, PoseLockConfig config)
     : state(PoseLockState::IDLE),
       config(config),
-      linearPid(linearPid),
-      strafePid(strafePid),
-      headingPid(headingPid),
+      xPid(xPid),
+      yPid(yPid),
+      thetaPid(thetaPid),
       targetPose(),
-      tankDrive(nullptr),
-      holonomicDrive(&drive) {}
+      drive(&drive) {}
 
 // ============================================================================
 //    ___       _    _ _        __  __     _   _            _
@@ -48,9 +46,9 @@ void PoseLock::setTarget(const Pose& target) {
   tankStage = TankStage::ALIGN_HEADING;
 
   // Reset all PID controllers for a clean start
-  linearPid.Reset();
-  strafePid.Reset();
-  headingPid.Reset();
+  xPid.Reset();
+  yPid.Reset();
+  thetaPid.Reset();
 }
 
 void PoseLock::update() {
@@ -64,7 +62,7 @@ void PoseLock::update() {
   }
 
   // Dispatch to drive-specific update logic
-  if (holonomicDrive != nullptr) {
+  if (drive->holonomic) {
     updateHolonomic();
   } else {
     updateTank();
@@ -80,16 +78,14 @@ void PoseLock::reset() {
   state = PoseLockState::IDLE;
   settledCounter = 0;
   tankStage = TankStage::IDLE;
-  linearPid.Reset();
-  strafePid.Reset();
-  headingPid.Reset();
+  xPid.Reset();
+  yPid.Reset();
+  thetaPid.Reset();
 }
 
 PoseLockState PoseLock::getState() const { return state; }
 
 TankStage PoseLock::getTankStage() const { return tankStage; }
-
-bool PoseLock::isHolonomic() const { return holonomicDrive != nullptr; }
 
 // ============================================================================
 //    ___     _                  _   _  _     _
@@ -99,45 +95,41 @@ bool PoseLock::isHolonomic() const { return holonomicDrive != nullptr; }
 //                                            |_|
 // ============================================================================
 
-double PoseLock::applyMinPower(double output) const {
+double PoseLock::applyMinVelocity(double velocity) const {
   // Below the deadband — motor wouldn't meaningfully move, treat as zero
-  if (std::fabs(output) < config.deadband) {
+  if (std::fabs(velocity) < config.deadband) {
     return 0.0;
   }
 
-  // Between deadband and minPower — bump up to overcome static friction
-  if (std::fabs(output) < config.minPower) {
-    return std::copysign(config.minPower, output);
+  // Between deadband and minVelocity — bump up to overcome static friction
+  if (std::fabs(velocity) < config.minVelocity) {
+    return std::copysign(config.minVelocity, velocity);
   }
 
-  return output;
+  return velocity;
 }
 
-double PoseLock::clampOutput(double output) const {
-  if (output > config.maxPower) return config.maxPower;
-  if (output < -config.maxPower) return -config.maxPower;
-  return output;
+double PoseLock::clampVelocity(double velocity) const {
+  if (velocity > config.maxVelocity) return config.maxVelocity;
+  if (velocity < -config.maxVelocity) return -config.maxVelocity;
+  return velocity;
 }
 
 
 void PoseLock::stopMotors() {
-  if (tankDrive != nullptr) {
-    tankDrive->stop();
-  } else if (holonomicDrive != nullptr) {
-    holonomicDrive->stop();
-  }
+  drive->stop();
 }
 
 bool PoseLock::checkTolerance() const {
-  const double currentX = tankDrive != nullptr ? tankDrive->getX() : holonomicDrive->getX();
-  const double currentY = tankDrive != nullptr ? tankDrive->getY() : holonomicDrive->getY();
-  const double currentTheta = tankDrive != nullptr ? tankDrive->getTheta() : holonomicDrive->getTheta();
+  const double currentX = drive->getX();
+  const double currentY = drive->getY();
+  const double currentTheta = drive->getTheta();
 
   const double dx = targetPose.x - currentX;
   const double dy = targetPose.y - currentY;
   const double distError = std::hypot(dx, dy);
   const double headingError =
-      std::fabs(normalizeAngle(targetPose.theta - currentTheta));
+      std::fabs(Angle().SetRadians(targetPose.theta - currentTheta).normalize().GetRadians());
 
   return (distError < config.linearTolerance) &&
          (headingError < config.angularTolerance);
@@ -154,9 +146,9 @@ bool PoseLock::checkTolerance() const {
 
 void PoseLock::updateTank() {
   // --- Read current pose from drivetrain ---
-  const double currentX = tankDrive->getX();
-  const double currentY = tankDrive->getY();
-  const double currentTheta = tankDrive->getTheta();
+  const double currentX = drive->getX();
+  const double currentY = drive->getY();
+  const double currentTheta = drive->getTheta();
 
   // --- Compute field-frame errors ---
   const double dx = targetPose.x - currentX;
@@ -164,8 +156,7 @@ void PoseLock::updateTank() {
   const double distToTarget = std::hypot(dx, dy);
 
   // Heading required to face the target position
-  // atan2(dy, dx) matches the odometry rotation convention
-  const double angleToTarget = std::atan2(dy, dx);
+  Angle angleToTarget = Angle().SetPos(dx, dy);
 
   switch (tankStage) {
     case TankStage::IDLE:
@@ -176,17 +167,17 @@ void PoseLock::updateTank() {
     // -----------------------------------------------------------------------
     case TankStage::ALIGN_HEADING: {
       const double headingError =
-          normalizeAngle(angleToTarget - currentTheta);
+          (angleToTarget - Angle().SetRadians(currentTheta)).normalize().GetRadians();
 
-      double turnOutput = headingPid.Output(headingError, 0.0);
-      turnOutput = clampOutput(applyMinPower(turnOutput));
+      double turnVelocity = thetaPid.Output(headingError, 0.0);
+      turnVelocity = clampVelocity(applyMinVelocity(turnVelocity));
 
-      tankDrive->driveWhileTurning(0.0, turnOutput);
+      drive->driveWhileTurning(0.0, turnVelocity);
 
       // Transition: heading is aligned OR already close enough to skip
       if (std::fabs(headingError) < config.angularTolerance ||
           distToTarget < config.linearTolerance) {
-        headingPid.Reset();
+        thetaPid.Reset();
         tankStage = TankStage::DRIVE_TO_TARGET;
       }
       break;
@@ -200,21 +191,21 @@ void PoseLock::updateTank() {
       const double forwardDist =
           dx * std::cos(currentTheta) + dy * std::sin(currentTheta);
 
-      double forwardOutput = linearPid.Output(forwardDist, 0.0);
-      forwardOutput = clampOutput(applyMinPower(forwardOutput));
+      double forwardVelocity = xPid.Output(forwardDist, 0.0);
+      forwardVelocity = clampVelocity(applyMinVelocity(forwardVelocity));
 
       // Keep heading pointed at the target while driving
       const double headingError =
-          normalizeAngle(angleToTarget - currentTheta);
-      double turnOutput = headingPid.Output(headingError, 0.0);
-      turnOutput = clampOutput(applyMinPower(turnOutput));
+          (angleToTarget - Angle().SetRadians(currentTheta)).normalize().GetRadians();
+      double turnVelocity = thetaPid.Output(headingError, 0.0);
+      turnVelocity = clampVelocity(applyMinVelocity(turnVelocity));
 
-      tankDrive->driveWhileTurning(forwardOutput, turnOutput);
+      drive->driveWhileTurning(forwardVelocity, turnVelocity);
 
       // Transition: close enough to target position
       if (distToTarget < config.linearTolerance) {
-        linearPid.Reset();
-        headingPid.Reset();
+        xPid.Reset();
+        thetaPid.Reset();
         tankStage = TankStage::FINAL_HEADING;
       }
       break;
@@ -225,12 +216,12 @@ void PoseLock::updateTank() {
     // -----------------------------------------------------------------------
     case TankStage::FINAL_HEADING: {
       const double headingError =
-          normalizeAngle(targetPose.theta - currentTheta);
+          (Angle().SetRadians(targetPose.theta) - Angle().SetRadians(currentTheta)).normalize().GetRadians();
 
-      double turnOutput = headingPid.Output(headingError, 0.0);
-      turnOutput = clampOutput(applyMinPower(turnOutput));
+      double turnVelocity = thetaPid.Output(headingError, 0.0);
+      turnVelocity = clampVelocity(applyMinVelocity(turnVelocity));
 
-      tankDrive->driveWhileTurning(0.0, turnOutput);
+      drive->driveWhileTurning(0.0, turnVelocity);
 
       // Check if fully settled across ALL axes
       if (checkTolerance()) {
@@ -263,7 +254,7 @@ void PoseLock::updateTank() {
 void PoseLock::updateHolonomic() {
   // goToPose is a blocking call that handles its own 3-DOF control loop
   // (forward + strafe + turn) using motion profiles internally.
-  holonomicDrive->goToPose(targetPose);
+  drive->goToPose(targetPose);
 
   // goToPose blocks until settled, so we can immediately mark as finished
   stopMotors();

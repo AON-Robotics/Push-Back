@@ -31,7 +31,7 @@ class TankDrive : public Drivetrain {
         rightMotors(rightPorts, 0, MAX_ACCEL),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain(),
+        Drivetrain(false),
         odometry() {}
 
   /// @brief Moves all motors the same `rpm` to move forward

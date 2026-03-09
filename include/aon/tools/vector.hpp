@@ -298,13 +298,13 @@ int main(){
   //> Double conversion operator for Angle object. Returns degrees.
   operator double() { return GetDegrees(); }
 
-  /// @brief Normalize an angle in radians to the range [-PI, PI]
-  /// @param radians Input angle in radians
-  /// @return Equivalent angle in [-PI, PI]
-  static double normalize(double radians) {
+  /// @brief Normalize this angle's radians to the range [-PI, PI]
+  /// @return Reference to this angle, now normalized to [-PI, PI]
+  Angle& normalize() {
     while (radians <= -M_PI) radians += 2.0 * M_PI;
     while (radians > M_PI) radians -= 2.0 * M_PI;
-    return radians;
+    degrees = 180.0 * radians / M_PI;
+    return *this;
   }
 };
 

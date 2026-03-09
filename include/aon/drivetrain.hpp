@@ -13,10 +13,13 @@ class Drivetrain {
   Pose pose;
   bool turbo = true;
   
-  public:
+ public:
+  /// true for omnidirectional drivetrains (X-Drive, mecanum, etc.),
+  /// false for non-holonomic drivetrains (tank drive)
+  const bool holonomic;
   Odometry odom;
 
-  Drivetrain() : pose(), odom() {}
+  explicit Drivetrain(bool holonomic = true) : pose(), odom(), holonomic(holonomic) {}
   
 
   Pose getPose() { return this->pose; }
@@ -203,6 +206,10 @@ class Drivetrain {
   /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
   /// @note Uses coordinate system from GPS in \b meters
   virtual void goTo(const double &x, const double &y) = 0;
+
+  /// @brief Goes to the target pose (holonomic drives only; no-op on tank)
+  /// @param target The desired pose (x in inches, y in inches, theta in radians)
+  virtual void goToPose(const Pose& target) {}
 
   /// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
   /// @param input The joystick input to be scaled
