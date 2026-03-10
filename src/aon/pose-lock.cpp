@@ -43,7 +43,9 @@ void PoseLock::setTarget(const Pose& target) {
   state = PoseLockState::SETTLING;
   settledCounter = 0;
   startTime = pros::millis();
-  tankStage = TankStage::ALIGN_HEADING;
+  if (!drive->holonomic) {
+    tankStage = TankStage::ALIGN_HEADING;
+  }
 
   // Reset all PID controllers for a clean start
   xPid.Reset();
@@ -129,7 +131,7 @@ bool PoseLock::checkTolerance() const {
   const double dy = targetPose.y - currentY;
   const double distError = std::hypot(dx, dy);
   const double headingError =
-      std::fabs(Angle().SetRadians(targetPose.theta - currentTheta).normalize().GetRadians());
+      std::fabs((Angle().SetRadians(targetPose.theta) - Angle().SetRadians(currentTheta)).normalize().GetRadians());
 
   return (distError < config.linearTolerance) &&
          (headingError < config.angularTolerance);

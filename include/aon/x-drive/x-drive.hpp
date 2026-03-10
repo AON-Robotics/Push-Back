@@ -180,7 +180,7 @@ class XDrive : public Drivetrain {
   /// @brief Goes to the target point
   /// @param target The intended destination using the gps coordinate system (x, y) both need to be in the range (-1.8, 1.8)
   /// @note Uses coordinate system from GPS in \b meters
-  void goToPose(const Pose& target) override;
+  void goToPose(const Pose& target);
 };
 
 }  // namespace aon
