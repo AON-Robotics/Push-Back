@@ -111,8 +111,8 @@ void GuiDebug::HandleVariablesMenuTouch() {
     const int menuY1 = 10, menuY2 = menuY1 + 30;
     const int menuX1 = BRAIN_SCREEN_WIDTH - 120, menuX2 = BRAIN_SCREEN_WIDTH - 40;
     if (touch.x >= menuX1 && touch.x <= menuX2 && touch.y >= menuY1 && touch.y <= menuY2) {
-      DisplayMainMenu();
-      CurrentScreen = MainMenu;
+      displayMainMenu();
+      currentScreen = MainMenu;
       variablesPage = 0;  // Reset page when leaving
       lastTouchMs = now;
       return;
@@ -124,10 +124,10 @@ void GuiDebug::HandleVariablesMenuTouch() {
     const int backY1 = 10, backY2 = backY1 + 30;
     const int backX2 = BRAIN_SCREEN_WIDTH / 2 - 110, backX1 = backX2 - 80;
     if (touch.x >= backX1 && touch.x <= backX2 && touch.y >= backY1 && touch.y <= backY2) {
-      CurrentScreen = PreviousScreen;
+      currentScreen = previousScreen;
       variablesPage = 0;  // Reset page when leaving
-      if (PreviousScreen == DebugMenu) DisplayDebugMenu();
-      else if (PreviousScreen == AutonRunner) DisplayAutonRunner();
+      if (previousScreen == DebugMenu) DisplayDebugMenu();
+      else if (previousScreen == AutonRunner) DisplayAutonRunner();
       lastTouchMs = now;
       pros::delay(300);
       return;

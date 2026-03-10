@@ -15,22 +15,22 @@ void GuiDebug::AddTestFunctionInternal(const std::string& name, std::function<in
   testFunctions.emplace_back(name, std::move(fn));
 }
 
-void GuiDebug::RegisterTestFunction(int (*func)(), const std::string& name) {
+void GuiDebug::registerTestFunction(int (*func)(), const std::string& name) {
   AddTestFunctionInternal(name, func);
 }
 
-void GuiDebug::RegisterTestFunction(const std::function<int()>& func, const std::string& name) {
+void GuiDebug::registerTestFunction(const std::function<int()>& func, const std::string& name) {
   AddTestFunctionInternal(name, func);
 }
 
-void GuiDebug::RegisterTestFunction(void (*func)(), const std::string& name) {
+void GuiDebug::registerTestFunction(void (*func)(), const std::string& name) {
   AddTestFunctionInternal(name, [func]() -> int {
     if (func) func();
     return 0;
   });
 }
 
-void GuiDebug::VariableChanger(double& variableRef, const std::string& name) {
+void GuiDebug::variableChanger(double& variableRef, const std::string& name) {
   for (const auto& e : variableEntries) {
     if (e.name == name) return;
   }
@@ -41,26 +41,26 @@ void GuiDebug::VariableChanger(double& variableRef, const std::string& name) {
   });
 }
 
-void GuiDebug::SetVariableRegister(const std::function<void()>& Register) {
+void GuiDebug::setVariableRegister(const std::function<void()>& Register) {
   variableRegister = Register;
 }
 
-void GuiDebug::SetTestRegister(const std::function<void()>& Register) {
+void GuiDebug::setTestRegister(const std::function<void()>& Register) {
   testRegister = Register;
 }
 
-void GuiDebug::RegisterDataEntry(const std::string& name, std::function<double()> getter) {
+void GuiDebug::registerDataEntry(const std::string& name, std::function<double()> getter) {
   for (const auto& e : dataEntries) {
     if (e.name == name) return;
   }
   dataEntries.push_back({name, std::move(getter)});
 }
 
-void GuiDebug::SetDataRegister(const std::function<void()>& Register) {
+void GuiDebug::setDataRegister(const std::function<void()>& Register) {
   dataRegister = Register;
 }
 
-int GuiDebug::InvokeSelectedAuton() {
+int GuiDebug::invokeSelectedAuton() {
   if (selectedAutonInvoker) return selectedAutonInvoker();
   if (selectedAuton.routine) return selectedAuton.routine();
   return 0;
@@ -70,7 +70,7 @@ int GuiDebug::InvokeSelectedAuton() {
 // Live Graph Methods
 // ============================================================================
 
-void GuiDebug::SetGraphDataProviders(std::function<double()> getX, std::function<double()> getY) {
+void GuiDebug::setGraphDataProviders(std::function<double()> getX, std::function<double()> getY) {
   graphGetX = getX;
   graphGetY = getY;
 }
@@ -156,17 +156,17 @@ void GuiDebug::DisplayDebugMenu() {
 // Main Menu Touch Handler Override
 // ============================================================================
 
-void GuiDebug::HandleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) {
+void GuiDebug::handleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) {
   if (TESTING_AUTONOMOUS) {
     // Debug mode: buttons split in half
     // Check if the "AUTONS" button is pressed (bottom-left corner)
     if (touchStatus.x < BRAIN_SCREEN_WIDTH / 2 && touchStatus.y > BRAIN_SCREEN_HEIGHT - 50) {
-      if (CurrentScreen != AutonMenu) {
+      if (currentScreen != AutonMenu) {
         pros::screen::set_eraser(COLOR_BLACK);
         pros::screen::erase_rect(0, BRAIN_SCREEN_HEIGHT - 50, BRAIN_SCREEN_WIDTH / 2, BRAIN_SCREEN_HEIGHT);
 
-        DisplayAutonMenu();
-        CurrentScreen = AutonMenu;
+        displayAutonMenu();
+        currentScreen = AutonMenu;
       }
     }
     // Check if the "DEBUG" button is pressed (bottom-right corner)
@@ -175,19 +175,19 @@ void GuiDebug::HandleMainMenuTouch(const pros::screen_touch_status_s_t& touchSta
       pros::screen::erase_rect(BRAIN_SCREEN_WIDTH / 2, BRAIN_SCREEN_HEIGHT - 50, BRAIN_SCREEN_WIDTH, BRAIN_SCREEN_HEIGHT);
       
       DisplayDebugMenu();
-      CurrentScreen = DebugMenu;
+      currentScreen = DebugMenu;
       pros::delay(300);
     }
   } else {
     // Non-debug mode: autons button takes full width
     // Check if the "AUTONS" button is pressed (full width bottom)
     if (touchStatus.y > BRAIN_SCREEN_HEIGHT - 50) {
-      if (CurrentScreen != AutonMenu) {
+      if (currentScreen != AutonMenu) {
         pros::screen::set_eraser(COLOR_BLACK);
         pros::screen::erase_rect(0, BRAIN_SCREEN_HEIGHT - 50, BRAIN_SCREEN_WIDTH, BRAIN_SCREEN_HEIGHT);
 
-        DisplayAutonMenu();
-        CurrentScreen = AutonMenu;
+        displayAutonMenu();
+        currentScreen = AutonMenu;
       }
     }
   }
@@ -205,8 +205,8 @@ void GuiDebug::HandleDebugMenuTouch() {
 
     // BACK button
     if (x >= 10 && x <= 90 && y >= 10 && y <= 40) {
-      DisplayMainMenu();
-      CurrentScreen = MainMenu;
+      displayMainMenu();
+      currentScreen = MainMenu;
       pros::delay(300);
       return;
     }
@@ -228,11 +228,11 @@ void GuiDebug::HandleDebugMenuTouch() {
       
       if (x >= btnX && x <= btnX + btnWidth && y >= btnY && y <= btnY + btnHeight) {
         switch (buttons[i].index) {
-          case 0: DisplayRegisteredAutonsMenu(); CurrentScreen = RegisteredFunctions; break;
-          case 1: DisplayLiveGraph(); CurrentScreen = LiveGraph; break;
-          case 2: DisplayAutonRunner(); CurrentScreen = AutonRunner; break;
-          case 3: PreviousScreen = DebugMenu; DisplayVariablesMenu(); CurrentScreen = VARS; break;
-          case 4: DisplayDataMenu(); CurrentScreen = DATA; break;
+          case 0: DisplayRegisteredAutonsMenu(); currentScreen = RegisteredFunctions; break;
+          case 1: DisplayLiveGraph(); currentScreen = LiveGraph; break;
+          case 2: DisplayAutonRunner(); currentScreen = AutonRunner; break;
+          case 3: previousScreen = DebugMenu; DisplayVariablesMenu(); currentScreen = VARS; break;
+          case 4: DisplayDataMenu(); currentScreen = DATA; break;
         }
         pros::delay(400);
         return;
@@ -247,28 +247,28 @@ void GuiDebug::HandleDebugMenuTouch() {
 // Overridden GUI Loop
 // ============================================================================
 
-void GuiDebug::RunGuiLoop() {
+void GuiDebug::mainLoop() {
   bool lastAutonState = false;
-  auto lastScreen = CurrentScreen;
+  auto lastScreen = currentScreen;
   
   while (true) {
     pros::screen_touch_status_s_t TouchStatus = pros::screen::touch_status();
     if (TouchStatus.touch_status > 0) {
-      switch (CurrentScreen) {
+      switch (currentScreen) {
         case MainMenu:
-          HandleMainMenuTouch(TouchStatus);
+          handleMainMenuTouch(TouchStatus);
           break;
         case AutonMenu:
-          HandleAutonMenuTouch();
+          handleAutonMenuTouch();
           break;
         case RedAutons:
-          HandleRedAutonMenuTouch();
+          handleRedAutonMenuTouch();
           break;
         case BlueAutons:
-          HandleBlueAutonMenuTouch();
+          handleBlueAutonMenuTouch();
           break;
         case SkillAutons:
-          HandleSkillsMenuTouch();
+          handleSkillsMenuTouch();
           break;
         case DebugMenu:
           HandleDebugMenuTouch();
@@ -296,18 +296,18 @@ void GuiDebug::RunGuiLoop() {
     pros::delay(30);
 
     // Redraw only when necessary
-    bool screenChanged = (CurrentScreen != lastScreen);
+    bool screenChanged = (currentScreen != lastScreen);
     bool autonStateChanged = (autonRunning != lastAutonState);
     
     if (screenChanged) {
-      lastScreen = CurrentScreen;
+      lastScreen = currentScreen;
       // Screen was changed by handler, it already redraws
     }
     
     if (autonStateChanged) {
       lastAutonState = autonRunning;
       // Redraw AutonRunner when auton state changes
-      if (CurrentScreen == AutonRunner) {
+      if (currentScreen == AutonRunner) {
         DisplayAutonRunner();
       }
     }
@@ -315,9 +315,9 @@ void GuiDebug::RunGuiLoop() {
     // For screens with real-time updates, refresh periodically
     static int refreshCounter = 0;
     if (++refreshCounter >= 10) {  // Every 300ms
-      if (CurrentScreen == DATA) {
+      if (currentScreen == DATA) {
         DisplayDataMenu();
-      } else if (CurrentScreen == LiveGraph) {
+      } else if (currentScreen == LiveGraph) {
         DisplayLiveGraph();
         if (graphGetX && graphGetY) {
           AddGraphPoint(graphGetX(), graphGetY());
@@ -332,7 +332,7 @@ void GuiDebug::RunGuiLoop() {
 // Main Menu Override - Conditional Button Sizing
 // ============================================================================
 
-void GuiDebug::DisplayMainMenu() {
+void GuiDebug::displayMainMenu() {
   // Ensure the screen is cleared at the start of each display function
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
@@ -374,9 +374,9 @@ void GuiDebug::DisplayMainMenu() {
 // Initialize
 // ============================================================================
 
-void GuiDebug::Initialize() {
+void GuiDebug::initialize() {
   // Call base class initialization first
-  Gui::Initialize();
+  Gui::initialize();
 
   // Seed test functions at startup if a register is provided
   if (testRegister) {

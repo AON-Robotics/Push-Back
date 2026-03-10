@@ -90,7 +90,7 @@ void GuiDebug::HandleLiveGraphTouch() {
     // BACK button
     if (x >= 10 && x <= 90 && y >= 10 && y <= 40) {
       DisplayDebugMenu();
-      CurrentScreen = DebugMenu;
+      currentScreen = DebugMenu;
       pros::delay(300);
       return;
     }

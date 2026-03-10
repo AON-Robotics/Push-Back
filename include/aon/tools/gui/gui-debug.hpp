@@ -56,20 +56,20 @@ public:
   std::string activeResetHandlerName;
 
   // Register a named reset handler (overwrites existing with same name)
-  void RegisterResetHandler(const std::string& name, const std::function<void()>& handler) { resetHandlers[name] = handler; activeResetHandlerName = name; }
+  void registerResetHandler(const std::string& name, const std::function<void()>& handler) { resetHandlers[name] = handler; activeResetHandlerName = name; }
 
   // Invoke the active reset handler (no-op if not set or not found)
-  void InvokeResetHandler() { auto it = resetHandlers.find(activeResetHandlerName); if (it != resetHandlers.end()) it->second(); }
+  void invokeResetHandler() { auto it = resetHandlers.find(activeResetHandlerName); if (it != resetHandlers.end()) it->second(); }
 
   // Constructor
   GuiDebug() = default; // Default to use TESTING_AUTONOMOUS for conditional display
   virtual ~GuiDebug() = default;
 
-  // Override Initialize to include debug setup
-  virtual void Initialize() override;
+  // Override initialize to include debug setup
+  virtual void initialize() override;
 
-  // Override DisplayMainMenu to support conditional button sizing
-  virtual void DisplayMainMenu() override;
+  // Override displayMainMenu to support conditional button sizing
+  virtual void displayMainMenu() override;
 
   // Debug menu display methods (delegated to subsystems)
   void DisplayDebugMenu();
@@ -80,7 +80,7 @@ public:
   void DisplayDataMenu();
 
   // Override main menu touch handler to handle DEBUG button
-  virtual void HandleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) override;
+  virtual void handleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) override;
 
   // Debug touch handler methods (delegated to subsystems)
   void HandleDebugMenuTouch();
@@ -92,7 +92,7 @@ public:
 
   // API: register a variable to be editable in Debug Menu 3.
   // T must support + and - (detected via std::void_t).
-  void VariableChanger(double& variableRef, const std::string& name) override;
+  void variableChanger(double& variableRef, const std::string& name) override;
 
   template <
     typename T,
@@ -113,35 +113,35 @@ public:
   }
 
   // Allow user code to provide a register
-  void SetVariableRegister(const std::function<void()>& Register);
+  void setVariableRegister(const std::function<void()>& Register);
 
   // API: register a data entry for the Data screen
-  void RegisterDataEntry(const std::string& name, std::function<double()> getter) override;
-  void SetDataRegister(const std::function<void()>& Register) override;
+  void registerDataEntry(const std::string& name, std::function<double()> getter) override;
+  void setDataRegister(const std::function<void()>& Register) override;
 
   // Allow user code to provide a register that calls registerTestFunction(...)
-  void SetTestRegister(const std::function<void()>& Register);
+  void setTestRegister(const std::function<void()>& Register);
 
   // Register test functions
-  void RegisterTestFunction(int (*func)(), const std::string& name);
-  void RegisterTestFunction(const std::function<int()>& func, const std::string& name);
-  void RegisterTestFunction(void (*func)(), const std::string& name);
+  void registerTestFunction(int (*func)(), const std::string& name);
+  void registerTestFunction(const std::function<int()>& func, const std::string& name);
+  void registerTestFunction(void (*func)(), const std::string& name);
 
   // Allow user code to set data providers for live graph
-  void SetGraphDataProviders(std::function<double()> getX, std::function<double()> getY);
+  void setGraphDataProviders(std::function<double()> getX, std::function<double()> getY);
 
   // Add a new data point to the graph buffer
   void AddGraphPoint(double x, double y);
 
 protected:
   // Override GUI loop to include debug screens
-  virtual void RunGuiLoop() override;
+  virtual void mainLoop() override;
 
   // Internal helper to add unique entries by name
   void AddTestFunctionInternal(const std::string& name, std::function<int()> fn);
 
   // Helper to invoke selected auton
-  int InvokeSelectedAuton();
+  int invokeSelectedAuton();
 };
 
 }  // namespace aon

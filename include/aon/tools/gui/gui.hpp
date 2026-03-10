@@ -25,7 +25,7 @@ namespace aon {
 
 
 // Forward declaration of FunctionReader for autonomous routines
-extern std::unique_ptr<FunctionReader<int>> AutonomousReader;
+extern std::unique_ptr<FunctionReader<int>> autonomousReader;
 
 // GUI screen states
 enum GuiScreen {
@@ -51,7 +51,7 @@ struct AutonOption {
 };
 
 // Constants
-static constexpr int AutonOptionsCount = 3;
+static constexpr int autonOptionsCount = 3;
 
 // Base Gui class - handles core GUI functionality without debug features
 class Gui {
@@ -71,23 +71,23 @@ public:
   int selectedSkill = 0;
 
   // Screen management
-  GuiScreen CurrentScreen = MainMenu;
-  GuiScreen PreviousScreen = MainMenu;
+  GuiScreen currentScreen = MainMenu;
+  GuiScreen previousScreen = MainMenu;
 
   // Auton routines for each alliance
-  AutonOption RedAutonOptions[AutonOptionsCount] = {
+  AutonOption redAutonOptions[autonOptionsCount] = {
     {"Red AUT1", aon::RedRingsRoutine},
     {"Red AUT2", aon::RedRingsRoutine},
     {"Red AUT3", aon::RedRingsRoutine},
   };
   
-  AutonOption BlueAutonOptions[AutonOptionsCount] = {
+  AutonOption blueAutonOptions[autonOptionsCount] = {
     {"Blue AUT1", aon::BlueRingsRoutine},
     {"Blue AUT2", aon::BlueRingsRoutine},
     {"Blue AUT3", aon::BlueRingsRoutine},
   };
   
-  AutonOption SkillsAutonOptions[AutonOptionsCount] = {
+  AutonOption skillsAutonOptions[autonOptionsCount] = {
     {"Skills AUT1", aon::RedRingsRoutine},
     {"Skills AUT2", aon::RedRingsRoutine},
     {"Skills AUT3", aon::RedRingsRoutine},
@@ -95,58 +95,53 @@ public:
 
 
   // Main initialization method (does not start the GUI loop task)
-  virtual void Initialize();
-
-  // Starts the GUI loop; call this once from main to spawn the task explicitly
-  void RunLoop() { RunGuiLoop(); }
+  virtual void initialize();
 
   // Screen display methods
-  virtual void DisplayMainMenu();
-  virtual void DisplayAutonMenu();
-  virtual void DisplayRedAutonMenu();
-  virtual void DisplayBlueAutonMenu();
-  virtual void DisplaySkillsMenu();
+  virtual void displayMainMenu();
+  virtual void displayAutonMenu();
+  virtual void displayRedAutonMenu();
+  virtual void displayBlueAutonMenu();
+  virtual void displaySkillsMenu();
 
   // Touch handler methods
-  virtual void HandleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus);
-  virtual void HandleAutonMenuTouch();
-  virtual void HandleRedAutonMenuTouch();
-  virtual void HandleBlueAutonMenuTouch();
-  virtual void HandleSkillsMenuTouch();
+  virtual void handleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus);
+  virtual void handleAutonMenuTouch();
+  virtual void handleRedAutonMenuTouch();
+  virtual void handleBlueAutonMenuTouch();
+  virtual void handleSkillsMenuTouch();
 
   // Debug-related APIs (no-op defaults). These are implemented fully in
   // `GuiDebug`. Declaring them here lets user code call them whether the
   // concrete GUI is `Gui` or `GuiDebug`.
-  virtual void SetVariableRegister(const std::function<void()>& /*Register*/ ) {}
-  virtual void VariableChanger(double& /*variableRef*/, const std::string& /*name*/) {}
-  virtual void SetTestRegister(const std::function<void()>& /*Register*/ ) {}
-  virtual void RegisterTestFunction(int (* /*func*/)(), const std::string& /*name*/) {}
-  virtual void RegisterTestFunction(const std::function<int()>& /*func*/, const std::string& /*name*/) {}
-  virtual void RegisterTestFunction(void (* /*func*/)(), const std::string& /*name*/) {}
-  virtual void SetGraphDataProviders(std::function<double()> /*getX*/, std::function<double()> /*getY*/) {}
-  virtual void RegisterDataEntry(const std::string& /*name*/, std::function<double()> /*getter*/) {}
-  virtual void SetDataRegister(const std::function<void()>& /*Register*/) {}
-  virtual void RegisterResetHandler(const std::string& /*name*/, const std::function<void()>& /*cb*/) {}
-  virtual void InvokeResetHandler() {}
+  virtual void setVariableRegister(const std::function<void()>& /*Register*/ ) {}
+  virtual void variableChanger(double& /*variableRef*/, const std::string& /*name*/) {}
+  virtual void setTestRegister(const std::function<void()>& /*Register*/ ) {}
+  virtual void registerTestFunction(int (* /*func*/)(), const std::string& /*name*/) {}
+  virtual void registerTestFunction(const std::function<int()>& /*func*/, const std::string& /*name*/) {}
+  virtual void registerTestFunction(void (* /*func*/)(), const std::string& /*name*/) {}
+  virtual void setGraphDataProviders(std::function<double()> /*getX*/, std::function<double()> /*getY*/) {}
+  virtual void registerDataEntry(const std::string& /*name*/, std::function<double()> /*getter*/) {}
+  virtual void setDataRegister(const std::function<void()>& /*Register*/) {}
+  virtual void registerResetHandler(const std::string& /*name*/, const std::function<void()>& /*cb*/) {}
+  virtual void invokeResetHandler() {}
 
   // Auton selection helper
-  void SelectAutonByList(Alliance alliance, int index1Based);
+  void selectAutonByList(Alliance alliance, int index1Based);
   // Invoke the currently selected auton. `GuiDebug` overrides this to
   // prefer debug-registered invokers; base `Gui` calls the normal
   // `selectedAutonRoutine` (or returns 0).
-  virtual int InvokeSelectedAuton();
+  virtual int invokeSelectedAuton();
   
 protected:
   // Helper methods
-  void ApplyPreselectedAuton();
-  int DisplayInitializationMessage();
+  void applyPreselectedAuton();
+  int displayInitializationMessage();
   
   // Virtual method for GUI loop - can be extended by derived classes
-  virtual void RunGuiLoop();
+  virtual void mainLoop();
 };
 
-
-  void InitializeGui();
 }
 
 #endif  // AON_TOOLS_GUI_HPP_

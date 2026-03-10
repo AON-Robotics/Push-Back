@@ -2,7 +2,7 @@
 
 
 void initialize() {
-  pros::Task guiLoopTask([]{aon::InitializeGui(); aon::gui.RunLoop();});
+  pros::Task guiLoopTask([]{aon::gui.initialize();});
   aon::logging::Initialize();
   aon::Configure(false);
   pros::Task odomTask([]{drivetrain.odom.initialize();});
@@ -25,7 +25,7 @@ void autonomous() {
   #else
   aon::testSmallBotRoutine();
   #endif
-  // aon::AutonomousReader->ExecuteFunction("autonomous");
+  // aon::autonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
 }
 
