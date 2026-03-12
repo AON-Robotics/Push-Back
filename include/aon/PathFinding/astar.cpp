@@ -5,10 +5,10 @@
 #include <algorithm>
 #include <cmath>
 
-std::vector<Astar::Point>
+std::vector<Point>
 Astar::astar(const CostGrid& grid, const Point& start, const Point& goal) const {
   // If start or goal is out of bounds we return empty vector
-  if (!grid.in_bounds(start.r, start.c) or !grid.in_bounds(goal.r,goal.c)) {
+  if (!grid.in_bounds(start.x, start.y) or !grid.in_bounds(goal.x,goal.y)) {
     return {};
   }
   // If start or goal cannot fit (robot footprint collides) return empty
@@ -21,8 +21,8 @@ Astar::astar(const CostGrid& grid, const Point& start, const Point& goal) const 
   }
 
   // Take start and goal indexes
-  int start_idx = grid.idx(start.r, start.c);
-  int goal_idx = grid.idx(goal.r,goal.c);
+  int start_idx = grid.idx(start.x, start.y);
+  int goal_idx = grid.idx(goal.x,goal.y);
 
   // Resources needed for runtime computation
   const int N = grid.rows * grid.cols;
@@ -78,21 +78,21 @@ Astar::astar(const CostGrid& grid, const Point& start, const Point& goal) const 
     }
 
     // Get 2D from the idx we just pop
-    int curr_r = item.idx / grid.cols;
-    int curr_c = item.idx % grid.cols;
+    double curr_r = item.idx / grid.cols;
+    double curr_c = item.idx % grid.cols;
     Point curr_point{curr_r,curr_c};
 
     // Iterate over neighbors
     for(int k = 0; k < 8; k++) {
       // Get neighbor
-      Point nb{curr_point.r + DR[k], curr_point.c + DC[k]};
+      Point nb{curr_point.x + DR[k], curr_point.y + DC[k]};
 
       // Basic checkings
-      if (!grid.in_bounds(nb.r, nb.c)) continue;
+      if (!grid.in_bounds(nb.x, nb.y)) continue;
       // Robot footprint collision check
       if (!fits_rect(grid, nb)) continue;
 
-      int nb_idx = grid.idx(nb.r, nb.c);
+      int nb_idx = grid.idx(nb.x, nb.y);
       if (closed[nb_idx]) continue;
 
       // Computing tentative g
@@ -115,33 +115,33 @@ Astar::astar(const CostGrid& grid, const Point& start, const Point& goal) const 
   std::vector<Point> path;
   int at = goal_idx;
   while (at != -1) {
-    int r = at / grid.cols;
-    int c = at % grid.cols;
-    path.push_back(Point{r, c});
+    double x = at / grid.cols;
+    double y = at % grid.cols;
+    path.push_back(Point{x, y});
     at = parent[at];
   }
   std::reverse(path.begin(), path.end());
   return path;
 }
 
-std::vector<Astar::Waypoint>
+std::vector<Waypoint>
 Astar::add_headings(const std::vector<Point>& path) const {
   std::vector<Waypoint> out;
   if (path.empty()) return out;
   out.reserve(path.size());
 
   // Helper lambdas to go grid -> plane
-  auto to_x = [&](int c) { return c - (CELLS / 2); };
-  auto to_y = [&](int r) { return (CELLS / 2) - r; };
+  auto to_x = [&](int y) { return y - (CELLS / 2); };
+  auto to_y = [&](int x) { return (CELLS / 2) - x; };
 
   for (size_t i = 0; i < path.size(); i++) {
     double heading = 0.0;
 
     if (i + 1 < path.size()) {
-      int x1 = to_x(path[i].c);
-      int y1 = to_y(path[i].r);
-      int x2 = to_x(path[i + 1].c);
-      int y2 = to_y(path[i + 1].r);
+      int x1 = to_x(path[i].y);
+      int y1 = to_y(path[i].x);
+      int x2 = to_x(path[i + 1].y);
+      int y2 = to_y(path[i + 1].x);
 
       int dx = x2 - x1;
       int dy = y2 - y1;

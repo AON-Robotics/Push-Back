@@ -10,7 +10,7 @@ def read_points_csv(path):
     with open(path, newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            pts.append((int(row["r"]), int(row["c"])))
+            pts.append((float(row["x"]), float(row["y"])))
     return pts
 
 def read_boxes_csv(path):
@@ -18,7 +18,7 @@ def read_boxes_csv(path):
     with open(path, newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            boxes.append((int(row["r"]), int(row["c"]), int(row["w"]), int(row["h"])))
+            boxes.append((float(row["x"]), float(row["y"]), float(row["w"]), float(row["h"])))
     return boxes
 
 def rc_to_xy(r, c):
@@ -30,13 +30,13 @@ def rc_to_xy(r, c):
 # --------------------------
 # Read CSVs
 # --------------------------
-path_pts = read_points_csv("path.csv")
-blocked_pts = read_points_csv("blocked.csv")
-penalty_pts = read_points_csv("penalty.csv")
+path_pts = read_points_csv("Plot/path.csv")
+blocked_pts = read_points_csv("Plot/blocked.csv")
+penalty_pts = read_points_csv("Plot/penalty.csv")
 
 # Optional: only if you generated robot_boxes.csv
 try:
-    robot_boxes = read_boxes_csv("robot_boxes.csv")
+    robot_boxes = read_boxes_csv("Plot/robot_boxes.csv")
 except FileNotFoundError:
     robot_boxes = []
 

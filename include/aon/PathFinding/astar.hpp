@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cmath>
 #include <cstdlib>
+#include "pathFidingConfig.hpp"
 
 // --------------------
 // A STAR CLASS
@@ -32,29 +33,18 @@ public:
   int get_robot_w() const { return robot_w; };
   int get_robot_h() const { return robot_h; };
 
-  struct Point {
-    int r = 0; // row
-    int c = 0; // column
-    bool operator==(const Point& other) const { return r == other.r && c == other.c; }
-  };
-
   // Convert grid cell -> plane (x,y) where (0,0) is center.
   // x: +right, -left
   // y: +up, -down
-  static inline int to_x(int c) { return c - (CELLS / 2); }
-  static inline int to_y(int r) { return (CELLS / 2) - r; }
+  static inline double to_x(int y) { return y - (CELLS / 2); }
+  static inline double to_y(int x) { return (CELLS / 2) - x; }
 
-  // Convert plane (x,y) -> grid cell (r,c)
-  static inline int to_c(int x) { return (CELLS / 2) + x; }
-  static inline int to_r(int y) { return (CELLS / 2) - y; }
+  // Convert plane (x,y) -> grid cell (x,y)
+  static inline double to_c(int x) { return (CELLS / 2) + x; }
+  static inline double to_r(int y) { return (CELLS / 2) - y; }
 
   // Convenience: build a Point from plane coords
   static inline Point from_xy(int x, int y) { return Point{to_r(y), to_c(x)}; }
-
-  struct Waypoint {
-    Point p;              // grid point
-    double heading_deg;   // where robot should face at this point
-  };
 
   // Convert a path of Points into waypoints with headings (degrees)
   std::vector<Waypoint> add_headings(const std::vector<Point>& path) const;
@@ -62,8 +52,8 @@ public:
   Astar() { set_robot_type(1); } // Default Big Robot selected
 
   // (Optional helpers) so you can add obstacles/penalties from outside
-  void set_blocked(Point p, bool v = true) { field.set_blocked(p.r, p.c, v); }
-  void set_penalty(Point p, int pen) { field.set_penalty(p.r, p.c, pen); }
+  void set_blocked(Point p, bool v = true) { field.set_blocked(p.x, p.y, v); }
+  void set_penalty(Point p, int pen) { field.set_penalty(p.x, p.y, pen); }
 
   // Call A* algorithm using start + goal provided by caller
   std::vector<Point> go(Point start, Point goal) const { return astar(field, start, goal); }
@@ -88,27 +78,27 @@ private:
     std::vector<int> penalty_vector;          // per-cell penalty
     std::vector<std::uint8_t> blocked_vector; // 0 free, 1 blocked
 
-    CostGrid(int r, int c)
-      : rows(r), cols(c),
-        penalty_vector(r * c, 0),
-        blocked_vector(r * c, 0) {}
+    CostGrid(int x, int y)
+      : rows(x), cols(y),
+        penalty_vector(x * y, 0),
+        blocked_vector(x * y, 0) {}
 
     // Return 1D index from 2D given index
-    int idx(int r, int c) const { return r * cols + c; }
+    int idx(int x, int y) const { return x * cols + y; }
     // Return True if given cell is in grid bounds
-    bool in_bounds(int r, int c) const { return r >= 0 && c >= 0 && r < rows && c < cols; }
+    bool in_bounds(int x, int y) const { return x >= 0 && y >= 0 && x < rows && y < cols; }
     // Return True is given cell is blocked
-    bool is_blocked(int r, int c) const { return blocked_vector[idx(r, c)] == 1; }
-    int  penalty(int r, int c) const { return penalty_vector[idx(r, c)]; }
+    bool is_blocked(int x, int y) const { return blocked_vector[idx(x, y)] == 1; }
+    int  penalty(int x, int y) const { return penalty_vector[idx(x, y)]; }
 
-    void set_blocked(int r, int c, bool v = true) { blocked_vector[idx(r, c)] = v ? 1 : 0; }
-    void set_penalty(int r, int c, int p) { penalty_vector[idx(r, c)] = p; }
+    void set_blocked(int x, int y, bool v = true) { blocked_vector[idx(x, y)] = v ? 1 : 0; }
+    void set_penalty(int x, int y, int p) { penalty_vector[idx(x, y)] = p; }
 
     // Move cost between adjacent cells (8-neighbors):
     // straight = RESOLUTION, diagonal = RESOLUTION*sqrt(2)
     double move_cost(const Point& a, const Point& b) const {
-      int dr = std::abs(a.r - b.r);
-      int dc = std::abs(a.c - b.c);
+      int dr = std::abs(a.x - b.x);
+      int dc = std::abs(a.y - b.y);
       if (dr + dc == 1) return double(RESOLUTION);      // straight
       return double(RESOLUTION) * std::sqrt(2.0);       // diagonal
     }
@@ -127,8 +117,8 @@ private:
 
       for (int dr = -hh; dr <= hh; dr++) {
         for (int dc = -hw; dc <= hw; dc++) {
-          int rr = p.r + dr;
-          int cc = p.c + dc;
+          int rr = p.x + dr;
+          int cc = p.y + dc;
 
           // out of bounds = collision
           if (!grid.in_bounds(rr, cc)) return false;
@@ -147,14 +137,14 @@ private:
 
   // Heuristic: Euclidean distance (in inches, consistent with move_cost)
   double h_cost(const Point& n, const Point& goal) const {
-    double dr = double(n.r - goal.r);
-    double dc = double(n.c - goal.c);
+    double dr = double(n.x - goal.x);
+    double dc = double(n.y - goal.y);
     return double(RESOLUTION) * std::sqrt(dr * dr + dc * dc);
   }
 
   // Tentative g for neighbor: g(curr) + move + penalty(neighbor)
   double g_cost(const CostGrid& field, const Point& curr, const Point& nb, double g_curr) const {
-    return g_curr + field.move_cost(curr, nb) + double(field.penalty(nb.r, nb.c));
+    return g_curr + field.move_cost(curr, nb) + double(field.penalty(nb.x, nb.y));
   }
 
   std::vector<Point> astar(const CostGrid& grid, const Point& start, const Point& goal) const;
