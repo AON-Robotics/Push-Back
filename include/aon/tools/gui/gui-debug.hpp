@@ -92,8 +92,6 @@ public:
 
   // API: register a variable to be editable in Debug Menu 3.
   // T must support + and - (detected via std::void_t).
-  void variableChanger(double& variableRef, const std::string& name) override;
-
   template <
     typename T,
     typename = std::void_t<
@@ -101,7 +99,7 @@ public:
       decltype(std::declval<T>() - std::declval<T>())
     >
   >
-  void VariableChanger(T& variableRef, const std::string& name) {
+  void variableChanger(T& variableRef, const std::string& name) {
     for (const auto& e : variableEntries) {
       if (e.name == name) return;
     }

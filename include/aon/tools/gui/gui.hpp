@@ -14,9 +14,9 @@
 
 namespace aon {
   class Gui;
-  // Global GUI reference. The concrete instance is defined in the
-  // implementation file; change the implementation type there only.
-  extern Gui& gui;
+  // Owning GUI instance. Created once in gui.cpp; type selected by the
+  // TESTING_AUTONOMOUS flag. Access members via gui->method().
+  extern std::unique_ptr<Gui> gui;
   
   int RedRingsRoutine();
   int BlueRingsRoutine();

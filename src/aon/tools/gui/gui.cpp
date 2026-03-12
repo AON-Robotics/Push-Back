@@ -5,17 +5,13 @@
 
 namespace aon {
 
-// Select concrete GUI implementation based on TESTING_AUTONOMOUS flag.
-// TESTING_AUTONOMOUS == true  -> GuiDebug (full debug features)
-// TESTING_AUTONOMOUS == false -> Gui (competition mode, no debug menu)
+// Owning GUI instance — type selected at compile time by TESTING_AUTONOMOUS.
+// A single std::unique_ptr<Gui> is used so no redundant reference alias is needed.
 #if TESTING_AUTONOMOUS
-static GuiDebug gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<GuiDebug>();
 #else
-static Gui gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<Gui>();
 #endif
-
-// Global reference to the GUI instance
-Gui& gui = gui_impl;
 
 // Define the autonomousReader unique_ptr
 std::unique_ptr<FunctionReader<int>> autonomousReader =

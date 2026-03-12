@@ -30,17 +30,6 @@ void GuiDebug::registerTestFunction(void (*func)(), const std::string& name) {
   });
 }
 
-void GuiDebug::variableChanger(double& variableRef, const std::string& name) {
-  for (const auto& e : variableEntries) {
-    if (e.name == name) return;
-  }
-  variableEntries.push_back({
-    name,
-    [&variableRef]() -> double { return variableRef; },
-    [&variableRef](double delta) { variableRef += delta; }
-  });
-}
-
 void GuiDebug::setVariableRegister(const std::function<void()>& Register) {
   variableRegister = Register;
 }

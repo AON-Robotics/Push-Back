@@ -3,9 +3,6 @@
 #include <cmath>
 #include <string>
 
-// Plain function pointer adapter required by FunctionReader::AddFunction.
-int InvokeSelectedAutonAdapter() { return aon::gui.invokeSelectedAuton(); }
-
 namespace aon {
 
 // ============================================================================
@@ -213,7 +210,7 @@ void GuiDebug::HandleRegisteredAutonsMenuTouch() {
       selectedAutonInvoker = fn;
       autonCompleted = false;  // Reset completed flag on new selection
       
-      autonomousReader->AddFunction("autonomous", InvokeSelectedAutonAdapter);
+      autonomousReader->AddFunction("autonomous", [this]{ return invokeSelectedAuton(); });
 
       DisplayAutonRunner();
       currentScreen = AutonRunner;
@@ -294,7 +291,7 @@ void GuiDebug::HandleAutonRunnerTouch() {
                   static_cast<bool>(selectedAutonInvoker);
   if (!hasAuton) return;
 
-  autonomousReader->AddFunction("autonomous", InvokeSelectedAutonAdapter);
+  autonomousReader->AddFunction("autonomous", [this]{ return invokeSelectedAuton(); });
   autonRunning = true;
   autonCompleted = false;
   DisplayAutonRunner();  // show orange running state
