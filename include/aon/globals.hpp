@@ -26,13 +26,13 @@
 #if USING_BIG_ROBOT
 
 // Drivetrain
-aon::TankDrive drivetrain = aon::TankDrive({16, -15, -14}, {-20, 19, 18});
+aon::TankDrive drivetrain = aon::TankDrive({-18, -19, 20}, {8, -9, 10});
 okapi::MotorGroup mid({17}); // Default make robot go right
 
 pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('H');
 
-aon::Intake intake = aon::Intake({1}, {13}, {-10}, {3}, {-6}, {-9}, 'G', 8, 7);
+aon::Intake intake = aon::Intake({1}, {13}, {0}, {3}, {-6}, {0}, 'G', 8, 7);
 
 #else
 

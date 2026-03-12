@@ -40,7 +40,7 @@ void strafe(double dist = TILE_WIDTH){
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  double startPos = odometry.encoderBack.get_position();
+  double startPos = drivetrain.odom.encoderBack.get_position();
   // Vector startPos = aon::odometry::GetPosition();
   
   double now = pros::micros() / 1E6;
@@ -49,7 +49,7 @@ void strafe(double dist = TILE_WIDTH){
   motionProfile.setVelocity(mid.getActualVelocity());
   
   while (traveledDist < dist) {
-    traveledDist = (std::abs(odometry.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+    traveledDist = (std::abs(drivetrain.odom.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
     // traveledDist = (aon::odometry::GetPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
