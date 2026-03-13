@@ -5,6 +5,7 @@
 #ifndef AON_TOOLS_FUNCTION_READER_HPP_
 #define AON_TOOLS_FUNCTION_READER_HPP_
 #include <algorithm>
+#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -23,7 +24,7 @@
 template <class T>
 class FunctionReader {
  private:
-  std::map<std::string, T (*)()> FunctionMap;
+  std::map<std::string, std::function<T()>> FunctionMap;
   std::vector<std::string> Keys;
 
  public:
@@ -32,10 +33,10 @@ class FunctionReader {
 
   /// Add function to be stored and executed later on
   /// \param name Specific name function to be stored as
-  /// \param func Function address, must be of the parameter type or casted
-  void AddFunction(std::string name, T (*func)()) {
+  /// \param func Callable (function pointer, lambda, or std::function)
+  void AddFunction(std::string name, std::function<T()> func) {
     Keys.push_back(name);
-    FunctionMap[name] = func;
+    FunctionMap[name] = std::move(func);
   }
 
   /// Find and execute function stored in the function map
@@ -43,8 +44,7 @@ class FunctionReader {
   /// reader
   T ExecuteFunction(std::string name) {
     if (FunctionMap.find(name) != FunctionMap.end()) {
-      T (*func)() = FunctionMap[name];
-      return func();
+      return FunctionMap[name]();
     }
     T temp;
     return temp;

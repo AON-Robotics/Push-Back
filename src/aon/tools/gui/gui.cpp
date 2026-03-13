@@ -5,137 +5,138 @@
 
 namespace aon {
 
-// Select concrete GUI implementation based on TESTING_AUTONOMOUS flag.
-// TESTING_AUTONOMOUS = true  -> GuiDebug (full debug features)
-// TESTING_AUTONOMOUS = false -> Gui (competition mode, no debug menu)
+// Owning GUI instance — type selected at compile time by TESTING_AUTONOMOUS.
+// A single std::unique_ptr<Gui> is used so no redundant reference alias is needed.
 #if TESTING_AUTONOMOUS
-static GuiDebug gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<GuiDebug>();
 #else
-static Gui gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<Gui>();
 #endif
-Gui& gui = gui_impl;
 
-// Define the AutonomousReader unique_ptr
-std::unique_ptr<FunctionReader<int>> AutonomousReader =
+// Define the autonomousReader unique_ptr
+std::unique_ptr<FunctionReader<int>> autonomousReader =
     std::make_unique<FunctionReader<int>>();
 
 // ============================================================================
 // Helper Methods
 // ============================================================================
 
-  int Gui::DisplayInitializationMessage() {
-    // Clear the screen completely
+int Gui::displayInitializationMessage() {
+  // Clear the screen completely
+  pros::screen::set_eraser(COLOR_BLACK);
+  pros::screen::erase();
+
+  // Typewriter-style primary message (shows debug text when enabled for
+  // testing)
+#if TESTING_AUTONOMOUS
+  const char* msg = "Initializing Debug...";
+#else
+  const char* msg = "Initializing AON...";
+#endif
+  int len = 0;
+  for (const char* p = msg; *p; ++p) ++len;
+
+  // Estimate character dimensions (matches Button helpers)
+  int charWidth = 18;  // pixels for large text
+  int charHeight = 20;
+
+  int textWidth = len * charWidth;
+  int startX = (BRAIN_SCREEN_WIDTH - textWidth) / 2;
+  int startY = BRAIN_SCREEN_HEIGHT / 3;  // higher on screen
+
+  pros::screen::set_pen(COLOR_WHITE);
+  for (int i = 1; i <= len; ++i) {
+    // Clear the text area to avoid artifacts
     pros::screen::set_eraser(COLOR_BLACK);
-    pros::screen::erase();
+    pros::screen::erase_rect(startX, startY, startX + textWidth, startY + charHeight + 4);
 
-    // Typewriter-style primary message (shows debug text when enabled for testing)
-  #if TESTING_AUTONOMOUS
-    const char* msg = "Initializing Debug...";
-  #else
-    const char* msg = "Initializing AON...";
-  #endif
-    int len = 0; for (const char* p = msg; *p; ++p) ++len;
+    // Print substring (typewriter effect)
+    char buf[128];
+    int copy = (i < (int)sizeof(buf)) ? i : ((int)sizeof(buf) - 1);
+    for (int j = 0; j < copy; ++j) buf[j] = msg[j];
+    buf[copy] = '\0';
+    pros::screen::print(pros::E_TEXT_LARGE, startX, startY, "%s", buf);
 
-    // Estimate character dimensions (matches Button helpers)
-    int charWidth = 18; // pixels for large text
-    int charHeight = 20;
+    pros::delay(60);
+  }
 
-    int textWidth = len * charWidth;
-    int startX = (BRAIN_SCREEN_WIDTH - textWidth) / 2;
-    int startY = BRAIN_SCREEN_HEIGHT / 3; // higher on screen
+  // Secondary message displayed lower and centered with typewriter effect
+#if TESTING_AUTONOMOUS
+  const char* secMsg = "Debug is ENABLED";
+#else
+  const char* secMsg = "AON is ON";
+#endif
+  int secLen = 0;
+  for (const char* p = secMsg; *p; ++p) ++secLen;
+  int secTextWidth = secLen * charWidth;
+  int secX = (BRAIN_SCREEN_WIDTH - secTextWidth) / 2;
+  int secY = startY + 40;
+  pros::screen::set_pen(COLOR_WHITE);
+  for (int i = 1; i <= secLen; ++i) {
+    // Clear the secondary text area
+    pros::screen::set_eraser(COLOR_BLACK);
+    pros::screen::erase_rect(secX, secY, secX + secTextWidth, secY + charHeight + 4);
 
-    pros::screen::set_pen(COLOR_WHITE);
-    for (int i = 1; i <= len; ++i) {
-      // Clear the text area to avoid artifacts
-      pros::screen::set_eraser(COLOR_BLACK);
-      pros::screen::erase_rect(startX, startY, startX + textWidth, startY + charHeight + 4);
+    // Print substring
+    char buf[64];
+    int copy = (i < (int)sizeof(buf)) ? i : ((int)sizeof(buf) - 1);
+    for (int j = 0; j < copy; ++j) buf[j] = secMsg[j];
+    buf[copy] = '\0';
+    pros::screen::print(pros::E_TEXT_LARGE, secX, secY, "%s", buf);
 
-      // Print substring (typewriter effect)
-      char buf[128];
-      int copy = (i < (int)sizeof(buf)) ? i : ((int)sizeof(buf) - 1);
-      for (int j = 0; j < copy; ++j) buf[j] = msg[j];
-      buf[copy] = '\0';
-      pros::screen::print(pros::E_TEXT_LARGE, startX, startY, "%s", buf);
-
-      pros::delay(60);
-    }
-
-    // Secondary message displayed lower and centered with typewriter effect
-  #if TESTING_AUTONOMOUS
-    const char* secMsg = "Debug is ENABLED";
-  #else
-    const char* secMsg = "AON is ON";
-  #endif
-    int secLen = 0; for (const char* p = secMsg; *p; ++p) ++secLen;
-    int secTextWidth = secLen * charWidth;
-    int secX = (BRAIN_SCREEN_WIDTH - secTextWidth) / 2;
-    int secY = startY + 40;
-    pros::screen::set_pen(COLOR_WHITE);
-    for (int i = 1; i <= secLen; ++i) {
-      // Clear the secondary text area
-      pros::screen::set_eraser(COLOR_BLACK);
-      pros::screen::erase_rect(secX, secY, secX + secTextWidth, secY + charHeight + 4);
-
-      // Print substring
-      char buf[64];
-      int copy = (i < (int)sizeof(buf)) ? i : ((int)sizeof(buf) - 1);
-      for (int j = 0; j < copy; ++j) buf[j] = secMsg[j];
-      buf[copy] = '\0';
-      pros::screen::print(pros::E_TEXT_LARGE, secX, secY, "%s", buf);
-
-      pros::delay(60);
-    }
-    if (TESTING_AUTONOMOUS) {
-      aon::drawDebugCleaner();
-    } else {
-      return 0;
-    }
-
+    pros::delay(60);
+  }
+  if (TESTING_AUTONOMOUS) {
+    aon::drawDebugCleaner();
+  } else {
     return 0;
   }
 
-void Gui::ApplyPreselectedAuton() {
+  return 0;
+}
+
+void Gui::applyPreselectedAuton() {
   // If user already directly set selectedAuton, don't override.
   if (selectedAuton.routine != nullptr && selectedAutonName != "None" &&
       (selectedRedAut == 0 && selectedBlueAut == 0 && selectedSkill == 0)) {
-    return; // Nothing to map; routine already chosen
+    return;  // Nothing to map; routine already chosen
   }
 
   if (selectedRedAut > 0) {
-    SelectAutonByList(Alliance::Red, selectedRedAut);
-    return; // Red takes precedence
+    selectAutonByList(Alliance::Red, selectedRedAut);
+    return;  // Red takes precedence
   }
 
   if (selectedBlueAut > 0) {
-    SelectAutonByList(Alliance::Blue, selectedBlueAut);
-    return; // Blue next
+    selectAutonByList(Alliance::Blue, selectedBlueAut);
+    return;  // Blue next
   }
 
   if (selectedSkill > 0) {
-    SelectAutonByList(Alliance::Skills, selectedSkill);
+    selectAutonByList(Alliance::Skills, selectedSkill);
   }
 }
 
-void Gui::SelectAutonByList(Alliance alliance, int index1Based) {
+void Gui::selectAutonByList(Alliance alliance, int index1Based) {
   if (index1Based < 1) index1Based = 1;
   if (index1Based > 3) index1Based = 3;
 
   const AutonOption* options = nullptr;
   switch (alliance) {
     case Alliance::Red:
-      options = RedAutonOptions;
+      options = redAutonOptions;
       selectedRedAut = index1Based;
       selectedBlueAut = 0;
       selectedSkill = 0;
       break;
     case Alliance::Blue:
-      options = BlueAutonOptions;
+      options = blueAutonOptions;
       selectedRedAut = 0;
       selectedBlueAut = index1Based;
       selectedSkill = 0;
       break;
     case Alliance::Skills:
-      options = SkillsAutonOptions;
+      options = skillsAutonOptions;
       selectedRedAut = 0;
       selectedBlueAut = 0;
       selectedSkill = index1Based;
@@ -144,135 +145,134 @@ void Gui::SelectAutonByList(Alliance alliance, int index1Based) {
   const AutonOption& choice = options[index1Based - 1];
   selectedAuton = choice;
   selectedAutonName = choice.name;
-  
-  // Register the selected autonomous routine to the AutonomousReader
-  AutonomousReader->AddFunction("autonomous", choice.routine);
 
-  if (CurrentScreen == MainMenu) {
-    DisplayMainMenu();
+  // Register the selected autonomous routine to the autonomousReader
+  autonomousReader->AddFunction("autonomous", choice.routine);
+
+  if (currentScreen == MainMenu) {
+    displayMainMenu();
   }
 }
-
-
 
 // ============================================================================
 // Touch Handlers
 // ============================================================================
 
-void Gui::HandleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) {
+void Gui::handleMainMenuTouch(
+    const pros::screen_touch_status_s_t& touchStatus) {
   // Check if AUTONS button is pressed
   if (AutonsBtn.isHit(touchStatus.x, touchStatus.y)) {
-    if (CurrentScreen != AutonMenu) {
-      DisplayAutonMenu();
-      CurrentScreen = AutonMenu;
+    if (currentScreen != AutonMenu) {
+      displayAutonMenu();
+      currentScreen = AutonMenu;
     }
   }
 }
 
-void Gui::HandleAutonMenuTouch() {
-  if (CurrentScreen != AutonMenu) return;
+void Gui::handleAutonMenuTouch() {
+  if (currentScreen != AutonMenu) return;
 
   pros::screen_touch_status_s_t touch = pros::screen::touch_status();
   if (touch.touch_status <= 0) return;
 
   int x = touch.x, y = touch.y;
 
-  if (BackBtnGray.isHit(x, y)) {
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
-  } else if (BlueBtn.isHit(x, y)) {
-    DisplayBlueAutonMenu();
-    CurrentScreen = BlueAutons;
-  } else if (RedBtn.isHit(x, y)) {
-    DisplayRedAutonMenu();
-    CurrentScreen = RedAutons;
-  } else if (SkillsBtn.isHit(x, y)) {
-    DisplaySkillsMenu();
-    CurrentScreen = SkillAutons;
+  if (backBtnGray.isHit(x, y)) {
+    displayMainMenu();
+    currentScreen = MainMenu;
+  } else if (blueBtn.isHit(x, y)) {
+    displayBlueAutonMenu();
+    currentScreen = BlueAutons;
+  } else if (redBtn.isHit(x, y)) {
+    displayRedAutonMenu();
+    currentScreen = RedAutons;
+  } else if (skillsBtn.isHit(x, y)) {
+    displaySkillsMenu();
+    currentScreen = SkillAutons;
   }
 }
 
-void Gui::HandleRedAutonMenuTouch() {
+void Gui::handleRedAutonMenuTouch() {
   pros::screen_touch_status_s_t touch = pros::screen::touch_status();
   if (touch.touch_status <= 0) return;
 
   int x = touch.x, y = touch.y;
 
-  if (BackBtnRed.isHit(x, y)) {
-    DisplayAutonMenu();
-    CurrentScreen = AutonMenu;
+  if (backBtnRed.isHit(x, y)) {
+    displayAutonMenu();
+    currentScreen = AutonMenu;
     return;
   }
 
   // Check auton selection buttons
-  if (Aut1Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Red, 1);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+  if (aut1Btn.isHit(x, y)) {
+    selectAutonByList(Alliance::Red, 1);
+    displayMainMenu();
+    currentScreen = MainMenu;
   } else if (Aut2Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Red, 2);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+    selectAutonByList(Alliance::Red, 2);
+    displayMainMenu();
+    currentScreen = MainMenu;
   } else if (Aut3Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Red, 3);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+    selectAutonByList(Alliance::Red, 3);
+    displayMainMenu();
+    currentScreen = MainMenu;
   }
 }
 
-void Gui::HandleBlueAutonMenuTouch() {
+void Gui::handleBlueAutonMenuTouch() {
   pros::screen_touch_status_s_t touch = pros::screen::touch_status();
   if (touch.touch_status <= 0) return;
 
   int x = touch.x, y = touch.y;
 
   if (BackBtnBlue.isHit(x, y)) {
-    DisplayAutonMenu();
-    CurrentScreen = AutonMenu;
+    displayAutonMenu();
+    currentScreen = AutonMenu;
     return;
   }
 
   // Check auton selection buttons
-  if (Aut1Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Blue, 1);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+  if (aut1Btn.isHit(x, y)) {
+    selectAutonByList(Alliance::Blue, 1);
+    displayMainMenu();
+    currentScreen = MainMenu;
   } else if (Aut2Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Blue, 2);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+    selectAutonByList(Alliance::Blue, 2);
+    displayMainMenu();
+    currentScreen = MainMenu;
   } else if (Aut3Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Blue, 3);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+    selectAutonByList(Alliance::Blue, 3);
+    displayMainMenu();
+    currentScreen = MainMenu;
   }
 }
 
-void Gui::HandleSkillsMenuTouch() {
+void Gui::handleSkillsMenuTouch() {
   pros::screen_touch_status_s_t touch = pros::screen::touch_status();
   if (touch.touch_status <= 0) return;
 
   int x = touch.x, y = touch.y;
 
   if (BackBtnGreen.isHit(x, y)) {
-    DisplayAutonMenu();
-    CurrentScreen = AutonMenu;
+    displayAutonMenu();
+    currentScreen = AutonMenu;
     return;
   }
 
   // Check auton selection buttons
-  if (Aut1Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Skills, 1);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+  if (aut1Btn.isHit(x, y)) {
+    selectAutonByList(Alliance::Skills, 1);
+    displayMainMenu();
+    currentScreen = MainMenu;
   } else if (Aut2Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Skills, 2);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+    selectAutonByList(Alliance::Skills, 2);
+    displayMainMenu();
+    currentScreen = MainMenu;
   } else if (Aut3Btn.isHit(x, y)) {
-    SelectAutonByList(Alliance::Skills, 3);
-    DisplayMainMenu();
-    CurrentScreen = MainMenu;
+    selectAutonByList(Alliance::Skills, 3);
+    displayMainMenu();
+    currentScreen = MainMenu;
   }
 }
 
@@ -280,25 +280,25 @@ void Gui::HandleSkillsMenuTouch() {
 // GUI Loop
 // ============================================================================
 
-void Gui::RunGuiLoop() {
+void Gui::mainLoop() {
   while (true) {
     pros::screen_touch_status_s_t TouchStatus = pros::screen::touch_status();
     if (TouchStatus.touch_status > 0) {
-      switch (CurrentScreen) {
+      switch (currentScreen) {
         case MainMenu:
-          HandleMainMenuTouch(TouchStatus);
+          handleMainMenuTouch(TouchStatus);
           break;
         case AutonMenu:
-          HandleAutonMenuTouch();
+          handleAutonMenuTouch();
           break;
         case RedAutons:
-          HandleRedAutonMenuTouch();
+          handleRedAutonMenuTouch();
           break;
         case BlueAutons:
-          HandleBlueAutonMenuTouch();
+          handleBlueAutonMenuTouch();
           break;
         case SkillAutons:
-          HandleSkillsMenuTouch();
+          handleSkillsMenuTouch();
           break;
         default:
           break;
@@ -313,30 +313,28 @@ void Gui::RunGuiLoop() {
 // Initialization
 // ============================================================================
 
-void Gui::Initialize() {
+void Gui::initialize() {
   std::cout << "Start" << std::endl;
 
   pros::delay(5);
 
-  CurrentScreen = MainMenu;
-  
-  DisplayInitializationMessage();
-  
+  currentScreen = MainMenu;
+
+  displayInitializationMessage();
+
   // Keep initialization message visible briefly before showing main menu
   pros::delay(1000);
 
-  DisplayMainMenu();
+  displayMainMenu();
 
-  ApplyPreselectedAuton();
+  applyPreselectedAuton();
+
+  this->mainLoop();
 }
 
-int Gui::InvokeSelectedAuton() {
+int Gui::invokeSelectedAuton() {
   if (selectedAuton.routine != nullptr) return selectedAuton.routine();
   return 0;
 }
 
-
-void InitializeGui() {
-    gui.Initialize();
-  }
 }  // namespace aon
