@@ -3,9 +3,6 @@
 #include <cmath>
 #include <string>
 
-// Plain function pointer adapter required by FunctionReader::AddFunction.
-int InvokeSelectedAutonAdapter() { return aon::gui.InvokeSelectedAuton(); }
-
 namespace aon {
 
 // ============================================================================
@@ -187,7 +184,7 @@ void GuiDebug::HandleRegisteredAutonsMenuTouch() {
     int backX1 = 10, backY1 = 6, backX2 = backX1 + 80, backY2 = backY1 + 28;
     if (x >= backX1 && x <= backX2 && y >= backY1 && y <= backY2) {
       DisplayDebugMenu();
-      CurrentScreen = DebugMenu;
+      currentScreen = DebugMenu;
       pros::delay(300);
       return;
     }
@@ -198,7 +195,7 @@ void GuiDebug::HandleRegisteredAutonsMenuTouch() {
   int nextX1 = BRAIN_SCREEN_WIDTH - 120, nextX2 = BRAIN_SCREEN_WIDTH - 40;
   if (x >= nextX1 && x <= nextX2 && y >= nextY1 && y <= nextY2) {
     DisplayAutonRunner();
-    CurrentScreen = AutonRunner;
+    currentScreen = AutonRunner;
     pros::delay(300);
     return;
   }
@@ -213,10 +210,10 @@ void GuiDebug::HandleRegisteredAutonsMenuTouch() {
       selectedAutonInvoker = fn;
       autonCompleted = false;  // Reset completed flag on new selection
       
-      AutonomousReader->AddFunction("autonomous", InvokeSelectedAutonAdapter);
+      autonomousReader->AddFunction("autonomous", [this]{ return invokeSelectedAuton(); });
 
       DisplayAutonRunner();
-      CurrentScreen = AutonRunner;
+      currentScreen = AutonRunner;
       pros::delay(300);
       return;
     }
@@ -237,7 +234,7 @@ void GuiDebug::HandleAutonRunnerTouch() {
               backY2 = backY1 + 28;
     if (x >= backX1 && x <= backX2 && y >= backY1 && y <= backY2) {
       DisplayDebugMenu();
-      CurrentScreen = DebugMenu;
+      currentScreen = DebugMenu;
       pros::delay(300);
       return;
     }
@@ -248,8 +245,8 @@ void GuiDebug::HandleAutonRunnerTouch() {
     const int menuY1 = 6, menuY2 = menuY1 + 28;
     const int menuX1 = BRAIN_SCREEN_WIDTH - 120, menuX2 = BRAIN_SCREEN_WIDTH - 40;
     if (x >= menuX1 && x <= menuX2 && y >= menuY1 && y <= menuY2) {
-      DisplayMainMenu();
-      CurrentScreen = MainMenu;
+      displayMainMenu();
+      currentScreen = MainMenu;
       pros::delay(300);
       return;
     }
@@ -263,9 +260,9 @@ void GuiDebug::HandleAutonRunnerTouch() {
       if (variableEntries.empty() && variableRegister) {
         variableRegister();
       }
-      PreviousScreen = AutonRunner;
+      previousScreen = AutonRunner;
       DisplayVariablesMenu();
-      CurrentScreen = VARS;
+      currentScreen = VARS;
       pros::delay(300);
       return;
     }
@@ -294,12 +291,12 @@ void GuiDebug::HandleAutonRunnerTouch() {
                   static_cast<bool>(selectedAutonInvoker);
   if (!hasAuton) return;
 
-  AutonomousReader->AddFunction("autonomous", InvokeSelectedAutonAdapter);
+  autonomousReader->AddFunction("autonomous", [this]{ return invokeSelectedAuton(); });
   autonRunning = true;
   autonCompleted = false;
   DisplayAutonRunner();  // show orange running state
 
-  AutonomousReader->ExecuteFunction("autonomous");
+  autonomousReader->ExecuteFunction("autonomous");
 
   autonRunning = false;
   autonCompleted = true;

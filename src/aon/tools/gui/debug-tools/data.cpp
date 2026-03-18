@@ -124,7 +124,7 @@ void GuiDebug::HandleDataMenuTouch() {
     const int backX1 = 10, backY1 = 10, backX2 = 80, backY2 = 38;
     if (x >= backX1 && x <= backX2 && y >= backY1 && y <= backY2) {
       DisplayDebugMenu();
-      CurrentScreen = DebugMenu;
+      currentScreen = DebugMenu;
       dataPage = 0;
       lastTouchMs = now + 300; // Add extra delay to prevent double-click
       pros::delay(300);
@@ -140,9 +140,9 @@ void GuiDebug::HandleDataMenuTouch() {
       if (variableEntries.empty() && variableRegister) {
         variableRegister();
       }
-      PreviousScreen = DATA;
+      previousScreen = DATA;
       DisplayVariablesMenu();
-      CurrentScreen = VARS;
+      currentScreen = VARS;
       lastTouchMs = now;
       return;
     }
@@ -154,7 +154,7 @@ void GuiDebug::HandleDataMenuTouch() {
     const int resetX2 = resetX1 + 80, resetY2 = resetY1 + 28;
     if (x >= resetX1 && x <= resetX2 && y >= resetY1 && y <= resetY2) {
       // Invoke the user-registered reset handler if available
-      InvokeResetHandler();
+      invokeResetHandler();
 
       DisplayDataMenu();
       lastTouchMs = now;

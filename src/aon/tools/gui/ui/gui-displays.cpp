@@ -5,7 +5,7 @@
 
 namespace aon {
 
-void Gui::DisplayMainMenu() {
+void Gui::displayMainMenu() {
   // Ensure the screen is cleared at the start of each display function
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
@@ -25,7 +25,7 @@ void Gui::DisplayMainMenu() {
   AutonsBtn.draw(pros::E_TEXT_LARGE);
 }
 
-void Gui::DisplayAutonMenu() {
+void Gui::displayAutonMenu() {
   // Main AUTONS hub: shows current selection and navigates to Red/Blue/Skills submenus
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
@@ -41,13 +41,13 @@ void Gui::DisplayAutonMenu() {
   }
 
   // Draw navigation buttons using UI helpers
-  BackBtnGray.draw();
-  BlueBtn.draw(pros::E_TEXT_LARGE);
-  RedBtn.draw(pros::E_TEXT_LARGE);
-  SkillsBtn.draw(pros::E_TEXT_LARGE);
+  backBtnGray.draw();
+  blueBtn.draw(pros::E_TEXT_LARGE);
+  redBtn.draw(pros::E_TEXT_LARGE);
+  skillsBtn.draw(pros::E_TEXT_LARGE);
 }
 
-void Gui::DisplayRedAutonMenu() {
+void Gui::displayRedAutonMenu() {
   // Red-side autons list with three option buttons
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
@@ -57,7 +57,7 @@ void Gui::DisplayRedAutonMenu() {
   pros::screen::erase();
 
   // Draw BACK button
-  BackBtnRed.draw();
+  backBtnRed.draw();
 
   // Display the current selected autonomous routine at the top center
   pros::screen::set_pen(COLOR_WHITE);
@@ -71,7 +71,7 @@ void Gui::DisplayRedAutonMenu() {
   pros::screen::print(pros::E_TEXT_LARGE_CENTER, 4, "RED");
 
   // Draw auton selection buttons with red theme colors
-  ui::Button aut1 = Aut1Btn; aut1.bg = COLOR_LIGHT_PINK;
+  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_LIGHT_PINK;
   ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_CRIMSON;
   ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_RED;
   aut1.draw(pros::E_TEXT_LARGE);
@@ -79,7 +79,7 @@ void Gui::DisplayRedAutonMenu() {
   aut3.draw(pros::E_TEXT_LARGE);
 }
 
-void Gui::DisplayBlueAutonMenu() {
+void Gui::displayBlueAutonMenu() {
   // Blue-side autons list
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
@@ -103,7 +103,7 @@ void Gui::DisplayBlueAutonMenu() {
   pros::screen::print(pros::E_TEXT_LARGE_CENTER, 4, "BLUE");
 
   // Draw auton selection buttons with blue theme colors
-  ui::Button aut1 = Aut1Btn; aut1.bg = COLOR_SKY_BLUE;
+  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_SKY_BLUE;
   ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_STEEL_BLUE;
   ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_BLUE;
   aut1.draw(pros::E_TEXT_LARGE);
@@ -111,7 +111,7 @@ void Gui::DisplayBlueAutonMenu() {
   aut3.draw(pros::E_TEXT_LARGE);
 }
 
-void Gui::DisplaySkillsMenu() {
+void Gui::displaySkillsMenu() {
   // Skills autons list
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
@@ -138,7 +138,7 @@ void Gui::DisplaySkillsMenu() {
   pros::screen::print(pros::E_TEXT_LARGE_CENTER, 4, "SKILLS");
 
   // Draw auton selection buttons with green theme colors
-  ui::Button aut1 = Aut1Btn; aut1.bg = COLOR_LIGHT_GREEN;
+  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_LIGHT_GREEN;
   ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_YELLOW_GREEN;
   ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_GREEN;
   aut1.draw(pros::E_TEXT_LARGE);
