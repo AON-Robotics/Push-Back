@@ -4,55 +4,43 @@
 #include "./controls/s-curve-profile.hpp"
 #include "./controls/pid/pid.hpp"
 #include "./odometry/odometry.hpp"
+#include "./odometry/odometry.hpp"
 
 namespace aon {
 
 class Drivetrain {
  protected:
-  // Pose pose;
+  Pose pose;
   bool turbo = false;
-  aon::Odometry odometry;
+  aon::Odometry odom;
   std::unique_ptr<pros::Task> odomTask;
 
   static void odomTaskFn(void* param) {
     Drivetrain* dt = static_cast<Drivetrain*>(param);
-    dt->odometry.sense();
+    dt->odom.sense();
   }
 
  public:
   // Drivetrain() : pose(), odometry(),
-  Drivetrain() : odometry() {}
+  Drivetrain() : odom() {}
 
   // Pose getPose() { return this->pose; }
   // void setPose(Pose p) { this->pose = p; }
 
-  // double getX() { return this->pose.x; }
-  // void setX(double x) { this->pose.x = x; }
+  double getX() { 
+    return this->odom.getX();
+  }
+  void setX(double x) { this->pose.x = x; }
 
-  // double getY() { return this->pose.y; }
-  // void setY(double y) { this->pose.y = y; }
+  double getY() { 
+    return this->odom.getY();
+  }
+  void setY(double y) { this->pose.y = y; }
 
-  // double getTheta() { return this->pose.theta; }
-  // void setTheta(double theta) { this->pose.theta = theta; }
-  void startOdometry() {
-    odometry.initialize();
-    odomTask = std::make_unique<pros::Task>(odomTaskFn, this);
-}
-
-  Vector getPose() { return this->odometry.getPosition(); }
-  void setPose(double x, double y) { this->odometry.setPosition(x, y); }
-
-  double getX() { return this->odometry.getX(); }
-  void setX(double x) { this->odometry.setX(x); }
-
-  double getY() { return this->odometry.getY(); }
-  void setY(double y) { this->odometry.setY(y); }
-
-  double getTheta() { return this->odometry.getDegrees(); }
-  void setTheta(double theta) { this->odometry.setDegrees(theta); }
-
-  /// @brief Debug odometry
-  void debugOdometry() { odometry.debug(); }
+  double getTheta() { 
+    return this->odom.getDegrees();
+  }
+  void setTheta(double theta) { this->pose.theta = theta; }
 
   bool isTurbo() { return this->turbo; }
   void setTurbo(bool turbo) { this->turbo = turbo; }

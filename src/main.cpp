@@ -1,10 +1,9 @@
 #include "../include/main.hpp"
-#include "../include/aon/drivetrain.hpp"
+
 
 void initialize() {
-  pros::Task guiTask(aon::gui::Initialize);
+  pros::Task guiLoopTask([]{aon::gui->initialize();});
   aon::logging::Initialize();
-  pros::lcd::initialize();
   aon::Configure(false);
   drivetrain.startOdometry(); // create task for odometry
   pros::Task safetyTask(aon::autonSafety);
@@ -25,7 +24,7 @@ void autonomous() {
   #else
   aon::testSmallBotRoutine();
   #endif
-  // aon::AutonomousReader->ExecuteFunction("autonomous");
+  // aon::autonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
 }
 

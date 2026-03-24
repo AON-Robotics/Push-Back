@@ -463,6 +463,7 @@ void XDrive::turnTo(const double &x, const double &y){
   turn(-calculateTurn(target, current));
 }
 
+// TODO: replace with with the `goToPose()`
 void XDrive::goTo(const double &x, const double &y){
   Vector target = Vector().SetPosition(x, y);
   // Determine current position
@@ -528,7 +529,8 @@ void XDrive::goToPose(const Pose& target){
 
   // TODO: add timeouts for safety
   while(remainingX > 0.05 || remainingY > 0.05 || remainingTheta > 0.05){
-    pros::lcd::print(1, "(x, y, theta): (%.2f, %.2f, %.2f)", this->getX(), this->getY(), this->getTheta());
+
+    pros::lcd::print(0, "(x, y, theta): (%.2f, %.2f, %.2f)", this->getX(), this->getY(), this->getTheta());
     remainingX = target.x - this->getX();
     remainingY = target.y - this->getY();
     remainingTheta = target.theta - this->getTheta();
@@ -563,9 +565,9 @@ void XDrive::goToPose(const Pose& target){
 
     pros::delay(delay);
 
-    this->setX(this->getX() + math::linearSpeed(x) * delay / 1000); //# in case of odom failure
-    this->setY(this->getY() + math::linearSpeed(y) * delay / 1000); //# in case of odom failure
-    this->setTheta(this->getTheta() + math::rotationalSpeed(theta) * delay / 1000); //# in case of odom failure
+    // this->setX(this->getX() + math::linearSpeed(x) * delay / 1000); //# in case of odom failure
+    // this->setY(this->getY() + math::linearSpeed(y) * delay / 1000); //# in case of odom failure
+    // this->setTheta(this->getTheta() + math::rotationalSpeed(theta) * delay / 1000); //# in case of odom failure
   }
 
   pros::lcd::clear();

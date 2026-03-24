@@ -24,6 +24,7 @@
 
 namespace aon {
 
+
 // ============================================================================|
 //   ____        _       ____             _   _                
 //  / ___| _   _| |__   |  _ \ ___  _   _| |_(_)_ __   ___  ___
@@ -283,24 +284,23 @@ void testDistanceFromVision(){
 }
 
 /// @brief Uses the gyro to test the precision of an ekf
-/// ERROR: odometry variable not defined in this scope
-// void testEKFWithGyro(){
-//   okapi::EKFFilter ekf1;
-//   okapi::EKFFilter ekf2(2.6E-4, 0.04);
-//   okapi::EKFFilter ekf3(3E-4, 0.04);
-//   okapi::EKFFilter ekf4(4E-4, 0.04);
-//   okapi::EKFFilter ekf5(5E-4, 0.04);
-//   while(true){
-//     const double pos = odometry.gyroscope.get_heading();
-//     pros::lcd::print(0, "Raw Heading = %.2f", pos);
-//     pros::lcd::print(1, "Default Filter = %.2f", ekf1.filter(pos));
-//     pros::lcd::print(2, "Tweaked Filter 2 = %.2f", ekf2.filter(pos)); // this one is slower which might mean i want to tweak the values for the ekf
-//     pros::lcd::print(3, "Tweaked Filter 3 = %.2f", ekf3.filter(pos));
-//     pros::lcd::print(4, "Tweaked Filter 4 = %.2f", ekf4.filter(pos));
-//     pros::lcd::print(5, "Tweaked Filter 5 = %.2f", ekf5.filter(pos));
-//     pros::delay(20);
-//   }
-// }
+void testEKFWithGyro(){
+  okapi::EKFFilter ekf1;
+  okapi::EKFFilter ekf2(2.6E-4, 0.04);
+  okapi::EKFFilter ekf3(3E-4, 0.04);
+  okapi::EKFFilter ekf4(4E-4, 0.04); 
+  okapi::EKFFilter ekf5(5E-4, 0.04);
+  while(true){
+    const double pos = drivetrain.odom.gyroscope.get_heading();
+    pros::lcd::print(0, "Raw Heading = %.2f", pos);
+    pros::lcd::print(1, "Default Filter = %.2f", ekf1.filter(pos));
+    pros::lcd::print(2, "Tweaked Filter 2 = %.2f", ekf2.filter(pos)); // this one is slower which might mean i want to tweak the values for the ekf
+    pros::lcd::print(3, "Tweaked Filter 3 = %.2f", ekf3.filter(pos));
+    pros::lcd::print(4, "Tweaked Filter 4 = %.2f", ekf4.filter(pos));
+    pros::lcd::print(5, "Tweaked Filter 5 = %.2f", ekf5.filter(pos));
+    pros::delay(20);
+  }
+}
 
 /// @brief Function wrapper for test function that is to be executed through the GUI
 /// @return 1 for successful execution
@@ -441,17 +441,17 @@ void testSmallBotRoutine(){
 }
 
 void testXDriveRoutine(){
-  // drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
-  // drivetrain.goToPose(Pose(0, 12, 0));
-  // drivetrain.goToPose(Pose(-12, 12, 0));
-  // drivetrain.goToPose(Pose(0, 0, 90));
-  // drivetrain.goToPose(Pose(-12, 18, 0));
-  // drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
-  // drivetrain.goToPose(Pose(0, 0, 0));
+  drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
+  drivetrain.goToPose(Pose(0, 12, 0));
+  drivetrain.goToPose(Pose(-12, 12, 0));
+  drivetrain.goToPose(Pose(0, 0, 90));
+  drivetrain.goToPose(Pose(-12, 18, 0));
+  drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
+  drivetrain.goToPose(Pose(0, 0, 0));
 }
 
 void smallbotjorgeg(){
-   drivetrain.move(31); // Align with match loader
+  drivetrain.move(31); // Align with match loader
   drivetrain.turn(87);
   intake.dropCart(); // Prepare loader mechanism
   pros::delay(200);  
