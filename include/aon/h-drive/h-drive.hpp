@@ -16,28 +16,7 @@
  * 
  * */
 
-/**
- * Things to ask:
- * 1. How is Pose suppose to work, i still dont understand
- * 2. What is slew rate?
- * 3. The override for 
- */
-
 namespace aon {
-
-// TODO: move this to the Odom class file
-
-class PoseH {
- public:
-  /// @brief Position of the robot on the x-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double x;
-  /// @brief Position of the robot on the y-axis in \b `inches` with respect to the field using (0,0) as the center of the field
-  double y;
-  /// @brief Orirentation of the robot in \b `radians` with respect to angle 90º in the VEX Field
-  double theta;
-
-  PoseH(double x = 0, double y = 0, double theta = 0) : x(x), y(y), theta(theta) {}
-};
 
 class HDrive : public TankDrive {
  private:
@@ -46,7 +25,6 @@ class HDrive : public TankDrive {
   MotionProfile xProfile;
   MotionProfile yProfile;
   MotionProfile thetaProfile;
-  Pose pose;
   
   public:
   
@@ -58,20 +36,7 @@ class HDrive : public TankDrive {
       middleMotor(mid),
       xProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
       yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
-      thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-      pose() {}
-
-  Pose getPose() { return this->pose; }
-  void setPose(Pose p) { pose = p; }
-
-  double getX() { return this->pose.x; }
-  void setX(double x) { pose.x = x; }
-
-  double getY() { return this->pose.y; }
-  void setY(double y) { pose.y = y; }
-
-  double getTheta() { return this->pose.theta; }
-  void setTheta(double theta) { pose.theta = theta; }
+      thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3) {}
 
   /// @brief Move robot with the controller. Holonomic motion with left joysick
   /// and turning with right.
@@ -94,7 +59,7 @@ class HDrive : public TankDrive {
   /// @param MAX_REVS The maximum RPM to send to the movement
   void moveHorizontalPID(double dist, PID pid = PID(0.02, 0, 0), const double &MAX_REVS=100);
 
-  /// @brief Move horizontally using Motion profile (default right)
+  /// @brief Move horizontally using Motion profile (default left)
   /// @param dist The distance to be moved in \b inches
   void strafe(double dist);
 

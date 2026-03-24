@@ -3,46 +3,56 @@
 #include "./okapi/api.hpp"
 #include "./controls/s-curve-profile.hpp"
 #include "./controls/pid/pid.hpp"
+#include "./odometry/odometry.hpp"
 
 namespace aon {
 
-// TODO: remove once odom PR is incorporated
-class Pose {
- public:
-  /// @brief Position of the robot on the x-axis in \b `inches` with respect to
-  /// the field using (0,0) as the center of the field
-  double x;
-  /// @brief Position of the robot on the y-axis in \b `inches` with respect to
-  /// the field using (0,0) as the center of the field
-  double y;
-  /// @brief Orientation of the robot in \b `radians` with respect to angle 90º
-  /// in the VEX Field
-  double theta;
-
-  Pose(double x = 0, double y = 0, double theta = 0)
-      : x(x), y(y), theta(theta) {}
-};
-// TODO end
-
 class Drivetrain {
  protected:
-  Pose pose;
-  bool turbo = true;
+  // Pose pose;
+  bool turbo = false;
+  aon::Odometry odometry;
+  std::unique_ptr<pros::Task> odomTask;
+
+  static void odomTaskFn(void* param) {
+    Drivetrain* dt = static_cast<Drivetrain*>(param);
+    dt->odometry.sense();
+  }
 
  public:
-  Drivetrain() : pose(){}
+  // Drivetrain() : pose(), odometry(),
+  Drivetrain() : odometry() {}
 
-  Pose getPose() { return this->pose; }
-  void setPose(Pose p) { this->pose = p; }
+  // Pose getPose() { return this->pose; }
+  // void setPose(Pose p) { this->pose = p; }
 
-  double getX() { return this->pose.x; }
-  void setX(double x) { this->pose.x = x; }
+  // double getX() { return this->pose.x; }
+  // void setX(double x) { this->pose.x = x; }
 
-  double getY() { return this->pose.y; }
-  void setY(double y) { this->pose.y = y; }
+  // double getY() { return this->pose.y; }
+  // void setY(double y) { this->pose.y = y; }
 
-  double getTheta() { return this->pose.theta; }
-  void setTheta(double theta) { this->pose.theta = theta; }
+  // double getTheta() { return this->pose.theta; }
+  // void setTheta(double theta) { this->pose.theta = theta; }
+  void startOdometry() {
+    odometry.initialize();
+    odomTask = std::make_unique<pros::Task>(odomTaskFn, this);
+}
+
+  Vector getPose() { return this->odometry.getPosition(); }
+  void setPose(double x, double y) { this->odometry.setPosition(x, y); }
+
+  double getX() { return this->odometry.getX(); }
+  void setX(double x) { this->odometry.setX(x); }
+
+  double getY() { return this->odometry.getY(); }
+  void setY(double y) { this->odometry.setY(y); }
+
+  double getTheta() { return this->odometry.getDegrees(); }
+  void setTheta(double theta) { this->odometry.setDegrees(theta); }
+
+  /// @brief Debug odometry
+  void debugOdometry() { odometry.debug(); }
 
   bool isTurbo() { return this->turbo; }
   void setTurbo(bool turbo) { this->turbo = turbo; }

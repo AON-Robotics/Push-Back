@@ -13,6 +13,7 @@ void TankDrive::motorsLeft(const double &rpm) {
 }
 
 void TankDrive::motorsRight(const double &rpm) {
+  // pros::lcd::print(3, "RPM right: %0.3f", rpm);
   this->rightMotors.moveVelocity(rpm);
 }
 
@@ -22,8 +23,11 @@ void TankDrive::rotate(const double &rpm) {
 }
 
 void TankDrive::driveWhileTurning(const double &forward, const double &turn){
+  // pros::lcd::print(1, "Forward: %0.3f", forward);
+  // pros::lcd::print(2, "Turn:    %0.3f", turn);
   this->leftMotors.moveVelocity(forward + turn);
-  this->rightMotors.moveVelocity(forward - turn);
+  // this->rightMotors.moveVelocity(forward - turn);
+  this->motorsRight(forward - turn);
 }
 
 void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {

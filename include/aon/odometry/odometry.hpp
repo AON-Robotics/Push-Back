@@ -77,9 +77,11 @@ namespace aon {
         //getters & setters
         double getX();
         double getY();
+        void setX(double x);
+        void setY(double y);
 
         Vector getPosition();
-        void SetPosition(double x, double y);
+        void setPosition(double x, double y);
 
         double getDegrees();
         void setDegrees(double degrees);
@@ -97,7 +99,6 @@ namespace aon {
 
 
         //Threading
-
         void sense();
 
         //Debugging/Testing

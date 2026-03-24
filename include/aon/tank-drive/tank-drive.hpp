@@ -16,13 +16,13 @@ namespace aon {
 
 class TankDrive : public Drivetrain {
  private:
-  Odometry odometry;
-  SmartMotorGroup leftMotors;
-  SmartMotorGroup rightMotors;
+ SmartMotorGroup leftMotors;
+ SmartMotorGroup rightMotors;
+ MotionProfile turningProfile;
+ 
+ protected:
   MotionProfile motionProfile;
-  MotionProfile turningProfile;
 
-  // TODO: add the odom object once it is done, use namespace temporarily
 
  public:
   TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
@@ -31,8 +31,7 @@ class TankDrive : public Drivetrain {
         rightMotors(rightPorts, 0, MAX_ACCEL),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain(),
-        odometry() {}
+        Drivetrain() {}
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm

@@ -18,7 +18,7 @@ namespace aon {
 
 class XDrive : public Drivetrain {
  private:
-  Odometry odometry;
+  // Odometry odometry;
   SmartMotorGroup frontLeftMotors;
   SmartMotorGroup frontRightMotors;
   SmartMotorGroup backLeftMotors;

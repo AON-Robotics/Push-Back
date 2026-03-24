@@ -14,6 +14,9 @@ void HDrive::drive(double leftX, double leftY, double rightX, double nothing) {
   const double horizontal = applySpeed(leftX, isTurbo() ? 1.41421356237 : 0.6);
   const double turn = applySpeed(rightX, isTurbo() ? 1.41421356237 : 0.6);
   
+  // pros::lcd::print(1, "Forward:    %0.3f", forward);
+  // pros::lcd::print(2, "Horizontal: %0.3f", horizontal);
+  // pros::lcd::print(3, "Turn:       %0.3f", turn);
   driveWhileTurning(forward, turn);
   middleMotor.moveVelocity(horizontal);
 }
@@ -40,14 +43,14 @@ void HDrive::moveHorizontalPID(double dist, PID pid, const double &MAX_REVS) {
   dist = abs(dist);                   // Setting the magnitude to positive
   pid.Reset();
   
-  Vector initialPos = aon::odometry::GetPosition();
+  Vector initialPos = odometry.getPosition();
 
   const double timeLimit = math::estimateTimetoTarget(dist, MAX_REVS);
   const double start_time = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - start_time  // every time the variable is called it is recalculated automatically
 
-  while ((aon::odometry::GetPosition() - initialPos).GetMagnitude() < dist) {
-    double currentDisplacement = (aon::odometry::GetPosition() - initialPos).GetMagnitude();
+  while ((odometry.getPosition() - initialPos).GetMagnitude() < dist) {
+    double currentDisplacement = (odometry.getPosition() - initialPos).GetMagnitude();
     double output = pid.Output(dist, currentDisplacement);
     pros::lcd::print(0, "Time Limit %.2f", timeLimit);
     pros::lcd::print(1, "Time: %.2f", time);
@@ -70,7 +73,7 @@ void HDrive::strafe(double dist) {
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  double startPos = aon::odometry::encoderBack.get_position();
+  double startPos = odometry.encoderBack.get_position();
   // Vector startPos = aon::odometry::GetPosition();
   
   double now = pros::micros() / 1E6;
@@ -79,7 +82,7 @@ void HDrive::strafe(double dist) {
   this->motionProfile.setVelocity(this->middleMotor.getActualVelocity());
   
   while (traveledDist < dist) {
-    traveledDist = (std::abs(aon::odometry::encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+    traveledDist = (std::abs(odometry.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
@@ -111,9 +114,9 @@ void HDrive::HolonomicMotion(
   double X, double Y, double T,
   PID drivePID, PID turnPID
 ) {
-  this->setX(0);
-  this->setY(0);
-  this->setTheta(0);
+  // this->setX(0);
+  // this->setY(0);
+  // this->setTheta(0);
   // ---------- Constants ----------
   const double delay = 20;
   const double d = DRIVE_WIDTH / 2; // inches
@@ -135,13 +138,9 @@ void HDrive::HolonomicMotion(
   std::cout << "Reamining Y: " << remainingY << "\n"; 
   std::cout << "Reamining T: " << remainingAngle << "\n"; 
 
-  // double remainingX = abs(X - aon::odometry::GetX());
-  // double remainingY = abs(Y - aon::odometry::GetY());
-  // double remainingAngle = abs(T - aon::odometry::GetDegrees());
-
   double lastTime = pros::micros() / 1E6;
 
-  while (remainingX > 0.05 || remainingY > 0.05 || remainingAngle > 0.05) {
+  while (fabs(remainingX) > 0.5 || fabs(remainingY) > 0.5 || fabs(remainingAngle) > 2) {
 
     // ---- Actual position ---- Simplify this after testing PID
     double x = this->getX();
@@ -157,23 +156,30 @@ void HDrive::HolonomicMotion(
     remainingX = X - x;
     remainingY = Y - y;
     remainingAngle = T - t;
+    while (remainingAngle > 180) remainingAngle -= 360;
+    while (remainingAngle < -180) remainingAngle += 360;
 
-    constexpr double EPS_XY = 1e-4;   // inches
-    constexpr double EPS_T  = 1e-2;   // degrees
+    // constexpr double EPS_T  = 1e-2;   // degrees
+    // remainingAngle = fabs(remainingAngle) < EPS_T ? 0 : remainingAngle;
+    // int signT = (remainingAngle == 0) ? 1 : remainingAngle / abs(remainingAngle);
+    // remainingAngle = abs(remainingAngle);
 
-    remainingX = fabs(remainingX) < EPS_XY ? 0 : remainingX;
-    remainingY = fabs(remainingY) < EPS_XY ? 0 : remainingY;
-    remainingAngle = fabs(remainingAngle) < EPS_T ? 0 : remainingAngle;
+    // --- Dont divide by 0 ---
+    // constexpr double EPS_XY = 1e-4;   // inches
+    // constexpr double EPS_T  = 1e-2;   // degrees
 
+    // remainingX = fabs(remainingX) < EPS_XY ? 0 : remainingX;
+    // remainingY = fabs(remainingY) < EPS_XY ? 0 : remainingY;
+    // remainingAngle = fabs(remainingAngle) < EPS_T ? 0 : remainingAngle;
     
-    // ----- Correct sign for motion profile ----
-    int signX = (remainingX == 0) ? 1 : remainingX / abs(remainingX);
-    int signY = (remainingY == 0) ? 1 : remainingY / abs(remainingY);
-    int signT = (remainingAngle == 0) ? 1 : remainingAngle / abs(remainingAngle);
+    // // ----- Correct sign for motion profile ----
+    // int signX = (remainingX == 0) ? 1 : remainingX / abs(remainingX);
+    // int signY = (remainingY == 0) ? 1 : remainingY / abs(remainingY);
+    // int signT = (remainingAngle == 0) ? 1 : remainingAngle / abs(remainingAngle);
     
-    remainingX = abs(remainingX);
-    remainingY = abs(remainingY);
-    remainingAngle = abs(remainingAngle);
+    // remainingX = abs(remainingX);
+    // remainingY = abs(remainingY);
+    // remainingAngle = abs(remainingAngle);
 
     std::cout << "Reamining X: " << remainingX << ",Y: " << remainingY << ", T: " << remainingAngle << "\n"; 
 
@@ -187,14 +193,36 @@ void HDrive::HolonomicMotion(
     double dx_r =  cos(tRad) * remainingX + sin(tRad) * remainingY;
     double dy_r = -sin(tRad) * remainingX + cos(tRad) * remainingY;
 
+    // --- Dont divide by 0 ---
+    // constexpr double EPS_XY = 1e-4;   // inches
+
+    // dx_r = fabs(dx_r) < EPS_XY ? 0 : dx_r;
+    // dy_r = fabs(dy_r) < EPS_XY ? 0 : dy_r;
+    
+    // // ----- Correct sign for motion profile ----
+    // int signX = (dx_r == 0) ? 1 : dx_r / abs(dx_r);
+    // int signY = (dy_r == 0) ? 1 : dy_r / abs(dy_r);
+    
+    // dx_r = abs(dx_r);
+    // dy_r = abs(dy_r);
+
     // --- Motion profile update ---
-    double vx = this->xProfile.update(remainingX) * signX;
-    double vy = this->yProfile.update(remainingY) * signY;
-    double vT = this->thetaProfile.update(circumference * (remainingAngle / 360.0)) * signT;
+    // double vx = this->xProfile.update(dx_r) * signX;
+    // double vy = this->yProfile.update(dy_r) * signY;
+    // double vT = this->thetaProfile.update(circumference * (remainingAngle / 360.0)) * signT;
+    double k = 0.03;
+    double kT = 0.01;
+
+    double vx = k * dx_r;
+    double vy = k * dy_r;
+    double vT = kT * remainingAngle;
 
     std::cout << "velocity X: " << vx << "\n"; 
     std::cout << "velocity Y: " << vy << "\n"; 
     std::cout << "velocity T: " << vT << "\n";
+    pros::lcd::print(4, "velocity X: %0.3f", vx);
+    pros::lcd::print(5, "velocity Y: %0.3f", vy);
+    pros::lcd::print(6, "velocity T: %0.3f", vT);
     
     // TEST IF MORE ACCURACY WITH PID
     // double vx_profile = xProfile.update(remainingX, dt_loop) * signX;
@@ -210,15 +238,15 @@ void HDrive::HolonomicMotion(
     // double vT = vx_profile + vt_pid;
 
     // ----- Move motors ------
-    this->motorsLeft (vy + vT);
-    this->motorsRight(vy - vT);
-    this->motorMid   (vx);
+    this->motorsLeft (vx - vT);
+    this->motorsRight(vx + vT);
+    this->motorMid   (vy);
 
     pros::delay(delay);
 
-    this->setX(this->getX() + math::linearSpeed(vx) * (delay / 1000)); //# in case of odom failure
-    this->setY(this->getY() + math::linearSpeed(vy) * (delay / 1000)); //# in case of odom failure
-    this->setTheta(this->getTheta() + math::rotationalSpeed(vT) * delay / 1000); //# in case of odom failure
+    // this->setX(this->getX() + math::linearSpeed(vx) * (delay / 1000)); //# in case of odom failure
+    // this->setY(this->getY() + math::linearSpeed(vy) * (delay / 1000)); //# in case of odom failure
+    // this->setTheta(this->getTheta() + math::rotationalSpeed(vT) * delay / 1000); //# in case of odom failure
   }
 
   std::cout << "Stop because remaining is: " << remainingX << ", " <<  remainingY << ", " << remainingAngle << "\n";

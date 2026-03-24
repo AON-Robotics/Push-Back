@@ -21,9 +21,10 @@
 #define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
 #define DRIVE_WHEEL_DIAMETER 2.75
 #define TRACKING_WHEEL_DIAMETER 1.959
-#define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 1.572
-#define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 1.572
-#define DISTANCE_BACK_TRACKING_WHEEL_CENTER 1.572
+#define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 5.0
+#define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 5.0
+#define DISTANCE_BACK_TRACKING_WHEEL_CENTER 9.0
+#define OFFSET_TRACKING_WHEEL 3.25
 #define MOTOR_TO_DRIVE_RATIO 1.3 // NumTeethMotorGear / NumTeethWheelGear
 #define GYRO_ENABLED true
 #define GYRO_CONFIDENCE 1
@@ -45,7 +46,7 @@
 #define INITIAL_ODOMETRY_X 0.0
 #define INITIAL_ODOMETRY_Y 0.0
 #define INITIAL_ODOMETRY_THETA 0.0
-#define TURNING_THRESHOLD 0.1
+#define TURNING_THRESHOLD 1.5 * (M_PI/180) // 2.71
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD
