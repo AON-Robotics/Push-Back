@@ -19,7 +19,7 @@ class Drivetrain {
   const bool holonomic;
   Odometry odom;
 
-  explicit Drivetrain(bool holonomic = true) : pose(), odom(), holonomic(holonomic) {}
+  Drivetrain(bool holonomic = true) : pose(), odom(), holonomic(holonomic) {}
   
 
   Pose getPose() { return this->pose; }
