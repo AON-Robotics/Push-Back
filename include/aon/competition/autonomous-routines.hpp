@@ -25,53 +25,6 @@
 namespace aon {
 
 
-//! ------------------ TODO: TAKE TO H-DRIVE CLASS -------- START
-#if USING_BIG_ROBOT
-/// @brief Strafes the robot a given distance
-/// @param dist The distance to strafe in \b inches
-/// @details A positive `dist` makes the robot go right while a negative
-/// `dist` makes the robot go left
-void strafe(double dist = TILE_WIDTH){
-  MotionProfile motionProfile(200, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-  if (dist == 0) { return; }
-  const int sign = dist / abs(dist);  // Direction of the movement
-  dist = abs(dist);                   // Setting the magnitude to positive
-  
-  double dt = 0.02;                   // (s)
-  double currVelocity = 0;
-  double traveledDist = 0;
-  double startPos = odometry.encoderBack.get_position();
-  // Vector startPos = aon::odometry::GetPosition();
-  
-  double now = pros::micros() / 1E6;
-  double lastTime = now;
-  
-  motionProfile.setVelocity(mid.getActualVelocity());
-  
-  while (traveledDist < dist) {
-    traveledDist = (std::abs(odometry.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
-    // traveledDist = (aon::odometry::GetPosition() - startPos).GetMagnitude();
-    double remainingDist = dist - traveledDist;
-    now = pros::micros() / 1E6;
-    dt = now - lastTime;
-    lastTime = now;
-
-    pros::lcd::print(0, "Trav %.2f", traveledDist);
-    
-    currVelocity = motionProfile.update(remainingDist, dt);
-    mid.moveVelocity(sign * currVelocity);
-
-    if (remainingDist <= 0) { break; }  // Overshoot prevention
-
-    pros::delay(20);
-  }
-
-  mid.moveVelocity(0);
-}
-#endif
-//! ------------------------ END --------------------------------
-
-
 // ============================================================================|
 //   ____        _       ____             _   _                
 //  / ___| _   _| |__   |  _ \ ___  _   _| |_(_)_ __   ___  ___
@@ -434,7 +387,7 @@ int BlueRoutine(){
 /// @brief Starting position is the left side of the parking facing towards the drive team, placed paralele to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
 void safeBigBotRoutine(){
   intake.activateScan();
-  strafe(28.5); // Align with match loader.
+  drivetrain.strafe(28.5); // Align with match loader.
   intake.dropShrimp(); // Prepare loader mechanism.
   drivetrain.move(6); // Move to match loader.
   drivetrain.motors(MAX_RPM / 2); // Push into loader
@@ -450,7 +403,7 @@ void safeBigBotRoutine(){
   drivetrain.move(15); // Go back a little.
   drivetrain.turn(-90); // Orient towards parking.
   drivetrain.move(12); // Move towards parking.
-  strafe(12); // Align with parking.
+  drivetrain.strafe(12); // Align with parking.
   drivetrain.move(11); // Move to parking.
   drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
   pros::delay(1000); // for a bit of time,
@@ -461,7 +414,7 @@ void safeBigBotRoutine(){
 }
 
 void BigBotSkillsRoutine(){
-  strafe(28.5);
+  drivetrain.strafe(28.5);
   intake.dropShrimp(); 
   drivetrain.move(6); 
   drivetrain.motors(MAX_RPM / 2); 
@@ -472,16 +425,16 @@ void BigBotSkillsRoutine(){
   drivetrain.motors(-MAX_RPM / 2);
   drivetrain.move(22);
   drivetrain.turn(180);
-  strafe(-10.5);
+  drivetrain.strafe(-10.5);
   drivetrain.move(50);
-  strafe(10.5);
+  drivetrain.strafe(10.5);
   intake.dropShrimp(); 
   drivetrain.move(6); 
   drivetrain.motors(MAX_RPM / 2); 
   pros::delay(200); 
   drivetrain.stop(); 
   pros::delay(8000); 
-  strafe(10); 
+  drivetrain.strafe(10); 
   drivetrain.turn(90);
   drivetrain.motors(MAX_RPM);
   pros::delay(1000); 

@@ -16,33 +16,45 @@
 
 namespace aon {
 
-class XDrive : public Drivetrain {
+class HDrive : public Drivetrain {
  private:
-  SmartMotorGroup frontLeftMotors;
-  SmartMotorGroup frontRightMotors;
-  SmartMotorGroup backLeftMotors;
-  SmartMotorGroup backRightMotors;
+  SmartMotorGroup leftMotors;
+  SmartMotorGroup rightMotors;
+  SmartMotorGroup midMotors;
   MotionProfile xProfile;
   MotionProfile yProfile;
   MotionProfile thetaProfile;
 
  public:
-  XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {0},
-         const std::initializer_list<okapi::Motor> &FRPorts = {0},
-         const std::initializer_list<okapi::Motor> &BLPorts = {0},
-         const std::initializer_list<okapi::Motor> &BRPorts = {0},
+  HDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
+         const std::initializer_list<okapi::Motor> &rightPorts = {0},
+         const std::initializer_list<okapi::Motor> &midPorts = {0},
          std::unique_ptr<Odometry> odometry = nullptr
         )
-      : frontLeftMotors(FLPorts),
-        frontRightMotors(FRPorts),
-        backLeftMotors(BLPorts),
-        backRightMotors(BRPorts),
+      : leftMotors(leftPorts),
+        rightMotors(rightPorts),
+        midMotors(midPorts),
         xProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
         Drivetrain(std::move(odometry)) {}
 
   void initialize() override;
+
+  /// @brief Configures the general settings for the motors
+  /// @param brakeMode The braking paradigm we will use, usually `holding` for
+  /// auton and `brake` for drivers
+  /// @param gearset The gearbox the physical motors contain, they MUST be all
+  /// the same
+  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
+    Drivetrain::configure(brakeMode, gearset);
+    midMotors.setBrakeMode(brakeMode);
+    midMotors.setGearing(okapi::AbstractMotor::gearset::green);
+    midMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+    midMotors.tarePosition();
+  }
+
+  void stop() override;
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm

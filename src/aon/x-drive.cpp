@@ -181,7 +181,7 @@ void XDrive::driveProfiled(double dist){
   double now = pros::micros() / 1E6;
   double lastTime = now;
 
-  this->xProfile.setVelocity(this->getRPM());
+  this->yProfile.setVelocity(this->getRPM());
 
   while(traveledDist < dist){
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -190,7 +190,7 @@ void XDrive::driveProfiled(double dist){
     dt =  now - lastTime;
     lastTime = now;
 
-    currVelocity = this->xProfile.update(remainingDist, dt);
+    currVelocity = this->yProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
 
     if(remainingDist <= 0) { break; } // Overshoot prevention
@@ -218,7 +218,7 @@ void XDrive::strafeProfiled(double dist){
   double now = pros::micros() / 1E6;
   double lastTime = now;
 
-  this->yProfile.setVelocity(this->getRPM());
+  this->xProfile.setVelocity(this->getRPM());
 
   while(traveledDist < dist && timeout > pros::millis()){
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -229,7 +229,7 @@ void XDrive::strafeProfiled(double dist){
     dt =  now - lastTime;
     lastTime = now;
 
-    currVelocity = this->yProfile.update(remainingDist, dt);
+    currVelocity = this->xProfile.update(remainingDist, dt);
     this->sideways(sign * currVelocity);
 
     if(remainingDist <= 0) { break; } // Overshoot prevention
@@ -293,11 +293,11 @@ void XDrive::turn(const double &angle){
 }
 
 void XDrive::setMaxVelocity(const double &rpm){
-  this->xProfile.setMaxVelocity(rpm);
+  this->yProfile.setMaxVelocity(rpm);
 }
 
 double XDrive::updateProfile(const double &distance, const double &dt){
-  return this->xProfile.update(distance, dt);
+  return this->yProfile.update(distance, dt);
 }
 
 void XDrive::driveInArc(double radius, const double &midSpeed) {
@@ -354,7 +354,7 @@ void XDrive::driveAngleOfArc(const double &radius, const double &angle) {
     remainingDist = distance - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
-    midSpeed = this->xProfile.update(remainingDist, dt);
+    midSpeed = this->yProfile.update(remainingDist, dt);
     lastTime = now;
 
     this->driveInArc(radius, sign * midSpeed);
@@ -431,8 +431,8 @@ void XDrive::driveInArcTo(const double &x, const double &y){
  * \returns The angle the robot needs to turn in order to face the target location
  *
  * \note The result must be passed into functions such as `turn()` and `drivetrain.turnPID()` as negative because of the GPS convention
- */
-double calculateTurn(Vector target, Pose current) {
+ */ // TODO: move this function to aon::math
+inline double calculateTurn(Vector target, Pose current) {
   Vector position = Vector().SetPos(current.x, current.y);
   // Get and change the heading to the common cartesian plane
   double heading = 90 - current.theta;

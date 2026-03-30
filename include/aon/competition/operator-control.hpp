@@ -71,32 +71,12 @@ bool turbo = false;
 /// Default Operator Control configuration
 inline void DriveDefault() { 
   //////////// DRIVE ////////////
-  
-  #if USING_BIG_ROBOT
-  
-  const double scaledVertical = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
-  const double scaledHorizontal = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
-  const double scaledTurn = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
-  
-  const double vertical = ApplySpeed(scaledVertical, drivetrain.isTurbo() ? 1.41421356237 : 0.6);
-  const double horizontal = ApplySpeed(scaledHorizontal, drivetrain.isTurbo() ? 1.41421356237 : 0.6);
-  const double turn = ApplySpeed(scaledTurn, drivetrain.isTurbo() ? 1.41421356237 : 0.4);
-  
-  drivetrain.driveWhileTurning(vertical, turn);
-  mid.moveVelocity(horizontal);
-
-  #else
-
   //# From now on, all drivetrains used will need to use this format for driving
   double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
   double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
   double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
   double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
   drivetrain.drive(leftX, leftY, rightX, rightY);
-  
-  #endif
-  
-
 
   #if USING_BIG_ROBOT
 
