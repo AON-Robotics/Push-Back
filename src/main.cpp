@@ -5,7 +5,7 @@ void initialize() {
   pros::Task guiLoopTask([]{aon::gui->initialize();});
   aon::logging::Initialize();
   aon::Configure(false);
-  pros::Task odomTask([]{drivetrain.odom.initialize();});
+  pros::Task odomTask([]{drivetrain.initialize();});
   pros::delay(3000);
   pros::Task safetyTask(aon::autonSafety);
   // pros::Task turretFollowTask([]{orbit.follow();});
@@ -23,7 +23,7 @@ void autonomous() {
   #if USING_BIG_ROBOT
   aon::safeBigBotRoutine();
   #else
-  aon::testSmallBotRoutine();
+  aon::smallBotRoutine();
   #endif
   // aon::autonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
@@ -42,8 +42,8 @@ void opcontrol() {
     #if USING_BIG_ROBOT
     aon::safeBigBotRoutine();
     #else
-    // aon::testSmallBotRoutine();
-    aon::testXDriveRoutine();
+    // aon::smallBotRoutine();
+    aon::tests::square();
     #endif
 
     pros::delay(5000);

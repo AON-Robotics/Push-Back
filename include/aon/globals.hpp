@@ -13,6 +13,7 @@
 #include "./tank-drive/tank-drive.hpp"
 #include "./orbit/orbit.hpp"
 #include "./drivetrain.hpp"
+#include "./odometry/odometry.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -25,23 +26,27 @@
 
 #if USING_BIG_ROBOT
 
+aon::Odometry odometry = aon::Odometry(0, 0, 0, 0, 0);
+
 // Drivetrain
-aon::TankDrive drivetrain = aon::TankDrive({1, 11, -2, -13}, {-10, -20, 9, 19});
-okapi::MotorGroup mid({-16}); // Default make robot go right
+aon::TankDrive drivetrain = aon::TankDrive({1, -16, 9, -10}, {-11, 12, -19, 20}, std::make_unique<aon::Odometry>(odometry));
+okapi::MotorGroup mid({-14}); // Default make robot go right
 
-pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
-pros::ADIDigitalOut brooksPiston('H');
+pros::ADIDigitalOut semPiston('Z'); // Shrek Ear Mechanism
+pros::ADIDigitalOut brooksPiston('Z');
 
-aon::Intake intake = aon::Intake({0}, {0}, {0}, {0}, {0}, {0}, 'G', 0, 0);
+aon::Intake intake = aon::Intake({0}, {0}, {0}, {0}, {0}, {0}, 'Z', 0, 0);
 
 #else
 
-aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
-// aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
+// aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
+aon::Odometry odometry = aon::Odometry(-11, 12, 0, 0, 10);
 
-aon::Intake intake = aon::Intake({6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
+aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, std::make_unique<aon::Odometry>(odometry));
 
-pros::ADIDigitalOut arrowPiston('F');
+aon::Intake intake = aon::Intake({0, 0}, {0}, {0, 0}, 'Z', 'Z', 0, 0);
+
+pros::ADIDigitalOut arrowPiston('Z');
 
 void activateArrow() { arrowPiston.set_value(HIGH); }
 
@@ -50,7 +55,7 @@ void deactivateArrow() { arrowPiston.set_value(LOW); }
 #endif
 
 // Misc
-aon::Orbit orbit(1,true,1,1);
+aon::Orbit orbit(0,true,0,0);
 
 // ============================================================================
 //   ___ ___ _  _ ___  ___  ___  ___ 
@@ -63,7 +68,7 @@ aon::Orbit orbit(1,true,1,1);
 // Encoders
 pros::Rotation turretEncoder(0, true);
 
-pros::ADIEncoder opticalEncoder('C', 'D');
+pros::ADIEncoder opticalEncoder('Z', 'Z');
 
 // Vision
 
@@ -84,7 +89,7 @@ pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE,
 pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 
 // Potentiometer
-pros::ADIPotentiometer potentiometer('P');
+pros::ADIPotentiometer potentiometer('Z');
 
 /// PIDs
 aon::PID drivePID = aon::PID(0.02, 0, 0);

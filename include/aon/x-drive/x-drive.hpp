@@ -18,7 +18,6 @@ namespace aon {
 
 class XDrive : public Drivetrain {
  private:
-  Odometry odometry;
   SmartMotorGroup frontLeftMotors;
   SmartMotorGroup frontRightMotors;
   SmartMotorGroup backLeftMotors;
@@ -33,7 +32,9 @@ class XDrive : public Drivetrain {
   XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {0},
          const std::initializer_list<okapi::Motor> &FRPorts = {0},
          const std::initializer_list<okapi::Motor> &BLPorts = {0},
-         const std::initializer_list<okapi::Motor> &BRPorts = {0})
+         const std::initializer_list<okapi::Motor> &BRPorts = {0},
+         std::unique_ptr<Odometry> odometry = nullptr
+        )
       : frontLeftMotors(FLPorts),
         frontRightMotors(FRPorts),
         backLeftMotors(BLPorts),
@@ -41,7 +42,9 @@ class XDrive : public Drivetrain {
         xProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain() {}
+        Drivetrain(std::move(odometry)) {}
+
+  void initialize() override;
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm

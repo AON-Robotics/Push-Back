@@ -40,7 +40,7 @@ void strafe(double dist = TILE_WIDTH){
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  double startPos = drivetrain.odom.encoderBack.get_position();
+  double startPos = odometry.encoderBack.get_position();
   // Vector startPos = aon::odometry::GetPosition();
   
   double now = pros::micros() / 1E6;
@@ -49,7 +49,7 @@ void strafe(double dist = TILE_WIDTH){
   motionProfile.setVelocity(mid.getActualVelocity());
   
   while (traveledDist < dist) {
-    traveledDist = (std::abs(drivetrain.odom.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+    traveledDist = (std::abs(odometry.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
     // traveledDist = (aon::odometry::GetPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
@@ -149,107 +149,6 @@ void alignAndIntake(const Colors &color = orbit.getColor()){
   intake.score();
 }
 
-
-// ============================================================================
-//   _____ ___ ___ _____ ___
-//  |_   _| __/ __|_   _/ __|
-//    | | | _|\__ \ | | \__ \
-//    |_| |___|___/ |_| |___/
-//
-// ============================================================================
-
-/// @brief Basic Routine to make the robot go in circles around the map to test GPS setup.
-void testGPS() {
-  drivetrain.goTo(.6, -1.2);
-  drivetrain.goTo(1.2, -.6);
-  drivetrain.goTo(1.2, .6);
-  drivetrain.goTo(.6, 1.2);
-  drivetrain.goTo(-.6, 1.2);
-  drivetrain.goTo(-1.2, .6);
-  drivetrain.goTo(-1.2, -.6);
-  drivetrain.goTo(-.6, -1.2);
-  drivetrain.goTo(.6, -1.2);
-  drivetrain.goTo(1.2, -.6);
-}
-
-/// @brief  Speed calculation test using the distance sensor
-/// @param RPM The velocity for the motors
-void testSpeed(double RPM = MAX_RPM){
-  MovingAverage mav(50);
-  while(true) {
-    drivetrain.motors(RPM);
-    // double measured = math::metersToInches(distanceSensor.get_object_velocity());
-    // double calculated = getSpeed(RPM);
-    // double error = abs(math::getErrorPercentage(calculated, measured));
-    // double avg = mav.update(error);
-    // pros::lcd::print(1, "RPM: %.2f", RPM);
-    // pros::lcd::print(2, "Calculated Velocity: %.2f", calculated);
-    // pros::lcd::print(3, "Measured Velocity: %.2f", measured);
-    // pros::lcd::print(4, "Error %: %.2f%", avg);
-    pros::delay(10);
-  }
-}
-
-/// @brief Small test to see if odom works with auton
-void testOdom(){
-  // Motion Profile
-  drivetrain.move(12 * 3);
-  pros::delay(1000);
-  drivetrain.move(-12 * 3);
-  pros::delay(1000);
-  drivetrain.turn(90);
-  pros::delay(1000);
-  drivetrain.turn(-90);
-  pros::delay(1000);
-
-  // PID Forward
-  drivetrain.drivePID(drivePID, 12 * 3, 100.0);
-  pros::delay(1000);
-  drivetrain.drivePID(drivePID, -12 * 3, 100.0);
-  pros::delay(1000);
-
-  // PID Rotations
-  drivetrain.turnPID(turnPID, 90, 50.0);
-  pros::delay(1000);
-  drivetrain.turnPID(turnPID, -90, 50.0);
-  pros::delay(1000);
-  drivetrain.turnPID(turnPID, 45, 50.0);
-  pros::delay(1000);
-  drivetrain.turnPID(turnPID, 45, 50.0);
-  pros::delay(1000);
-  drivetrain.turnPID(turnPID, -45, 50.0);
-  pros::delay(1000);
-  drivetrain.turnPID(turnPID, -45, 50.0);
-  pros::delay(1000);
-}
-
-/// @brief Test to ensure the concurrency is working fine, requires `intake.scan()` to be running in another thread
-void testConcurrency(){
-  intake.activateScan();
-  int startTime = pros::micros() / 1E6;
-  #define time (pros::micros() / 1E6) - startTime
-  while(time < 5){
-    drivetrain.motors(100);
-    pros::delay(20);
-  }
-  #undef time
-  drivetrain.stop();
-  intake.stopScan();
-}
-
-/// @brief Tests the alignment of the robot to the object of `COLOR` using tasks
-void testAlignment(){
-  while(true){
-    alignRobotTo(RED);
-    pros::delay(20);
-  }
-}
-
-/// @brief Checks the output of an optical shaft encoder
-void testADIEncoder(){
-  pros::lcd::print(1, "Encoder value: %d", opticalEncoder.get_value());
-}
-
 /// @brief Uses the ORBIT to adjust the path going toward a ring to intake it accurately
 /// @param color The color of the ring we wish to intake
 void driveIntoRing(const Colors &color = orbit.getColor()){
@@ -299,8 +198,111 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
   driveTillPickUp();
 }
 
+
+// ============================================================================
+//   _____ ___ ___ _____ ___
+//  |_   _| __/ __|_   _/ __|
+//    | | | _|\__ \ | | \__ \
+//    |_| |___|___/ |_| |___/
+//
+// ============================================================================
+
+namespace tests {
+
+/// @brief Basic Routine to make the robot go in circles around the map to test GPS setup.
+void gpsOctagon() {
+  drivetrain.goTo(.6, -1.2);
+  drivetrain.goTo(1.2, -.6);
+  drivetrain.goTo(1.2, .6);
+  drivetrain.goTo(.6, 1.2);
+  drivetrain.goTo(-.6, 1.2);
+  drivetrain.goTo(-1.2, .6);
+  drivetrain.goTo(-1.2, -.6);
+  drivetrain.goTo(-.6, -1.2);
+  drivetrain.goTo(.6, -1.2);
+  drivetrain.goTo(1.2, -.6);
+}
+
+/// @brief  Speed calculation test using the distance sensor
+/// @param RPM The velocity for the motors
+void distanceSensorSpeed(double RPM = MAX_RPM){
+  MovingAverage mav(50);
+  while(true) {
+    drivetrain.motors(RPM);
+    // double measured = math::metersToInches(distanceSensor.get_object_velocity());
+    // double calculated = getSpeed(RPM);
+    // double error = abs(math::getErrorPercentage(calculated, measured));
+    // double avg = mav.update(error);
+    // pros::lcd::print(1, "RPM: %.2f", RPM);
+    // pros::lcd::print(2, "Calculated Velocity: %.2f", calculated);
+    // pros::lcd::print(3, "Measured Velocity: %.2f", measured);
+    // pros::lcd::print(4, "Error %: %.2f%", avg);
+    pros::delay(10);
+  }
+}
+
+/// @brief Small test to see if odom works with auton
+void odom(){
+  // Motion Profile
+  drivetrain.move(12 * 3);
+  pros::delay(1000);
+  drivetrain.move(-12 * 3);
+  pros::delay(1000);
+  drivetrain.turn(90);
+  pros::delay(1000);
+  drivetrain.turn(-90);
+  pros::delay(1000);
+
+  // PID Forward
+  drivetrain.drivePID(drivePID, 12 * 3, 100.0);
+  pros::delay(1000);
+  drivetrain.drivePID(drivePID, -12 * 3, 100.0);
+  pros::delay(1000);
+
+  // PID Rotations
+  drivetrain.turnPID(turnPID, 90, 50.0);
+  pros::delay(1000);
+  drivetrain.turnPID(turnPID, -90, 50.0);
+  pros::delay(1000);
+  drivetrain.turnPID(turnPID, 45, 50.0);
+  pros::delay(1000);
+  drivetrain.turnPID(turnPID, 45, 50.0);
+  pros::delay(1000);
+  drivetrain.turnPID(turnPID, -45, 50.0);
+  pros::delay(1000);
+  drivetrain.turnPID(turnPID, -45, 50.0);
+  pros::delay(1000);
+}
+
+/// @brief Test to ensure the concurrency is working fine, requires `intake.scan()` to be running in another thread
+void concurrency(){
+  intake.activateScan();
+  int startTime = pros::micros() / 1E6;
+  #define time (pros::micros() / 1E6) - startTime
+  while(time < 5){
+    drivetrain.motors(100);
+    pros::delay(20);
+  }
+  #undef time
+  drivetrain.stop();
+  intake.stopScan();
+}
+
+/// @brief Tests the alignment of the robot to the object of `COLOR` using tasks
+void alignment(){
+  while(true){
+    alignRobotTo(RED);
+    pros::delay(20);
+  }
+}
+
+/// @brief Checks the output of an optical shaft encoder
+void ADIEncoder(){
+  pros::lcd::print(1, "Encoder value: %d", opticalEncoder.get_value());
+}
+
 /// @brief Outputs and logs the width of a ring, and the distance to it based on that width
-void testDistanceFromVision(){
+void visionSensorDistance(){
   MovingAverage readingMav(50);
   MovingAverage avgMav(50);
   MovingAverage ekfMav(50);
@@ -331,14 +333,14 @@ void testDistanceFromVision(){
 }
 
 /// @brief Uses the gyro to test the precision of an ekf
-void testEKFWithGyro(){
+void gyroWithEKF(){
   okapi::EKFFilter ekf1;
   okapi::EKFFilter ekf2(2.6E-4, 0.04);
   okapi::EKFFilter ekf3(3E-4, 0.04);
   okapi::EKFFilter ekf4(4E-4, 0.04); 
   okapi::EKFFilter ekf5(5E-4, 0.04);
   while(true){
-    const double pos = drivetrain.odom.gyroscope.get_heading();
+    const double pos = odometry.gyroscope.get_heading();
     pros::lcd::print(0, "Raw Heading = %.2f", pos);
     pros::lcd::print(1, "Default Filter = %.2f", ekf1.filter(pos));
     pros::lcd::print(2, "Tweaked Filter 2 = %.2f", ekf2.filter(pos)); // this one is slower which might mean i want to tweak the values for the ekf
@@ -352,7 +354,7 @@ void testEKFWithGyro(){
 /// @brief Function wrapper for test function that is to be executed through the GUI
 /// @return 1 for successful execution
 /// @note Usually the tests in here use `potentiometer.get_value()` to tune a parameter in a function as well as testing the function itself
-int testAdjustable(){
+int adjustable(){
   drivetrain.driveInArcTo(math::inchesToMeters(TILE_WIDTH / 2), math::inchesToMeters(TILE_WIDTH / 2));
   return 1;
 }
@@ -360,7 +362,7 @@ int testAdjustable(){
 /// @brief Function wrapper for test functions that are to be executed through the GUI
 /// @return 1 for successful execution
 /// @note Choose between 3 tests depending on the result of `potentiometer.get_value()`
-int testMultiple(){
+int multiple(){
   int choice = potentiometer.get_value();
   // UP
   if(choice > 2550){
@@ -377,12 +379,12 @@ int testMultiple(){
   return 1;
 }
 
-void testTurns(){
+void turns(){
   for (int i = 0; i < 4; i++){drivetrain.turn(); pros::delay(750);}
   for (int i = 0; i < 4; i++){drivetrain.turn(-90); pros::delay(750);}
 }
 
-void testSquare(){
+void square(){
   for (int i = 0; i < 4; i++){
     drivetrain.move();
     pros::delay(750);
@@ -392,6 +394,42 @@ void testSquare(){
 }
 
 #if USING_BIG_ROBOT
+
+
+
+#else
+
+void xDriveRoutine(){
+  drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
+  drivetrain.goToPose(Pose(0, 12, 0));
+  drivetrain.goToPose(Pose(-12, 12, 0));
+  drivetrain.goToPose(Pose(0, 0, 90));
+  drivetrain.goToPose(Pose(-12, 18, 0));
+  drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
+  drivetrain.goToPose(Pose(0, 0, 0));
+}
+
+#endif
+
+} // namespace aon::tests
+
+// ============================================================================|
+//   ___  ___  _   _ _____ ___ _  _ ___ ___                                    |
+//  | _ \/ _ \| | | |_   _|_ _| \| | __/ __|                                   |
+//  |   / (_) | |_| | | |  | || .` | _|\__ \                                   |
+//  |_|_\\___/ \___/  |_| |___|_|\_|___|___/                                   |
+//                                                                             |
+// ============================================================================|
+
+#if USING_BIG_ROBOT
+
+int RedRoutine(){
+  return 1;
+}
+
+int BlueRoutine(){
+  return 1;
+}
 
 /// @brief Starting position is the left side of the parking facing towards the drive team, placed paralele to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
 void safeBigBotRoutine(){
@@ -454,10 +492,17 @@ void BigBotSkillsRoutine(){
   //Park
 }
 
-
 #else
 
-void testSmallBotRoutine(){
+int RedRoutine(){
+  return 1;
+}
+
+int BlueRoutine(){
+  return 1;
+}
+
+void smallBotRoutine(){
   drivetrain.move(31); // Align with match loader
   drivetrain.turn(86);
   intake.dropCart(); // Prepare loader mechanism
@@ -485,16 +530,6 @@ void testSmallBotRoutine(){
   pros::delay(1200);
   drivetrain.stop(); 
   //* Works till here
-}
-
-void testXDriveRoutine(){
-  drivetrain.goToPose(Pose(-TILE_WIDTH, 0, 0));
-  drivetrain.goToPose(Pose(0, 12, 0));
-  drivetrain.goToPose(Pose(-12, 12, 0));
-  drivetrain.goToPose(Pose(0, 0, 90));
-  drivetrain.goToPose(Pose(-12, 18, 0));
-  drivetrain.goToPose(Pose(-TILE_WIDTH, TILE_WIDTH, 90));
-  drivetrain.goToPose(Pose(0, 0, 0));
 }
 
 void smallbotjorgeg(){
@@ -529,474 +564,7 @@ void smallbotjorgeg(){
   drivetrain.turn(90); // allign for middle-middle
   drivetrain.move(20);
   drivetrain.turn(-45);
-  drivetrain.move();
-
-  
-
-  
-}
-
-#endif
-
-// ============================================================================|
-//   ___  ___  _   _ _____ ___ _  _ ___ ___                                    |
-//  | _ \/ _ \| | | |_   _|_ _| \| | __/ __|                                   |
-//  |   / (_) | |_| | | |  | || .` | _|\__ \                                   |
-//  |_|_\\___/ \___/  |_| |___|_|\_|___|___/                                   |
-//                                                                             |
-// ============================================================================|
-
-#if USING_BIG_ROBOT
-
-/**
- * \brief This routine is if WE ARE RED and want to grab RED RINGS
- *
- * \note Designed for being in the third quadrant
- * \note Starting Position (-0.34, -0.82) \b m facing towards 296.86 \b deg
- *
- * \author Kevin Gomez
-*/
-int RedRingsRoutine(){
-  // Secure and score the first ring in the middle stake
-  drivetrain.move(6);
-  intake.score();
-  // intake.openGate();
-
-  // Get the next ring in our side
-  drivetrain.turnTo(-.6, -1.2);
-  drivetrain.move(6);
-  drivetrain.move(-6);
-  alignRobotTo(orbit.getColor());
-  driveTillPickUp();
-
-  // Get the last ring in that line
-  drivetrain.move(-6);
-  drivetrain.turnTo(-1.2, -1.2);
-  drivetrain.move(6);
-  driveTillPickUp();
-
-  // Bring down the 4 stack
- 
-  return 1;
-}
-
-/**
- * \brief This routine is if WE ARE BLUE and want to grab BLUE RINGS
- *
- * \note Designed for being in the first quadrant
- * \note Starting Position (0.34, 0.82) \b m facing towards 116.86 \b deg
- *
- * \author Kevin Gomez
- */
-int BlueRingsRoutine(){
-  // Secure and score the first ring in the middle stake
-  drivetrain.move(6);
-  intake.score();
-  // intake.openGate();
-  
-  // Get the next ring in our side
-  drivetrain.turnTo(.6, 1.2);
-  drivetrain.move(6);
-  drivetrain.move(-6);
-  alignRobotTo(orbit.getColor());
-  driveTillPickUp();
-  
-  // Get the last ring in that line
-  drivetrain.move(-6);
-  drivetrain.turnTo(1.2, 1.2);
-  drivetrain.move(6);
-  driveTillPickUp();
-  
-  // Bring down the 4 stack
-  
-  return 1;
-}
-
-
-/**
-  WILL CLEAR POSITIVE SIDE JUST TO BE SURE
-
-  LOOKING AT THE POSITIVE SIDE OF OUR SIDE
-
-  TRY TO PUT IT 4 INCHES AWAY AS BEST AS POSSIBLE
-  */
-
-int BlueRingsRoutine_JorgeGuz(){
-  // Go into the esquina
-  drivetrain.move(4);
-  intake.pickUp(1500);
-  drivetrain.move(-4);
-  drivetrain.move(4);
-  intake.pickUp(1500);
-  drivetrain.move(-4);
-  drivetrain.move(4);
-  intake.pickUp(1500);
-  drivetrain.move(-4);
-  
-  return 0;
-}
-
-/**
-  Will take the closest to us, in our side and take th rings that are below
-
-  START IN THE POSITIVE SIDE OF THE FIELD, LOOKING AT THE STAKE WHEN WE ARE RED.
-
-  RED-NEGATIVE SIDE
-*/
-int safeRingRoutine() {
-  drivetrain.turnTo(-1.2,-1.2);
-  drivetrain.goTo(-1.2,-1.2);
-  driveIntoRing(RED);
-  drivetrain.turnTo(-1.5,0);
-  drivetrain.goTo(-1.5,0);
-  driveIntoRing(RED);
-  drivetrain.turnTo(1.2,-1.2);
-  drivetrain.goTo(1.2,-1.2);
-  driveIntoRing(RED);
-  return 0;
-}
-
-int safeRingRoutine2() {
-  drivetrain.turnTo(-1.2,-1.2);
-  drivetrain.goTo(-1.2,-1.2);
-  driveIntoRing(RED);
-  drivetrain.turnTo(-1.5,0);
-  drivetrain.goTo(-1.5,0);
-  driveIntoRing(RED);
-  drivetrain.turnTo(-1.2,1.2);
-  drivetrain.goTo(-1.2,1.2);
-  driveIntoRing(RED);
-  return 0;
-}
-
-
-
-
-
-/**
- * \brief This routine is if WE ARE BLUE and want to grab BLUE RINGS
- *
- * \author Jorge Luis
-*/    
-
-int BlueRingsRoutineJorgeLuna() {
-  /*
-    go for negative side mobile goal, score rings, and prepare for go enemy double side
-  */
-  // go to the side mobile goal
-  drivetrain.move(6);
-  // intake.score(2000);
-  // intake.openGate();
-
-  // go to ring on the bottom
-  drivetrain.goTo(1.2, -0.55);
-  driveIntoRing(orbit.getColor());
-
-  // then the one below that one
-  drivetrain.goTo(1.2, -1.1);
-  driveIntoRing(orbit.getColor());
-
-  // drive into the corner and try to grab the rings
-  drivetrain.goTo(1.7, -1.7);
-  driveIntoRing(orbit.getColor());
-  drivetrain.turnTo(.7, -1.7);
-  driveIntoRing(orbit.getColor());
-
-  drivetrain.move(-6);
-  drivetrain.turnTo(1.8, 1.8);
-  return 0;
-}
-
-/**
- * \author Jorge L
- */
-int SkillsBlackBotJorge(){
-  // grab skate in the middle bottom
-  // grab 0, -1.2
-  // grab 0.6, -1.2
-  // turn to -1.4, 0
-  // grab -1.4, 0
-  // turn to -0.6, -0.6
-  // go closer
-  // grab -0.6, -0.6
-  // turn to -1.2, -1.2
-  // grab it
-  // grab -1.8, -1.8
-  // turn 180 
-  // let stake at the esquina
-  
-  // go to 0.6, -0.6
-  // grab stake
-  // grab rings in the middle
-  // let stake
-  // go to -.6, -0.6
-  // grab stake most right
-  // take ring 1.5, 0
-  // take ring 1.2, -0.6
-  // take ring 0.6, -1.2
-  // take ring 1.2, -1.2
-  // take ring -1.8, 1.8
-  // if we suppose all the red rings are as points
-    // take blue ring 1.8, -1.8
-  // put stake in 1.8, -1.8
-  return 0;
-}
-
-/**
- * \author Kevin
- * 
- * \note Starts with claw in (-1.2, -6) facing bottom-most goal
- */
-int SkillsBlackBotKevin(){
-  // Grab bottom-most goal
-  
-  // Grab ring in (-1.2, -1.2)
-  drivetrain.turnTo(-1.2, -1.2);
-  driveIntoRing();
-  drivetrain.move(-12);
-
-  // Grab ring in (-1.8, -1.8)
-  drivetrain.turnTo(-1.8, -1.8);
-  drivetrain.move(6);
-  driveIntoRing();
-  drivetrain.move(-12);
-
-  // Grab ring in (-.6, -.6)
-  drivetrain.goTo(-.9, -.9);
-  driveIntoRing();
-  drivetrain.move(-24);
-
-  // Grab ring in (0, -1.2)
-  drivetrain.turnTo(0, -1.2);
-  
-  return 0;
-}
-
-
-#else
-
-/**
- * \brief This routine is if WE ARE RED and want to grab RED RINGS
- *
- * \note Designed for being in the third quadrant
- * \note Starting Position (-0.34, -0.82) \b m facing towards 296.86 \b deg
- *
- * \author Kevin Gomez
-*/
-int RedRingsRoutine(){
-  // Secure and score the first ring in the middle stake
-  drivetrain.move(6);
-  intake.score();
-  // intake.openGate();
-
-  // Get the next ring in our side
-  drivetrain.turnTo(-.6, -1.2);
-  drivetrain.move(6);
-  drivetrain.move(-6);
-  alignRobotTo(orbit.getColor());
-  driveTillPickUp();
-
-  // Get the last ring in that line
-  drivetrain.move(-6);
-  drivetrain.turnTo(-1.2, -1.2);
-  drivetrain.move(6);
-  driveTillPickUp();
-
-  // Bring down the 4 stack
- 
-  return 1;
-}
-
-/**
- * \brief This routine is if WE ARE BLUE and want to grab BLUE RINGS
- *
- * \note Designed for being in the first quadrant
- * \note Starting Position (0.34, 0.82) \b m facing towards 116.86 \b deg
- *
- * \author Kevin Gomez
- */
-int BlueRingsRoutine(){
-  // Secure and score the first ring in the middle stake
-  drivetrain.move(6);
-  intake.score();
-  // intake.openGate();
-  
-  // Get the next ring in our side
-  drivetrain.turnTo(.6, 1.2);
-  drivetrain.move(6);
-  drivetrain.move(-6);
-  alignRobotTo(orbit.getColor());
-  driveTillPickUp();
-  
-  // Get the last ring in that line
-  drivetrain.move(-6);
-  drivetrain.turnTo(1.2, 1.2);
-  drivetrain.move(6);
-  driveTillPickUp();
-  
-  // Bring down the 4 stack
-  
-  return 1;
-}
-
-
-/**
-  WILL CLEAR POSITIVE SIDE JUST TO BE SURE
-
-  LOOKING AT THE POSITIVE SIDE OF OUR SIDE
-
-  TRY TO PUT IT 4 INCHES AWAY AS BEST AS POSSIBLE
-  */
-
-int BlueRingsRoutine_JorgeGuz(){
-  // Go into the esquina
-  drivetrain.move(4);
-  intake.pickUp(1500);
-  drivetrain.move(-4);
-  drivetrain.move(4);
-  intake.pickUp(1500);
-  drivetrain.move(-4);
-  drivetrain.move(4);
-  intake.pickUp(1500);
-  drivetrain.move(-4);
-  
-  return 0;
-}
-
-/**
-  Will take the closest to us, in our side and take th rings that are below
-
-  START IN THE POSITIVE SIDE OF THE FIELD, LOOKING AT THE STAKE WHEN WE ARE RED.
-
-  RED-NEGATIVE SIDE
-*/
-int safeRingRoutine() {
-  drivetrain.turnTo(-1.2,-1.2);
-  drivetrain.goTo(-1.2,-1.2);
-  driveIntoRing(RED);
-  drivetrain.turnTo(-1.5,0);
-  drivetrain.goTo(-1.5,0);
-  driveIntoRing(RED);
-  drivetrain.turnTo(1.2,-1.2);
-  drivetrain.goTo(1.2,-1.2);
-  driveIntoRing(RED);
-  return 0;
-}
-
-int safeRingRoutine2() {
-  drivetrain.turnTo(-1.2,-1.2);
-  drivetrain.goTo(-1.2,-1.2);
-  driveIntoRing(RED);
-  drivetrain.turnTo(-1.5,0);
-  drivetrain.goTo(-1.5,0);
-  driveIntoRing(RED);
-  drivetrain.turnTo(-1.2,1.2);
-  drivetrain.goTo(-1.2,1.2);
-  driveIntoRing(RED);
-  return 0;
-}
-
-
-
-
-
-/**
- * \brief This routine is if WE ARE BLUE and want to grab BLUE RINGS
- *
- * \author Jorge Luis
-*/    
-
-int BlueRingsRoutineJorgeLuna() {
-  /*
-    go for negative side mobile goal, score rings, and prepare for go enemy double side
-  */
-  // go to the side mobile goal
-  drivetrain.move(6);
-  // intake.score(2000);
-  // intake.openGate();
-
-  // go to ring on the bottom
-  drivetrain.goTo(1.2, -0.55);
-  driveIntoRing(orbit.getColor());
-
-  // then the one below that one
-  drivetrain.goTo(1.2, -1.1);
-  driveIntoRing(orbit.getColor());
-
-  // drive into the corner and try to grab the rings
-  drivetrain.goTo(1.7, -1.7);
-  driveIntoRing(orbit.getColor());
-  drivetrain.turnTo(1.7, -1.7);
-  driveIntoRing(orbit.getColor());
-
-  drivetrain.move(-6);
-  drivetrain.turnTo(1.8, 1.8);
-  return 0;
-}
-
-/**
- * \author Jorge L
- */
-int SkillsBlackBotJorge(){
-  // grab skate in the middle bottom
-  // grab 0, -1.2
-  // grab 0.6, -1.2
-  // turn to -1.4, 0
-  // grab -1.4, 0
-  // turn to -0.6, -0.6
-  // go closer
-  // grab -0.6, -0.6
-  // turn to -1.2, -1.2
-  // grab it
-  // grab -1.8, -1.8
-  // turn 180 
-  // let stake at the esquina
-  
-  // go to 0.6, -0.6
-  // grab stake
-  // grab rings in the middle
-  // let stake
-  // go to -.6, -0.6
-  // grab stake most right
-  // take ring 1.5, 0
-  // take ring 1.2, -0.6
-  // take ring 0.6, -1.2
-  // take ring 1.2, -1.2
-  // take ring -1.8, 1.8
-  // if we suppose all the red rings are as points
-    // take blue ring 1.8, -1.8
-  // put stake in 1.8, -1.8
-  return 0;
-}
-
-/**
- * \author Kevin
- * 
- * \note Starts with claw in (-1.2, -6) facing bottom-most goal
- */
-int SkillsBlackBotKevin(){
-  // Grab bottom-most goal
-  
-  // Grab ring in (-1.2, -1.2)
-  drivetrain.turnTo(-1.2, -1.2);
-  driveIntoRing();
-  drivetrain.move(-12);
-
-  // Grab ring in (-1.8, -1.8)
-  drivetrain.turnTo(-1.8, -1.8);
-  drivetrain.move(6);
-  driveIntoRing();
-  drivetrain.move(-12);
-
-  // Grab ring in (-.6, -.6)
-  drivetrain.goTo(-.9, -.9);
-  driveIntoRing();
-  drivetrain.move(-24);
-
-  // Grab ring in (0, -1.2)
-  drivetrain.turnTo(0, -1.2);
-  
-  return 0;
+  drivetrain.move();  
 }
 
 #endif

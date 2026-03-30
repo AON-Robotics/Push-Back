@@ -10,30 +10,33 @@ namespace aon {
 
 class Drivetrain {
  protected:
+  std::unique_ptr<Odometry> odometry;
   Pose pose;
   bool turbo = true;
   
   public:
-  Odometry odom;
 
-  Drivetrain() : pose(), odom() {}
+  Drivetrain(std::unique_ptr<Odometry> odom): pose(), odometry(std::move(odom)) {}
+
+
+  virtual void initialize() = 0;
   
 
   Pose getPose() { return this->pose; }
   void setPose(Pose p) { this->pose = p; }
 
   double getX() { 
-    return this->odom.getX();
+    return this->odometry->getX();
   }
   void setX(double x) { this->pose.x = x; }
 
   double getY() { 
-    return this->odom.getY();
+    return this->odometry->getY();
   }
   void setY(double y) { this->pose.y = y; }
 
   double getTheta() { 
-    return this->odom.getDegrees();
+    return this->odometry->getDegrees();
   }
   void setTheta(double theta) { this->pose.theta = theta; }
 
@@ -203,6 +206,11 @@ class Drivetrain {
   /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
   /// @note Uses coordinate system from GPS in \b meters
   virtual void goTo(const double &x, const double &y) = 0;
+
+  /// @brief Goes to the target point
+  /// @param pose The target pose
+  /// @note Uses coordinate system from GPS in \b meters
+  virtual void goToPose(const Pose &pose) = 0;
 
   /// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
   /// @param input The joystick input to be scaled
