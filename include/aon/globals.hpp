@@ -39,11 +39,11 @@ aon::Intake intake = aon::Intake({0}, {0}, {0}, {0}, {0}, {0}, 'Z', 0, 0);
 #else
 
 // aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
-aon::Odometry odometry = aon::Odometry(-11, 12, 0, 0, 10);
+aon::Odometry odometry = aon::Odometry(-5, 6, 0, 0, 7);
 
 aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, std::make_unique<aon::Odometry>(odometry));
 
-aon::Intake intake = aon::Intake({0, 0}, {0}, {0, 0}, 'Z', 'Z', 0, 0);
+aon::Intake intake = aon::Intake({-11}, {0}, {0}, 'Z', 'Z', 0, 0);
 
 pros::ADIDigitalOut arrowPiston('Z');
 

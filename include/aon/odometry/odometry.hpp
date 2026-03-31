@@ -66,7 +66,7 @@ namespace aon {
         pros::Mutex orientation_mutex;
 
     public: 
-        Odometry(short right, short left, short back, short gps, short gyro);
+        Odometry(short left, short right, short back, short gps, short gyro);
         Odometry(const Odometry& other);
 
         double getX();
