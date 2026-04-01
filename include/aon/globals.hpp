@@ -34,7 +34,7 @@ aon::HDrive drivetrain = aon::HDrive({-1, -2, 3, 4}, {12, -13, -18, 19}, {-15}, 
 pros::ADIDigitalOut semPiston('Z'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('Z');
 
-aon::Intake intake = aon::Intake({20, -11}, {0}, {0}, {0}, {0}, {0}, 'Z', 0, 0);
+aon::Intake intake = aon::Intake({20, -11}, {0}, 'Z', 0, 0);
 
 #else
 

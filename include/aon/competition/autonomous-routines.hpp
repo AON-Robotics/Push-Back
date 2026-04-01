@@ -399,7 +399,7 @@ void safeBigBotRoutine(){
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
   intake.raiseShrimp(); // Reset loader mechanism.
-  intake.score(Intake::TOP, Intake::BOTTOM, 8000); // Score all 9 blocks.
+  intake.score(Intake::TOP, 8000); // Score all 9 blocks.
   drivetrain.move(15); // Go back a little.
   drivetrain.turn(-90); // Orient towards parking.
   drivetrain.move(12); // Move towards parking.
