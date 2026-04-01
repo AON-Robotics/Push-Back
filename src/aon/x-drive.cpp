@@ -3,6 +3,9 @@
 
 namespace aon {
 
+void XDrive::initialize() {
+  this->odometry->initialize();
+}
 
 void XDrive::motors(const double &rpm) {
   this->frontLeftMotors.moveVelocity(rpm);
@@ -98,15 +101,15 @@ void XDrive::drivePID(PID pid, double dist, const double &MAX_REVS) {
   dist = abs(dist); // Setting the magnitude to positive
   pid.Reset();
 
-  Vector initialPos = odometry.getPosition();
+  Vector initialPos = odometry->getPosition();
 
   const double timeLimit = math::estimateTimetoTarget(dist, MAX_REVS);
   const double start_time = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - start_time // every time the variable is called it is recalculated automatically
 
-  while((odometry.getPosition() - initialPos).GetMagnitude() < dist){
+  while((odometry->getPosition() - initialPos).GetMagnitude() < dist){
 
-    double currentDisplacement = (odometry.getPosition() - initialPos).GetMagnitude();
+    double currentDisplacement = (odometry->getPosition() - initialPos).GetMagnitude();
 
     double output = pid.Output(dist, currentDisplacement);
 
@@ -129,8 +132,8 @@ void XDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
   const int sign = angle / abs(angle); // Getting the direction of the movement
   angle = abs(angle); // Setting the magnitude to positive
   pid.Reset();
-  odometry.gyroscope.tare(); // .tare() or .reset(true) depending on the time issue
-  const double startAngle = odometry.getDegrees(); // Angle relative to the start
+  odometry->gyroscope.tare(); // .tare() or .reset(true) depending on the time issue
+  const double startAngle = odometry->getDegrees(); // Angle relative to the start
   
   double timeLimit = math::getTimetoTurnDeg(angle);
 
@@ -142,7 +145,7 @@ void XDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
 
   while(time < timeLimit){
 
-    double traveledAngle = abs(odometry.getDegrees() - startAngle);
+    double traveledAngle = abs(odometry->getDegrees() - startAngle);
 
     double output = pid.Output(angle, traveledAngle);
 
@@ -173,21 +176,21 @@ void XDrive::driveProfiled(double dist){
   double dt = 0.02; // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  Vector startPos = odometry.getPosition();
+  Vector startPos = odometry->getPosition();
 
   double now = pros::micros() / 1E6;
   double lastTime = now;
 
-  this->xProfile.setVelocity(this->getRPM());
+  this->yProfile.setVelocity(this->getRPM());
 
   while(traveledDist < dist){
-    traveledDist = (odometry.getPosition() - startPos).GetMagnitude();
+    traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
     dt =  now - lastTime;
     lastTime = now;
 
-    currVelocity = this->xProfile.update(remainingDist, dt);
+    currVelocity = this->yProfile.update(remainingDist, dt);
     this->motors(sign * currVelocity);
 
     if(remainingDist <= 0) { break; } // Overshoot prevention
@@ -210,15 +213,15 @@ void XDrive::strafeProfiled(double dist){
   double dt = 0.02; // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  Vector startPos = odometry.getPosition();
+  Vector startPos = odometry->getPosition();
 
   double now = pros::micros() / 1E6;
   double lastTime = now;
 
-  this->yProfile.setVelocity(this->getRPM());
+  this->xProfile.setVelocity(this->getRPM());
 
   while(traveledDist < dist && timeout > pros::millis()){
-    traveledDist = (odometry.getPosition() - startPos).GetMagnitude();
+    traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     // traveledDist += getSpeed(this->getRPM()) * dt; //# in case of odom failure
 
     double remainingDist = dist - traveledDist;
@@ -226,7 +229,7 @@ void XDrive::strafeProfiled(double dist){
     dt =  now - lastTime;
     lastTime = now;
 
-    currVelocity = this->yProfile.update(remainingDist, dt);
+    currVelocity = this->xProfile.update(remainingDist, dt);
     this->sideways(sign * currVelocity);
 
     if(remainingDist <= 0) { break; } // Overshoot prevention
@@ -251,13 +254,13 @@ void XDrive::turnProfiled(double angle){
   double currVelocity = 0;
   double currAngle;
   double traveledAngle = 0;
-  double startAngle = odometry.getDegrees();
+  double startAngle = odometry->getDegrees();
 
   double now;
   double lastTime = pros::micros() / 1E6;
   
   while(traveledAngle < angle){
-    traveledAngle = abs(odometry.getDegrees() - startAngle);
+    traveledAngle = abs(odometry->getDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
@@ -290,11 +293,11 @@ void XDrive::turn(const double &angle){
 }
 
 void XDrive::setMaxVelocity(const double &rpm){
-  this->xProfile.setMaxVelocity(rpm);
+  this->yProfile.setMaxVelocity(rpm);
 }
 
 double XDrive::updateProfile(const double &distance, const double &dt){
-  return this->xProfile.update(distance, dt);
+  return this->yProfile.update(distance, dt);
 }
 
 void XDrive::driveInArc(double radius, const double &midSpeed) {
@@ -340,18 +343,18 @@ void XDrive::driveAngleOfArc(const double &radius, const double &angle) {
   double dt = 0.02;
   double now = pros::micros() / 1E6;
   double lastTime = now;
-  const double rightEncStartPos = odometry.encoderRight.get_position(); //! Temporary
-  const double leftEncStartPos = odometry.encoderLeft.get_position(); //! Temporary
+  const double rightEncStartPos = odometry->encoderRight.get_position(); //! Temporary
+  const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
   // const double startDist = odometry::getTraveledDistance();
   while(traveledDist < distance){
     // traveledDist = odometry::getTraveledDistance() - startDist;
-    const double rightEncDist = (std::abs(odometry.encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
-    const double leftEncDist = (std::abs(odometry.encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
+    const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
+    const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     traveledDist = (rightEncDist + leftEncDist) / 2; //! Temporary
     remainingDist = distance - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
-    midSpeed = this->xProfile.update(remainingDist, dt);
+    midSpeed = this->yProfile.update(remainingDist, dt);
     lastTime = now;
 
     this->driveInArc(radius, sign * midSpeed);
@@ -364,9 +367,9 @@ void XDrive::driveAngleOfArc(const double &radius, const double &angle) {
 
 void XDrive::driveInArcTo(const double &x, const double &y){
   // Get the current pose
-  Vector position = odometry.getPosition();
+  Vector position = odometry->getPosition();
   position.SetPosition(math::inchesToMeters(position.GetX()), math::inchesToMeters(position.GetY()));
-  double heading = odometry.getDegrees(); //? should this come in the same format as the GPS heading?
+  double heading = odometry->getDegrees(); //? should this come in the same format as the GPS heading?
   Vector target = Vector().SetPosition(x, y);
 
   // Convert the heading to traditional math coordinates
@@ -428,8 +431,8 @@ void XDrive::driveInArcTo(const double &x, const double &y){
  * \returns The angle the robot needs to turn in order to face the target location
  *
  * \note The result must be passed into functions such as `turn()` and `drivetrain.turnPID()` as negative because of the GPS convention
- */
-double calculateTurn(Vector target, Pose current) {
+ */ // TODO: move this function to aon::math
+inline double calculateTurn(Vector target, Pose current) {
   Vector position = Vector().SetPos(current.x, current.y);
   // Get and change the heading to the common cartesian plane
   double heading = 90 - current.theta;
@@ -457,7 +460,7 @@ double calculateTurn(Vector target, Pose current) {
 void XDrive::turnTo(const double &x, const double &y){
   Vector target = Vector().SetPosition(x, y);
   // Determine current position
-  Pose current = odometry.getPose();
+  Pose current = odometry->getPose();
 
   // Do the movement
   turn(-calculateTurn(target, current));
@@ -467,10 +470,10 @@ void XDrive::turnTo(const double &x, const double &y){
 void XDrive::goTo(const double &x, const double &y){
   Vector target = Vector().SetPosition(x, y);
   // Determine current position
-  Vector current = odometry.gpsPosition();
+  Vector current = odometry->gpsPosition();
 
   // Do the movement
-  turn(-calculateTurn(target, odometry.getPose()));
+  turn(-calculateTurn(target, odometry->getPose()));
   move(math::findDistance(target, current));
 }
 

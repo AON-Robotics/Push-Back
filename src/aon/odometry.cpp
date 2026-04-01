@@ -2,19 +2,30 @@
 
 namespace aon{
 
-    Odometry::Odometry() 
+    Odometry::Odometry(short left, short right, short back, short gps, short gyro)
     :
     conversionFactor(M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION),
-    encoderRight(5, true),
-    encoderLeft(4, false),
-    encoderBack(11, false),
-    gps(13, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET)
+    encoderLeft(abs(left), (left / abs(left) != 1)),
+    encoderRight(abs(right), (right / abs(right) != 1)),
+    encoderBack(abs(back), (back / abs(back) != 1)),
+    gps(gps, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET)
     #if GYRO_ENABLED
-    , gyroscope(6)
+    , gyroscope(gyro)
     #endif
     {}
 
-    //GETTER & SETTERS
+    Odometry::Odometry(const Odometry& other)
+    :
+    conversionFactor(M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION),
+    encoderLeft(other.encoderLeft),
+    encoderRight(other.encoderRight),
+    encoderBack(other.encoderBack),
+    gps(other.gps)
+    #if GYRO_ENABLED
+    , gyroscope(other.gyroscope)
+    #endif
+    {}
+
 
 
     /**

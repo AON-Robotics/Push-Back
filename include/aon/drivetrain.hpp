@@ -10,33 +10,33 @@ namespace aon {
 
 class Drivetrain {
  protected:
+  std::unique_ptr<Odometry> odometry;
   Pose pose;
   bool turbo = true;
   
- public:
-  /// true for omnidirectional drivetrains (X-Drive, mecanum, etc.),
-  /// false for non-holonomic drivetrains (tank drive)
-  const bool holonomic;
-  Odometry odom;
+  public:
 
-  Drivetrain(bool holonomic = true) : pose(), odom(), holonomic(holonomic) {}
+  Drivetrain(std::unique_ptr<Odometry> odom): pose(), odometry(std::move(odom)) {}
+
+
+  virtual void initialize() = 0;
   
 
   Pose getPose() { return this->pose; }
   void setPose(Pose p) { this->pose = p; }
 
   double getX() { 
-    return this->odom.getX();
+    return this->odometry->getX();
   }
   void setX(double x) { this->pose.x = x; }
 
   double getY() { 
-    return this->odom.getY();
+    return this->odometry->getY();
   }
   void setY(double y) { this->pose.y = y; }
 
   double getTheta() { 
-    return this->odom.getDegrees();
+    return this->odometry->getDegrees();
   }
   void setTheta(double theta) { this->pose.theta = theta; }
 
@@ -108,7 +108,7 @@ class Drivetrain {
                      double rightY) = 0;
 
   /// @brief Stops all motors
-  void stop() { this->motors(0); }
+  virtual void stop() { this->motors(0); }
 
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for
@@ -207,9 +207,10 @@ class Drivetrain {
   /// @note Uses coordinate system from GPS in \b meters
   virtual void goTo(const double &x, const double &y) = 0;
 
-  /// @brief Goes to the target pose (holonomic drives only; no-op on tank)
-  /// @param target The desired pose (x in inches, y in inches, theta in radians)
-  virtual void goToPose(const Pose& target) {}
+  /// @brief Goes to the target point
+  /// @param pose The target pose
+  /// @note Uses coordinate system from GPS in \b meters
+  virtual void goToPose(const Pose &pose) = 0;
 
   /// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
   /// @param input The joystick input to be scaled
