@@ -32,8 +32,12 @@ class Intake {
   pros::ADIDigitalOut shrimpPistons;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
+  pros::ADIDigitalIn proximitySensor;
+  pros::ADIDigitalIn acceptSensor;
 
   volatile bool scanning = false;
+  volatile bool ejecting = false;
+  volatile bool scoreDown = false;
 
  public:
   Intake(const std::initializer_list<okapi::Motor>& frontElevatorPorts,
@@ -42,7 +46,8 @@ class Intake {
          const std::initializer_list<okapi::Motor>& scorerPorts,
          const std::initializer_list<okapi::Motor>& shotbeltPorts,
          const std::initializer_list<okapi::Motor>& shooterPorts,
-         char shrimpPistonsPort, int distanceSensorPort, int colorSensorPort);
+         char shrimpPistonsPort, int distanceSensorPort, int colorSensorPort,
+         char proximitySensorPort, char acceptSensorPort);
 
   /// @brief Moves only the frontElevator at the given `rpm`
   /// @param rpm The rpm at which to set the frontElevator
@@ -92,15 +97,20 @@ class Intake {
   pros::ADIDigitalOut cartPiston;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
+  pros::ADIDigitalIn proximitySensor;
+  pros::ADIDigitalIn acceptSensor;
 
   volatile bool scanning = true;
+  volatile bool ejecting = false;
+  volatile bool scoreDown = false;
 
  public:
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
          char scorerPistonPort, char cartPistonPort,
-         int distanceSensorPort, int colorSensorPort);
+         int distanceSensorPort, int colorSensorPort,
+         char proximitySensorPort, char acceptSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -169,6 +179,11 @@ class Intake {
   /// @brief Runs a background loop to color sort blocks when scanning is
   /// active.
   void sort();
+
+  /// @brief When enabled, correct-alliance blocks are sent down (reverse)
+  /// instead of up, so the eject path doubles as a score-down path.
+  /// @param down Pass `true` to score down, `false` to score up (default).
+  void setScoreDown(bool down);
 
   /// @brief Sets the flag for the scanning async task to start/resume runnning
   void activateScan();

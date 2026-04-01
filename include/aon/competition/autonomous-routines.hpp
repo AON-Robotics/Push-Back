@@ -396,29 +396,29 @@ void testSquare(){
 /// @brief Starting position is the left side of the parking facing towards the drive team, placed paralele to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
 void safeBigBotRoutine(){
   intake.activateScan();
-  strafe(28.5); // Align with match loader.
-  intake.dropShrimp(); // Prepare loader mechanism.
-  drivetrain.move(6); // Move to match loader.
-  drivetrain.motors(MAX_RPM / 2); // Push into loader
-  pros::delay(200); // for a bit of time,
-  drivetrain.stop(); // then stop.
-  pros::delay(8000); // Take up all the blocks (9).
-  drivetrain.move(-22); // Move to long goal.
-  drivetrain.motors(-MAX_RPM / 2); // Push into goal
-  pros::delay(200); // for a bit of time,
-  drivetrain.stop(); // then stop.
-  intake.raiseShrimp(); // Reset loader mechanism.
-  intake.score(Intake::TOP, Intake::BOTTOM, 8000); // Score all 9 blocks.
-  drivetrain.move(15); // Go back a little.
-  drivetrain.turn(-90); // Orient towards parking.
-  drivetrain.move(12); // Move towards parking.
-  strafe(12); // Align with parking.
-  drivetrain.move(11); // Move to parking.
-  drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
-  pros::delay(1000); // for a bit of time,
-  drivetrain.stop(); // then stop.
-  brooksPiston.set_value(HIGH); // Park.
-  intake.stopScan();
+  // strafe(28.5); // Align with match loader.
+  // intake.dropShrimp(); // Prepare loader mechanism.
+  // drivetrain.move(6); // Move to match loader.
+  // drivetrain.motors(MAX_RPM / 2); // Push into loader
+  // pros::delay(200); // for a bit of time,
+  // drivetrain.stop(); // then stop.
+  // pros::delay(8000); // Take up all the blocks (9).
+  // drivetrain.move(-22); // Move to long goal.
+  // drivetrain.motors(-MAX_RPM / 2); // Push into goal
+  // pros::delay(200); // for a bit of time,
+  // drivetrain.stop(); // then stop.
+  // intake.raiseShrimp(); // Reset loader mechanism.
+  // intake.score(Intake::TOP, Intake::BOTTOM, 8000); // Score all 9 blocks.
+  // drivetrain.move(15); // Go back a little.
+  // drivetrain.turn(-90); // Orient towards parking.
+  // drivetrain.move(12); // Move towards parking.
+  // strafe(12); // Align with parking.
+  // drivetrain.move(11); // Move to parking.
+  // drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
+  // pros::delay(1000); // for a bit of time,
+  // drivetrain.stop(); // then stop.
+  // brooksPiston.set_value(HIGH); // Park.
+  // intake.stopScan();
   //* Works till here
 }
 

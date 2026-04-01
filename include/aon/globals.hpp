@@ -32,14 +32,14 @@ okapi::MotorGroup mid({-16}); // Default make robot go right
 pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('H');
 
-aon::Intake intake = aon::Intake({0}, {0}, {0}, {0}, {0}, {0}, 'G', 0, 0);
+aon::Intake intake = aon::Intake({0}, {20}, {0}, {17}, {0}, {0}, 'G', {0}, {1}, 'A', 'B');
 
 #else
 
 aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
 // aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
 
-aon::Intake intake = aon::Intake({6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
+aon::Intake intake = aon::Intake({6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15, 'A', 'B');
 
 pros::ADIDigitalOut arrowPiston('F');
 
