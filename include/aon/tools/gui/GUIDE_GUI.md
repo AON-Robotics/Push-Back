@@ -358,6 +358,106 @@ aon::gui.SetGraphDataProviders(
 
 ---
 
+## Field Mapper
+
+The Field Mapper (**Debug Menu → Field Mapper**) draws a top-down trace of the robot's path on a 6-tile VEX field. It also lets you measure arc geometry between any two points on the path so you can directly copy the values into `driveAngleOfArc()`.
+
+### API
+
+```cpp
+aon::gui->setMapDataProvider([]() -> aon::Pose {
+  return {drivetrain.getX(), drivetrain.getY(),
+          drivetrain.getTheta() * M_PI / 180.0};
+});
+```
+
+`Pose` fields:
+- `x` — robot X position in **inches**
+- `y` — robot Y position in **inches**
+- `theta` — robot heading in **radians**
+
+> `getTheta()` returns degrees — multiply by `M_PI / 180.0` before passing it.
+
+### How It Works
+
+1. `setMapDataProvider(callback)` stores the pose provider.
+2. While the Field Mapper screen is open, the pose is sampled periodically and appended to the path buffer (up to 1 000 points).
+3. The full path is drawn in **cyan**. The most recent position shows a heading arrow.
+4. **CLEAR** erases the recorded path and resets arc state.
+
+### Screen Layout
+
+```
+┌────────────────────────────────────────────────────────────┐
+│ [BACK]           FIELD MAPPER                    [CLEAR]   │
+├─────────────────────┬──────────────────────────────────────┤
+│                     │  X:  12.34"                          │
+│   6-tile field      │  Y:  -5.67"                          │
+│   (cyan path,       │  H:  90.0°                           │
+│    yellow arc seg,  │  D:  47.83"                          │
+│    green dot =      │ ────────────────────                 │
+│    arc start)       │  ARC:                                │
+│                     │  Radius: 12.50"  ΔHdg: 90°           │
+│                     │  ArcLen: 19.63"                      │
+│                     │  Chord:  17.68"                      │
+│                     │  Inner: 6.97"  Out: 18.03"           │
+├─────────────────────┼──────────────────────────────────────┤
+│                     │  [MARK S]         [MARK E]           │
+└─────────────────────┴──────────────────────────────────────┘
+```
+
+### Data Panel
+
+| Field | Description |
+|-------|-------------|
+| **X** | Current robot X in inches |
+| **Y** | Current robot Y in inches |
+| **H** | Current heading in degrees |
+| **D** | Total path distance traveled in inches |
+
+### Arc Measurement
+
+Use the two buttons at the bottom of the data panel:
+
+| Button | Color | Action |
+|--------|-------|--------|
+| **MARK S** | Dark green | Mark the current end of the path as the arc start; arc segment highlights yellow |
+| **MARK E** | Dark blue | Compute arc from marked start to current end |
+
+Once measured, the arc segment highlights in **yellow** (green dot marks the start) and the panel displays:
+
+| Field | Description | Use in code |
+|-------|-------------|-------------|
+| **Radius** | Robot-center arc radius in inches | First arg of `driveAngleOfArc(radius, angle)` |
+| **ΔHdg** | Total heading change in degrees (shown beside Radius) | Second arg of `driveAngleOfArc(radius, angle)` |
+| **ArcLen** | Cumulative path length along the arc in inches | — |
+| **Chord** | Straight-line distance start → end in inches | — |
+| **Inner** | Inner drive-wheel radius (`Radius − DRIVE_WIDTH/2`) | Reference only |
+| **Out** | Outer drive-wheel radius (`Radius + DRIVE_WIDTH/2`) | Reference only |
+
+### Using Arc Results in Autonomous
+
+```cpp
+// Field Mapper showed: Radius: 12.50", ΔHdg: 90°, turning right (clockwise)
+drivetrain.driveAngleOfArc(12.5, 90.0);   // positive radius = clockwise
+
+// Turning left (counter-clockwise): negate the radius
+drivetrain.driveAngleOfArc(-12.5, 90.0);
+```
+
+- **Radius** is already the robot-center radius — pass it directly, no adjustment needed.
+- **ΔHdg** is the arc angle — use it as the `angle` parameter.
+- The Field Mapper does not auto-detect turn direction: use **positive radius for clockwise**, **negative for counter-clockwise**.
+
+### Notes
+
+- Only active under `GuiDebug` (`TESTING_AUTONOMOUS true`). No-op on base `Gui`.
+- Call `setMapDataProvider()` **before** `aon::gui->initialize()`.
+- Buffer holds up to 1 000 points; once full, new points are dropped until **CLEAR** is pressed.
+- Arc results use `DRIVE_WIDTH` from `constants.hpp` for Inner/Out values, so they automatically reflect whichever robot is selected via `USING_BIG_ROBOT`.
+
+---
+
 ## Complete Example
 
 ```cpp

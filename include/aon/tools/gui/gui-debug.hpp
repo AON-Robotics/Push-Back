@@ -76,10 +76,16 @@ public:
   double   mapTotalDist    = 0.0; // cumulative distance traveled (inches)
 
   // Arc measurement state
-  int  arcStartIndex = -1;  // index into mapBuffer where arc mark was set; -1 = not set
+  enum class MapMode { SELECT, DISPLACEMENT, ARC };
+  MapMode mapMode = MapMode::SELECT;
+
+  int  arcStartIndex = -1;  // index into mapBuffer where arc/disp start was set; -1 = not set
+  int  dispEndIndex  = -1;  // index into mapBuffer where disp end was set; -1 = not set
   bool arcMeasured   = false;
   struct ArcResult {
-    double radius;       // inches (0 = straight)
+    double radius;       // inches — robot center (pass directly to driveInArc)
+    double innerRadius;  // inches — inner drive wheel
+    double outerRadius;  // inches — outer drive wheel
     double arcLength;    // inches
     double chordLength;  // inches
     double deltaHeading; // degrees

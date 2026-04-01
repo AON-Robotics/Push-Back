@@ -112,8 +112,10 @@ void GuiDebug::ClearMapPath() {
   mapBufferCount = 0;
   mapTotalDist   = 0.0;
   arcStartIndex  = -1;
+  dispEndIndex   = -1;
   arcMeasured    = false;
   arcResult      = {};
+  mapMode        = MapMode::SELECT;
 }
 
 // ============================================================================

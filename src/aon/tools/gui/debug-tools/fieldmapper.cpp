@@ -71,6 +71,8 @@ static void computeArc(const GuiDebug::MapPoint* buf, int start, int end,
   out.chordLength  = chord;
   out.deltaHeading = dDeg;
   out.radius       = radius;
+  out.innerRadius  = (radius > 0.01) ? radius - (DRIVE_WIDTH / 2.0) : 0.0;
+  out.outerRadius  = (radius > 0.01) ? radius + (DRIVE_WIDTH / 2.0) : 0.0;
   out.valid        = true;
 }
 
@@ -217,67 +219,164 @@ void GuiDebug::DisplayFieldMapper() {
   pros::screen::erase_rect(dx, dy, dx + FM_DW, dy + 1);
   dy += 6;
 
-  // ── Arc results ──────────────────────────────────────────────────────────
-  if (arcMeasured && arcResult.valid) {
-    pros::screen::set_pen(COLOR_YELLOW);
-    pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "ARC:");
+  // ── Stats panel ──────────────────────────────────────────────────────────
+  if (mapMode == MapMode::DISPLACEMENT) {
+    pros::screen::set_pen(COLOR_CYAN);
+    pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "DISPLACE:");
     dy += rowH;
 
-    // Radius + ΔHdg on the same row
-    pros::screen::set_pen(COLOR_LIGHT_GRAY);
-    pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "Radius:");
-    pros::screen::set_pen(COLOR_YELLOW);
-    if (arcResult.radius > 0.01) {
-      snprintf(buf, sizeof(buf), "%.2f\"", arcResult.radius);
+    if (arcStartIndex >= 0 && dispEndIndex > arcStartIndex) {
+      const auto& s = mapBuffer[arcStartIndex];
+      const auto& e = mapBuffer[dispEndIndex];
+      double ddx = e.x - s.x;
+      double ddy = e.y - s.y;
+      double ddTheta = e.theta - s.theta;
+      while (ddTheta >  M_PI) ddTheta -= 2.0 * M_PI;
+      while (ddTheta < -M_PI) ddTheta += 2.0 * M_PI;
+      double hyp = std::sqrt(ddx * ddx + ddy * ddy);
+
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "X:");
+      pros::screen::set_pen(COLOR_CYAN);
+      snprintf(buf, sizeof(buf), "%.2f\"", ddx);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 16, dy, buf);
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 130, dy, "Hdg:");
+      pros::screen::set_pen(COLOR_CYAN);
+      snprintf(buf, sizeof(buf), "%.1f" "\xb0", ddTheta * (180.0 / M_PI));
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 158, dy, buf);
+      dy += rowH;
+
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "Y:");
+      pros::screen::set_pen(COLOR_CYAN);
+      snprintf(buf, sizeof(buf), "%.2f\"", ddy);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 16, dy, buf);
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 130, dy, "Hyp:");
+      pros::screen::set_pen(COLOR_CYAN);
+      snprintf(buf, sizeof(buf), "%.2f\"", hyp);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 158, dy, buf);
+      dy += rowH;
+
+      dy += rowH * 2; // padding to match row count
+    } else if (arcStartIndex >= 0) {
+      pros::screen::set_pen(0x555555);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "-- mark end --");
+      dy += rowH * 3;
     } else {
-      snprintf(buf, sizeof(buf), "straight");
+      pros::screen::set_pen(0x555555);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "-- mark start --");
+      dy += rowH * 3;
     }
-    pros::screen::print(pros::E_TEXT_SMALL, dx + 56, dy, buf);
-    pros::screen::set_pen(COLOR_LIGHT_GRAY);
-    pros::screen::print(pros::E_TEXT_SMALL, dx + 130, dy, "\xce\x94Hdg:");
-    pros::screen::set_pen(COLOR_YELLOW);
-    snprintf(buf, sizeof(buf), "%.1f" "\xb0", arcResult.deltaHeading);
-    pros::screen::print(pros::E_TEXT_SMALL, dx + 170, dy, buf);
-    dy += rowH;
+  } else if (mapMode == MapMode::ARC) {
+    if (arcMeasured && arcResult.valid) {
+      pros::screen::set_pen(COLOR_YELLOW);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "ARC:");
+      dy += rowH;
 
-    pros::screen::set_pen(COLOR_LIGHT_GRAY);
-    pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "ArcLen:");
-    pros::screen::set_pen(COLOR_YELLOW);
-    snprintf(buf, sizeof(buf), "%.2f\"", arcResult.arcLength);
-    pros::screen::print(pros::E_TEXT_SMALL, dx + 56, dy, buf);
-    dy += rowH;
+      // Radius + ΔHdg on the same row
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "Radius:");
+      pros::screen::set_pen(COLOR_YELLOW);
+      if (arcResult.radius > 0.01) {
+        snprintf(buf, sizeof(buf), "%.2f\"", arcResult.radius);
+      } else {
+        snprintf(buf, sizeof(buf), "straight");
+      }
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 56, dy, buf);
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 130, dy, "Hdg:");
+      pros::screen::set_pen(COLOR_YELLOW);
+      snprintf(buf, sizeof(buf), "%.1f" "\xb0", arcResult.deltaHeading);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 158, dy, buf);
+      dy += rowH;
 
-    pros::screen::set_pen(COLOR_LIGHT_GRAY);
-    pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "Chord:");
-    pros::screen::set_pen(COLOR_YELLOW);
-    snprintf(buf, sizeof(buf), "%.2f\"", arcResult.chordLength);
-    pros::screen::print(pros::E_TEXT_SMALL, dx + 48, dy, buf);
-    dy += rowH;
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "ArcLen:");
+      pros::screen::set_pen(COLOR_YELLOW);
+      snprintf(buf, sizeof(buf), "%.2f\"", arcResult.arcLength);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 56, dy, buf);
+      if (arcResult.radius > 0.01) {
+        pros::screen::set_pen(COLOR_LIGHT_GRAY);
+        pros::screen::print(pros::E_TEXT_SMALL, dx + 130, dy, "In:");
+        pros::screen::set_pen(COLOR_YELLOW);
+        snprintf(buf, sizeof(buf), "%.2f\"", arcResult.innerRadius);
+        pros::screen::print(pros::E_TEXT_SMALL, dx + 150, dy, buf);
+      }
+      dy += rowH;
+
+      pros::screen::set_pen(COLOR_LIGHT_GRAY);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "Chord:");
+      pros::screen::set_pen(COLOR_YELLOW);
+      snprintf(buf, sizeof(buf), "%.2f\"", arcResult.chordLength);
+      pros::screen::print(pros::E_TEXT_SMALL, dx + 48, dy, buf);
+      if (arcResult.radius > 0.01) {
+        pros::screen::set_pen(COLOR_LIGHT_GRAY);
+        pros::screen::print(pros::E_TEXT_SMALL, dx + 130, dy, "Out:");
+        pros::screen::set_pen(COLOR_YELLOW);
+        snprintf(buf, sizeof(buf), "%.2f\"", arcResult.outerRadius);
+        pros::screen::print(pros::E_TEXT_SMALL, dx + 154, dy, buf);
+      }
+      dy += rowH;
+    } else {
+      pros::screen::set_pen(0x555555);
+      pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "ARC: --");
+      dy += rowH * 4;
+    }
   } else {
-    pros::screen::set_pen(0x555555);
-    pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "ARC: --");
-    dy += rowH * 4;  // reserve same space
+    // SELECT mode — prompt
+    pros::screen::set_pen(0x888888);
+    pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "Select mode below:");
+    dy += rowH * 4;
   }
 
-  // ── Arc control buttons ──────────────────────────────────────────────────
+  // ── Bottom buttons ────────────────────────────────────────────────────────
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 35;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 5;
   const int halfW = (FM_DW - 6) / 2;
 
-  // [MARK S]
-  uint32_t markSColor = (arcStartIndex >= 0) ? COLOR_DARK_GREEN : 0x005500;
-  pros::screen::set_eraser(markSColor);
-  pros::screen::erase_rect(dx, btnY1, dx + halfW, btnY2);
-  pros::screen::set_pen(COLOR_WHITE);
-  pros::screen::print(pros::E_TEXT_SMALL, dx + 4, btnY1 + 8,
-                      (arcStartIndex >= 0) ? "S SET" : "MARK S");
+  if (mapMode == MapMode::SELECT) {
+    // [DISPLACE]  [ARC MEAS]
+    pros::screen::set_eraser(0x005566);
+    pros::screen::erase_rect(dx, btnY1, dx + halfW, btnY2);
+    pros::screen::set_pen(COLOR_WHITE);
+    pros::screen::print(pros::E_TEXT_SMALL, dx + 4, btnY1 + 8, "DISPLACE");
 
-  // [MARK E]
-  uint32_t markEColor = arcMeasured ? COLOR_DARK_BLUE : 0x000055;
-  pros::screen::set_eraser(markEColor);
-  pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + FM_DW, btnY2);
-  pros::screen::set_pen(COLOR_WHITE);
-  pros::screen::print(pros::E_TEXT_SMALL, dx + halfW + 10, btnY1 + 8, "MARK E");
+    pros::screen::set_eraser(0x005500);
+    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + FM_DW, btnY2);
+    pros::screen::set_pen(COLOR_WHITE);
+    pros::screen::print(pros::E_TEXT_SMALL, dx + halfW + 10, btnY1 + 8, "ARC MEAS");
+  } else if (mapMode == MapMode::DISPLACEMENT) {
+    // [MARK START]  [MARK END]
+    uint32_t startColor = (arcStartIndex >= 0) ? COLOR_DARK_GREEN : 0x005500;
+    pros::screen::set_eraser(startColor);
+    pros::screen::erase_rect(dx, btnY1, dx + halfW, btnY2);
+    pros::screen::set_pen(COLOR_WHITE);
+    pros::screen::print(pros::E_TEXT_SMALL, dx + 4, btnY1 + 8,
+                        (arcStartIndex >= 0) ? "START SET" : "MARK START");
+
+    uint32_t endColor = (dispEndIndex >= 0) ? COLOR_DARK_BLUE : 0x000055;
+    pros::screen::set_eraser(endColor);
+    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + FM_DW, btnY2);
+    pros::screen::set_pen(COLOR_WHITE);
+    pros::screen::print(pros::E_TEXT_SMALL, dx + halfW + 10, btnY1 + 8,
+                        (dispEndIndex >= 0) ? "END SET" : "MARK END");
+  } else {
+    // ARC mode — [MARK START]  [MARK END]
+    uint32_t markSColor = (arcStartIndex >= 0) ? COLOR_DARK_GREEN : 0x005500;
+    pros::screen::set_eraser(markSColor);
+    pros::screen::erase_rect(dx, btnY1, dx + halfW, btnY2);
+    pros::screen::set_pen(COLOR_WHITE);
+    pros::screen::print(pros::E_TEXT_SMALL, dx + 4, btnY1 + 8,
+                        (arcStartIndex >= 0) ? "START SET" : "MARK START");
+
+    uint32_t markEColor = arcMeasured ? COLOR_DARK_BLUE : 0x000055;
+    pros::screen::set_eraser(markEColor);
+    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + FM_DW, btnY2);
+    pros::screen::set_pen(COLOR_WHITE);
+    pros::screen::print(pros::E_TEXT_SMALL, dx + halfW + 10, btnY1 + 8, "MARK END");
+  }
 }
 
 // ============================================================================
@@ -311,7 +410,7 @@ void GuiDebug::HandleFieldMapperTouch() {
     return;
   }
 
-  // ── MARK START button ─────────────────────────────────────────────────────
+  // ── MARK START / MARK END / DISPLACE / ARC MEAS buttons ─────────────────
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 35;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 5;
   const int halfW = (FM_DW - 6) / 2;
@@ -320,19 +419,43 @@ void GuiDebug::HandleFieldMapperTouch() {
   const int markEX2 = FM_DX + FM_DW;
 
   if (tx >= FM_DX && tx <= markSX2 && ty >= btnY1 && ty <= btnY2) {
-    // Set arc start to the most recent path point
-    arcStartIndex = (mapBufferCount > 0) ? mapBufferCount - 1 : 0;
-    arcMeasured   = false;
-    arcResult     = {};
+    if (mapMode == MapMode::SELECT) {
+      // Enter DISPLACEMENT mode
+      mapMode = MapMode::DISPLACEMENT;
+      arcStartIndex = -1;
+      dispEndIndex  = -1;
+    } else if (mapMode == MapMode::DISPLACEMENT) {
+      // MARK START
+      arcStartIndex = (mapBufferCount > 0) ? mapBufferCount - 1 : 0;
+      dispEndIndex  = -1;
+    } else if (mapMode == MapMode::ARC) {
+      // MARK START
+      arcStartIndex = (mapBufferCount > 0) ? mapBufferCount - 1 : 0;
+      arcMeasured   = false;
+      arcResult     = {};
+    }
     DisplayFieldMapper();
     return;
   }
 
-  // ── MARK END button ───────────────────────────────────────────────────────
   if (tx >= markEX1 && tx <= markEX2 && ty >= btnY1 && ty <= btnY2) {
-    if (arcStartIndex >= 0 && mapBufferCount > arcStartIndex + 1) {
-      computeArc(mapBuffer, arcStartIndex, mapBufferCount - 1, arcResult);
-      arcMeasured = arcResult.valid;
+    if (mapMode == MapMode::SELECT) {
+      // Enter ARC mode
+      mapMode = MapMode::ARC;
+      arcStartIndex = -1;
+      arcMeasured   = false;
+      arcResult     = {};
+    } else if (mapMode == MapMode::DISPLACEMENT) {
+      // MARK END for displacement
+      if (arcStartIndex >= 0 && mapBufferCount > arcStartIndex) {
+        dispEndIndex = mapBufferCount - 1;
+      }
+    } else if (mapMode == MapMode::ARC) {
+      // MARK END — compute arc
+      if (arcStartIndex >= 0 && mapBufferCount > arcStartIndex + 1) {
+        computeArc(mapBuffer, arcStartIndex, mapBufferCount - 1, arcResult);
+        arcMeasured = arcResult.valid;
+      }
     }
     DisplayFieldMapper();
     return;
