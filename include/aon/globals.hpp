@@ -26,15 +26,15 @@
 
 #if USING_BIG_ROBOT
 
-aon::Odometry odometry = aon::Odometry(0, 0, 0, 0, 0);
+aon::Odometry odometry = aon::Odometry(5, -6, 0, 0, 14);
 
 // Drivetrain
-aon::HDrive drivetrain = aon::HDrive({1, -16, 9, -10}, {-11, 12, -19, 20}, {-14}, std::make_unique<aon::Odometry>(odometry));
+aon::HDrive drivetrain = aon::HDrive({-1, -2, 3, 4}, {12, -13, -18, 19}, {-15}, std::make_unique<aon::Odometry>(odometry));
 
 pros::ADIDigitalOut semPiston('Z'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('Z');
 
-aon::Intake intake = aon::Intake({0}, {0}, {0}, {0}, {0}, {0}, 'Z', 0, 0);
+aon::Intake intake = aon::Intake({20, -11}, {0}, {0}, {0}, {0}, {0}, 'Z', 0, 0);
 
 #else
 
@@ -43,7 +43,7 @@ aon::Odometry odometry = aon::Odometry(-5, 6, 0, 0, 7);
 
 aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, std::make_unique<aon::Odometry>(odometry));
 
-aon::Intake intake = aon::Intake({-11}, {0}, {0}, 'Z', 'Z', 0, 0);
+aon::Intake intake = aon::Intake({-11, 20}, {15}, {0 /*-12*/}, 'Z', 'Z', 0, 8);
 
 pros::ADIDigitalOut arrowPiston('Z');
 
@@ -126,7 +126,7 @@ inline void Configure(const bool opcontrol = true) {
   #if USING_BIG_ROBOT
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
   
-  intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::green);
+  intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::blue);
   
   #else
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);

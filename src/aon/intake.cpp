@@ -45,7 +45,7 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
   scorerMG.tarePosition();
 
   shotbeltMG.setBrakeMode(brakeMode);
-  shotbeltMG.setGearing(okapi::AbstractMotor::gearset::blue);
+  shotbeltMG.setGearing(gearset);
   shotbeltMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   shotbeltMG.tarePosition();
 

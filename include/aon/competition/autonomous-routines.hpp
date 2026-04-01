@@ -469,11 +469,11 @@ void smallBotRoutine(){
   pros::delay(200);  
   drivetrain.move(4); // Go to match loader
   intake.activateScan(); 
-  drivetrain.motors(-MAX_RPM / 2); // Push into loader
-  pros::delay(100); // for a bit of time,
-  drivetrain.motors(MAX_RPM / 2); // Push into loader
+  drivetrain.motors(-MAX_RPM / 2); // Jerk back
+  pros::delay(100); // for an instance,
+  drivetrain.motors(MAX_RPM / 2); // then push into loader
   pros::delay(400); // for a bit of time,
-  drivetrain.stop(); // then stop.
+  drivetrain.stop(); // and stop.
   pros::delay(5000); // Take up some blocks (6);
   intake.stopScan();
   drivetrain.move(-13); // Move to Long goal
@@ -490,6 +490,34 @@ void smallBotRoutine(){
   pros::delay(1200);
   drivetrain.stop(); 
   //* Works till here
+}
+
+// TODO: test
+void smallBotRoutineWorlds(){
+  drivetrain.move(31); // Align with match loader
+  drivetrain.turn(-90);
+  drivetrain.move(4); // Go to match loader
+  intake.activateScan(); 
+  intake.dropCart(); // Prepare loader mechanism // TODO: replace with function of the back mechanism
+  pros::delay(200);
+  drivetrain.motors(MAX_RPM / 2); // Jerk back
+  pros::delay(100); // for an instance,
+  drivetrain.motors(-MAX_RPM / 2); // then push into loader
+  pros::delay(400); // for a bit of time,
+  drivetrain.stop(); // and stop.
+  pros::delay(5000); // Take up some blocks (6);
+  intake.stopScan();
+  drivetrain.move(13); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism // TODO: replace with function of the back mechanism
+  intake.setScorerHeight(HIGH);
+  drivetrain.move(6.5);
+  intake.score(Intake::TOP, 3000); // Score all blocks
+  drivetrain.move(-23); // Go back a little
+  drivetrain.turn(-90); // Orient towards parking
+  drivetrain.move(20); // Go to parking
+  drivetrain.motors(MAX_RPM);
+  pros::delay(1200);
+  drivetrain.stop(); 
 }
 
 void smallbotjorgeg(){
