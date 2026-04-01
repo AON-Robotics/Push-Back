@@ -18,7 +18,8 @@ PoseLock::PoseLock(Drivetrain& drive, PID xPid, PID thetaPid,
       yPid(0, 0, 0),  // unused for non-holonomic drives
       thetaPid(thetaPid),
       targetPose(),
-      drive(&drive) {}
+      drive(&drive),
+      holonomic(false) {}
 
 PoseLock::PoseLock(Drivetrain& drive, PID xPid, PID yPid,
                    PID thetaPid, PoseLockConfig config)
@@ -28,7 +29,8 @@ PoseLock::PoseLock(Drivetrain& drive, PID xPid, PID yPid,
       yPid(yPid),
       thetaPid(thetaPid),
       targetPose(),
-      drive(&drive) {}
+      drive(&drive),
+      holonomic(true) {}
 
 // ============================================================================
 //    ___       _    _ _        __  __     _   _            _
@@ -43,7 +45,7 @@ void PoseLock::setTarget(const Pose& target) {
   state = PoseLockState::SETTLING;
   settledCounter = 0;
   startTime = pros::millis();
-  if (!drive->holonomic) {
+  if (!holonomic) {
     tankStage = TankStage::ALIGN_HEADING;
   }
 
@@ -64,7 +66,7 @@ void PoseLock::update() {
   }
 
   // Dispatch to drive-specific update logic
-  if (drive->holonomic) {
+  if (holonomic) {
     updateHolonomic();
   } else {
     updateTank();
@@ -125,7 +127,7 @@ void PoseLock::stopMotors() {
 bool PoseLock::checkTolerance() const {
   const double currentX = drive->getX();
   const double currentY = drive->getY();
-  const double currentTheta = drive->getTheta();
+  const double currentTheta = drive->getThetaRadians();
 
   const double dx = targetPose.x - currentX;
   const double dy = targetPose.y - currentY;
@@ -150,7 +152,7 @@ void PoseLock::updateTank() {
   // --- Read current pose from drivetrain ---
   const double currentX = drive->getX();
   const double currentY = drive->getY();
-  const double currentTheta = drive->getTheta();
+  const double currentTheta = drive->getThetaRadians();
 
   // --- Compute field-frame errors ---
   const double dx = targetPose.x - currentX;

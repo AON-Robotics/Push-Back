@@ -38,6 +38,9 @@ class Drivetrain {
   double getTheta() { 
     return this->odometry->getDegrees();
   }
+  double getThetaRadians() {
+    return this->odometry->getRadians();
+  }
   void setTheta(double theta) { this->pose.theta = theta; }
 
   bool isTurbo() { return this->turbo; }

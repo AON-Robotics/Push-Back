@@ -134,6 +134,7 @@ class PoseLock {
   int settledCounter = 0;
   uint32_t startTime = 0;
   TankStage tankStage = TankStage::IDLE;
+  bool holonomic = false;  ///< true if this PoseLock is driving a holonomic (X-Drive) robot
 
   // === Internal Helpers ===
 
