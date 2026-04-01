@@ -2,13 +2,14 @@
 
 ## Overview
 
-The GUI system provides five main features:
+The GUI system provides six main features:
 
 1. **Registered Autons** — Register functions and select them from the Debug Menu
 2. **Auton Runner** — Execute autonomous routines on-demand during testing
 3. **Tunable Variables** — Live adjustment of parameters without rebuilding
 4. **Data Menu** — Live display of registered numeric values with reset controls
 5. **Live Graph** — Real-time visualization of X/Y data (e.g., odometry)
+6. **Field Mapper** — Real-time robot path trace on a top-down field view with arc measurement
 
 ---
 
@@ -22,6 +23,7 @@ The GUI system provides five main features:
 - [Tunable Variables](#tunable-variables)
 - [Data Menu](#data-menu)
 - [Live Graph](#live-graph)
+- [Field Mapper](#field-mapper)
 - [Complete Example](#complete-example)
 - [API Reference](#api-reference)
 - [Troubleshooting](#troubleshooting)
@@ -389,6 +391,11 @@ void initialize() {
     []() { return drivetrain.odom.getY(); }
   );
 
+  aon::gui->setMapDataProvider([]() -> aon::Pose {
+    return {drivetrain.getX(), drivetrain.getY(),
+            drivetrain.getTheta() * M_PI / 180.0};
+  });
+
   aon::gui.RegisterResetHandler("ResetOdom", []{
     drivetrain.odom.resetCurrent(0.0, 0.0, 0.0);
   });
@@ -449,6 +456,12 @@ Supported signatures: `int(*)()`, `void(*)()`, `std::function<int()>`, lambda.
 | Function | Description |
 |----------|-------------|
 | `aon::gui.SetGraphDataProviders(xFunc, yFunc)` | Set X and Y data provider callbacks |
+
+### Field Mapper
+
+| Function | Description |
+|----------|-------------|
+| `aon::gui->setMapDataProvider(poseFunc)` | Set a `std::function<Pose()>` callback; `Pose.theta` must be in **radians** |
 
 ### State Properties
 

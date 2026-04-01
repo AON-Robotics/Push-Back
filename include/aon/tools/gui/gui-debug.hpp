@@ -2,6 +2,7 @@
 #ifndef AON_TOOLS_GUI_DEBUG_HPP_
 #define AON_TOOLS_GUI_DEBUG_HPP_
 #include "gui.hpp"
+#include "aon/math/pose.hpp"
 #include <map>
 #include <string>
 #include <type_traits>
@@ -61,6 +62,42 @@ public:
   // Invoke the active reset handler (no-op if not set or not found)
   void invokeResetHandler() { auto it = resetHandlers.find(activeResetHandlerName); if (it != resetHandlers.end()) it->second(); }
 
+  // ── Field Mapper ──────────────────────────────────────────────────────────
+
+  struct MapPoint {
+    double x;      // inches, field-center origin
+    double y;      // inches, field-center origin
+    double theta;  // radians (same as Pose)
+  };
+
+  static constexpr int MAP_BUFFER_SIZE = 600;
+  MapPoint mapBuffer[MAP_BUFFER_SIZE] = {};
+  int      mapBufferCount  = 0;   // number of valid points (0..MAP_BUFFER_SIZE)
+  double   mapTotalDist    = 0.0; // cumulative distance traveled (inches)
+
+  // Arc measurement state
+  int  arcStartIndex = -1;  // index into mapBuffer where arc mark was set; -1 = not set
+  bool arcMeasured   = false;
+  struct ArcResult {
+    double radius;       // inches (0 = straight)
+    double arcLength;    // inches
+    double chordLength;  // inches
+    double deltaHeading; // degrees
+    bool   valid = false;
+  } arcResult = {};
+
+  // User provides live pose via this callback
+  std::function<Pose()> mapGetPose = nullptr;
+
+  // Register the pose provider (called once in globals/opcontrol setup)
+  void setMapDataProvider(std::function<Pose()> getPose) override;
+
+  // Append a new pose sample; computes running distance
+  void AddMapPoint(double x, double y, double theta);
+
+  // Erase all recorded path data and reset arc state
+  void ClearMapPath();
+
   // Constructor
   GuiDebug() = default; // Default to use TESTING_AUTONOMOUS for conditional display
   virtual ~GuiDebug() = default;
@@ -78,6 +115,7 @@ public:
   void DisplayLiveGraph();
   void DisplayVariablesMenu();
   void DisplayDataMenu();
+  void DisplayFieldMapper();
 
   // Override main menu touch handler to handle DEBUG button
   virtual void handleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus) override;
@@ -89,6 +127,7 @@ public:
   void HandleLiveGraphTouch();
   void HandleVariablesMenuTouch();
   void HandleDataMenuTouch();
+  void HandleFieldMapperTouch();
 
   // API: register a variable to be editable in Debug Menu 3.
   // T must support + and - (detected via std::void_t).

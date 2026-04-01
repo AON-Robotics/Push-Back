@@ -9,6 +9,7 @@
 #include <functional>
 #include "../../../api.h"
 #include "aon/constants.hpp"
+#include "aon/math/pose.hpp"
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
 
@@ -40,6 +41,7 @@ enum GuiScreen {
   VARS,
   DATA,
   LiveGraph,
+  FieldMapper,
 };
 
 // Auton selection system
@@ -125,6 +127,7 @@ public:
   virtual void setDataRegister(const std::function<void()>& /*Register*/) {}
   virtual void registerResetHandler(const std::string& /*name*/, const std::function<void()>& /*cb*/) {}
   virtual void invokeResetHandler() {}
+  virtual void setMapDataProvider(std::function<Pose()> /*getPose*/) {}
 
   // Auton selection helper
   void selectAutonByList(Alliance alliance, int index1Based);

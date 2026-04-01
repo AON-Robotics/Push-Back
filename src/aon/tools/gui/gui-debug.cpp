@@ -90,6 +90,33 @@ void GuiDebug::AddGraphPoint(double x, double y) {
 }
 
 // ============================================================================
+// Field Mapper Methods
+// ============================================================================
+
+void GuiDebug::setMapDataProvider(std::function<Pose()> getPose) {
+  mapGetPose = std::move(getPose);
+}
+
+void GuiDebug::AddMapPoint(double x, double y, double theta) {
+  if (mapBufferCount >= MAP_BUFFER_SIZE) return;
+  if (mapBufferCount > 0) {
+    const auto& prev = mapBuffer[mapBufferCount - 1];
+    double dx = x - prev.x;
+    double dy = y - prev.y;
+    mapTotalDist += std::sqrt(dx * dx + dy * dy);
+  }
+  mapBuffer[mapBufferCount++] = {x, y, theta};
+}
+
+void GuiDebug::ClearMapPath() {
+  mapBufferCount = 0;
+  mapTotalDist   = 0.0;
+  arcStartIndex  = -1;
+  arcMeasured    = false;
+  arcResult      = {};
+}
+
+// ============================================================================
 // Debug Display Methods (Delegated to Subsystems)
 // ============================================================================
 
@@ -122,10 +149,11 @@ void GuiDebug::DisplayDebugMenu() {
     {"Live", "Graph", 1, 0},
     {"Variables", "", 2, 0},
     {"Auton", "Runner", 0, 1},
-    {"Data", "", 1, 1}
+    {"Data", "", 1, 1},
+    {"Field", "Map", 2, 1},
   };
   
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 6; ++i) {
     int x = startX + buttons[i].col * (btnWidth + gap);
     int y = startY + buttons[i].row * (btnHeight + gap);
     
@@ -208,10 +236,11 @@ void GuiDebug::HandleDebugMenuTouch() {
       {1, 0, 1}, // Live Graph
       {2, 0, 3}, // Variables
       {0, 1, 2}, // Auton Runner
-      {1, 1, 4}  // Odometry
+      {1, 1, 4}, // Data
+      {2, 1, 5}, // Field Map
     };
     
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 6; ++i) {
       int btnX = startX + buttons[i].col * (btnWidth + gap);
       int btnY = startY + buttons[i].row * (btnHeight + gap);
       
@@ -222,6 +251,7 @@ void GuiDebug::HandleDebugMenuTouch() {
           case 2: DisplayAutonRunner(); currentScreen = AutonRunner; break;
           case 3: previousScreen = DebugMenu; DisplayVariablesMenu(); currentScreen = VARS; break;
           case 4: DisplayDataMenu(); currentScreen = DATA; break;
+          case 5: DisplayFieldMapper(); currentScreen = FieldMapper; break;
         }
         pros::delay(400);
         return;
@@ -277,6 +307,9 @@ void GuiDebug::mainLoop() {
         case LiveGraph:
           HandleLiveGraphTouch();
           break;
+        case FieldMapper:
+          HandleFieldMapperTouch();
+          break;
         default:
           break;
       }
@@ -311,6 +344,12 @@ void GuiDebug::mainLoop() {
         if (graphGetX && graphGetY) {
           AddGraphPoint(graphGetX(), graphGetY());
         }
+      } else if (currentScreen == FieldMapper) {
+        if (mapGetPose) {
+          Pose p = mapGetPose();
+          AddMapPoint(p.x, p.y, p.theta);
+        }
+        DisplayFieldMapper();
       }
       refreshCounter = 0;
     }
