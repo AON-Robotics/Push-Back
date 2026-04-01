@@ -41,19 +41,20 @@ The implementation in [src/aon/tools/gui/gui.cpp](../../../src/aon/tools/gui/gui
 
 ```cpp
 #if TESTING_AUTONOMOUS
-static GuiDebug gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<GuiDebug>();
 #else
-static Gui gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<Gui>();
 #endif
-Gui& gui = gui_impl;
 ```
+
+`aon::gui` is a `std::unique_ptr<Gui>` — all method calls use `->`.
 
 | `TESTING_AUTONOMOUS` | GUI Type | Main Menu |
 |---|---|---|
 | `true` | `GuiDebug` | Split bar: **AUTONS** + **DEBUG** |
 | `false` | `Gui` | Full-width **AUTONS** only |
 
-**Note:** The base `Gui` class provides no-op virtual methods for all debug APIs (`VariableChanger`, `RegisterTestFunction`, `RegisterDataEntry`, etc.) so registration calls compile in both modes. Runtime behavior is only active under `GuiDebug`.
+**Note:** The base `Gui` class provides no-op virtual methods for all debug APIs (`variableChanger`, `registerTestFunction`, `registerDataEntry`, etc.) so registration calls compile in both modes. Runtime behavior is only active under `GuiDebug`.
 
 **If failing to switch between them delete bin file and d file**
 
@@ -80,14 +81,14 @@ Implement the function in [autonomous-routines.hpp](../../competition/autonomous
 In [gui.hpp](gui.hpp), update the relevant array:
 
 ```cpp
-AutonOption RedAutonOptions[AutonOptionsCount] = {
+AutonOption redAutonOptions[autonOptionsCount] = {
   {"Red AUT1", aon::MyNewRedRoutine},
-  {"Red AUT2", aon::RedRingsRoutine},
-  {"Red AUT3", aon::RedRingsRoutine},
+  {"Red AUT2", aon::RedRoutine},
+  {"Red AUT3", aon::RedRoutine},
 };
 ```
 
-`AutonOptionsCount` is 3 — don't change it unless you resize all three arrays (`RedAutonOptions`, `BlueAutonOptions`, `SkillsAutonOptions`) together.
+`autonOptionsCount` is 3 — don't change it unless you resize all three arrays (`redAutonOptions`, `blueAutonOptions`, `skillsAutonOptions`) together.
 
 ### 3. Rebuild
 
@@ -103,32 +104,31 @@ Navigate to **AUTONS** on the brain to confirm.
 
 ## Quick Start
 
-Call all `Set*Register` functions **before** `InitializeGui()`.
+Call all `set*Register` functions **before** starting the GUI task.
 
 ```cpp
 void initialize() {
-  aon::gui.SetTestRegister([]{
-    aon::gui.RegisterTestFunction(&RedRingsRoutine, "Red Rings");
-    aon::gui.RegisterTestFunction(&BlueRingsRoutine, "Blue Rings");
+  aon::gui->setTestRegister([]{
+    aon::gui->registerTestFunction(&RedRingsRoutine, "Red Rings");
+    aon::gui->registerTestFunction(&BlueRingsRoutine, "Blue Rings");
   });
 
-  aon::gui.SetVariableRegister([]{
-    aon::gui.VariableChanger(DRIVE_KP, "Drive kP");
+  aon::gui->setVariableRegister([]{
+    aon::gui->variableChanger(DRIVE_KP, "Drive kP");
   });
 
-  aon::gui.SetDataRegister([]{
-    aon::gui.RegisterDataEntry("X",       [](){ return drivetrain.odom.getX(); });
-    aon::gui.RegisterDataEntry("Y",       [](){ return drivetrain.odom.getY(); });
-    aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+  aon::gui->setDataRegister([]{
+    aon::gui->registerDataEntry("X",       []{ return drivetrain.getX(); });
+    aon::gui->registerDataEntry("Y",       []{ return drivetrain.getY(); });
+    aon::gui->registerDataEntry("Heading", []{ return drivetrain.getTheta(); });
   });
 
-  aon::gui.SetGraphDataProviders(
-    []() { return drivetrain.odom.getX(); },
-    []() { return drivetrain.odom.getY(); }
+  aon::gui->setGraphDataProviders(
+    []() { return drivetrain.getX(); },
+    []() { return drivetrain.getY(); }
   );
 
-  aon::InitializeGui();
-  pros::Task guiLoopTask([]{ aon::gui.RunLoop(); });
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
 }
 ```
 
@@ -142,30 +142,30 @@ Test functions appear in **Debug Menu → Registered Autons** and can be selecte
 
 ```cpp
 // int-returning function pointer
-aon::gui.RegisterTestFunction(&YourFunction, "Display Name");
+aon::gui->registerTestFunction(&YourFunction, "Display Name");
 
 // void-returning function pointer (wrapped automatically)
-aon::gui.RegisterTestFunction(&YourVoidFunction, "Display Name");
+aon::gui->registerTestFunction(&YourVoidFunction, "Display Name");
 
 // Lambda or std::function
-aon::gui.RegisterTestFunction([]() -> int {
+aon::gui->registerTestFunction([]() -> int {
   pros::delay(1000);
   return 0;
 }, "Display Name");
 ```
 
-Wrap registrations in a `SetTestRegister` callback:
+Wrap registrations in a `setTestRegister` callback:
 
 ```cpp
-aon::gui.SetTestRegister([]{
-  aon::gui.RegisterTestFunction(&RedRingsRoutine, "Red Rings");
-  aon::gui.RegisterTestFunction(&BlueRingsRoutine, "Blue Rings");
+aon::gui->setTestRegister([]{
+  aon::gui->registerTestFunction(&RedRingsRoutine, "Red Rings");
+  aon::gui->registerTestFunction(&BlueRingsRoutine, "Blue Rings");
 });
 ```
 
 ### How It Works
 
-1. `SetTestRegister(callback)` stores the callback.
+1. `setTestRegister(callback)` stores the callback.
 2. When **Registered Autons** opens, the callback is invoked once to populate the list.
 3. Tap a name to select it — the screen navigates automatically to the Auton Runner.
 
@@ -185,11 +185,10 @@ The Auton Runner (**Debug Menu → Auton Runner**) executes a selected autonomou
 
 When **RUN** is pressed:
 
-1. The selected function is registered with `AutonomousReader` under the key `"autonomous"`.
-2. `AutonomousReader->ExecuteFunction("autonomous")` is called **synchronously** in the GUI loop task.
-3. The screen redraws to show the auton name in **orange** before execution begins.
-4. The GUI is completely blocked — touch input is not processed while the routine runs.
-5. When the routine returns, the screen updates to **cyan "COMPLETED"**.
+1. The selected function is called **synchronously** in the GUI loop task.
+2. The screen redraws to show the auton name in **orange** before execution begins.
+3. The GUI is completely blocked — touch input is not processed while the routine runs.
+4. When the routine returns, the screen updates to **cyan "COMPLETED"**.
 
 > **There is no stop button.** Because execution is synchronous, touch input cannot be received while the auton is running. The only way to stop an auton is to let it run to completion.
 
@@ -251,31 +250,64 @@ Variables appear in **Debug Menu → Variables** with +/− buttons for live adj
 ### API
 
 ```cpp
-aon::gui.VariableChanger(variableRef, "Display Name");
+aon::gui->variableChanger(variableRef, "Display Name");
 ```
 
-Wrap registrations in a `SetVariableRegister` callback:
+Wrap registrations in a `setVariableRegister` callback:
 
 ```cpp
-aon::gui.SetVariableRegister([]{
-  aon::gui.VariableChanger(DRIVE_KP,  "Drive kP");
-  aon::gui.VariableChanger(DRIVE_KI,  "Drive kI");
-  aon::gui.VariableChanger(MAX_SPEED, "Max Speed");
+aon::gui->setVariableRegister([]{
+  aon::gui->variableChanger(DRIVE_KP,  "Drive kP");
+  aon::gui->variableChanger(DRIVE_KI,  "Drive kI");
+  aon::gui->variableChanger(MAX_SPEED, "Max Speed");
 });
 ```
 
 ### How It Works
 
-1. `SetVariableRegister(callback)` stores the callback.
+1. `setVariableRegister(callback)` stores the callback.
 2. When **Variables** opens, the callback is invoked once.
 3. Each entry shows six buttons: `-10`, `-1`, `-0.1` | `+0.1`, `+1`, `+10`.
 4. Tapping a button immediately applies the delta to the variable in memory.
 5. Up to 2 variables per page; use **PREV**/**NEXT** to paginate.
 
+### Variable Declaration — Important
+
+Variables must be declared as `inline double` at **global scope** in [globals.hpp](../../globals.hpp) — **not** inside a function or routine. This lets both the GUI registration and the autonomous routine access the same variable by reference.
+
+```cpp
+// globals.hpp — declare inline doubles at global scope
+inline double INCHES  = -138.0;
+inline double ANGLE   =   13.0;
+```
+
+They are then **used inside the autonomous routine** so that adjusting them in the Variables menu changes what the routine does on the next run:
+
+```cpp
+// autonomous-routines.hpp
+int MyRoutine() {
+  drivetrain.moveForward(INCHES);
+  drivetrain.turnDegrees(ANGLE);
+  return 0;
+}
+```
+
+Registration in `initialize()`:
+
+```cpp
+aon::gui->setVariableRegister([]{
+  aon::gui->variableChanger(INCHES, "Distance");
+  aon::gui->variableChanger(ANGLE,  "Angle");
+});
+```
+
+Workflow: adjust **Distance** / **Angle** in the Variables menu → press **BACK** → press **RUN** in Auton Runner → observe result → repeat.
+
 ### Notes
 
 - Pass variables **by reference** — the GUI modifies the actual variable.
-- Use global or `inline` variables so changes persist.
+- Declare as `inline double` at global scope in `globals.hpp` so they are accessible from both the registration callback and the routine.
+- **Do not declare tunable variables as local variables inside a routine** — local variables go out of scope and the `variableChanger` reference will dangle.
 - Duplicate names are silently ignored.
 
 ---
@@ -287,16 +319,16 @@ The Data screen (**Debug Menu → Data**) shows live numeric values with VARS an
 ### API
 
 ```cpp
-aon::gui.SetDataRegister([]{
-  aon::gui.RegisterDataEntry("X",       [](){ return drivetrain.odom.getX(); });
-  aon::gui.RegisterDataEntry("Y",       [](){ return drivetrain.odom.getY(); });
-  aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+aon::gui->setDataRegister([]{
+  aon::gui->registerDataEntry("X",       []{ return drivetrain.getX(); });
+  aon::gui->registerDataEntry("Y",       []{ return drivetrain.getY(); });
+  aon::gui->registerDataEntry("Heading", []{ return drivetrain.getTheta(); });
 });
 ```
 
 ### How It Works
 
-1. `SetDataRegister(callback)` stores the callback.
+1. `setDataRegister(callback)` stores the callback.
 2. When the Data screen opens, the callback is invoked once.
 3. Each entry displays as `Name: value` with three decimal places.
 4. Up to 6 entries per page; use **PREV**/**NEXT** for pagination.
@@ -306,14 +338,14 @@ aon::gui.SetDataRegister([]{
 ### RESET Handler
 
 ```cpp
-aon::gui.RegisterResetHandler("ResetOdom", []{
-  drivetrain.odom.resetCurrent(0.0, 0.0, 0.0);
+aon::gui->registerResetHandler("ResetOdom", []{
+  drivetrain.resetPose(0.0, 0.0, 0.0);
 });
 ```
 
 - The most recently registered handler is the active one.
 - No-op on base `Gui`; safe to call in all builds.
-- Register before `InitializeGui()` to have it available immediately.
+- Register before starting the GUI task to have it available immediately.
 
 ---
 
@@ -324,7 +356,7 @@ The Live Graph (**Debug Menu → Live Graph**) plots real-time X/Y data with aut
 ### API
 
 ```cpp
-aon::gui.SetGraphDataProviders(
+aon::gui->setGraphDataProviders(
   []() -> double { return /* X */; },
   []() -> double { return /* Y */; }
 );
@@ -332,7 +364,7 @@ aon::gui.SetGraphDataProviders(
 
 ### How It Works
 
-1. `SetGraphDataProviders(xFunc, yFunc)` stores the two callbacks.
+1. `setGraphDataProviders(xFunc, yFunc)` stores the two callbacks.
 2. While the Live Graph screen is open, a new point is sampled every ~300 ms.
 3. Up to 300 points are kept in a circular buffer; oldest data is dropped as new arrives.
 4. Axes auto-scale around the data range.
@@ -342,13 +374,13 @@ aon::gui.SetGraphDataProviders(
 
 ```cpp
 // Odometry path
-aon::gui.SetGraphDataProviders(
-  []() { return drivetrain.odom.getX(); },
-  []() { return drivetrain.odom.getY(); }
+aon::gui->setGraphDataProviders(
+  []() { return drivetrain.getX(); },
+  []() { return drivetrain.getY(); }
 );
 
 // Time vs motor velocity
-aon::gui.SetGraphDataProviders(
+aon::gui->setGraphDataProviders(
   []() { return (double)pros::millis() / 1000.0; },
   []() { return LEFT_MOTORS->get_velocity(); }
 );
@@ -359,42 +391,45 @@ aon::gui.SetGraphDataProviders(
 ## Complete Example
 
 ```cpp
-// main.cpp
+// globals.hpp — inline doubles accessible from both the GUI and routines
+inline double INCHES  = -138.0;
+inline double ANGLE   =   13.0;
 
-int TestRoutine() {
-  pros::delay(3000);
+// autonomous-routines.hpp — routine reads the globals so changes take effect
+int MyRoutine() {
+  drivetrain.moveForward(INCHES);
+  drivetrain.turnDegrees(ANGLE);
   return 0;
 }
 
+// main.cpp
 void initialize() {
-  aon::gui.SetTestRegister([]{
-    aon::gui.RegisterTestFunction(&TestRoutine,     "Test 3s");
-    aon::gui.RegisterTestFunction(&RedRingsRoutine, "Red Rings");
+  aon::gui->setTestRegister([]{
+    aon::gui->registerTestFunction(&MyRoutine,      "My Routine");
+    aon::gui->registerTestFunction(&RedRingsRoutine, "Red Rings");
   });
 
-  aon::gui.SetVariableRegister([]{
-    aon::gui.VariableChanger(aon::DRIVE_KP,  "Drive kP");
-    aon::gui.VariableChanger(aon::DRIVE_KI,  "Drive kI");
-    aon::gui.VariableChanger(aon::MAX_SPEED, "Max Speed");
+  aon::gui->setVariableRegister([]{
+    aon::gui->variableChanger(INCHES, "Distance");
+    aon::gui->variableChanger(ANGLE,  "Angle");
   });
 
-  aon::gui.SetDataRegister([]{
-    aon::gui.RegisterDataEntry("X",       [](){ return drivetrain.odom.getX(); });
-    aon::gui.RegisterDataEntry("Y",       [](){ return drivetrain.odom.getY(); });
-    aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+  aon::gui->setDataRegister([]{
+    aon::gui->registerDataEntry("X",       []{ return drivetrain.getX(); });
+    aon::gui->registerDataEntry("Y",       []{ return drivetrain.getY(); });
+    aon::gui->registerDataEntry("Heading", []{ return drivetrain.getTheta(); });
   });
 
-  aon::gui.SetGraphDataProviders(
-    []() { return drivetrain.odom.getX(); },
-    []() { return drivetrain.odom.getY(); }
+  aon::gui->setGraphDataProviders(
+    []() { return drivetrain.getX(); },
+    []() { return drivetrain.getY(); }
   );
 
-  aon::gui.RegisterResetHandler("ResetOdom", []{
-    drivetrain.odom.resetCurrent(0.0, 0.0, 0.0);
+  aon::gui->registerResetHandler("Reset", []{
+    drivetrain.resetPose(0.0, 0.0, 0.0);
   });
 
-  aon::InitializeGui();
-  pros::Task guiLoopTask([]{ aon::gui.RunLoop(); });
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
 }
 ```
 
@@ -417,15 +452,14 @@ void initialize() {
 
 | Function | Description |
 |----------|-------------|
-| `aon::InitializeGui()` | Initialize the GUI; call once in `initialize()` |
-| `aon::gui.RunLoop()` | Blocking GUI event loop; run in a dedicated `pros::Task` |
+| `pros::Task guiLoopTask([]{ aon::gui->initialize(); })` | Start the GUI; call once in `initialize()` |
 
 ### Test Function Registration
 
 | Function | Description |
 |----------|-------------|
-| `aon::gui.SetTestRegister(callback)` | Store the callback (invoked lazily when Registered Autons opens) |
-| `aon::gui.RegisterTestFunction(func, name)` | Register a function with a display name |
+| `aon::gui->setTestRegister(callback)` | Store the callback (invoked lazily when Registered Autons opens) |
+| `aon::gui->registerTestFunction(func, name)` | Register a function with a display name |
 
 Supported signatures: `int(*)()`, `void(*)()`, `std::function<int()>`, lambda.
 
@@ -433,33 +467,42 @@ Supported signatures: `int(*)()`, `void(*)()`, `std::function<int()>`, lambda.
 
 | Function | Description |
 |----------|-------------|
-| `aon::gui.SetVariableRegister(callback)` | Store the callback (invoked lazily when Variables opens) |
-| `aon::gui.VariableChanger(var, name)` | Register a variable for live +/− adjustment |
+| `aon::gui->setVariableRegister(callback)` | Store the callback (invoked lazily when Variables opens) |
+| `aon::gui->variableChanger(var, name)` | Register an `inline double` global for live +/− adjustment |
 
 ### Data Registration
 
 | Function | Description |
 |----------|-------------|
-| `aon::gui.SetDataRegister(callback)` | Store the callback (invoked lazily when Data opens) |
-| `aon::gui.RegisterDataEntry(name, getter)` | Register a `std::function<double()>` getter with a display name |
-| `aon::gui.RegisterResetHandler(name, cb)` | Register a named reset handler; last registered is active |
+| `aon::gui->setDataRegister(callback)` | Store the callback (invoked lazily when Data opens) |
+| `aon::gui->registerDataEntry(name, getter)` | Register a `std::function<double()>` getter with a display name |
+| `aon::gui->registerResetHandler(name, cb)` | Register a named reset handler; last registered is active |
 
 ### Graph
 
 | Function | Description |
 |----------|-------------|
-| `aon::gui.SetGraphDataProviders(xFunc, yFunc)` | Set X and Y data provider callbacks |
+| `aon::gui->setGraphDataProviders(xFunc, yFunc)` | Set X and Y data provider callbacks |
 
 ### State Properties
 
+Access via `aon::gui->propertyName` (unique_ptr dereference).
+
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `aon::gui.selectedAuton` | `AutonOption` | `{"None", nullptr}` | Currently selected preset auton |
-| `aon::gui.selectedAutonName` | `std::string` | `"None"` | Display name of selected auton |
-| `aon::gui.selectedAutonInvoker` | `std::function<int()>` | `nullptr` | Invoker for debug-registered autons |
-| `aon::gui.selectedRedAut` | `int` | `0` | Preselect Red auton index (1–3) |
-| `aon::gui.selectedBlueAut` | `int` | `0` | Preselect Blue auton index (1–3) |
-| `aon::gui.selectedSkill` | `int` | `0` | Preselect Skills auton index (1–3) |
+| `selectedAuton` | `AutonOption` | `{"None", nullptr}` | Currently selected preset auton |
+| `selectedAutonName` | `std::string` | `"None"` | Display name of selected auton |
+| `selectedAutonInvoker` | `std::function<int()>` | `nullptr` | Invoker for debug-registered autons |
+| `selectedRedAut` | `int` | `0` | Preselect Red auton index (1–3, 0=none) |
+| `selectedBlueAut` | `int` | `0` | Preselect Blue auton index (1–3, 0=none) |
+| `selectedSkill` | `int` | `0` | Preselect Skills auton index (1–3, 0=none) |
+
+To preselect an auton before the GUI starts (skips manual selection—useful during testing):
+
+```cpp
+aon::gui->selectedRedAut = 1;  // preselect Red AUT1 — jump straight to Auton Runner
+pros::Task guiLoopTask([]{ aon::gui->initialize(); });
+```
 
 ---
 
@@ -468,34 +511,35 @@ Supported signatures: `int(*)()`, `void(*)()`, `std::function<int()>`, lambda.
 ### Function not appearing in Registered Autons?
 
 1. Name must be unique — duplicates are silently ignored.
-2. Verify `SetTestRegister()` is called before `InitializeGui()`.
+2. Verify `setTestRegister()` is called before the GUI task starts.
 3. Close and reopen the Registered Autons screen to re-trigger the callback.
 
 ### Auton won't run from Auton Runner?
 
 1. Select an auton from **Registered Autons** or **AUTONS** first — RUN is gray until one is selected.
-2. Confirm the function is registered with `RegisterTestFunction()`.
+2. Confirm the function is registered with `registerTestFunction()`.
 
 ### The GUI freezes when I press RUN — is that a bug?
 
-No. The Auton Runner calls `ExecuteFunction` **synchronously** in the GUI loop task. The screen intentionally shows orange while blocked and cyan when the routine returns. There is no mechanism to stop or interrupt a running auton — it always runs to completion.
+No. The Auton Runner calls the selected function **synchronously** in the GUI loop task. The screen intentionally shows orange while blocked and cyan when the routine returns. There is no mechanism to stop or interrupt a running auton — it always runs to completion.
 
 ### Data screen shows "No Data Registered"?
 
-1. Call `SetDataRegister(...)` before `InitializeGui()`.
+1. Call `setDataRegister(...)` before the GUI task starts.
 2. Confirm `TESTING_AUTONOMOUS` is `true` — the Data screen is only active on `GuiDebug`.
 3. Rebuild with `pros build`.
 
 ### Graph not updating?
 
-1. Confirm `SetGraphDataProviders()` was called before `InitializeGui()`.
+1. Confirm `setGraphDataProviders()` was called before the GUI task starts.
 2. Verify the lambdas return valid `double` values (not NaN/infinity).
 3. You must be on the **Live Graph** screen — data is only sampled while that screen is active.
 
 ### Variable changes not persisting?
 
-1. Variables must be passed **by reference** to `VariableChanger()`.
-2. Use global or `inline` scope so the variable outlives the callback.
+1. Variables must be declared as `inline double` at **global scope** in `globals.hpp`.
+2. Pass them **by reference** to `variableChanger()`.
+3. Do not declare tunable variables as local variables — they will go out of scope.
 
 ### BACK from Variables doesn't return to Auton Runner?
 
@@ -520,16 +564,17 @@ The implementation in `src/aon/tools/gui/gui.cpp` automatically selects the corr
 ```cpp
 // Automatic selection based on TESTING_AUTONOMOUS flag:
 #if TESTING_AUTONOMOUS
-static GuiDebug gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<GuiDebug>();
 #else
-static Gui gui_impl;
+std::unique_ptr<Gui> gui = std::make_unique<Gui>();
 #endif
-Gui& gui = gui_impl;
 ```
+
+`aon::gui` is a `std::unique_ptr<Gui>` — use `aon::gui->method()` everywhere.
 
 After changing `TESTING_AUTONOMOUS`, rebuild your project to pick up the selected GUI behavior.
 
-**Note about debug-only addons:** The base `Gui` class provides no-op virtual methods for most debug APIs so user code that calls `VariableChanger`, `RegisterTestFunction`, `RegisterDataEntry`, etc., will compile and link even when `Gui` (non-debug) is in use. The full runtime behavior (variables list, registered autons, data screens, live graph) is implemented only in `GuiDebug`.
+**Note about debug-only addons:** The base `Gui` class provides no-op virtual methods for most debug APIs so user code that calls `variableChanger`, `registerTestFunction`, `registerDataEntry`, etc., will compile and link even when `Gui` (non-debug) is in use. The full runtime behavior (variables list, registered autons, data screens, live graph) is implemented only in `GuiDebug`.
 
 Options:
 - Enable the debug GUI by setting `TESTING_AUTONOMOUS` to `true` in `include/aon/constants.hpp` to get full debug features at runtime.
@@ -537,8 +582,8 @@ Options:
 
 ### [Registering Test Functions](#registering-test-functions)
 ```cpp
-aon::gui.SetTestRegister([]{
-  aon::gui.RegisterTestFunction(&MyFunction, "My Test");
+aon::gui->setTestRegister([]{
+  aon::gui->registerTestFunction(&MyFunction, "My Test");
 });
 ```
 
@@ -550,25 +595,25 @@ Access via: **DEBUG Menu → Auton Runner** (or select a test from Registered Au
 
 ### [Tunable Variables](#tunable-variables)
 ```cpp
-aon::gui.SetVariableRegister([]{
-  aon::gui.VariableChanger(myVariable, "Variable Name");
+aon::gui->setVariableRegister([]{
+  aon::gui->variableChanger(myVariable, "Variable Name");
 });
 ```
 
 ### [Data Menu](#data-menu)
 ```cpp
-aon::gui.SetDataRegister([]{  
-  aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
-  aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
-  aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+aon::gui->setDataRegister([]{  
+  aon::gui->registerDataEntry("X",       []{ return drivetrain.getX(); });
+  aon::gui->registerDataEntry("Y",       []{ return drivetrain.getY(); });
+  aon::gui->registerDataEntry("Heading", []{ return drivetrain.getTheta(); });
 });
 ```
 
 ### [Live Graph](#live-graph)
 ```cpp
-aon::gui.SetGraphDataProviders(
-  []() { return data_x; },
-  []() { return data_y; }
+aon::gui->setGraphDataProviders(
+  []() { return drivetrain.getX(); },
+  []() { return drivetrain.getY(); }
 );
 ```
 
@@ -579,7 +624,6 @@ aon::gui.SetGraphDataProviders(
 The main menu displays preset autonomous routines for Red, Blue, and Skills alliances. To change these:
 
 ### 1. Modify the Auton Options (in header)
-
 
 Open [gui.hpp](gui.hpp) and jump directly to the `AutonOption` arrays:
 
@@ -592,32 +636,30 @@ Note: when adding a new preset auton, also add a forward declaration for the fun
 ```cpp
 // Forward declarations at top of gui.hpp (inside namespace aon)
 namespace aon {
-  int RedRingsRoutine();
-  int BlueRingsRoutine();
+  int RedRoutine();
+  int BlueRoutine();
   int ForwardBackTurnRoutine();
   // Add other auton routine declarations as needed
-
+}
 
 // Auton option arrays (instance members of the Gui class — no static/inline)
-AutonOption RedAutonOptions[AutonOptionsCount] = {
+AutonOption redAutonOptions[autonOptionsCount] = {
   {"Red ForwardBackTurn", aon::ForwardBackTurnRoutine},
-  {"Red AUT2", aon::RedRingsRoutine},
-  {"Red AUT3", aon::RedRingsRoutine},
+  {"Red AUT2", aon::RedRoutine},
+  {"Red AUT3", aon::RedRoutine},
 };
 
-AutonOption BlueAutonOptions[AutonOptionsCount] = {
-  {"Blue AUT1", aon::BlueRingsRoutine},
-  {"Blue AUT2", aon::BlueRingsRoutine},
-  {"Blue AUT3", aon::BlueRingsRoutine},
+AutonOption blueAutonOptions[autonOptionsCount] = {
+  {"Blue AUT1", aon::BlueRoutine},
+  {"Blue AUT2", aon::BlueRoutine},
+  {"Blue AUT3", aon::BlueRoutine},
 };
 
-AutonOption SkillsAutonOptions[AutonOptionsCount] = {
-  {"Skills AUT1", aon::RedRingsRoutine},
-  {"Skills AUT2", aon::RedRingsRoutine},
-  {"Skills AUT3", aon::RedRingsRoutine},
+AutonOption skillsAutonOptions[autonOptionsCount] = {
+  {"Skills AUT1", aon::RedRoutine},
+  {"Skills AUT2", aon::RedRoutine},
+  {"Skills AUT3", aon::RedRoutine},
 };
-
-}
 ```
 
 **To change an auton:**
@@ -627,9 +669,9 @@ AutonOption SkillsAutonOptions[AutonOptionsCount] = {
 
 Example:
 ```cpp
-AutonOption RedAutonOptions[AutonOptionsCount] = {
+AutonOption redAutonOptions[autonOptionsCount] = {
   {"Red AUT1", aon::MyNewRedRoutine},      // Changed function
-  {"Red AUT2", aon::RedRingsRoutine},
+  {"Red AUT2", aon::RedRoutine},
   {"Red Safe", aon::RedSafeRoutine},       // Changed name
 };
 ```
@@ -649,7 +691,7 @@ Navigate to **AUTONS** menu on the brain to see your updated options.
 
 - **Names must match**: Ensure the function names match exactly with forward declarations or actual function definitions
 - **Naming style**: Functions should be in the `aon::` namespace and return `int` 
-- **Array size**: Don't change `AutonOptionsCount` (set to 3) unless you also change all three arrays
+- **Array size**: Don't change `autonOptionsCount` (set to 3) unless you also change all three arrays
 - **Only for preset autons**: If you want to dynamically register autons, use the Debug Menu's **Registered Autons** feature instead (see [Registering Test Functions](#registering-test-functions))
 
 ---
@@ -658,41 +700,43 @@ Navigate to **AUTONS** menu on the brain to see your updated options.
 
 ### Basic Setup (in `initialize()`)
 
-**Important:** Call all `Set*Register` functions **before** `InitializeGui()` so entries are eagerly seeded during initialization.
+**Important:** Call all `set*Register` functions **before** starting the GUI task so entries are eagerly seeded during initialization.
 
 ```cpp
 void initialize() {
-  // Register ALL callbacks BEFORE InitializeGui()
-  
+  // Register ALL callbacks BEFORE starting the GUI task
+
   // Register variables (optional)
-  aon::gui.SetVariableRegister([]{  
-    aon::gui.VariableChanger(MAX_RPM_TEST, "Max RPM Test");
+  aon::gui->setVariableRegister([]{  
+    aon::gui->variableChanger(INCHES, "Distance");
+    aon::gui->variableChanger(ANGLE,  "Angle");
   });
   
   // Register test functions (optional)
-  aon::gui.SetTestRegister([]{  
-    aon::gui.RegisterTestFunction(&RedRingsRoutine, "Red Rings");
-    aon::gui.RegisterTestFunction(&BlueRingsRoutine, "Blue Rings");
+  aon::gui->setTestRegister([]{  
+    aon::gui->registerTestFunction(&RedRingsRoutine,  "Red Rings");
+    aon::gui->registerTestFunction(&BlueRingsRoutine, "Blue Rings");
   });
   
   // Register data entries (optional)
-  aon::gui.SetDataRegister([]{  
-    aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
-    aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
-    aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+  aon::gui->setDataRegister([]{  
+    aon::gui->registerDataEntry("X",       []{ return drivetrain.getX(); });
+    aon::gui->registerDataEntry("Y",       []{ return drivetrain.getY(); });
+    aon::gui->registerDataEntry("Heading", []{ return drivetrain.getTheta(); });
   });
   
   // Set up live graph (optional)
-  aon::gui.SetGraphDataProviders(
-    []() { return drivetrain.odom.getX(); },
-    []() { return drivetrain.odom.getY(); }
+  aon::gui->setGraphDataProviders(
+    []() { return drivetrain.getX(); },
+    []() { return drivetrain.getY(); }
   );
   
-  // NOW initialize the GUI (this eagerly seeds all registers above)
-  aon::InitializeGui();
+  // NOW start the GUI task (initializes and runs the loop)
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
+}
 ```
-Note: the initialization screen now renders the primary and secondary messages with a typewriter-style animation (see `src/aon/tools/gui/gui.cpp`).
 
+Note: the initialization screen renders the primary and secondary messages with a typewriter-style animation (see `src/aon/tools/gui/gui.cpp`).
 
 ---
 
@@ -704,13 +748,13 @@ Test functions appear in **Debug Menu 1: "Registered Autons"** and allow you to 
 
 ```cpp
 // Register with int-returning function pointer
-aon::gui.RegisterTestFunction(&YourAutonFunction, "Display Name");
+aon::gui->registerTestFunction(&YourAutonFunction, "Display Name");
 
 // Register with void-returning function pointer
-aon::gui.RegisterTestFunction(&YourVoidFunction, "Display Name");
+aon::gui->registerTestFunction(&YourVoidFunction, "Display Name");
 
 // Register with std::function or lambda
-aon::gui.RegisterTestFunction([]() -> int {
+aon::gui->registerTestFunction([]() -> int {
   // your code
   return 0;
 }, "Display Name");
@@ -718,33 +762,33 @@ aon::gui.RegisterTestFunction([]() -> int {
 
 ### How It Works
 
-1. Call `SetTestRegister(callback)` with a callback containing your `RegisterTestFunction()` calls
+1. Call `setTestRegister(callback)` with a callback containing your `registerTestFunction()` calls
 2. When you open **Debug Menu → Registered Autons**, the callback is invoked once to populate the list
 3. Tap a function to select it
 4. Go to **Debug Menu 2 (Auton Runner)** and press **RUN**
-5. The auton executes **synchronously** in the GUI loop task via the `AutonomousReader`; the GUI is blocked until the routine returns.
+5. The auton executes **synchronously** in the GUI loop task; the GUI is blocked until the routine returns.
 
 ### Example
 
 ```cpp
 void initialize() {
-  aon::InitializeGui();
-  
-  aon::gui.SetTestRegister([]{
-    aon::gui.RegisterTestFunction(&RedRingsRoutine, "Red Rings");
-    aon::gui.RegisterTestFunction(&BlueRingsRoutine, "Blue Rings");
-    aon::gui.RegisterTestFunction([]() -> int {
+  aon::gui->setTestRegister([]{
+    aon::gui->registerTestFunction(&RedRingsRoutine, "Red Rings");
+    aon::gui->registerTestFunction(&BlueRingsRoutine, "Blue Rings");
+    aon::gui->registerTestFunction([]() -> int {
       // Inline test
       return 0;
     }, "Quick Test");
   });
+
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
 }
 ```
 
 ### Notes
 
 - **Deduplication**: Duplicate names are ignored; later registrations with the same name won't be added
-- **Lazy Loading**: The register callback is called when Debug Menu 1 opens, not at startup to avoid constant searching
+- **Lazy Loading**: The register callback is called when Debug Menu 1 opens, not at startup
 - **Name Uniqueness**: Each function's display name must be unique
 - **Return Value**: Functions should return `0` on success, non-zero on failure
 
@@ -757,8 +801,7 @@ The **Auton Runner** (Debug Menu 2) allows you to execute autonomous routines **
 ### Features
 
 - **Run at your own choice**: Execute autons while in driver control mode
-
- - **No built-in watchdog**: The GUI does not implement a 30-second watchdog. If you need an execution timeout, implement it in your autonomous routine or in a separate safety task (for example `autonSafety`).
+- **No built-in watchdog**: The GUI does not implement a 30-second watchdog. If you need an execution timeout, implement it in your autonomous routine or in a separate safety task (for example `autonSafety`).
 - **Quick Access to Variables**: Jump directly to the Variables menu from Auton Runner
 - **Visual Status**: Shows running (orange), completed (cyan), or ready (green) states
 
@@ -804,7 +847,9 @@ The **Auton Runner** (Debug Menu 2) allows you to execute autonomous routines **
 
 ### Workflow Example
 
-1. **Select an Auton**:
+> **Testing tip**: Set `aon::gui->selectedRedAut = 1;` (or whichever index) before `pros::Task guiLoopTask(...)` to have a preset auton already selected on boot — skip step 1 entirely.
+
+1. **Select an Auton** *(or skip with preselect above)*:
    - Go to **Debug Menu → Registered Autons** and tap a test function, OR
    - Go to **AUTONS** menu and select a preset auton
 
@@ -826,7 +871,7 @@ The **Auton Runner** (Debug Menu 2) allows you to execute autonomous routines **
 The **VARS** button (orange, top-right of the selected auton panel) provides quick access to tunable variables:
 
 - Tap **VARS** to jump to the Variables menu
-- Adjust parameters like kP, kI, kD on the fly
+- Adjust parameters live
 - Use **BACK** to return to the Auton Runner
 - Run the auton again with updated values
 
@@ -850,12 +895,33 @@ Tunable variables appear in **Debug Menu 3: "Variables"** with +/- buttons to ad
 ### API
 
 ```cpp
-aon::gui.VariableChanger(VariableReference, "Display Name");
+aon::gui->variableChanger(variableRef, "Display Name");
+```
+
+### Variable Declaration — Important
+
+Variables must be declared as `inline double` at **global scope** in [globals.hpp](../../globals.hpp) — **not** inside a function or routine. This lets the GUI hold a reference that remains valid for the entire program lifetime.
+
+```cpp
+// globals.hpp
+inline double INCHES  = -138.0;
+inline double ANGLE   =   13.0;
+```
+
+They are **used inside the autonomous routine** so that adjusting them in the Variables menu changes what the routine does on the next run:
+
+```cpp
+// autonomous-routines.hpp
+int MyRoutine() {
+  drivetrain.moveForward(INCHES);
+  drivetrain.turnDegrees(ANGLE);
+  return 0;
+}
 ```
 
 ### How It Works
 
-1. Call `SetVariableRegister(callback)` with a callback containing your `VariableChanger()` calls
+1. Call `setVariableRegister(callback)` with a callback containing your `variableChanger()` calls
 2. When you open **Debug Menu 3**, the callback is invoked to populate the list
 3. Each variable shows with six buttons:
    - `-10`, `-1`, `-0.1` (decrement)
@@ -866,24 +932,26 @@ aon::gui.VariableChanger(VariableReference, "Display Name");
 ### Example
 
 ```cpp
-double MAX_RPM_TEST = 100.0;
-double DRIVE_KP = 0.5;
-double DRIVE_KI = 0.02;
+// globals.hpp
+inline double INCHES  = -138.0;
+inline double ANGLE   =   13.0;
 
+// main.cpp
 void initialize() {
-  aon::InitializeGui();
-  
-  aon::gui.SetVariableRegister([]{
-    aon::gui.VariableChanger(MAX_RPM_TEST, "Max RPM Test");
-    aon::gui.VariableChanger(DRIVE_KP, "Drive kP");
-    aon::gui.VariableChanger(DRIVE_KI, "Drive kI");
+  aon::gui->setVariableRegister([]{
+    aon::gui->variableChanger(INCHES, "Distance");
+    aon::gui->variableChanger(ANGLE,  "Angle");
   });
+
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
 }
 ```
 
 ### Notes
 
 - **Reference Required**: Pass variables by reference; the GUI adjusts the actual variable
+- **Global scope required**: Declare as `inline double` in `globals.hpp` — do not use local variables
+- **Use in routine**: The variable must be read inside the autonomous routine for adjustments to have any effect
 - **Deduplication**: Duplicate names are ignored
 - **Lazy Loading**: The register callback is called when Debug Menu 3 opens
 - **Precision**: Adjustments use double precision; increment/decrement values are fixed (+/-0.1, +/-1, +/-10)
@@ -897,7 +965,7 @@ The **Live Graph** screen (Debug Menu → "Live Graph") displays real-time X/Y d
 ### API
 
 ```cpp
-aon::gui.SetGraphDataProviders(
+aon::gui->setGraphDataProviders(
   []() -> double { return /* X data */ },
   []() -> double { return /* Y data */ }
 );
@@ -905,7 +973,7 @@ aon::gui.SetGraphDataProviders(
 
 ### How It Works
 
-1. Call `SetGraphDataProviders(xCallback, yCallback)` with lambdas returning double values
+1. Call `setGraphDataProviders(xCallback, yCallback)` with lambdas returning double values
 2. Open **Debug Menu → Live Graph**
 3. The graph displays points as they're collected (300-point circular buffer)
 4. Axes auto-scale with 10% padding
@@ -916,13 +984,13 @@ aon::gui.SetGraphDataProviders(
 
 ```cpp
 void initialize() {
-  aon::InitializeGui();
-  
   // Graph odometry (X/Y position)
-  aon::gui.SetGraphDataProviders(
-    []() { return drivetrain.odom.getX(); },
-    []() { return drivetrain.odom.getY(); }
+  aon::gui->setGraphDataProviders(
+    []() { return drivetrain.getX(); },
+    []() { return drivetrain.getY(); }
   );
+
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
 }
 ```
 
@@ -930,13 +998,13 @@ void initialize() {
 
 ```cpp
 void initialize() {
-  aon::InitializeGui();
-  
   // Graph time vs motor velocity
-  aon::gui.SetGraphDataProviders(
+  aon::gui->setGraphDataProviders(
     []() { return (double)pros::millis() / 1000.0; },  // Time in seconds
     []() { return LEFT_MOTORS->get_velocity(); }       // Motor velocity
   );
+
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
 }
 ```
 
@@ -949,62 +1017,52 @@ void initialize() {
 
 ## Data Menu
 
-The Data screen (Debug Menu → "Data") shows live numeric values registered by user code and provides quick access to variables and odometry reset controls.
+The Data screen (Debug Menu → "Data") shows live numeric values registered by user code and provides quick access to variables and reset controls.
 
 - **Access:** Debug Menu → Data
-- **Registration (lazy):** The GUI calls the callback set with `aon::gui.SetDataRegister(...)` when the Data screen opens (only if the internal `dataEntries` list is empty). Use that callback to call `RegisterDataEntry(...)` for each value you want displayed.
+- **Registration (lazy):** The GUI calls the callback set with `aon::gui->setDataRegister(...)` when the Data screen opens (only if the internal `dataEntries` list is empty). Use that callback to call `registerDataEntry(...)` for each value you want displayed.
 - **Display / page size:** Shows up to six (6) entries per page (constant `DATA_PER_PAGE = 6`). Each entry is displayed as `Name: value` with values formatted to three decimal places.
 - **Pagination:** If more than one page is required, a `Page X/Y` indicator is shown and `PREV` / `NEXT` buttons allow navigation.
-- **VARS button:** Opens the Variables menu. If no variables are present and a `SetVariableRegister` callback exists, the GUI will invoke it to populate the variables list.
-- **RESET button:** Resets odometry and related sensor state. Reset actions include:
-  - clearing/taring encoder positions,
-  - zeroing internal encoder and gyro data structs,
-  - setting `deltaTheta = 0.0` and zeroing local position accumulators (e.g. `deltaDlocal`, `changeWeb`), and
-  - calling `aon::odometry::SetPosition(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y)` and `aon::odometry::SetDegrees(INITIAL_ODOMETRY_THETA)`.
-  - If `GYRO_ENABLED` is defined, the gyroscope is tared as part of the reset.
+- **VARS button:** Opens the Variables menu. If no variables are present and a `setVariableRegister` callback exists, the GUI will invoke it to populate the variables list.
+- **RESET button:** Invokes the registered reset handler.
 
 ### Using the RESET Button
 
 The Data screen's `RESET` button invokes a user-registered reset handler (if one exists). The GUI provides a small API to register one or more named reset handlers; the active handler is invoked when the button is pressed.
 
 How it works (implementation notes):
-- The GUI calls `gui->InvokeResetHandler()` when the RESET button is tapped (see `src/aon/tools/gui/gui-debug/data.cpp`).
-- On `GuiDebug`, call `RegisterResetHandler(name, callback)` to register a handler. The last-registered handler with the provided name becomes the active handler.
+- The GUI calls `gui->invokeResetHandler()` when the RESET button is tapped.
+- On `GuiDebug`, call `registerResetHandler(name, callback)` to register a handler. The last-registered handler with the provided name becomes the active handler.
 - On the base `Gui` (competition mode) these calls are no-ops, so register safely in all builds.
 
-Quick tutorial — register a reset handler (example you can put in `initialize()` or your `data.cpp` registration file):
+Quick tutorial — register a reset handler (example you can put in `initialize()`):
 
 ```cpp
-// Example: register a reset handler that reinitializes odometry
-// Put this in your initialization code (e.g. main.cpp or data.cpp)
-aon::gui.RegisterResetHandler("ResetOdom", []{
-  // Reset odometry to origin (example API; adapt to your odometry API)
-  drivetrain.odom.resetCurrent(0.0, 0.0, 0.0);
-  // Optionally tare encoders or gyro here as well:
-  // LEFT_MOTORS->tare_position(); RIGHT_MOTORS->tare_position();
+aon::gui->registerResetHandler("Reset", []{
+  drivetrain.resetPose(0.0, 0.0, 0.0);
 });
 
-// If you register multiple handlers, calling RegisterResetHandler again
+// If you register multiple handlers, calling registerResetHandler again
 // with a different name will make that new handler the active one.
 ```
 
 Notes and tips:
-- Call `RegisterResetHandler(...)` before `aon::InitializeGui()` if you want the handler to be available immediately when the Data screen is opened.
+- Call `registerResetHandler(...)` before starting the GUI task if you want the handler to be available immediately when the Data screen is opened.
 - You can register handlers from any translation unit (main, a dedicated `data.cpp`, etc.). The GUI will invoke the active handler regardless of where it was registered.
 - If you need multiple reset options, register them under different names; the GUI's debug UI currently uses the most recently-registered name as the active handler.
 - For safety: ensure your reset handler runs quickly and avoids blocking the GUI thread (do minimal work or post to a background task if needed).
 
 ### Example: register data entries
 ```cpp
-aon::gui.SetDataRegister([]{
-  aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
-  aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
-  aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+aon::gui->setDataRegister([]{
+  aon::gui->registerDataEntry("X",       []{ return drivetrain.getX(); });
+  aon::gui->registerDataEntry("Y",       []{ return drivetrain.getY(); });
+  aon::gui->registerDataEntry("Heading", []{ return drivetrain.getTheta(); });
 });
 ```
 
 Tips:
-- Call `SetDataRegister(...)` from `initialize()` (before `aon::InitializeGui()`) if you want the entries to be eagerly seeded at startup.
+- Call `setDataRegister(...)` from `initialize()` (before starting the GUI task) if you want the entries to be eagerly seeded at startup.
 - Ensure each registered entry has a unique name; duplicate names are ignored.
 
 ### Notes
@@ -1039,52 +1097,63 @@ Debug mode is controlled by `TESTING_AUTONOMOUS` in [constants.hpp](../../consta
 
 ## Complete Example
 
-Here's a full setup showing all three features:
+Here's a full setup showing all features:
 
 ```cpp
-// globals.hpp
-namespace aon {
-  inline double MAX_RPM_TEST = 100.0;
-  inline double DRIVE_KP = 0.5;
-  inline double DRIVE_KI = 0.02;
+// globals.hpp — inline doubles at global scope, used by both GUI and routine
+inline double INCHES      = -138.0;
+inline double ANGLE       =   13.0;
+inline double TWOINCHES   =  -15.0;
+inline double TWOANGLE    = -110.0;
+
+// autonomous-routines.hpp — routine reads the globals
+int MyRoutine() {
+  drivetrain.moveForward(INCHES);
+  drivetrain.turnDegrees(ANGLE);
+  drivetrain.moveForward(TWOINCHES);
+  drivetrain.turnDegrees(TWOANGLE);
+  return 0;
 }
 
 // main.cpp
 void initialize() {
-  // Set up tunable variables
-  aon::gui.SetVariableRegister([]{  // Register BEFORE InitializeGui()
-    aon::gui.VariableChanger(aon::MAX_RPM_TEST, "Max RPM Test");
-    aon::gui.VariableChanger(aon::DRIVE_KP, "Drive kP");
-    aon::gui.VariableChanger(aon::DRIVE_KI, "Drive kI");
+  // Set up tunable variables — register BEFORE starting the GUI task
+  aon::gui->setVariableRegister([]{
+    aon::gui->variableChanger(INCHES,    "Distance");
+    aon::gui->variableChanger(ANGLE,     "Angle");
+    aon::gui->variableChanger(TWOINCHES, "Second Distance");
+    aon::gui->variableChanger(TWOANGLE,  "Second Angle");
   });
   
   // Set up test functions
-  aon::gui.SetTestRegister([]{
-    aon::gui.RegisterTestFunction(&RedRingsRoutine, "Red Rings");
-    aon::gui.RegisterTestFunction(&BlueRingsRoutine, "Blue Rings");
-    aon::gui.RegisterTestFunction(&SkillsRoutine, "Skills");
+  aon::gui->setTestRegister([]{
+    aon::gui->registerTestFunction(&MyRoutine,       "My Routine");
+    aon::gui->registerTestFunction(&RedRingsRoutine, "Red Rings");
+    aon::gui->registerTestFunction(&SkillsRoutine,   "Skills");
   });
   
   // Register data entries
-  aon::gui.SetDataRegister([]{  
-    aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
-    aon::gui.RegisterDataEntry("Y", [](){ return drivetrain.odom.getY(); });
-    aon::gui.RegisterDataEntry("Heading", [](){ return drivetrain.odom.getDegrees(); });
+  aon::gui->setDataRegister([]{  
+    aon::gui->registerDataEntry("X",       []{ return drivetrain.getX(); });
+    aon::gui->registerDataEntry("Y",       []{ return drivetrain.getY(); });
+    aon::gui->registerDataEntry("Heading", []{ return drivetrain.getTheta(); });
   });
   
-  // Set up live graph (odometry)
-  aon::gui.SetGraphDataProviders(
-    []() { return drivetrain.odom.getX(); },
-    []() { return drivetrain.odom.getY(); }
+  // Set up live graph
+  aon::gui->setGraphDataProviders(
+    []() { return drivetrain.getX(); },
+    []() { return drivetrain.getY(); }
   );
 
-  aon::InitializeGui();
-  pros::Task guiLoopTask([]{ aon::gui.RunLoop(); });
+  aon::gui->registerResetHandler("Reset", []{
+    drivetrain.resetPose(0.0, 0.0, 0.0);
+  });
+
+  pros::Task guiLoopTask([]{ aon::gui->initialize(); });
 }
 
 void opcontrol() {
   while (true) {
-    // Your driver control code
     aon::operator_control::Run(aon::operator_control::DEFAULT);
     pros::delay(10);
   }
@@ -1097,7 +1166,7 @@ void opcontrol() {
 2. **Debug Menu**: Five options including "Registered Autons" and "Auton Runner"
 3. **Registered Autons** (Debug 1): List of your registered test functions; tap to select and go to Auton Runner
 4. **Auton Runner** (Debug 2): Execute selected auton — runs synchronously, GUI blocks until complete; quick VARS access
-5. **Variables** (Debug 3): Live-adjustable parameters with +/- buttons
+5. **Variables** (Debug 3): Live-adjustable inline double globals with +/- buttons
 6. **Data** (Debug 4): Live display of registered data values with RESET and VARS buttons
 7. **Live Graph**: Real-time X/Y plot with auto-scaling
 
@@ -1109,15 +1178,14 @@ void opcontrol() {
 
 | Function | Purpose |
 |----------|---------|
-| `aon::InitializeGui()` | Initialize the GUI system; call once in `initialize()` |
-| `aon::gui.Initialize()` | Called internally by `InitializeGui()` |
+| `pros::Task guiLoopTask([]{ aon::gui->initialize(); })` | Start the GUI task; call once in `initialize()` |
 
 ### Test Function Registration
 
 | Function | Purpose |
 |----------|---------|
-| `aon::gui.SetTestRegister(callback)` | Set callback to register test functions (called lazily when Debug Menu 1 opens) |
-| `aon::gui.RegisterTestFunction(func, name)` | Register a test function with given display name |
+| `aon::gui->setTestRegister(callback)` | Set callback to register test functions (called lazily when Debug Menu 1 opens) |
+| `aon::gui->registerTestFunction(func, name)` | Register a test function with given display name |
 
 **Supported signatures:**
 - `int (*func)()` - Function pointer returning int
@@ -1128,34 +1196,33 @@ void opcontrol() {
 
 | Function | Purpose |
 |----------|---------|
-| `aon::gui.SetVariableRegister(callback)` | Set callback to register variables (called lazily when Debug Menu 3 opens) |
-| `aon::gui.VariableChanger(var, name)` | Register a double variable for live adjustment |
+| `aon::gui->setVariableRegister(callback)` | Set callback to register variables (called lazily when Debug Menu 3 opens) |
+| `aon::gui->variableChanger(var, name)` | Register an `inline double` global for live adjustment |
 
 ### Graph Setup
 
 | Function | Purpose |
 |----------|---------|
-| `aon::gui.SetGraphDataProviders(xFunc, yFunc)` | Set data provider callbacks for live graph |
-| `aon::gui.AddGraphPoint(x, y)` | Manually add data point (usually called internally) |
+| `aon::gui->setGraphDataProviders(xFunc, yFunc)` | Set data provider callbacks for live graph |
+| `aon::gui->AddGraphPoint(x, y)` | Manually add data point (usually called internally) |
 
 ### Data Registration
 
 | Function | Purpose |
 |----------|--------|
-| `aon::gui.SetDataRegister(callback)` | Set callback to register data entries (called lazily when Data screen opens) |
-| `aon::gui.RegisterDataEntry(name, getter)` | Register a named data entry with a `std::function<double()>` getter |
+| `aon::gui->setDataRegister(callback)` | Set callback to register data entries (called lazily when Data screen opens) |
+| `aon::gui->registerDataEntry(name, getter)` | Register a named data entry with a `std::function<double()>` getter |
 
 ### Configuration
 
 | Property | Type | Default | Purpose |
 |----------|------|---------|---------|
-
-| `aon::gui.selectedAuton` | `AutonOption` | `{ "None", nullptr }` | Currently selected auton (name + routine) |
-| `aon::gui.selectedAutonName` | `std::string` | `"None"` | Display name of selected auton |
-| `aon::gui.selectedAutonInvoker` | `std::function<int()>` | `nullptr` | Optional invoker used by debug-registered autons |
-| `aon::gui.selectedRedAut` | `int` | `0` | Preselect Red auton (1-3, 0=none) |
-| `aon::gui.selectedBlueAut` | `int` | `0` | Preselect Blue auton (1-3, 0=none) |
-| `aon::gui.selectedSkill` | `int` | `0` | Preselect Skills auton (1-3, 0=none) |
+| `aon::gui->selectedAuton` | `AutonOption` | `{ "None", nullptr }` | Currently selected auton (name + routine) |
+| `aon::gui->selectedAutonName` | `std::string` | `"None"` | Display name of selected auton |
+| `aon::gui->selectedAutonInvoker` | `std::function<int()>` | `nullptr` | Optional invoker used by debug-registered autons |
+| `aon::gui->selectedRedAut` | `int` | `0` | Preselect Red auton (1-3, 0=none) |
+| `aon::gui->selectedBlueAut` | `int` | `0` | Preselect Blue auton (1-3, 0=none) |
+| `aon::gui->selectedSkill` | `int` | `0` | Preselect Skills auton (1-3, 0=none) |
 
 ---
 
@@ -1165,19 +1232,19 @@ void opcontrol() {
 
 1. **Check deduplication**: Ensure the name is unique (no duplicate names registered)
 2. **Verify lazy loading**: Close and reopen the debug screen to force redraw
-3. **Check registration timing**: Ensure `SetTestRegister()` or `SetVariableRegister()` is called before opening the menu
+3. **Check registration timing**: Ensure `setTestRegister()` or `setVariableRegister()` is called before opening the menu
 4. **Avoid loops**: Don't call registration inside tight loops; call once in `initialize()` or guarded by a `static bool`
 
 ### Data screen shows "No Data Registered"?
 
-1. **Call `SetDataRegister` in `initialize()`**: Ensure `aon::gui.SetDataRegister(...)` is called inside `initialize()` **before** `aon::InitializeGui()` so entries are eagerly seeded during initialization
-2. **Use `RegisterDataEntry` inside the callback**: Entries must be registered inside the lambda passed to `SetDataRegister`, not outside it
+1. **Call `setDataRegister` in `initialize()`**: Ensure `aon::gui->setDataRegister(...)` is called inside `initialize()` **before** starting the GUI task so entries are eagerly seeded during initialization
+2. **Use `registerDataEntry` inside the callback**: Entries must be registered inside the lambda passed to `setDataRegister`, not outside it
 3. **Check debug mode**: Data screen only works with `GuiDebug` (`TESTING_AUTONOMOUS` must be `true` in [constants.hpp](../../constants.hpp))
 4. **Rebuild**: After changing code, rebuild with `pros build`
 
 ### Graph not updating?
 
-1. Verify `SetGraphDataProviders()` was called
+1. Verify `setGraphDataProviders()` was called
 2. Check that the lambda functions return valid double values
 3. Ensure you opened the **Live Graph** screen (not just Debug Menu)
 4. Check that data providers aren't returning NaN or infinity
@@ -1187,27 +1254,28 @@ void opcontrol() {
 1. Ensure you selected an auton from **Registered Autons** or **AUTONS** menu first
 2. The RUN button should be **green**—if it's gray, no auton is selected
 3. Check that the selected function returns 0 (success)
-4. Verify the function is registered with `RegisterTestFunction()`
+4. Verify the function is registered with `registerTestFunction()`
 
 ### Auton Runner shows MOV but won't stop the auton?
 
-This is expected behavior. Execution is **synchronous** — `ExecuteFunction` blocks the GUI loop task until the routine returns. The **MOV** label is a visual indicator of running state, not a functional stop button. The only way to stop an auton is to let it run to completion or implement a timeout inside the routine itself.
+This is expected behavior. Execution is **synchronous** — the selected function blocks the GUI loop task until it returns. The **MOV** label is a visual indicator of running state, not a functional stop button. The only way to stop an auton is to let it run to completion or implement a timeout inside the routine itself.
 
 ### Variable adjustments not persisting?
 
-1. Ensure variables are passed **by reference** to `VariableChanger()`
-2. Check that the variable scope is correct (use global or static variables)
-3. Verify the name is unique in the variable list
+1. Ensure variables are declared as `inline double` at **global scope** in `globals.hpp`
+2. Make sure they are passed **by reference** to `variableChanger()` — the GUI modifies the original value
+3. Make sure the variable is **read inside the routine** (not just declared globally)
+4. Verify the name is unique in the variable list
 
 ---
 
 ## Notes & Tips
 
-- **Keep registrations in callbacks**: Use `SetTestRegister()`, `SetVariableRegister()`, and `SetDataRegister()` callbacks to keep registration logic clean. Call all `Set*Register` functions **before** `InitializeGui()` so entries are eagerly seeded during initialization.
-- **Use global/static variables**: For variables to persist, declare them at global or static scope
+- **Keep registrations in callbacks**: Use `setTestRegister()`, `setVariableRegister()`, and `setDataRegister()` callbacks to keep registration logic clean. Call all `set*Register` functions **before** starting the GUI task.
+- **Use `inline double` globals**: For variables to be tunable, declare them as `inline double` at global scope in `globals.hpp` and use them inside the autonomous routine.
 - **Guard against multiple registration**: The GUI deduplicates by name, so duplicate registrations are safe but unnecessary
-- **Preselect autons**: You can set `selectedRedAut`, `selectedBlueAut`, or `selectedSkill` (1-3) before `Initialize()` to preselect an auton
-- **Competition mode**: Set `TESTING_AUTONOMOUS` to `false` in constants.hpp to use `Gui gui` (no debug menu)
+- **Preselect autons**: Set `aon::gui->selectedRedAut`, `aon::gui->selectedBlueAut`, or `aon::gui->selectedSkill` (1–3) before starting the GUI task. Default is `0` (none). Set to `1` during testing to have Red AUT1 already selected on boot, skipping manual selection.
+- **Competition mode**: Set `TESTING_AUTONOMOUS` to `false` in constants.hpp to disable the debug menu
 
 ---
 
@@ -1215,20 +1283,20 @@ This is expected behavior. Execution is **synchronous** — `ExecuteFunction` bl
 
 1. **Initialize** (in `initialize()`)
    ```cpp
-   // Set registers BEFORE InitializeGui
-   aon::gui.SetTestRegister([]{
-     aon::gui.RegisterTestFunction(&RedRingsRoutine, "Red Rings");
+   // Set registers BEFORE starting the GUI task
+   aon::gui->setTestRegister([]{
+     aon::gui->registerTestFunction(&RedRingsRoutine, "Red Rings");
    });
-   aon::gui.SetVariableRegister([]{
-     aon::gui.VariableChanger(aon::DRIVE_KP, "Drive kP");
+   aon::gui->setVariableRegister([]{
+     aon::gui->variableChanger(INCHES, "Distance");
    });
-   aon::gui.SetDataRegister([]{
-    aon::gui.RegisterDataEntry("X", [](){ return drivetrain.odom.getX(); });
+   aon::gui->setDataRegister([]{
+     aon::gui->registerDataEntry("X", []{ return drivetrain.getX(); });
    });
-   aon::InitializeGui();
+   pros::Task guiLoopTask([]{ aon::gui->initialize(); });
    ```
 
-2. **Main Menu** appears showing "NO AUTON" with "AUTONS" and "DEBUG" buttons
+2. **Main Menu** appears showing selected auton with "AUTONS" and "DEBUG" buttons
 
 3. **User taps "DEBUG"** → Debug Menu appears
 
@@ -1242,7 +1310,7 @@ This is expected behavior. Execution is **synchronous** — `ExecuteFunction` bl
 
 7. **Routine completes** → Status shows cyan "COMPLETED"; RUN button turns green
 
-8. **User taps "VARS"** → Variables menu opens; adjust `Drive kP` value
+8. **User taps "VARS"** → Variables menu opens; adjust `Distance` value
 
 9. **User taps "BACK"** → Returns to Auton Runner; run again with new values
 

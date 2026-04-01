@@ -447,8 +447,15 @@ void BigBotSkillsRoutine(){
 
 #else
 
-int RedRoutine(){
-  return 1;
+int RedRoutine() {
+  drivetrain.driveAngleOfArc(INCHES,ANGLE);
+  intake.move(-600);
+  pros::delay(800);
+  intake.stop();
+  drivetrain.driveAngleOfArc(TWOINCHES, TWOANGLE);
+  pros::delay(50);
+  drivetrain.driveAngleOfArc(THREEINCHES, THREEANGLE);
+  return 0;
 }
 
 int BlueRoutine(){

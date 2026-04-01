@@ -110,6 +110,11 @@ public:
     });
   }
 
+  // Override the virtual base to ensure calls through Gui* hit the template above
+  void variableChanger(double& variableRef, const std::string& name) override {
+    variableChanger<double>(variableRef, name);
+  }
+
   // Allow user code to provide a register
   void setVariableRegister(const std::function<void()>& Register);
 
