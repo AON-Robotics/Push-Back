@@ -266,7 +266,7 @@ void visionSensorDistance(){
     pros::vision_object block = orbit.getLargestObject();
     if(block.signature == RED){
       const double distance = orbit.groundDistanceToDisk(block.width);
-      if(!std::isnormal(distance)) { continue; }
+      if(!::std::isnormal(distance)) { continue; }
       const double avg = readingMav.update(distance);
       const double filtered = ekf.filter(distance); // this seems to be the best alternative out of the 2
       const double avgDif = avgMav.update(math::getPercentDifference(avg, distance));
@@ -373,6 +373,8 @@ void xDriveRoutine(){
 //  |_|_\\___/ \___/  |_| |___|_|\_|___|___/                                   |
 //                                                                             |
 // ============================================================================|
+
+namespace routines {
 
 #if USING_BIG_ROBOT
 
@@ -549,6 +551,8 @@ void smallbotjorgeg(){
 }
 
 #endif
+
+} // namespace aon::routines
 
 };  // namespace aon
 
