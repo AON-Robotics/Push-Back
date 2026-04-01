@@ -26,7 +26,7 @@
 
 #if USING_BIG_ROBOT
 
-aon::Odometry odometry = aon::Odometry(5, -6, 0, 0, 14);
+aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
 
 // Drivetrain
 aon::HDrive drivetrain = aon::HDrive({-1, -2, 3, 4}, {12, -13, -18, 19}, {-15}, std::make_unique<aon::Odometry>(odometry));
@@ -34,7 +34,7 @@ aon::HDrive drivetrain = aon::HDrive({-1, -2, 3, 4}, {12, -13, -18, 19}, {-15}, 
 pros::ADIDigitalOut semPiston('Z'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('Z');
 
-aon::Intake intake = aon::Intake({20, -11}, {0}, 'Z', 0, 0);
+aon::Intake intake = aon::Intake({20, -11, -16}, {17}, 'Z', 0, 0);
 
 #else
 
