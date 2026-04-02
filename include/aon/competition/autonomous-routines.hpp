@@ -410,7 +410,7 @@ void safeBigBotRoutine(){
   drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
   pros::delay(1000); // for a bit of time,
   drivetrain.stop(); // then stop.
-  brooksPiston.set_value(HIGH); // Park.
+  activateBrooks(); // Park.
   intake.stopScan();
   //* Works till here
 }
@@ -441,7 +441,7 @@ void BigBotSkillsRoutine(){
   drivetrain.motors(MAX_RPM);
   pros::delay(1000); 
   drivetrain.stop(); 
-  brooksPiston.set_value(HIGH); 
+  activateBrooks(); 
   //empy the match loader 
   //empty match loader across 
   //Park
