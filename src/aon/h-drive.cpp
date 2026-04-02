@@ -399,48 +399,13 @@ void HDrive::driveInArcTo(const double &x, const double &y){
   this->driveAngleOfArc(math::metersToInches(radius), angle);
 }
 
-/**
- * \brief Determines the angle needed to be turned in order to face a specific point in the field
- *
- * \param target The point we wish to face
- * \param current Where the robot is now
- *
- * \returns The angle the robot needs to turn in order to face the target location
- *
- * \note The result must be passed into functions such as `turn()` and `drivetrain.turnPID()` as negative because of the GPS convention
- */ // TODO: move this function to aon::math
-inline double calculateTurn(Vector target, Pose current) {
-  Vector position = Vector().SetPos(current.x, current.y);
-  // Get and change the heading to the common cartesian plane
-  double heading = 90 - current.theta;
-
-  // Limiting the heading to the 0-360 range
-  if (heading < 0) heading += 360;
-  else if (heading > 360) heading -= 360;
- 
-  // This number is in respect to the common cartesian plane if odometry position is used
-  double toTarget = (target - position).GetDegrees();
- 
-  // Limiting the the target to the 0-360 range
-  if (toTarget < 0) toTarget += 360;
-  else if (toTarget >= 360) toTarget -= 360;
-
-  double angle = toTarget - heading; // Calculate the angle to turn
- 
-  // Limiting the heading to the -180-180 range
-  if (angle > 180) angle -= 360;
-  else if (angle < -180) angle += 360;
-
-  return angle;
-}
-
 void HDrive::turnTo(const double &x, const double &y){
   Vector target = Vector().SetPosition(x, y);
   // Determine current position
   Pose current = odometry->getPose();
 
   // Do the movement
-  turn(-calculateTurn(target, current));
+  turn(-math::calculateTurn(target, current));
 }
 
 // TODO: replace with with the `goToPose()`
@@ -450,7 +415,7 @@ void HDrive::goTo(const double &x, const double &y){
   Vector current = odometry->gpsPosition();
 
   // Do the movement
-  turn(-calculateTurn(target, odometry->getPose()));
+  turn(-math::calculateTurn(target, odometry->getPose()));
   move(math::findDistance(target, current));
 }
 
