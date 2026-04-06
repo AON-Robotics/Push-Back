@@ -1,186 +1,142 @@
 #include "../include/aon/odometry/odometry.hpp"
 
-namespace aon{
+namespace aon {
 
-    Odometry::Odometry() 
-    :
-    conversionFactor(M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION),
-    encoderRight(15, true),
-    encoderLeft(14, false),
-    encoderBack(16, true),
-    gps(20, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET, GPS_Y_OFFSET)
-    #if GYRO_ENABLED
-    , gyroscope(1)
-    #endif
-    {}
+Odometry::Odometry(short left, short right, short back, short gps, short gyro)
+    : conversionFactor(M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION),
+      encoderLeft(abs(left), (left / abs(left) != 1)),
+      encoderRight(abs(right), (right / abs(right) != 1)),
+      encoderBack(abs(back), (back / abs(back) != 1)),
+      gps(gps, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET,
+          GPS_Y_OFFSET)
+#if GYRO_ENABLED
+      ,
+      gyroscope(gyro)
+#endif
+{
+}
 
-    //GETTER & SETTERS
+Odometry::Odometry(const Odometry& other)
+    : conversionFactor(M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION),
+      encoderLeft(other.encoderLeft),
+      encoderRight(other.encoderRight),
+      encoderBack(other.encoderBack),
+      gps(other.gps)
+#if GYRO_ENABLED
+      ,
+      gyroscope(other.gyroscope)
+#endif
+{
+}
 
+/// @brief Get current X position in \b inches
+/// @return Returns current X position in \b inches
+double Odometry::getX() {
+  p_mutex.take(1);
+  double currentX = position.GetX();
+  p_mutex.give();
+  return currentX;
+}
 
-    /**
-     * \brief Get current X position in \b inches
-     *
-     * \returns Returns current X position in \b inches
-     */
-    double Odometry::getX(){
-        p_mutex.take(1);
-        double currentX = position.GetX();
-        p_mutex.give();
-        return currentX;
-    }
+/// @brief Get current Y position in \b inches
+/// @return Returns current Y position in \b inches
+double Odometry::getY() {
+  p_mutex.take(1);
+  double currentY = position.GetY();
+  p_mutex.give();
+  return currentY;
+}
 
-    /**
-     * \brief Set current X position in \b inches
-     */
-    void Odometry::setX(double x){
-        p_mutex.take(1);
-        position.SetPosition(x, getY());
-        p_mutex.give();
-    }
+/// @brief Get a vector with the current position
+/// @return Returns new vector with current position
+Vector Odometry::getPosition() {
+  p_mutex.take(1);
+  Vector pos = position;
+  p_mutex.give();
+  return pos;
+}
 
-    /**
-     * \brief Get current Y position in \b inches
-     *
-     * \returns Returns current Y position in \b inches
-     */
-    double Odometry::getY(){
-        p_mutex.take(1);
-        double currentY = position.GetY();
-        p_mutex.give();
-        return currentY;
-    }
+/// @brief Set position in \b inches
+/// @param x The x coordinate in the field in \b inches
+/// @param y The y coordinate in the field in \b inches
+void Odometry::SetPosition(double x, double y) {
+  p_mutex.take(1);
+  position.SetPosition(x, y);
+  p_mutex.give();
+}
 
-    /**
-     * \brief Set current Y position in \b inches
-     */
-    void Odometry::setY(double y){
-        p_mutex.take(1);
-        position.SetPosition(getX(), y);
-        p_mutex.give();
-    }
+/// @brief Get current pose's angle in \b degrees
+/// @return Returns current pose's angle in \b degrees
+double Odometry::getDegrees() {
+  orientation_mutex.take(1);
+  double currentDegrees = orientation.GetDegrees();
+  orientation_mutex.give();
+  return currentDegrees;
+}
 
-    /**
-     * \brief Get a vector with the current position
-     *
-     * \return Returns new vector with current position
-     */
-    Vector Odometry::getPosition(){
-        p_mutex.take(1);
-        Vector pos = position;
-        p_mutex.give();
-        return pos;
-    }
+/// @brief Set current pose's angle in \b degrees
+/// @param degrees Input value to set the current angle to
+void Odometry::setDegrees(double degrees) {
+  orientation_mutex.take(1);
+  orientation.SetDegrees(degrees);
+  orientation_mutex.give();
+  deltaTheta = 0.0;
+}
 
+/// @brief Get current pose's angle in \b radians
+/// @return Returns current pose's angle in \b radians
+double Odometry::getRadians() {
+  orientation_mutex.take(1);
+  const double currentRadian = orientation.GetRadians();
+  orientation_mutex.give();
+  return currentRadian;
+}
 
-    /**
-     * \brief Set Y position in \b inches
-     *
-     * \param x Value on X to set new position
-     * \param y Value on Y to set new position
-     */
-    void Odometry::setPosition(double x, double y){
-        p_mutex.take(1);
-        position.SetPosition(x, y);
-        p_mutex.give();
-    }
+/// @brief Set current pose's angle in \b radians
+/// @param radians Input value to set the current angle to
+/// @warning Sets angles in units of \b radians. INPUT MUST BE IN \b RADIANS
+void Odometry::setRadians(double radians) {
+  orientation_mutex.take(1);
+  orientation.SetRadians(radians);
+  orientation_mutex.give();
+}
 
-
-    /**
-     * \brief Get current pose's angle in \b degrees
-     *
-     * \returns Returns current pose's angle in \b degrees
-     */
-    double Odometry::getDegrees(){
-        orientation_mutex.take(1);
-        double currentDegrees = orientation.GetDegrees();
-        orientation_mutex.give();
-        return currentDegrees;
-    }
-
-
-    /**
-     * \brief Set current pose's angle in \b degrees
-     *
-     * \param degrees Input value to set the current angle to
-     */
-    void Odometry::setDegrees(double degrees){
-        orientation_mutex.take(1);
-        orientation.SetDegrees(degrees);
-        orientation_mutex.give();
-        deltaTheta = 0.0;
-    }
+/// @brief Get current position in the X-axis, Y-axis, and  angle in \b degrees
+Pose Odometry::getPose() { return Pose(getX(), getY(), getDegrees()); }
 
 
-    /**
-     * \brief Get current pose's angle in \b radians
-     *
-     * \returns Returns current pose's angle in \b radians
-     */
-    double Odometry::getRadians(){
-        orientation_mutex.take(1);
-        const double currentRadian = orientation.GetRadians();
-        orientation_mutex.give();
-        return currentRadian;
-    }
+/// @brief Resets the Odometry values with `INITIAL_ODOMETRY_X`,Y and T
+/// constants.
+void Odometry::resetInitial() {
+  /*
+  ATTENTION
+  We need to know where the robot start (coordinates), for the odometry knows
+  where the robot is at all times. Maybe using gps or a const variable
+  */
+  // Normal initial
+  resetCurrent(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y, INITIAL_ODOMETRY_THETA);
+}
 
+/// @brief Initialization function to put everything to 0
+void Odometry::initialize() {
+  encoderLeft.set_position(0);
+  encoderRight.set_position(0);
+  encoderBack.set_position(0);
 
-    /// @brief Set current pose's angle in \b radians
-    /// @param radians Input value to set the current angle to
-    /// @warning Sets angles in units of \b radians. INPUT MUST BE IN \b RADIANS
-    void Odometry::setRadians(double radians){
-        orientation_mutex.take(1);
-        orientation.SetRadians(radians);
-        orientation_mutex.give();
-    }
+  encoderLeft.reset();
+  encoderRight.reset();
+  encoderBack.reset();
 
+  // Set initial position with gps (need test with field)
+  // INITIAL_ODOMETRY_X = gps.get_x_position();
+  // INITIAL_ODOMETRY_Y = gps.get_y_position();
+  resetInitial();
 
-    /// @brief Get current position in the X-axis, Y-axis, and  angle in \b degrees
-    Pose Odometry::getPose(){
-        return Pose(getX(),getY(), getDegrees());
-    }
-
-
-    //MAIN FUNCTIONS
-
-
-    /**
-     * \brief Resets the Odometry values with `INITIAL_ODOMETRY_X`,Y and T constants.
-     */
-    void Odometry::resetInitial(){
-        /*
-        ATTENTION
-        We need to know where the robot start (coordinates), for the odometry knows where the
-        robot is at all times. Maybe using gps or a const variable
-        */
-        // Normal initial
-        resetCurrent(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y, INITIAL_ODOMETRY_THETA);
-    }
-
-
-    /**
-     * \brief Initialization function to put everything to 0
-     */
-    void Odometry::initialize(){
-        encoderLeft.set_position(0);
-        encoderRight.set_position(0);
-        encoderBack.set_position(0);
-
-
-        encoderLeft.reset();
-        encoderRight.reset();
-        encoderBack.reset();
-
-
-        // Set initial position with gps (need test with field)
-        // INITIAL_ODOMETRY_X = gps.get_x_position();
-        // INITIAL_ODOMETRY_Y = gps.get_y_position();
-        resetInitial();
-
-        while(true){
-            update();
-            pros::delay(20);
-        }
-    }
+  while (true) {
+    update();
+    pros::delay(20);
+  }
+}
 
     static double max = 0;
     static double maxRight = 0;
@@ -325,9 +281,9 @@ namespace aon{
         std::cout << "X: " << getX() << ", Y: " << getY() << ", T: " << getDegrees() << "\n";
         pros::lcd::print(1, "X: %0.3f | Y: %0.3f | H: %0.3f", getX(), getY(), getDegrees());
 
-        // Save current values as previous for future updates
-        encoderLeft_data.prevValue = encoderLeft_data.currentValue;
-        encoderRight_data.prevValue = encoderRight_data.currentValue;
+  // Save current values as previous for future updates
+  encoderLeft_data.prevValue = encoderLeft_data.currentValue;
+  encoderRight_data.prevValue = encoderRight_data.currentValue;
 
         encoderRight_data.previousDistance = encoderRight_data.currentDistance;
         encoderLeft_data.previousDistance = encoderLeft_data.currentDistance;
@@ -336,59 +292,66 @@ namespace aon{
         #endif
     }
 
+/// @brief resets Odometry values using the particular parameters
+/// @param x X position in \b inches
+/// @param y Y position in \b inches
+/// @param theta Angular position in \b degrees
+void Odometry::resetCurrent(double x, double y, double theta) {
+  const double currentAngleRight = encoderRight.get_position() / 100.0;
+  const double currentAngleLeft = encoderLeft.get_position() / 100.0;
+  const double currentAngleBack = encoderBack.get_position() / 100.0;
+  const double currentAngleGyro = gyroscope.get_heading();
+  std::cout << "currentAngleGyro: " << currentAngleGyro << "\n";
 
-    /**
-     * \brief resets Odometry values using the particular parameters
-     *
-     * \param x X position in \b inches
-     * \param y Y position in \b inches
-     * \param theta Angular position in \b degrees
-     */
-    void Odometry::resetCurrent(double x , double y, double theta){
+  // Reset encoder's struct variables
+  encoderRight_data = {
+      currentAngleRight,                     // current position in degrees
+      currentAngleRight,                     // previous position in degrees
+      0,                                     // delta in degrees
+      currentAngleRight * conversionFactor,  // current position in inches
+      currentAngleRight * conversionFactor,  // previous position in inches
+      0.0};                                  // delta in inches
 
-        const double currentAngleRight = encoderRight.get_position() / 100.0;
-        const double currentAngleLeft = encoderLeft.get_position() / 100.0;
-        const double currentAngleBack = encoderBack.get_position() / 100.0;
-        const double currentAngleGyro = gyroscope.get_heading();
+  encoderLeft_data = {
+      currentAngleLeft,                     // current position in degrees
+      currentAngleLeft,                     // previous position in degrees
+      0,                                    // delta in degrees
+      currentAngleLeft * conversionFactor,  // current position in inches
+      currentAngleLeft * conversionFactor,  // previous position in inches
+      0.0};                                 // delta in inches
 
+  encoderBack_data = {
+      currentAngleBack,                     // current position in degrees
+      currentAngleBack,                     // previous position in degrees
+      0,                                    // delta in degrees
+      currentAngleBack * conversionFactor,  // current position in inches
+      currentAngleBack * conversionFactor,  // previous position in inches
+      0.0};                                 // delta in inches
 
-        // Reset encoder's struct variables
-        encoderRight_data = {currentAngleRight,                    // current position in degrees
-                            currentAngleRight,                     // previous position in degrees
-                            0,                                     // delta in degrees
-                            currentAngleRight * conversionFactor,  // current position in inches 
-                            currentAngleRight * conversionFactor,  // previous position in inches
-                            0.0};                                  // delta in inches
+  gyro_data = {0,     // current value degrees
+               0,     // previous value degrees
+               0,     // current radians
+               0.0,   // delta degrees
+               0.0};  // delta radians
 
-        encoderLeft_data = {currentAngleLeft,                       // current position in degrees
-                            currentAngleLeft,                       // previous position in degrees
-                            0,                                      // delta in degrees
-                            currentAngleLeft * conversionFactor,    // current position in inches 
-                            currentAngleLeft * conversionFactor,    // previous position in inches
-                            0.0};                                   // delta in inches
+  // Preset odometry values
+  deltaTheta = 0.0;
+  deltaDlocal.SetPosition(0.0, 0.0);
 
-        encoderBack_data = {currentAngleBack,                       // current position in degrees
-                            currentAngleBack,                       // previous position in degrees
-                            0,                                      // delta in degrees
-                            currentAngleBack * conversionFactor,    // current position in inches 
-                            currentAngleBack * conversionFactor,    // previous position in inches
-                            0.0};                                   // delta in inches
-
-        gyro_data = {0,                                             // current value degrees
-                    0,                                             // previous value degrees
-                    0,                                             // current radians
-                    0.0,                                           // delta degrees
-                    0.0};                                          // delta radians
-
-        // Preset odometry values
-        deltaTheta = 0.0;
-        deltaDlocal.SetPosition(0.0, 0.0);
-
+  // Other odometry we could use, less calculations
+  changeWeb.SetPosition(0.0, 0.0);
         // Other odometry we could use, less calculations
         changeWeb.SetPosition(0.0, 0.0);
         changeMine.SetPosition(0.0, 0.0);
         changeEasy.SetPosition(0.0, 0.0);
 
+  setDegrees(theta);
+  SetPosition(x, y);
+#if GYRO_ENABLED
+  gyroscope.tare();
+  pros::delay(3000);
+#endif
+}
         setDegrees(theta);
         position.SetPosition(x, y);
         #if GYRO_ENABLED
@@ -398,15 +361,15 @@ namespace aon{
     }
 
 
-    /// @brief Returns position of the robot in the field
-    /// @returns The GPS coordinates as a `Vector`
-    Vector Odometry::gpsPosition(){
-      pros::delay(2000);
-        pros::c::gps_status_s_t status = gps.get_status();
-        Vector current = Vector().SetPosition(status.x, status.y);
+/// @brief Returns position of the robot in the field
+/// @returns The GPS coordinates as a `Vector`
+Vector Odometry::gpsPosition() {
+  pros::delay(2000);
+  pros::c::gps_status_s_t status = gps.get_status();
+  Vector current = Vector().SetPosition(status.x, status.y);
 
-        return current;
-    }
+  return current;
+}
 
 
     // Testing 
@@ -436,11 +399,9 @@ namespace aon{
         // pros::lcd::print(6, "No Math:    X: %0.3f | Y: %0.3f", changeMine.GetX(), changeMine.GetY()); 
         // pros::lcd::print(7, "Video:       X: %0.3f | Y: %0.3f", changeVideo.GetX(), changeVideo.GetY()); 
 
-        update();
-        pros::delay(20);
-        }
-
-    }
-
+    update();
+    pros::delay(20);
+  }
 }
 
+}  // namespace aon

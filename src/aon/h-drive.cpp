@@ -1,61 +1,98 @@
 #include "../include/aon/h-drive/h-drive.hpp"
 
+
 namespace aon {
-// ============================================================================
-//    ___      _
-//   |   \ _ _(_)_ _____ _ _ 
-//   | |) | '_| \ V / -_) '_|
-//   |___/|_| |_|\_/\___|_|
-//
-// ============================================================================
 
-void HDrive::drive(double leftX, double leftY, double rightX, double nothing) {
-  const double forward = applySpeed(leftY , isTurbo() ? 1.41421356237 : 0.6);
-  const double horizontal = applySpeed(leftX, isTurbo() ? 1.41421356237 : 0.6);
-  const double turn = applySpeed(rightX, isTurbo() ? 1.41421356237 : 0.6);
-  
-  // pros::lcd::print(1, "Forward:    %0.3f", forward);
-  // pros::lcd::print(2, "Horizontal: %0.3f", horizontal);
-  // pros::lcd::print(3, "Turn:       %0.3f", turn);
-  driveWhileTurning(forward, turn);
-  middleMotor.moveVelocity(horizontal);
+void HDrive::initialize() {
+  this->odometry->initialize();
 }
 
-// ============================================================================
-//   __  __  _____   _____ __  __ ___ _  _ _____
-//  |  \/  |/ _ \ \ / / __|  \/  | __| \| |_   _|
-//  | |\/| | (_) \ V /| _|| |\/| | _|| .` | | |  
-//  |_|  |_|\___/ \_/ |___|_|  |_|___|_|\_| |_|  
-//
-// ============================================================================
-
-void HDrive::stop(){
-  this->motors(0);
-  this->middleMotor.moveVelocity(0);
+void HDrive::motors(const double &rpm) {
+  this->leftMotors.moveVelocity(rpm);
+  this->rightMotors.moveVelocity(rpm);
 }
 
-void HDrive::motorMid(const double &rpm) {
-  this->middleMotor.moveVelocity(rpm);
+void HDrive::sideways(const double &rpm) {
+  this->midMotors.moveVelocity(rpm);
 }
 
-void HDrive::moveHorizontalPID(double dist, PID pid, const double &MAX_REVS) {
-  const int sign = dist / abs(dist);  // Getting the direction of the movement
-  dist = abs(dist);                   // Setting the magnitude to positive
+void HDrive::rotate(const double &rpm) {
+  this->leftMotors.moveVelocity(rpm);
+  this->rightMotors.moveVelocity(-rpm);
+}
+
+void HDrive::driveWhileTurning(const double &forward, const double &turn){
+  this->leftMotors.moveVelocity(forward + turn);
+  this->rightMotors.moveVelocity(forward - turn);
+}
+
+void HDrive::drive(double leftX, double leftY, double rightX, double rightY) {
+  double forward = applySpeed(leftY, this->isTurbo() ? 1 : 0.5);
+  double sideways = applySpeed(leftX, this->isTurbo() ? 1 : 0.5);
+  double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.5);
+
+  this->driveWhileTurning(forward, turn);
+  this->sideways(sideways);
+}
+
+void HDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
+  leftMotors.setBrakeMode(brakeMode);
+  rightMotors.setBrakeMode(brakeMode);
+  midMotors.setBrakeMode(brakeMode);
+}
+
+void HDrive::setGearset(okapi::AbstractMotor::gearset gearset){
+  leftMotors.setGearing(gearset);
+  rightMotors.setGearing(gearset);
+  midMotors.setGearing(gearset);
+}
+
+void HDrive::setEncoderUnits(okapi::AbstractMotor::encoderUnits units){
+  leftMotors.setEncoderUnits(units);
+  leftMotors.tarePosition();
+  rightMotors.setEncoderUnits(units);
+  rightMotors.tarePosition();
+  midMotors.setEncoderUnits(units);
+  midMotors.tarePosition();
+}
+
+void HDrive::setSlewRate(double slew){
+  leftMotors.SetAcceleration(slew);
+  rightMotors.SetAcceleration(slew);
+  midMotors.SetAcceleration(slew);
+}
+
+
+
+double HDrive::getRPM(){
+  double left = leftMotors.getActualVelocity();
+  double right = rightMotors.getActualVelocity();
+  return (left + right) / 2;
+}
+
+void HDrive::drivePID(PID pid, double dist, const double &MAX_REVS) {
+  const int sign = dist / abs(dist); // Getting the direction of the movement
+  dist = abs(dist); // Setting the magnitude to positive
   pid.Reset();
-  
-  Vector initialPos = odom.getPosition();
+
+  Vector initialPos = odometry->getPosition();
 
   const double timeLimit = math::estimateTimetoTarget(dist, MAX_REVS);
   const double start_time = pros::micros() / 1E6;
-  #define time (pros::micros() / 1E6) - start_time  // every time the variable is called it is recalculated automatically
+  #define time (pros::micros() / 1E6) - start_time // every time the variable is called it is recalculated automatically
 
-  while ((odom.getPosition() - initialPos).GetMagnitude() < dist) {
-    double currentDisplacement = (odom.getPosition() - initialPos).GetMagnitude();
+  while((odometry->getPosition() - initialPos).GetMagnitude() < dist){
+
+    double currentDisplacement = (odometry->getPosition() - initialPos).GetMagnitude();
+
     double output = pid.Output(dist, currentDisplacement);
+
     pros::lcd::print(0, "Time Limit %.2f", timeLimit);
     pros::lcd::print(1, "Time: %.2f", time);
-    pros::lcd::print(2, "Odom Displacement %.2f", currentDisplacement);
-    this->middleMotor.moveVelocity(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
+    pros::lcd::print(2, "Odometry Displacement %.2f", currentDisplacement);
+
+    this->motors(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
+
     pros::delay(10);
   }
 
@@ -65,201 +102,415 @@ void HDrive::moveHorizontalPID(double dist, PID pid, const double &MAX_REVS) {
   #undef time
 }
 
-void HDrive::strafe(double dist) {
-  if (dist == 0) { return; }
-  const int sign = dist / abs(dist);  // Getting the direction of the movement
-  dist = abs(dist);                   // Setting the magnitude to positive
+void HDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
+  const int sign = angle / abs(angle); // Getting the direction of the movement
+  angle = abs(angle); // Setting the magnitude to positive
+  pid.Reset();
+  odometry->gyroscope.tare(); // .tare() or .reset(true) depending on the time issue
+  const double startAngle = odometry->getDegrees(); // Angle relative to the start
   
-  double dt = 0.02;                   // (s)
+  double timeLimit = math::getTimetoTurnDeg(angle);
+
+  if(sign == -1) { angle = 360.0 - angle + CLOCKWISE_ROTATION_DEGREES_OFFSET; }
+  if(sign == 1) { angle -= CLOCKWISE_ROTATION_DEGREES_OFFSET; }
+
+  const double startTime = pros::micros() / 1E6;
+  #define time (pros::micros() / 1E6) - startTime
+
+  while(time < timeLimit){
+
+    double traveledAngle = abs(odometry->getDegrees() - startAngle);
+
+    double output = pid.Output(angle, traveledAngle);
+
+    pros::lcd::print(0, "Time Limit %.2f", timeLimit);
+    pros::lcd::print(1, "Time: %.2f", time);
+    pros::lcd::print(2, "Gyroscope Displacement %.2f", traveledAngle);
+
+    // Taking clockwise rotation as positive (to change this just flip the negative on the sign below)
+    this->rotate(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
+
+    pros::delay(10);
+  }
+
+  this->stop();
+
+  #undef time
+}
+
+void HDrive::driveProfiled(double dist){
+  if(dist == 0) { return; }
+  const int sign = dist / abs(dist); // Getting the direction of the movement
+  dist = abs(dist); // Setting the magnitude to positive
+
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (dist / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+  
+  double dt = 0.02; // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  double startPos = odom.encoderBack.get_position();
-  // Vector startPos = aon::odom::GetPosition();
-  
+  Vector startPos = odometry->getPosition();
+
   double now = pros::micros() / 1E6;
   double lastTime = now;
-  
-  this->motionProfile.setVelocity(this->middleMotor.getActualVelocity());
-  
-  while (traveledDist < dist) {
-    traveledDist = (std::abs(odom.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+
+  this->yProfile.setVelocity(this->getRPM());
+
+  while(traveledDist < dist){
+    traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
-    dt = now - lastTime;
+    dt =  now - lastTime;
     lastTime = now;
-    
-    pros::lcd::print(0, "Trav %.2f", traveledDist);
 
-    currVelocity = this->motionProfile.update(remainingDist, dt);
-    this->motorMid(sign * currVelocity);
+    currVelocity = this->yProfile.update(remainingDist, dt);
+    this->motors(sign * currVelocity);
 
-    if (traveledDist >= dist) { break; }  // Overshoot prevention
+    if(remainingDist <= 0) { break; } // Overshoot prevention
 
     pros::delay(20);
   }
 
-  currVelocity=0;
-  this->motorMid(0);
+  this->stop();
 }
 
-/*
-THINGS TO DO:
-- change to Pose class, the x, y and theta
-- test with PID
-- check constant
-- put the motion profile and pid as part of the class
+void HDrive::strafeProfiled(double dist){
+  if(dist == 0) { return; }
+  const int sign = dist / abs(dist); // Getting the direction of the movement
+  dist = abs(dist); // Setting the magnitude to positive
 
-*/
-void HDrive::HolonomicMotion(
-  double X, double Y, double T,
-  PID drivePID, PID turnPID
-) {
-  // this->setX(0);
-  // this->setY(0);
-  // this->setTheta(0);
-  // ---------- Constants ----------
-  const double delay = 20;
-  const double d = DRIVE_WIDTH / 2; // inches
-  // Maybe move this to constants
-  const double drive_width = 17.5;
-  const double drive_length = 17.5;
-  const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
-  const double circumference = M_TWOPI * ROBOT_RADIUS;
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (dist / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+  
+  double dt = 0.02; // (s)
+  double currVelocity = 0;
+  double traveledDist = 0;
+  Vector startPos = odometry->getPosition();
 
-  // Test if accuracy improve with PID
-  drivePID.Reset();
-  turnPID.Reset();
+  double now = pros::micros() / 1E6;
+  double lastTime = now;
 
-  double remainingX = abs(X - this->getX());
-  double remainingY = abs(Y - this->getY());
-  double remainingAngle = abs(T - this->getTheta());
+  this->xProfile.setVelocity(this->getRPM());
 
-  std::cout << "Reamining X: " << remainingX << "\n"; 
-  std::cout << "Reamining Y: " << remainingY << "\n"; 
-  std::cout << "Reamining T: " << remainingAngle << "\n"; 
+  while(traveledDist < dist && timeout > pros::millis()){
+    traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
+    // traveledDist += getSpeed(this->getRPM()) * dt; //# in case of odom failure
 
-  double lastTime = pros::micros() / 1E6;
+    double remainingDist = dist - traveledDist;
+    now = pros::micros() / 1E6;
+    dt =  now - lastTime;
+    lastTime = now;
 
-  while (fabs(remainingX) > 0.5 || fabs(remainingY) > 0.5 || fabs(remainingAngle) > 2) {
+    currVelocity = this->xProfile.update(remainingDist, dt);
+    this->sideways(sign * currVelocity);
 
-    // ---- Actual position ---- Simplify this after testing PID
-    double x = this->getX();
-    double y = this->getY();
-    double t = this->getTheta();
-    double tRad = t * (M_PI / 180);
+    if(remainingDist <= 0) { break; } // Overshoot prevention
 
-    std::cout << "current X: " << x << "\n"; 
-    std::cout << "current Y: " << y << "\n"; 
-    std::cout << "current T: " << t << "\n"; 
-
-    // --- Remaining Distance ---
-    remainingX = X - x;
-    remainingY = Y - y;
-    remainingAngle = T - t;
-    while (remainingAngle > 180) remainingAngle -= 360;
-    while (remainingAngle < -180) remainingAngle += 360;
-
-    // constexpr double EPS_T  = 1e-2;   // degrees
-    // remainingAngle = fabs(remainingAngle) < EPS_T ? 0 : remainingAngle;
-    // int signT = (remainingAngle == 0) ? 1 : remainingAngle / abs(remainingAngle);
-    // remainingAngle = abs(remainingAngle);
-
-    // --- Dont divide by 0 ---
-    // constexpr double EPS_XY = 1e-4;   // inches
-    // constexpr double EPS_T  = 1e-2;   // degrees
-
-    // remainingX = fabs(remainingX) < EPS_XY ? 0 : remainingX;
-    // remainingY = fabs(remainingY) < EPS_XY ? 0 : remainingY;
-    // remainingAngle = fabs(remainingAngle) < EPS_T ? 0 : remainingAngle;
-    
-    // // ----- Correct sign for motion profile ----
-    // int signX = (remainingX == 0) ? 1 : remainingX / abs(remainingX);
-    // int signY = (remainingY == 0) ? 1 : remainingY / abs(remainingY);
-    // int signT = (remainingAngle == 0) ? 1 : remainingAngle / abs(remainingAngle);
-    
-    // remainingX = abs(remainingX);
-    // remainingY = abs(remainingY);
-    // remainingAngle = abs(remainingAngle);
-
-    std::cout << "Reamining X: " << remainingX << ",Y: " << remainingY << ", T: " << remainingAngle << "\n"; 
-
-    // ============ FIELD → ROBOT TRANSFORM ============
-    //
-    // Rotate field-relative velocity into robot frame
-    //
-    // [ vx_r ]   [  cosθ   sinθ ] [ vx_f ]
-    // [ vy_r ] = [ -sinθ   cosθ ] [ vy_f ]
-
-    double dx_r =  cos(tRad) * remainingX + sin(tRad) * remainingY;
-    double dy_r = -sin(tRad) * remainingX + cos(tRad) * remainingY;
-
-    // --- Dont divide by 0 ---
-    // constexpr double EPS_XY = 1e-4;   // inches
-
-    // dx_r = fabs(dx_r) < EPS_XY ? 0 : dx_r;
-    // dy_r = fabs(dy_r) < EPS_XY ? 0 : dy_r;
-    
-    // // ----- Correct sign for motion profile ----
-    // int signX = (dx_r == 0) ? 1 : dx_r / abs(dx_r);
-    // int signY = (dy_r == 0) ? 1 : dy_r / abs(dy_r);
-    
-    // dx_r = abs(dx_r);
-    // dy_r = abs(dy_r);
-
-    // --- Motion profile update ---
-    // double vx = this->xProfile.update(dx_r) * signX;
-    // double vy = this->yProfile.update(dy_r) * signY;
-    // double vT = this->thetaProfile.update(circumference * (remainingAngle / 360.0)) * signT;
-    double k = 0.03;
-    double kT = 0.01;
-
-    double vx = k * dx_r;
-    double vy = k * dy_r;
-    double vT = kT * remainingAngle;
-
-    std::cout << "velocity X: " << vx << "\n"; 
-    std::cout << "velocity Y: " << vy << "\n"; 
-    std::cout << "velocity T: " << vT << "\n";
-    pros::lcd::print(4, "velocity X: %0.3f", vx);
-    pros::lcd::print(5, "velocity Y: %0.3f", vy);
-    pros::lcd::print(6, "velocity T: %0.3f", vT);
-    
-    // TEST IF MORE ACCURACY WITH PID
-    // double vx_profile = xProfile.update(remainingX, dt_loop) * signX;
-    // double vy_profile = yProfile.update(remainingY, dt_loop) * signY;
-    // double vT_profile = turnProfile.update(circumference * (remainingAngle / 360.0), dt_loop) * signT;
-    
-    // double vx_pid = drivePID.OutputDt(X, x, dt_loop);
-    // double vy_pid = drivePID.OutputDt(Y, y, dt_loop);
-    // double vt_pid = drivePID.OutputDt(T, t, dt_loop);
-    
-    // double vx = vx_profile + vx_pid;
-    // double vy = vx_profile + vy_pid;
-    // double vT = vx_profile + vt_pid;
-
-    // ----- Move motors ------
-    this->motorsLeft (vx - vT);
-    this->motorsRight(vx + vT);
-    this->motorMid   (vy);
-
-    pros::delay(delay);
-
-    // this->setX(this->getX() + math::linearSpeed(vx) * (delay / 1000)); //# in case of odom failure
-    // this->setY(this->getY() + math::linearSpeed(vy) * (delay / 1000)); //# in case of odom failure
-    // this->setTheta(this->getTheta() + math::rotationalSpeed(vT) * delay / 1000); //# in case of odom failure
+    pros::delay(20);
   }
-
-  std::cout << "Stop because remaining is: " << remainingX << ", " <<  remainingY << ", " << remainingAngle << "\n";
 
   this->stop();
 }
 
-// void HDrive::goToH(const double &x, const double &y, const double &theta) {
-//   HDrive::HolonomicMotion(x, y, theta);
-// }
+void HDrive::turnProfiled(double angle){
+  if (angle == 0) { return; }
+  const int sign = angle / abs(angle);  // Getting the direction of the movement
+  angle = abs(angle);                   // Setting the magnitude to positive
 
-void HDrive::goToPose(Pose &target) {
-  HDrive::HolonomicMotion(target.x, target.y, target.theta);
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (std::sqrt(angle / 2)) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+
+  const double circumference = DRIVE_WIDTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
+  double dt = 0.02;                     // (s)
+  double currVelocity = 0;
+  double currAngle;
+  double traveledAngle = 0;
+  double startAngle = odometry->getDegrees();
+
+  double now;
+  double lastTime = pros::micros() / 1E6;
+  
+  while(traveledAngle < angle){
+    traveledAngle = abs(odometry->getDegrees() - startAngle);
+    double remainingAngle = angle - traveledAngle;
+    now = pros::micros() / 1E6;
+    dt = now - lastTime;
+    lastTime = now;
+    
+    // Debugging output
+    pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
+    // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledAngle, angle);
+
+    currVelocity = this->thetaProfile.update(circumference * (remainingAngle / 360.0), dt);
+    this->rotate(sign * currVelocity);
+
+    if (traveledAngle >= angle) { break; }  // Overshoot prevention
+
+    pros::delay(20);
+  }
+  this->stop();
 }
 
-} // aon namespace
+void HDrive::stop(){
+  this->motors(0);
+  this->sideways(0);
+}
+
+void HDrive::move(const double &dist){
+  driveProfiled(dist);
+}
+
+void HDrive::strafe(const double &dist){
+  strafeProfiled(dist);
+}
+
+void HDrive::turn(const double &angle){
+  turnProfiled(angle);
+}
+
+void HDrive::setMaxVelocity(const double &rpm){
+  this->yProfile.setMaxVelocity(rpm);
+}
+
+double HDrive::updateProfile(const double &distance, const double &dt){
+  return this->yProfile.update(distance, dt);
+}
+
+void HDrive::driveInArc(double radius, const double &midSpeed) {
+  if(radius == 0) return;
+  const bool clockwise = radius > 0.0;
+  radius = std::abs(radius);
+
+  // Calculate wheel speeds based on center speed and arc geometry
+  const double outerRatio =  (radius + (DRIVE_WIDTH / 2)) / radius;
+  const double innerRatio = (radius - (DRIVE_WIDTH / 2)) / radius;
+  const double outerSpeed = midSpeed * outerRatio;
+  const double innerSpeed = midSpeed * innerRatio;
+
+  double leftSpeed, rightSpeed;
+  
+  // Clockwise, more speed on the left
+  if(clockwise) {
+    leftSpeed = outerSpeed;
+    rightSpeed = innerSpeed;
+  }
+  // Counter-clockwise, more speed on the right
+  else {
+    rightSpeed = outerSpeed;
+    leftSpeed = innerSpeed;
+  }
+
+  leftMotors.moveVelocity(leftSpeed); 
+  rightMotors.moveVelocity(rightSpeed);
+}
+
+void HDrive::driveAngleOfArc(const double &radius, const double &angle) {
+  if(angle == 0) { return; }
+  if(radius == 0) {
+    turn(angle);
+    return;
+  }
+  const short sign = angle / std::abs(angle);
+  const double distance = std::abs((2 * radius * M_PI) * (angle / 360));
+  double midSpeed;
+  double traveledDist = 0, remainingDist = distance;
+  double dt = 0.02;
+  double now = pros::micros() / 1E6;
+  double lastTime = now;
+  const double rightEncStartPos = odometry->encoderRight.get_position(); //! Temporary
+  const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
+  // const double startDist = odometry::getTraveledDistance();
+  while(traveledDist < distance){
+    // traveledDist = odometry::getTraveledDistance() - startDist;
+    const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
+    const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
+    traveledDist = (rightEncDist + leftEncDist) / 2; //! Temporary
+    remainingDist = distance - traveledDist;
+    now = pros::micros() / 1E6;
+    dt = now - lastTime;
+    midSpeed = this->yProfile.update(remainingDist, dt);
+    lastTime = now;
+
+    this->driveInArc(radius, sign * midSpeed);
+
+    pros::delay(20);
+  }
+
+  this->stop();
+}
+
+void HDrive::driveInArcTo(const double &x, const double &y){
+  // Get the current pose
+  Vector position = odometry->getPosition();
+  position.SetPosition(math::inchesToMeters(position.GetX()), math::inchesToMeters(position.GetY()));
+  double heading = odometry->getDegrees(); //? should this come in the same format as the GPS heading?
+  Vector target = Vector().SetPosition(x, y);
+
+  // Convert the heading to traditional math coordinates
+  heading = (90 - heading); //? only do the `(90 - heading)` part if the heading comes in gps coordinates
+  if (heading < 0) { heading += 360; }
+  heading *=  M_PI / 180;
+
+  // (heading - π/2) % π cannot be 0 because tan(heading) would not be defined
+  const bool isTanHeadingDefined = std::fmod(heading - M_PI_2, M_PI) != 0;
+
+  // Calculate slopes of tangent to circular path and secant that cuts through current point and desired point
+  double m_t = isTanHeadingDefined ? std::tan(heading) : DBL_MAX;
+  double m_s = (position.GetX() != x) ? (position.GetY() - y) / (position.GetX() - x) : DBL_MAX;
+
+  // Avoid 0 division later by switching to a very small value if a 0 slope arises
+  m_t = m_t == 0 ? DBL_MIN : m_t;
+  m_s = m_s == 0 ? DBL_MIN : m_s;
+
+  // Get midpoint of the secant
+  Vector midpoint = Vector().SetPosition((position.GetX() + x) / 2, (position.GetY() + y) / 2);
+
+  // Calculate the position of the center of the circular path
+  double centerX = (midpoint.GetY() - position.GetY() - (position.GetX() / m_t) + (midpoint.GetX() / m_s)) / ((-1 / m_t) + (1 / m_s));
+  double centerY = ((-1 / m_t) * (centerX - position.GetX())) + position.GetY();
+  Vector center = Vector().SetPosition(centerX, centerY);
+
+  // Get the radius using the pythagorean theorem
+  double radius = std::hypot(position.GetX() - center.GetX(), position.GetY() - center.GetY());
+
+  // Determine the angle with some geometry and trigonometry
+  double angle = math::getAngleOfArc(position, target, center);
+
+  // Use a projection to determine which way we are turning
+  const double projectionStep = 0.001;
+  const Vector projection = Vector().SetPosition(position.GetX() + (projectionStep * std::cos(heading)),
+                                                 position.GetY() + (projectionStep * std::sin(heading)));
+  const double projectionAngle = math::getAngleInCircle(projection, center);
+  
+  const double positionAngle = math::getAngleInCircle(position, center);
+  const double targetAngle = math::getAngleInCircle(target, center);
+  
+  // If going clockwise, the center is to the right (positive radius) and to the left in a counter-clockwise movement (negative radius)
+  const bool clockwise = (targetAngle < projectionAngle && projectionAngle < positionAngle) || (projectionAngle < positionAngle && positionAngle < targetAngle) || (positionAngle < targetAngle && targetAngle < projectionAngle);
+  if (!clockwise) { radius *= -1; }
+  
+  // Check if we have to go the long way around
+  const bool longWay = (math::getAngleOfArc(projection, target, center) > angle) || (positionAngle < targetAngle && targetAngle < projectionAngle);
+  if (longWay) { angle = 360 - angle; }
+
+  this->driveAngleOfArc(math::metersToInches(radius), angle);
+}
+
+void HDrive::turnTo(const double &x, const double &y){
+  Vector target = Vector().SetPosition(x, y);
+  // Determine current position
+  Pose current = odometry->getPose();
+
+  // Do the movement
+  turn(-math::calculateTurn(target, current));
+}
+
+// TODO: replace with with the `goToPose()`
+void HDrive::goTo(const double &x, const double &y){
+  Vector target = Vector().SetPosition(x, y);
+  // Determine current position
+  Vector current = odometry->gpsPosition();
+
+  // Do the movement
+  turn(-math::calculateTurn(target, odometry->getPose()));
+  move(math::findDistance(target, current));
+}
+
+// Using PID
+// void HDrive::goToPose(const Pose& target){
+//   const double delay = 20; // ms
+//   const Pose initialPose = this->getPose();
+//   Pose currPose = this->getPose();
+//   PID xPID = PID(50, 10, 0, delay / 1000, 2, 50);
+//   PID yPID = PID(50, 10, 0, delay / 1000, 2, 50);
+//   PID thetaPID = PID(2.8, 1.25, 0, delay / 1000, 5, 50);
+
+//   // while(!(withinError(this->getPose().x, target.x, 10) && withinError(this->getPose().y, target.y, 10) && withinError(this->getPose().theta, target.theta, 10))){
+//   while(abs(this->getPose().x - target.x) > 0.5 || abs(this->getPose().y - target.y) > 0.5 || abs(this->getPose().theta - target.theta) > 2.5){
+//     pros::lcd::print(1, "X: %.2f / %.2f", this->getPose().x, target.x);
+//     pros::lcd::print(2, "Y: %.2f / %.2f", this->getPose().y, target.y);
+//     pros::lcd::print(3, "Theta: %.2f / %.2f", this->getPose().theta, target.theta);
+//     double x = xPID.Output(target.x, currPose.x);
+//     double y = yPID.Output(target.y, currPose.y);
+//     double theta = thetaPID.Output(target.theta, currPose.theta);
+
+//     Vector direction = Vector().SetPosition(x, y);
+//     direction.SetDegrees(direction.GetDegrees() + currPose.theta);// - initialPose.theta);
+//     Vector command = translateToMotorCommand(direction);
+//     double topRightDiag = command.GetX();
+//     double topLeftDiag = command.GetY();
+//     double turn = theta;
+
+//     this->leftMotors.moveVelocity(topRightDiag + turn);
+//     this->rightMotors.moveVelocity(topLeftDiag - turn);
+//     this->midMotors.moveVelocity(topLeftDiag + turn);
+//     this->backRightMotors.moveVelocity(topRightDiag - turn);
+//     pros::delay(delay);
+//     currPose.x += getSpeed(x) * delay / 1000; //# in case of odom failure
+//     currPose.y += getSpeed(y) * delay / 1000; //# in case of odom failure
+//     currPose.theta += rotationSpeed(theta) * delay / 1000; //# in case of odom failure
+//     this->setPose(currPose);
+//   }
+
+//   pros::lcd::clear();
+//   this->stop();
+// }
+
+// Using Motion Profile
+void HDrive::goToPose(const Pose& target){
+  const double delay = 20; // ms
+
+  double remainingX = abs(target.x - this->getX());
+  double remainingY = abs(target.y - this->getY());
+  double remainingTheta = abs(target.theta - this->getTheta());
+
+  const double drive_width = 10.5;
+  const double drive_length = 8.25;
+  const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
+  const double circumference = M_TWOPI * ROBOT_RADIUS;
+
+  // TODO: add timeouts for safety
+  while(remainingX > 0.05 || remainingY > 0.05 || remainingTheta > 0.05){
+
+    pros::lcd::print(0, "(x, y, theta): (%.2f, %.2f, %.2f)", this->getX(), this->getY(), this->getTheta());
+    remainingX = target.x - this->getX();
+    remainingY = target.y - this->getY();
+    remainingTheta = target.theta - this->getTheta();
+
+    double xSign = remainingX / abs(remainingX);
+    if(remainingX == 0) xSign = 1;
+    double ySign = remainingY / abs(remainingY);
+    if(remainingY == 0) ySign = 1;
+    double thetaSign = remainingTheta / abs(remainingTheta);
+    if(remainingTheta == 0) thetaSign = 1;
+
+    remainingX = abs(remainingX);
+    remainingY = abs(remainingY);
+    remainingTheta = abs(remainingTheta);
+
+    double x = this->xProfile.update(remainingX) * xSign;
+    double y = this->yProfile.update(remainingY) * ySign;
+    double theta = this->thetaProfile.update(circumference * (remainingTheta / 360.0)) * thetaSign;
+
+    Vector direction = Vector().SetPosition(x, y);
+    direction.SetDegrees(direction.GetDegrees() + this->getTheta());// - initialPose.theta);
+    
+
+    this->driveWhileTurning(direction.GetY(), theta);
+    this->sideways(direction.GetX());
+
+    pros::delay(delay);
+
+    // this->setX(this->getX() + math::linearSpeed(x) * delay / 1000); //# in case of odom failure
+    // this->setY(this->getY() + math::linearSpeed(y) * delay / 1000); //# in case of odom failure
+    // this->setTheta(this->getTheta() + math::rotationalSpeed(theta) * delay / 1000); //# in case of odom failure
+  }
+
+  pros::lcd::clear();
+  this->stop();
+}
+
+}  // namespace aon

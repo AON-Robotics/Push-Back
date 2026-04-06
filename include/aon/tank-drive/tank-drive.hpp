@@ -16,22 +16,23 @@ namespace aon {
 
 class TankDrive : public Drivetrain {
  private:
- SmartMotorGroup leftMotors;
- SmartMotorGroup rightMotors;
- MotionProfile turningProfile;
- 
- protected:
+  SmartMotorGroup leftMotors;
+  SmartMotorGroup rightMotors;
   MotionProfile motionProfile;
 
 
  public:
   TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
-            const std::initializer_list<okapi::Motor> &rightPorts = {0})
+            const std::initializer_list<okapi::Motor> &rightPorts = {0},
+            std::unique_ptr<Odometry> odometry = nullptr
+          )
       : leftMotors(leftPorts, 0, MAX_ACCEL),
         rightMotors(rightPorts, 0, MAX_ACCEL),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain() {}
+        Drivetrain(std::move(odometry)) {}
+
+  void initialize() override;
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
@@ -182,5 +183,10 @@ class TankDrive : public Drivetrain {
   /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
   /// @note Uses coordinate system from GPS in \b meters
   void goTo(const double &x, const double &y) override;
+
+  /// @brief Goes to the target point
+  /// @param pose The target pose
+  /// @note Uses coordinate system from GPS in \b meters
+  void goToPose(const Pose &pose) override;
 };
 }  // namespace aon

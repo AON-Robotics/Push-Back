@@ -23,12 +23,8 @@ class Intake {
 
 #if USING_BIG_ROBOT
  private:
-  okapi::MotorGroup frontElevatorMG;
-  okapi::MotorGroup hoarderMG;
-  okapi::MotorGroup backElevatorMG;
-  okapi::MotorGroup scorerMG;
-  okapi::MotorGroup shotbeltMG;
-  okapi::MotorGroup shooterMG;
+  okapi::MotorGroup elevatorMG;
+  okapi::MotorGroup judgeMG;
   pros::ADIDigitalOut shrimpPistons;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
@@ -36,36 +32,17 @@ class Intake {
   volatile bool scanning = false;
 
  public:
-  Intake(const std::initializer_list<okapi::Motor>& frontElevatorPorts,
-         const std::initializer_list<okapi::Motor>& hoarderPorts,
-         const std::initializer_list<okapi::Motor>& backElevatorPorts,
-         const std::initializer_list<okapi::Motor>& scorerPorts,
-         const std::initializer_list<okapi::Motor>& shotbeltPorts,
-         const std::initializer_list<okapi::Motor>& shooterPorts,
+  Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
+         const std::initializer_list<okapi::Motor>& judgePorts,
          char shrimpPistonsPort, int distanceSensorPort, int colorSensorPort);
 
-  /// @brief Moves only the frontElevator at the given `rpm`
-  /// @param rpm The rpm at which to set the frontElevator
-  void frontElevator(const int& rpm = INTAKE_VELOCITY);
+  /// @brief Moves only the elevator at the given `rpm`
+  /// @param rpm The rpm at which to set the elevator
+  void elevator(const int& rpm = INTAKE_VELOCITY);
 
-  /// @brief Moves only the backElevator at the given `rpm`
-  /// @param rpm The rpm at which to set the backElevator
-  void backElevator(const int& rpm = INTAKE_VELOCITY);
-
-  /// @brief Moves only the hoarder at the given `rpm`
-  /// @param rpm The rpm at which to set the hoarder
-  void hoarder(const int& rpm = INTAKE_VELOCITY);
-
-  /// @brief Moves only the shotbelt at the given `rpm`
-  /// @param rpm The rpm at which to set the shotbelt
-  void shotbelt(const int& rpm = INTAKE_VELOCITY);
-
-  /// @brief Moves only the shooter at the given `rpm`
-  /// @param rpm The rpm at which to set the shooter
-  void shooter(const int& rpm = 200);
-
-  /// @brief Discards blocks through the back of the robot
-  void hoard(const int& delay = 0);
+  /// @brief Moves only the judge at the given `rpm`
+  /// @param rpm The rpm at which to set the judge
+  void judge(const int& rpm = INTAKE_VELOCITY);
 
   /// @brief Drops the shrimp by activating its pistons
   void dropShrimp();
@@ -80,8 +57,7 @@ class Intake {
   /// @param from The location of the balls to be scored (HIGHER, LOWER)
   /// @param delay The time in \b milliseconds to leave the scorer running.
   /// @note A delay of 0 will never stop moving the intake.
-  void score(const Height& to = TOP, const Height& from = BOTTOM,
-             const int& delay = 0);
+  void score(const Height& to = TOP, const int& delay = 0);
 
 #else
  private:
@@ -109,6 +85,10 @@ class Intake {
   /// @brief Moves only the judge at the given `rpm`
   /// @param rpm The rpm at which to set the judge
   void judge(const int& rpm = INTAKE_VELOCITY);
+
+  /// @brief Moves only the scorer at the given `rpm`
+  /// @param rpm The rpm at which to set the scorer
+  void scorer(const int& rpm = INTAKE_VELOCITY);
 
   /// @brief This small subroutine moves the intake such that a block is scored
   /// on a goal.
@@ -142,10 +122,6 @@ class Intake {
   /// @brief Moves the entire intake system at the same `rpm`
   /// @param rpm The rpm to set to the motors
   void move(const int& rpm = INTAKE_VELOCITY);
-
-  /// @brief Moves only the scorer at the given `rpm`
-  /// @param rpm The rpm at which to set the scorer
-  void scorer(const int& rpm = INTAKE_VELOCITY);
 
   /// @brief Stops all motors
   void stop();

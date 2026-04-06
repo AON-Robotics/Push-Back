@@ -18,8 +18,10 @@ namespace aon {
   // TESTING_AUTONOMOUS flag. Access members via gui->method().
   extern std::unique_ptr<Gui> gui;
   
-  int RedRingsRoutine();
-  int BlueRingsRoutine();
+  namespace routines {
+    int RedRoutine();
+    int BlueRoutine();
+  }
     
   // Add other auton routine declarations as needed
 
@@ -74,23 +76,24 @@ public:
   GuiScreen currentScreen = MainMenu;
   GuiScreen previousScreen = MainMenu;
 
+  // TODO: move this to be only parameter based
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
-    {"Red AUT1", aon::RedRingsRoutine},
-    {"Red AUT2", aon::RedRingsRoutine},
-    {"Red AUT3", aon::RedRingsRoutine},
+    {"Red AUT1", aon::routines::RedRoutine},
+    {"Red AUT2", aon::routines::RedRoutine},
+    {"Red AUT3", aon::routines::RedRoutine},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {
-    {"Blue AUT1", aon::BlueRingsRoutine},
-    {"Blue AUT2", aon::BlueRingsRoutine},
-    {"Blue AUT3", aon::BlueRingsRoutine},
+    {"Blue AUT1", aon::routines::BlueRoutine},
+    {"Blue AUT2", aon::routines::BlueRoutine},
+    {"Blue AUT3", aon::routines::BlueRoutine},
   };
   
   AutonOption skillsAutonOptions[autonOptionsCount] = {
-    {"Skills AUT1", aon::RedRingsRoutine},
-    {"Skills AUT2", aon::RedRingsRoutine},
-    {"Skills AUT3", aon::RedRingsRoutine},
+    {"Skills AUT1", aon::routines::RedRoutine},
+    {"Skills AUT2", aon::routines::RedRoutine},
+    {"Skills AUT3", aon::routines::RedRoutine},
   };
 
 

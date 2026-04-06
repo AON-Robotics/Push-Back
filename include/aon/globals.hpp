@@ -8,12 +8,13 @@
 #include "../okapi/api.hpp"
 #include "./controls/pid/pid.hpp"
 #include "./tools/vector.hpp"
-#include "./x-drive/x-drive.hpp"
+#include "./h-drive/h-drive.hpp"
 #include "./intake/intake.hpp"
 #include "./tank-drive/tank-drive.hpp"
 #include "./h-drive/h-drive.hpp"
 #include "./orbit/orbit.hpp"
 #include "./drivetrain.hpp"
+#include "./odometry/odometry.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -26,23 +27,34 @@
 
 #if USING_BIG_ROBOT
 
+aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
+
 // Drivetrain
-aon::TankDrive drivetrain = aon::TankDrive({1, 11, -2, -13}, {-10, -20, 9, 19});
-okapi::MotorGroup mid({-16}); // Default make robot go right
+aon::HDrive drivetrain = aon::HDrive({-1, -2, 3, 4}, {12, -13, -18, 19}, {-15}, std::make_unique<aon::Odometry>(odometry));
 
-pros::ADIDigitalOut semPiston('F'); // Shrek Ear Mechanism
-pros::ADIDigitalOut brooksPiston('H');
+aon::Intake intake = aon::Intake({20, -11, -16}, {17}, 'Z', 0, 0);
 
-aon::Intake intake = aon::Intake({0}, {0}, {0}, {0}, {0}, {0}, 'G', 0, 0);
+pros::ADIDigitalOut semPiston('Z'); // Shrek Ear Mechanism
+pros::ADIDigitalOut brooksPiston('Z');
+
+void activateSEM() { semPiston.set_value(HIGH); }
+
+void deactivateSEM() { semPiston.set_value(LOW); }
+
+void activateBrooks() { brooksPiston.set_value(HIGH); }
+
+void deactivateBrooks() { brooksPiston.set_value(LOW); }
 
 #else
 
-aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
-// aon::TankDrive drivetrain = aon::TankDrive({-13, -12, 11, 14}, {16, -17, -19, 18});
+// aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
+aon::Odometry odometry = aon::Odometry(-5, 6, 0, 0, 7);
 
-aon::Intake intake = aon::Intake({6, -3}, {-2}, {-4, -7}, 'H', 'G', 5, 15);
+aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, std::make_unique<aon::Odometry>(odometry));
 
-pros::ADIDigitalOut arrowPiston('F');
+aon::Intake intake = aon::Intake({-11, 20}, {15}, {0 /*-12*/}, 'Z', 'Z', 0, 8);
+
+pros::ADIDigitalOut arrowPiston('Z');
 
 void activateArrow() { arrowPiston.set_value(HIGH); }
 
@@ -51,7 +63,7 @@ void deactivateArrow() { arrowPiston.set_value(LOW); }
 #endif
 
 // Misc
-aon::Orbit orbit(1,true,1,1);
+aon::Orbit orbit(0,true,0,0);
 
 // ============================================================================
 //   ___ ___ _  _ ___  ___  ___  ___ 
@@ -64,7 +76,7 @@ aon::Orbit orbit(1,true,1,1);
 // Encoders
 pros::Rotation turretEncoder(0, true);
 
-pros::ADIEncoder opticalEncoder('C', 'D');
+pros::ADIEncoder opticalEncoder('Z', 'Z');
 
 // Vision
 
@@ -85,7 +97,7 @@ pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE,
 pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 
 // Potentiometer
-pros::ADIPotentiometer potentiometer('P');
+pros::ADIPotentiometer potentiometer('Z');
 
 /// PIDs
 aon::PID drivePID = aon::PID(0.02, 0, 0);
@@ -123,13 +135,7 @@ inline void Configure(const bool opcontrol = true) {
   #if USING_BIG_ROBOT
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
   
-  intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::green);
-  
-  
-  // mid.setBrakeMode(okapi::AbstractMotor::brakeMode::brake);
-  // mid.setGearing(okapi::AbstractMotor::gearset::green);
-  // mid.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  // mid.tarePosition();
+  intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::blue);
   
   #else
   drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
