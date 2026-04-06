@@ -11,7 +11,7 @@
 
 // NOT using big robot = Using small robot
 #define USING_BIG_ROBOT true
-#define TESTING_AUTONOMOUS true
+#define TESTING_AUTONOMOUS false
 
 #define RED_ALLIANCE true
 #define BLUE_ALLIANCE !RED_ALLIANCE
@@ -21,10 +21,9 @@
 #define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
 #define DRIVE_WHEEL_DIAMETER 2.75
 #define TRACKING_WHEEL_DIAMETER 1.959
-#define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 5.0
-#define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 5.0
-#define DISTANCE_BACK_TRACKING_WHEEL_CENTER 9.0
-#define OFFSET_TRACKING_WHEEL 3.25
+#define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 1.572
+#define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 1.572
+#define DISTANCE_BACK_TRACKING_WHEEL_CENTER 1.572
 #define MOTOR_TO_DRIVE_RATIO 1.3 // NumTeethMotorGear / NumTeethWheelGear
 #define GYRO_ENABLED true
 #define GYRO_CONFIDENCE 1
@@ -46,7 +45,7 @@
 #define INITIAL_ODOMETRY_X 0.0
 #define INITIAL_ODOMETRY_Y 0.0
 #define INITIAL_ODOMETRY_THETA 0.0
-#define TURNING_THRESHOLD 1.5 * (M_PI/180) // 2.71
+#define TURNING_THRESHOLD 0.01
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD
@@ -55,35 +54,10 @@
 #define GPS_INITIAL_Y -0.47 // Field
 #define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
 
-#define MAX_RPM 600.0 // For the drivetrain
+#define MAX_RPM 600 // For the drivetrain
 #define INTAKE_VELOCITY 600
-#define MAX_ANGULAR_VELOCITY (MAX_VELOCITY_LINEAR / AVG_DRIVETRAIN_RADIUS)
 
-/// @brief Maximum linear acceleration without slippage
-/// @note vmax = wmax * r
-/// @note Unit: in/s (not RPM for now)
-#define MAX_LINEAR_VELOCITY (double) MAX_RPM * ((2 * M_PI) / 60) * (DRIVE_WHEEL_DIAMETER / 2)
-
-/// @brief Maximum linear acceleration without slippage
-/// @note Unit: rad/s (not RPM for now)
-// #define MAX_ANGULAR_VELOCITY (double)(MAX_LINEAR_VELOCITY / AVG_DRIVETRAIN_RADIUS)
-
-/// @brief Maximum linear acceleration without slippage
-///
-/// @see https://www.desmos.com/calculator/mctysmxspb
-/// @note Why not the normal MAX_ACCEL? The function used assumes
-///       is turning in its own axis. With holonomic motion that 
-///       that doesn't work.
-/// @note Unit: in/s^2 (not RPM for now)
-#define MAX_LINEAR_ACCEL 424.69659155
-
-/// @brief Maximum angular acceleration without slippage
-///
-/// @see https://www.desmos.com/calculator/mctysmxspb
-/// @note Unit: rad/s^2 (Not RPM for now)
-#define MAX_ANGULAR_ACCEL (MAX_LINEAR_ACCEL / AVG_DRIVETRAIN_RADIUS) 
-
-/// @brief Maximum acceleration without slippage in RPM/s
+/// @brief Maximum acceleration without slippage
 ///
 /// @see https://www.desmos.com/calculator/9e23f1f7b6
 #define MAX_ACCEL 4991.46340024
@@ -132,7 +106,6 @@
 #define INITIAL_ODOMETRY_X 0.0
 #define INITIAL_ODOMETRY_Y 0.0
 #define INITIAL_ODOMETRY_THETA 0.0
-#define TURNING_THRESHOLD 0.01
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD
@@ -141,11 +114,8 @@
 #define GPS_INITIAL_Y -0.47 // Field
 #define GPS_INITIAL_HEADING 298.8 // Field (in Degrees)
 
-#define MAX_RPM 600 // make sure to change this for each drivetrain
-#define MAX_VELOCITY_LINEAR (double)(MAX_RPM * 2 * M_PI * (TRACKING_WHEEL_DIAMETER / 2)) / 60 // inches / sec
-#define INTAKE_VELOCITY (int)(200 * 0.8)  // move to header file. intake motor is on green (200 RPM), running it at ~80%
-#define DEFAULT_INITIAL_SPEED 0.0
-#define DEFAULT_FINAL_SPEED 0.0
+#define MAX_RPM 600 // For the drivetrain
+#define INTAKE_VELOCITY 600
 
 /// @brief Maximum acceleration without slippage
 ///

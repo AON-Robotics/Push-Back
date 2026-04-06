@@ -219,12 +219,12 @@ namespace aon{
         #endif
 
         // Calculate delta theta if we dont have gyro
-        double deltaTheta = (encoderLeft_data.deltaDistance - encoderRight_data.deltaDistance) / (DISTANCE_RIGHT_TRACKING_WHEEL_CENTER + DISTANCE_LEFT_TRACKING_WHEEL_CENTER);
+        double deltaTheta = (encoderRight_data.deltaDistance - encoderLeft_data.deltaDistance) / (DISTANCE_RIGHT_TRACKING_WHEEL_CENTER + DISTANCE_LEFT_TRACKING_WHEEL_CENTER);
 
         // If we have gyro, get value and calculate delta
         #if GYRO_ENABLED 
         // Read gyro value
-        gyro_data.currentDegrees = gyroscope.get_heading(); // CCW positive
+        gyro_data.currentDegrees = -gyroscope.get_heading(); // CCW positive
         gyro_data.currentRadians = gyro_data.currentDegrees * (M_PI / 180);
 
         
@@ -251,23 +251,6 @@ namespace aon{
         // Right now, confidence gyro 1.0, encoder confidence 0 (must sum 1) 
         deltaTheta = (1 - GYRO_CONFIDENCE) * deltaTheta + GYRO_CONFIDENCE * gyro_data.deltaRadians;
         #endif
-        if (deltaTheta * (180/M_PI) > max) max = deltaTheta * (180/M_PI);
-        pros::lcd::print(3, "max: %0.3f", max);
-
-        if (std::abs(encoderRight_data.deltaDistance) > std::abs(maxRight)) maxRight = std::abs(encoderRight_data.deltaDistance);
-        pros::lcd::print(4, "max Right: %0.3f", maxRight);
-
-        if (std::abs(encoderLeft_data.deltaDistance) > std::abs(maxLeft)) maxLeft = std::abs(encoderLeft_data.deltaDistance);
-        pros::lcd::print(5, "max Left: %0.3f", maxLeft);
-
-        if (std::abs(encoderLeft_data.deltaDistance) - std::abs(encoderRight_data.deltaDistance) < minResta) 
-            minResta = std::abs(encoderLeft_data.deltaDistance) - std::abs(encoderRight_data.deltaDistance);
-        if (std::abs(encoderLeft_data.deltaDistance) - std::abs(encoderRight_data.deltaDistance) > maxResta) 
-            maxResta = std::abs(encoderLeft_data.deltaDistance) - std::abs(encoderRight_data.deltaDistance);
-
-        pros::lcd::print(6, "max resta: %0.3f", minResta);
-        pros::lcd::print(7, "min resta: %0.3f", maxResta);
-        
 
         // Updating angle
         double thetaMid = (getRadians() + deltaTheta) / 2; // Theta where change happen
@@ -280,8 +263,13 @@ namespace aon{
 
         /* ------------------ no math ------------------ */
         #if USING_BIG_ROBOT
-        double dx = ((encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2) - (OFFSET_TRACKING_WHEEL * deltaTheta);
-        double dy = encoderBack_data.deltaDistance - (deltaTheta * DISTANCE_BACK_TRACKING_WHEEL_CENTER); // delete the contribution from the back encoder in the turning
+        // Eliminate rotation induced component
+        double dL_corr = encoderLeft_data.deltaDistance -  DISTANCE_LEFT_TRACKING_WHEEL_CENTER  * deltaTheta;
+        double dR_corr = encoderRight_data.deltaDistance - DISTANCE_RIGHT_TRACKING_WHEEL_CENTER * deltaTheta;
+        double dS_corr = encoderBack_data.deltaDistance -  DISTANCE_BACK_TRACKING_WHEEL_CENTER  * deltaTheta;
+
+        double dx = (dL_corr + dR_corr) / 2.0;
+        double dy = dS_corr; // delete the contribution from the back encoder in the turning
         #else 
         changeMine.SetPosition(encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance / 2, 
                                 0.0);
@@ -318,13 +306,14 @@ namespace aon{
         // Else if the robot is moving straight forward or backward or sideways, average encoder values for distance    
         else {
             // std::cout << "Not turning\n";
-            double deltaD = ((encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) / 2.0) - (OFFSET_TRACKING_WHEEL * deltaTheta); // movement in X axis
-            std::cout << "Delta D: " << deltaD << "      supose to be close to 0\n";
+            double dL_corr = encoderLeft_data.deltaDistance -  DISTANCE_LEFT_TRACKING_WHEEL_CENTER  * deltaTheta;
+            double dR_corr = encoderRight_data.deltaDistance - DISTANCE_RIGHT_TRACKING_WHEEL_CENTER * deltaTheta;
+            double deltaD = (dL_corr + dR_corr) / 2.0; // movement in X axis
             deltaDlocal.SetPosition(deltaD, 0);
             
             // If we have encoder back
             #if USING_BIG_ROBOT 
-            double deltaY = encoderBack_data.deltaDistance - deltaTheta * DISTANCE_BACK_TRACKING_WHEEL_CENTER;
+            double deltaY = encoderBack_data.deltaDistance -  DISTANCE_BACK_TRACKING_WHEEL_CENTER  * deltaTheta;
             deltaDlocal.SetPosition(deltaD, deltaY);
             #endif
         }
@@ -364,7 +353,7 @@ namespace aon{
 
 
         // Reset encoder's struct variables
-        encoderRight_data = {currentAngleRight,                     // current position in degrees
+        encoderRight_data = {currentAngleRight,                    // current position in degrees
                             currentAngleRight,                     // previous position in degrees
                             0,                                     // delta in degrees
                             currentAngleRight * conversionFactor,  // current position in inches 
@@ -441,8 +430,8 @@ namespace aon{
         pros::lcd::print(1, "Right: %0.3f, %0.3f, %0.3f", encoderRight_data.currentDistance, encoderRight_data.previousDistance, encoderRight_data.deltaDistance);
         pros::lcd::print(2, "Back: %0.3f, %0.3f, %0.3f", encoderBack_data.currentDistance, encoderBack_data.previousDistance, encoderBack_data.deltaDistance);
         pros::lcd::print(3, "Heading: %0.3f", getDegrees());
-        pros::lcd::print(4, "Delta X: %0.3f, Y: %0.3f\n", deltaDlocal.GetX(), deltaDlocal.GetY());
-        pros::lcd::print(5, "X: %0.3f | Y: %0.3f", getX(), getY());
+        pros::lcd::print(4, "Original: X: %0.3f | Y: %0.3f", getX(), getY());
+        pros::lcd::print(5, "Not math: X: %0.3f | Y: %0.3f", changeMine.GetX(), changeMine.GetY());
         // pros::lcd::print(5, "Web:        X: %0.3f | Y: %0.3f", changeWeb.GetX(), changeWeb.GetY()); 
         // pros::lcd::print(6, "No Math:    X: %0.3f | Y: %0.3f", changeMine.GetX(), changeMine.GetY()); 
         // pros::lcd::print(7, "Video:       X: %0.3f | Y: %0.3f", changeVideo.GetX(), changeVideo.GetY()); 

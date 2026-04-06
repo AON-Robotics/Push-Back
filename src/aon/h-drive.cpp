@@ -43,18 +43,18 @@ void HDrive::moveHorizontalPID(double dist, PID pid, const double &MAX_REVS) {
   dist = abs(dist);                   // Setting the magnitude to positive
   pid.Reset();
   
-  Vector initialPos = odometry.getPosition();
+  Vector initialPos = odom.getPosition();
 
   const double timeLimit = math::estimateTimetoTarget(dist, MAX_REVS);
   const double start_time = pros::micros() / 1E6;
   #define time (pros::micros() / 1E6) - start_time  // every time the variable is called it is recalculated automatically
 
-  while ((odometry.getPosition() - initialPos).GetMagnitude() < dist) {
-    double currentDisplacement = (odometry.getPosition() - initialPos).GetMagnitude();
+  while ((odom.getPosition() - initialPos).GetMagnitude() < dist) {
+    double currentDisplacement = (odom.getPosition() - initialPos).GetMagnitude();
     double output = pid.Output(dist, currentDisplacement);
     pros::lcd::print(0, "Time Limit %.2f", timeLimit);
     pros::lcd::print(1, "Time: %.2f", time);
-    pros::lcd::print(2, "Odometry Displacement %.2f", currentDisplacement);
+    pros::lcd::print(2, "Odom Displacement %.2f", currentDisplacement);
     this->middleMotor.moveVelocity(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
     pros::delay(10);
   }
@@ -73,8 +73,8 @@ void HDrive::strafe(double dist) {
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  double startPos = odometry.encoderBack.get_position();
-  // Vector startPos = aon::odometry::GetPosition();
+  double startPos = odom.encoderBack.get_position();
+  // Vector startPos = aon::odom::GetPosition();
   
   double now = pros::micros() / 1E6;
   double lastTime = now;
@@ -82,7 +82,7 @@ void HDrive::strafe(double dist) {
   this->motionProfile.setVelocity(this->middleMotor.getActualVelocity());
   
   while (traveledDist < dist) {
-    traveledDist = (std::abs(odometry.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
+    traveledDist = (std::abs(odom.encoderBack.get_position() - startPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION;
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
     dt = now - lastTime;
