@@ -138,6 +138,14 @@ void GuiDebug::DisplayAutonRunner() {
   pros::screen::set_pen(COLOR_BLACK);
   pros::screen::print(pros::E_TEXT_MEDIUM, vcX1 + 18, vcY1 + 8, "VARS");
 
+    // RESET button
+  const int resetY1 = vcY2 + 10, resetY2 = resetY1 + 40;
+  const int resetX1 = vcX1, resetX2 = vcX2;
+  pros::screen::set_eraser(COLOR_RED);
+  pros::screen::erase_rect(resetX1, resetY1, resetX2, resetY2);
+  pros::screen::set_pen(COLOR_WHITE);
+  pros::screen::print(pros::E_TEXT_MEDIUM, resetX1 + 8, resetY1 + 8, "RESET");
+
   // Bottom RUN/MOV button - centered
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 70;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 20;
@@ -268,6 +276,20 @@ void GuiDebug::HandleAutonRunnerTouch() {
     }
   }
 
+    // RESET button
+  {
+    const int vcY2 = 70 + 40;
+    const int resetY1 = vcY2 + 10, resetY2 = resetY1 + 40;
+    const int resetX1 = BRAIN_SCREEN_WIDTH - 140, resetX2 = BRAIN_SCREEN_WIDTH - 40;
+    if (x >= resetX1 && x <= resetX2 && y >= resetY1 && y <= resetY2) {
+      invokeResetHandler();
+      DisplayAutonRunner();
+      pros::delay(300);
+      return;
+    }
+  }
+
+  
   // Bottom RUN/MOV button coordinates (must match display)
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 70;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 20;
