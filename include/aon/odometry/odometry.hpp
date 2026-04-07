@@ -46,7 +46,7 @@ namespace aon {
 
     };
 
-    class Odometry{
+    class Odometry {
 
     private:
         double deltaTheta;
@@ -66,10 +66,9 @@ namespace aon {
         pros::Mutex orientation_mutex;
 
     public: 
-        Odometry(); //constructor
+        Odometry(short left, short right, short back, short gps, short gyro);
+        Odometry(const Odometry& other);
 
-
-        //getters & setters
         double getX();
         double getY();
 

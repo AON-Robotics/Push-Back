@@ -5,7 +5,7 @@ void initialize() {
   pros::Task guiLoopTask([]{aon::gui->initialize();});
   aon::logging::Initialize();
   aon::Configure(false);
-  pros::Task odomTask([]{drivetrain.odom.initialize();});
+  pros::Task odomTask([]{drivetrain.initialize();});
   pros::delay(3000);
   pros::Task safetyTask(aon::autonSafety);
   // pros::Task turretFollowTask([]{orbit.follow();});
@@ -21,9 +21,9 @@ void competition_initialize() {}
 void autonomous() {
   aon::Configure(false); // Set drivetrain to hold for auton
   #if USING_BIG_ROBOT
-  aon::safeBigBotRoutine();
+  aon::routines::safeBigBotRoutine();
   #else
-  aon::testSmallBotRoutine();
+  aon::routines::smallBotRoutine();
   #endif
   // aon::autonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
@@ -40,10 +40,10 @@ void opcontrol() {
     aon::Configure(false); // Set drivetrain to hold for auton testing
 
     #if USING_BIG_ROBOT
-    aon::safeBigBotRoutine();
+    aon::routines::safeBigBotRoutine();
     #else
-    // aon::testSmallBotRoutine();
-    aon::testXDriveRoutine();
+    // aon::routines::smallBotRoutine();
+    aon::tests::square();
     #endif
 
     pros::delay(5000);
