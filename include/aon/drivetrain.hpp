@@ -40,10 +40,6 @@ class Drivetrain {
   }
   void setTheta(double theta) { this->pose.theta = theta; }
 
-  void resetPose(double x = 0.0, double y = 0.0, double theta = 0.0) {
-    this->odometry->resetCurrent(x, y, theta);
-  }
-
   bool isTurbo() { return this->turbo; }
   void setTurbo(bool turbo) { this->turbo = turbo; }
   void toggleTurbo() { this->turbo = !this->turbo; }
