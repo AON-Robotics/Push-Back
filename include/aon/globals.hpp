@@ -31,6 +31,13 @@ aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
 // Drivetrain
 aon::HDrive drivetrain = aon::HDrive({-1, -2, 3, 4}, {12, -13, -18, 19}, {-15}, std::make_unique<aon::Odometry>(odometry));
 
+// aon::Intake(
+//   elevatorPorts,       {20, -11, -16}
+//   judgePorts,          {17}
+//   shrimpPistonsPort,   'Z'
+//   distanceSensorPort,  0
+//   colorSensorPort,     0
+// )
 aon::Intake intake = aon::Intake({20, -11, -16}, {17}, 'Z', 0, 0);
 
 pros::ADIDigitalOut semPiston('Z'); // Shrek Ear Mechanism
@@ -51,7 +58,18 @@ aon::Odometry odometry = aon::Odometry(-5, 6, 0, 0, 7);
 
 aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, std::make_unique<aon::Odometry>(odometry));
 
-aon::Intake intake = aon::Intake({-11, 20}, {15}, {0 /*-12*/}, 'Z', 'Z', 0, 8);
+// aon::Intake(
+//   elevatorPorts,       {-11, 20}
+//   judgePorts,          {15}
+//   scorerPorts,         {0 /*-12*/}
+//   scorerPistonPort,    'Z'
+//   cartPistonPort,      'Z'
+//   distanceSensorPort,  0
+//   colorSensorPort,     8
+//   proximitySensorPort, 'Z' // TODO: set proximity sensor port
+//   acceptSensorPort,    'Z' // TODO: set accept sensor port
+// )
+aon::Intake intake = aon::Intake({-11, 20}, {15}, {0 /*-12*/}, 'Z', 'Z', 0, 8, 'Z', 'Z');
 
 pros::ADIDigitalOut arrowPiston('Z');
 
