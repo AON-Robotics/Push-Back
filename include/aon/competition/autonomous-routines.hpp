@@ -266,7 +266,7 @@ void visionSensorDistance(){
     pros::vision_object block = orbit.getLargestObject();
     if(block.signature == RED){
       const double distance = orbit.groundDistanceToDisk(block.width);
-      if(!std::isnormal(distance)) { continue; }
+      if(!::std::isnormal(distance)) { continue; }
       const double avg = readingMav.update(distance);
       const double filtered = ekf.filter(distance); // this seems to be the best alternative out of the 2
       const double avgDif = avgMav.update(math::getPercentDifference(avg, distance));
@@ -374,6 +374,8 @@ void xDriveRoutine(){
 //                                                                             |
 // ============================================================================|
 
+namespace routines {
+
 #if USING_BIG_ROBOT
 
 int RedRoutine(){
@@ -399,7 +401,7 @@ void safeBigBotRoutine(){
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
   intake.raiseShrimp(); // Reset loader mechanism.
-  intake.score(Intake::TOP, Intake::BOTTOM, 8000); // Score all 9 blocks.
+  intake.score(Intake::TOP, 8000); // Score all 9 blocks.
   drivetrain.move(15); // Go back a little.
   drivetrain.turn(-90); // Orient towards parking.
   drivetrain.move(12); // Move towards parking.
@@ -408,7 +410,7 @@ void safeBigBotRoutine(){
   drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
   pros::delay(1000); // for a bit of time,
   drivetrain.stop(); // then stop.
-  brooksPiston.set_value(HIGH); // Park.
+  activateBrooks(); // Park.
   intake.stopScan();
   //* Works till here
 }
@@ -439,7 +441,7 @@ void BigBotSkillsRoutine(){
   drivetrain.motors(MAX_RPM);
   pros::delay(1000); 
   drivetrain.stop(); 
-  brooksPiston.set_value(HIGH); 
+  activateBrooks(); 
   //empy the match loader 
   //empty match loader across 
   //Park
@@ -556,6 +558,8 @@ void smallbotjorgeg(){
 }
 
 #endif
+
+} // namespace aon::routines
 
 };  // namespace aon
 

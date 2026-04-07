@@ -60,12 +60,11 @@ inline double ApplySpeed(const double& input, const double& percentage){
 #if USING_BIG_ROBOT
 bool shrimpOut = false;
 bool brooksUp = false;
-bool wingsOut = false;
+bool semOut = false;
 #else
 bool cartOut = false;
 bool scorerUp = false;
 bool arrowOut = false;
-bool turbo = false;
 #endif
 
 /// Default Operator Control configuration
@@ -80,54 +79,35 @@ inline void DriveDefault() {
 
   #if USING_BIG_ROBOT
 
-  if(mainController.get_digital(DIGITAL_R2)){
-    intake.activateScan();
-    intake.frontElevator();
-    intake.backElevator();
-  }
-  else {
-    intake.stopScan();
-  }
+  // TODO: discuss with driver if he wants this functionality (probably will)
+  // if(mainController.get_digital(DIGITAL_R1)){
+  //   intake.activateScan();
+  //   intake.elevator();
+  // }
+  // else {
+  //   intake.stopScan();
+  // }
 
-  if(mainController.get_digital(DIGITAL_Y)){
-    intake.hoard();
+  if(mainController.get_digital(DIGITAL_L1)){
+    intake.score(Intake::TOP);
   }
-
   else if(mainController.get_digital(DIGITAL_L2)){
+    intake.score(Intake::MIDDLE);
+  }
+  else if(mainController.get_digital(DIGITAL_R2)){
     intake.score(Intake::BOTTOM);
   } 
-  // Score Mid from Top
-  else if(mainController.get_digital(DIGITAL_RIGHT)){
-    intake.score(Intake::MIDDLE, Intake::TOP);
-  }
   else if(!intake.isScanning()){
-    intake.frontElevator(0);
-    intake.scorer(0);
-    intake.hoarder(0);
-    intake.backElevator(0);
-  }
-
-  // Score High
-  if(mainController.get_digital(DIGITAL_B)) {
-    intake.shotbelt();
-    intake.shooter(200);
-  }
-
-  if(!(mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_B) || mainController.get_digital(DIGITAL_RIGHT))) {
-    intake.shooter(0);
-  }
-
-  if(!(mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_RIGHT) || mainController.get_digital(DIGITAL_B)) && !intake.isScanning()){
-    intake.shotbelt(0);
+    intake.stop();
   }
 
   // Change Brooks Height
   if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    brooksPiston.set_value(toggle(brooksUp) ? HIGH : LOW);
+    toggle(brooksUp) ? activateBrooks() : deactivateBrooks();
   }
   // Toggle SEM
   else if(mainController.get_digital_new_press(DIGITAL_R1)) {
-    semPiston.set_value(toggle(wingsOut) ? HIGH : LOW);
+    toggle(semOut) ? activateSEM() : deactivateSEM();
   }
   // Match loaders mechanism
   else if(mainController.get_digital_new_press(DIGITAL_L1)) {
