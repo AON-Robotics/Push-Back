@@ -11,7 +11,7 @@ namespace aon {
 
 // Field view: 200×200 px square, anchored top-left with padding
 static constexpr int  FM_FX1    = 5;    // field view left edge
-static constexpr int  FM_FY1    = 28;   // field view top edge
+static constexpr int  FM_FY1    = 36;   // field view top edge (below 28px header)
 static constexpr int  FM_FSIZE  = 200;  // pixel width/height of the field square
 static constexpr int  FM_FX2    = FM_FX1  + FM_FSIZE;
 static constexpr int  FM_FY2    = FM_FY1  + FM_FSIZE;
@@ -77,27 +77,30 @@ static void computeArc(const GuiDebug::MapPoint* buf, int start, int end,
 }
 
 // ============================================================================
-// Display
+// DISPLAY FUNCTIONS
 // ============================================================================
 
 void GuiDebug::DisplayFieldMapper() {
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
 
-  // ── Header bar ────────────────────────────────────────────────────────────
-  // [BACK]  FIELD MAPPER  [CLEAR]
+  // Header
+  pros::screen::set_pen(COLOR_WHITE);
+  pros::screen::print(pros::E_TEXT_MEDIUM, BRAIN_SCREEN_WIDTH / 2 - 55, 10, "FIELD MAPPER");
+
+  // BACK button
+  const int backX1 = 10, backY1 = 6, backX2 = backX1 + 80, backY2 = backY1 + 28;
   pros::screen::set_eraser(COLOR_DARK_GRAY);
-  pros::screen::erase_rect(5, 2, 70, 24);
+  pros::screen::erase_rect(backX1, backY1, backX2, backY2);
   pros::screen::set_pen(COLOR_WHITE);
-  pros::screen::print(pros::E_TEXT_SMALL, 14, 8, "BACK");
+  pros::screen::print(pros::E_TEXT_MEDIUM, backX1 + 10, backY1 + 6, "BACK");
 
+  // CLEAR button
+  const int clearX1 = BRAIN_SCREEN_WIDTH - 90, clearY1 = 6, clearX2 = BRAIN_SCREEN_WIDTH - 10, clearY2 = clearY1 + 28;
   pros::screen::set_eraser(COLOR_RED);
-  pros::screen::erase_rect(BRAIN_SCREEN_WIDTH - 75, 2, BRAIN_SCREEN_WIDTH - 5, 24);
+  pros::screen::erase_rect(clearX1, clearY1, clearX2, clearY2);
   pros::screen::set_pen(COLOR_WHITE);
-  pros::screen::print(pros::E_TEXT_SMALL, BRAIN_SCREEN_WIDTH - 63, 8, "CLEAR");
-
-  pros::screen::set_pen(COLOR_WHITE);
-  pros::screen::print(pros::E_TEXT_MEDIUM, BRAIN_SCREEN_WIDTH / 2 - 55, 5, "FIELD MAPPER");
+  pros::screen::print(pros::E_TEXT_MEDIUM, clearX1 + 10, clearY1 + 6, "CLEAR");
 
   // ── Field view ────────────────────────────────────────────────────────────
   // Outer border
@@ -380,85 +383,92 @@ void GuiDebug::DisplayFieldMapper() {
 }
 
 // ============================================================================
-// Touch Handler
+// TOUCH HANDLERS
 // ============================================================================
 
 void GuiDebug::HandleFieldMapperTouch() {
-  pros::screen_touch_status_s_t touch = pros::screen::touch_status();
+  const auto touch = pros::screen::touch_status();
   if (touch.touch_status <= 0) return;
 
-  static uint32_t lastTouchMs = 0;
-  uint32_t now = pros::millis();
-  if (now - lastTouchMs < 300) return;
-  lastTouchMs = now;
+  int x = touch.x;
+  int y = touch.y;
 
-  int tx = touch.x;
-  int ty = touch.y;
-
-  // ── BACK button (top-left) ────────────────────────────────────────────────
-  if (tx >= 5 && tx <= 70 && ty >= 2 && ty <= 24) {
-    DisplayDebugMenu();
-    currentScreen = DebugMenu;
-    return;
-  }
-
-  // ── CLEAR button (top-right) ──────────────────────────────────────────────
-  if (tx >= BRAIN_SCREEN_WIDTH - 75 && tx <= BRAIN_SCREEN_WIDTH - 5 &&
-      ty >= 2 && ty <= 24) {
-    ClearMapPath();
-    DisplayFieldMapper();
-    return;
-  }
-
-  // ── MARK START / MARK END / DISPLACE / ARC MEAS buttons ─────────────────
-  const int btnY1 = BRAIN_SCREEN_HEIGHT - 35;
-  const int btnY2 = BRAIN_SCREEN_HEIGHT - 5;
-  const int halfW = (FM_DW - 6) / 2;
-  const int markSX2 = FM_DX + halfW;
-  const int markEX1 = FM_DX + halfW + 6;
-  const int markEX2 = FM_DX + FM_DW;
-
-  if (tx >= FM_DX && tx <= markSX2 && ty >= btnY1 && ty <= btnY2) {
-    if (mapMode == MapMode::SELECT) {
-      // Enter DISPLACEMENT mode
-      mapMode = MapMode::DISPLACEMENT;
-      arcStartIndex = -1;
-      dispEndIndex  = -1;
-    } else if (mapMode == MapMode::DISPLACEMENT) {
-      // MARK START
-      arcStartIndex = (mapBufferCount > 0) ? mapBufferCount - 1 : 0;
-      dispEndIndex  = -1;
-    } else if (mapMode == MapMode::ARC) {
-      // MARK START
-      arcStartIndex = (mapBufferCount > 0) ? mapBufferCount - 1 : 0;
-      arcMeasured   = false;
-      arcResult     = {};
+  // BACK button
+  {
+    const int backX1 = 10, backY1 = 6, backX2 = backX1 + 80, backY2 = backY1 + 28;
+    if (x >= backX1 && x <= backX2 && y >= backY1 && y <= backY2) {
+      DisplayDebugMenu();
+      currentScreen = DebugMenu;
+      pros::delay(300);
+      return;
     }
-    DisplayFieldMapper();
-    return;
   }
 
-  if (tx >= markEX1 && tx <= markEX2 && ty >= btnY1 && ty <= btnY2) {
-    if (mapMode == MapMode::SELECT) {
-      // Enter ARC mode
-      mapMode = MapMode::ARC;
-      arcStartIndex = -1;
-      arcMeasured   = false;
-      arcResult     = {};
-    } else if (mapMode == MapMode::DISPLACEMENT) {
-      // MARK END for displacement
-      if (arcStartIndex >= 0 && mapBufferCount > arcStartIndex) {
-        dispEndIndex = mapBufferCount - 1;
-      }
-    } else if (mapMode == MapMode::ARC) {
-      // MARK END — compute arc
-      if (arcStartIndex >= 0 && mapBufferCount > arcStartIndex + 1) {
-        computeArc(mapBuffer, arcStartIndex, mapBufferCount - 1, arcResult);
-        arcMeasured = arcResult.valid;
-      }
+  // CLEAR button
+  {
+    const int clearX1 = BRAIN_SCREEN_WIDTH - 90, clearY1 = 6;
+    const int clearX2 = BRAIN_SCREEN_WIDTH - 10, clearY2 = clearY1 + 28;
+    if (x >= clearX1 && x <= clearX2 && y >= clearY1 && y <= clearY2) {
+      ClearMapPath();
+      DisplayFieldMapper();
+      pros::delay(300);
+      return;
     }
-    DisplayFieldMapper();
-    return;
+  }
+
+  // Mode / Mark buttons (bottom of data panel)
+  {
+    const int btnY1 = BRAIN_SCREEN_HEIGHT - 35;
+    const int btnY2 = BRAIN_SCREEN_HEIGHT - 5;
+    const int halfW = (FM_DW - 6) / 2;
+    const int markSX2 = FM_DX + halfW;
+    const int markEX1 = FM_DX + halfW + 6;
+    const int markEX2 = FM_DX + FM_DW;
+
+    if (x >= FM_DX && x <= markSX2 && y >= btnY1 && y <= btnY2) {
+      if (mapMode == MapMode::SELECT) {
+        // Enter DISPLACEMENT mode
+        mapMode = MapMode::DISPLACEMENT;
+        arcStartIndex = -1;
+        dispEndIndex  = -1;
+      } else if (mapMode == MapMode::DISPLACEMENT) {
+        // MARK START
+        arcStartIndex = (mapBufferCount > 0) ? mapBufferCount - 1 : 0;
+        dispEndIndex  = -1;
+      } else if (mapMode == MapMode::ARC) {
+        // MARK START
+        arcStartIndex = (mapBufferCount > 0) ? mapBufferCount - 1 : 0;
+        arcMeasured   = false;
+        arcResult     = {};
+      }
+      DisplayFieldMapper();
+      pros::delay(300);
+      return;
+    }
+
+    if (x >= markEX1 && x <= markEX2 && y >= btnY1 && y <= btnY2) {
+      if (mapMode == MapMode::SELECT) {
+        // Enter ARC mode
+        mapMode = MapMode::ARC;
+        arcStartIndex = -1;
+        arcMeasured   = false;
+        arcResult     = {};
+      } else if (mapMode == MapMode::DISPLACEMENT) {
+        // MARK END for displacement
+        if (arcStartIndex >= 0 && mapBufferCount > arcStartIndex) {
+          dispEndIndex = mapBufferCount - 1;
+        }
+      } else if (mapMode == MapMode::ARC) {
+        // MARK END — compute arc
+        if (arcStartIndex >= 0 && mapBufferCount > arcStartIndex + 1) {
+          computeArc(mapBuffer, arcStartIndex, mapBufferCount - 1, arcResult);
+          arcMeasured = arcResult.valid;
+        }
+      }
+      DisplayFieldMapper();
+      pros::delay(300);
+      return;
+    }
   }
 }
 
