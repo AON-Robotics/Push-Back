@@ -60,12 +60,11 @@ inline double ApplySpeed(const double& input, const double& percentage){
 #if USING_BIG_ROBOT
 bool shrimpOut = false;
 bool brooksUp = false;
-bool wingsOut = false;
+bool semOut = false;
 #else
 bool cartOut = false;
 bool scorerUp = false;
 bool arrowOut = false;
-bool turbo = false;
 #endif
 
 /// Default Operator Control configuration
@@ -104,11 +103,11 @@ inline void DriveDefault() {
 
   // Change Brooks Height
   if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    brooksPiston.set_value(toggle(brooksUp) ? HIGH : LOW);
+    toggle(brooksUp) ? activateBrooks() : deactivateBrooks();
   }
   // Toggle SEM
   else if(mainController.get_digital_new_press(DIGITAL_R1)) {
-    semPiston.set_value(toggle(wingsOut) ? HIGH : LOW);
+    toggle(semOut) ? activateSEM() : deactivateSEM();
   }
   // Match loaders mechanism
   else if(mainController.get_digital_new_press(DIGITAL_L1)) {
