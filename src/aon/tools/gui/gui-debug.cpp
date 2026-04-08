@@ -232,14 +232,14 @@ void GuiDebug::HandleDebugMenuTouch() {
 
     int btnWidth = 100, btnHeight = 55, gap = 10;
     int startX = 20, startY = 65;
-    struct BtnPos { int col, row, index; };
+    struct BtnPos { int col, row; };
     BtnPos buttons[] = {
-      {0, 0, 0}, // Registered Autons
-      {1, 0, 1}, // Live Graph
-      {2, 0, 3}, // Variables
-      {0, 1, 2}, // Auton Runner
-      {1, 1, 4}, // Data
-      {2, 1, 5}, // Field Map
+      {0, 0}, // Registered Autons
+      {1, 0}, // Live Graph
+      {2, 0}, // Variables
+      {0, 1}, // Auton Runner
+      {1, 1}, // Data
+      {2, 1}, // Field Map
     };
     
     for (int i = 0; i < 6; ++i) {
@@ -247,7 +247,7 @@ void GuiDebug::HandleDebugMenuTouch() {
       int btnY = startY + buttons[i].row * (btnHeight + gap);
       
       if (x >= btnX && x <= btnX + btnWidth && y >= btnY && y <= btnY + btnHeight) {
-        switch (buttons[i].index) {
+        switch (i) {
           case 0: DisplayRegisteredAutonsMenu(); currentScreen = RegisteredFunctions; break;
           case 1: DisplayLiveGraph(); currentScreen = LiveGraph; break;
           case 2: DisplayAutonRunner(); currentScreen = AutonRunner; break;

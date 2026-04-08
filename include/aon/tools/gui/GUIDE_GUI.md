@@ -453,7 +453,7 @@ drivetrain.driveAngleOfArc(-12.5, 90.0);
 
 - Only active under `GuiDebug` (`TESTING_AUTONOMOUS true`). No-op on base `Gui`.
 - Call `setMapDataProvider()` **before** `aon::gui->initialize()`.
-- Buffer holds up to 1 000 points; once full, new points are dropped until **CLEAR** is pressed.
+- Buffer holds up to 600 points; once full, new points are dropped until **CLEAR** is pressed.
 - Arc results use `DRIVE_WIDTH` from `constants.hpp` for Inner/Out values, so they automatically reflect whichever robot is selected via `USING_BIG_ROBOT`.
 
 ---

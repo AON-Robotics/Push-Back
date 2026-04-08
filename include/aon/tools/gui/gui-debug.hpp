@@ -64,14 +64,8 @@ public:
 
   // ── Field Mapper ──────────────────────────────────────────────────────────
 
-  struct MapPoint {
-    double x;      // inches, field-center origin
-    double y;      // inches, field-center origin
-    double theta;  // radians (same as Pose)
-  };
-
   static constexpr int MAP_BUFFER_SIZE = 600;
-  MapPoint mapBuffer[MAP_BUFFER_SIZE] = {};
+  Pose mapBuffer[MAP_BUFFER_SIZE] = {};
   int      mapBufferCount  = 0;   // number of valid points (0..MAP_BUFFER_SIZE)
   double   mapTotalDist    = 0.0; // cumulative distance traveled (inches)
 
@@ -99,7 +93,7 @@ public:
   void setMapDataProvider(std::function<Pose()> getPose) override;
 
   // Append a new pose sample; computes running distance
-  void AddMapPoint(double x, double y, double theta);
+  void AddMapPoint(double x, double y, double theta);  // theta in degrees (matches Pose)
 
   // Erase all recorded path data and reset arc state
   void ClearMapPath();
@@ -135,29 +129,12 @@ public:
   void HandleDataMenuTouch();
   void HandleFieldMapperTouch();
 
-  // API: register a variable to be editable in Debug Menu 3.
-  // T must support + and - (detected via std::void_t).
-  template <
-    typename T,
-    typename = std::void_t<
-      decltype(std::declval<T>() + std::declval<T>()),
-      decltype(std::declval<T>() - std::declval<T>())
-    >
-  >
-  void variableChanger(T& variableRef, const std::string& name) {
+  // Override the type-erased virtual; called by the template in the base class
+  void variableChangerImpl(const std::string& name,std::function<double()> get,std::function<void(double)> apply) override {
     for (const auto& e : variableEntries) {
       if (e.name == name) return;
     }
-    variableEntries.push_back({
-      name,
-      [&variableRef]() -> double { return static_cast<double>(variableRef); },
-      [&variableRef](double delta) { variableRef += static_cast<T>(delta); }
-    });
-  }
-
-  // Override the virtual base to ensure calls through Gui* hit the template above
-  void variableChanger(double& variableRef, const std::string& name) override {
-    variableChanger<double>(variableRef, name);
+    variableEntries.push_back({name, std::move(get), std::move(apply)});
   }
 
   // Allow user code to provide a register
