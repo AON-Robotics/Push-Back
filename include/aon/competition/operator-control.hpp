@@ -132,14 +132,20 @@ inline void DriveDefault() {
   else if(mainController.get_digital(DIGITAL_L1)) {
     intake.score(Intake::BOTTOM);
   }
-  // Score Top
-  if(mainController.get_digital(DIGITAL_R1)) {
-    intake.scorer();
-  }
+
+  // Lever // TODO: make this behavior native to the intake class
+  if(mainController.get_digital_new_press(DIGITAL_R1) && intake.leverController->isSettled()) {
+    intake.leverController->setMaxVelocity(100);
+    intake.leverController->setTarget(140);
+  } else if (intake.leverController->getError() < 10) {
+    intake.leverController->setMaxVelocity(100);
+    intake.leverController->setTarget(0);
+  } 
   
-  if(!(mainController.get_digital(DIGITAL_R1) || mainController.get_digital(DIGITAL_L1))){
-    intake.scorer(0);
+  if (mainController.get_digital_new_press(DIGITAL_R1)) {
+    intake.leverController->setMaxVelocity(200);
   }
+
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
     intake.elevator(0);
     intake.judge(0);

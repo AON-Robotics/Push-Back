@@ -150,7 +150,9 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
       scorerPiston(scorerPistonPort),
       cartPiston(cartPistonPort),
       distanceSensor(distanceSensorPort),
-      colorSensor(colorSensorPort) {}
+      colorSensor(colorSensorPort) {
+        this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
+      }
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
@@ -167,6 +169,8 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
   scorerMG.setGearing(gearset);
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
+
+  leverController->tarePosition();
 }
 
 void Intake::move(const int& rpm) {
@@ -293,7 +297,10 @@ void Intake::dropCart() { cartPiston.set_value(HIGH); }
 
 void Intake::raiseCart() { cartPiston.set_value(LOW); }
 
-void Intake::scorer(const int& rpm) { scorerMG.moveVelocity(rpm); }
+void Intake::scorer(const int& rpm) {
+  // TODO: modify logic for the lever
+  scorerMG.moveVelocity(rpm);
+}
 
 #endif
 

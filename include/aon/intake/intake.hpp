@@ -72,6 +72,7 @@ class Intake {
   volatile bool scanning = true;
 
  public:
+  std::shared_ptr<okapi::AsyncPositionController<double, double>> leverController = nullptr;
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
