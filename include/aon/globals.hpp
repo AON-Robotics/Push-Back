@@ -165,7 +165,7 @@ void testEndpoint(int speed = 100){
 /// @brief Task to stop all motors during auton testing if something goes wrong
 void autonSafety(){
   while(true){
-    while(mainController.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
+    while(mainController.get_digital(DIGITAL_X)){
       STOP();
     }
     pros::delay(50);
