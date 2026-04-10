@@ -8,29 +8,29 @@ namespace aon {
 // Field Mapper — color constants
 // ============================================================================
 
-static constexpr uint32_t FIELDMAPPER_COLOR_FIELD_BG       = 0x1A1A1A; // field background
-static constexpr uint32_t FIELDMAPPER_COLOR_GRID           = 0x333333; // tile grid lines
-static constexpr uint32_t FIELDMAPPER_COLOR_ORIGIN         = 0x444444; // field origin cross
-static constexpr uint32_t FIELDMAPPER_COLOR_LABEL_DIM      = 0x555555; // placeholder / no-data text
-static constexpr uint32_t FIELDMAPPER_COLOR_LABEL_HINT     = 0x888888; // SELECT mode hint text
-static constexpr uint32_t FIELDMAPPER_COLOR_BTN_DISPLACE   = 0x005566; // DISPLACE button
-static constexpr uint32_t FIELDMAPPER_COLOR_BTN_ARC_IDLE   = 0x005500; // ARC/MARK START inactive
-static constexpr uint32_t FIELDMAPPER_COLOR_BTN_END_IDLE   = 0x000055; // MARK END inactive
+static constexpr uint32_t COLOR_FIELD_BG       = 0x1A1A1A; // field background
+static constexpr uint32_t COLOR_GRID           = 0x333333; // tile grid lines
+static constexpr uint32_t COLOR_ORIGIN         = 0x444444; // field origin cross
+static constexpr uint32_t COLOR_LABEL_DIM      = 0x555555; // placeholder / no-data text
+static constexpr uint32_t COLOR_LABEL_HINT     = 0x888888; // SELECT mode hint text
+static constexpr uint32_t COLOR_BTN_DISPLACE   = 0x005566; // DISPLACE button
+static constexpr uint32_t COLOR_BTN_ARC_IDLE   = 0x005500; // ARC/MARK START inactive
+static constexpr uint32_t COLOR_BTN_END_IDLE   = 0x000055; // MARK END inactive
 
 // ============================================================================
 // Field Mapper — layout constants
 // ============================================================================
 
 // Field view: 200×200 px square, anchored top-left with padding
-static constexpr int  FIELDMAPPER_FIELDX1    = 5;    // field view left edge
-static constexpr int  FIELDMAPPER_FIELDY1    = 36;   // field view top edge (below 28px header)
-static constexpr int  FIELDMAPPER_FSIZE  = 200;  // pixel width/height of the field square
-static constexpr int  FIELDMAPPER_FIELDX2    = FIELDMAPPER_FIELDX1  + FIELDMAPPER_FSIZE;
-static constexpr int  FIELDMAPPER_FIELDY2    = FIELDMAPPER_FIELDY1  + FIELDMAPPER_FSIZE;
+static constexpr int  FIELDX1    = 5;    // field view left edge
+static constexpr int  FIELDY1    = 36;   // field view top edge (below 28px header)
+static constexpr int  FSIZE  = 200;  // pixel width/height of the field square
+static constexpr int  FIELDX2    = FIELDX1  + FSIZE;
+static constexpr int  FIELDY2    = FIELDY1  + FSIZE;
 
 // Data panel sits to the right of the field view
-static constexpr int  FIELDMAPPER_DX     = FIELDMAPPER_FIELDX2 + 8;  // data panel left edge (x=213)
-static constexpr int  FIELDMAPPER_DW     = BRAIN_SCREEN_WIDTH - FIELDMAPPER_DX - 4; // ~263 px
+static constexpr int  DX     = FIELDX2 + 8;  // data panel left edge (x=213)
+static constexpr int  DW     = BRAIN_SCREEN_WIDTH - DX - 4; // ~263 px
 
 // Half-field size in inches (6 tiles × TILE_WIDTH / 2)
 static constexpr double FIELD_HALF = 6.0 * TILE_WIDTH / 2.0; // ≈ 70.866 in
@@ -38,12 +38,12 @@ static constexpr double FIELD_HALF = 6.0 * TILE_WIDTH / 2.0; // ≈ 70.866 in
 // ── Coordinate helpers ──────────────────────────────────────────────────────
 
 static int fieldToScreenX(double x) {
-  return FIELDMAPPER_FIELDX1 + static_cast<int>((x + FIELD_HALF) / (2.0 * FIELD_HALF) * FIELDMAPPER_FSIZE);
+  return FIELDX1 + static_cast<int>((x + FIELD_HALF) / (2.0 * FIELD_HALF) * FSIZE);
 }
 
 static int fieldToScreenY(double y) {
   // y increases upward on field, downward on screen → flip
-  return FIELDMAPPER_FIELDY2 - static_cast<int>((y + FIELD_HALF) / (2.0 * FIELD_HALF) * FIELDMAPPER_FSIZE);
+  return FIELDY2 - static_cast<int>((y + FIELD_HALF) / (2.0 * FIELD_HALF) * FSIZE);
 }
 
 // ── Arc computation ──────────────────────────────────────────────────────────
@@ -117,22 +117,22 @@ void GuiDebug::DisplayFieldMapper() {
   // ── Field view ────────────────────────────────────────────────────────────
   // Outer border
   pros::screen::set_eraser(COLOR_DARK_GRAY);
-  pros::screen::erase_rect(FIELDMAPPER_FIELDX1 - 1, FIELDMAPPER_FIELDY1 - 1, FIELDMAPPER_FIELDX2 + 1, FIELDMAPPER_FIELDY2 + 1);
+  pros::screen::erase_rect(FIELDX1 - 1, FIELDY1 - 1, FIELDX2 + 1, FIELDY2 + 1);
   // Field background
-  pros::screen::set_eraser(FIELDMAPPER_COLOR_FIELD_BG);
-  pros::screen::erase_rect(FIELDMAPPER_FIELDX1, FIELDMAPPER_FIELDY1, FIELDMAPPER_FIELDX2, FIELDMAPPER_FIELDY2);
+  pros::screen::set_eraser(COLOR_FIELD_BG);
+  pros::screen::erase_rect(FIELDX1, FIELDY1, FIELDX2, FIELDY2);
 
   // Tile grid (6 tiles → 7 lines in each direction)
-  pros::screen::set_pen(FIELDMAPPER_COLOR_GRID);
+  pros::screen::set_pen(COLOR_GRID);
   for (int i = 0; i <= 6; ++i) {
-    int px = FIELDMAPPER_FIELDX1 + i * FIELDMAPPER_FSIZE / 6;
-    int py = FIELDMAPPER_FIELDY1 + i * FIELDMAPPER_FSIZE / 6;
-    pros::screen::draw_line(px, FIELDMAPPER_FIELDY1, px, FIELDMAPPER_FIELDY2);
-    pros::screen::draw_line(FIELDMAPPER_FIELDX1, py, FIELDMAPPER_FIELDX2, py);
+    int px = FIELDX1 + i * FSIZE / 6;
+    int py = FIELDY1 + i * FSIZE / 6;
+    pros::screen::draw_line(px, FIELDY1, px, FIELDY2);
+    pros::screen::draw_line(FIELDX1, py, FIELDX2, py);
   }
 
   // Field origin cross (faint)
-  pros::screen::set_pen(FIELDMAPPER_COLOR_ORIGIN);
+  pros::screen::set_pen(COLOR_ORIGIN);
   int ox = fieldToScreenX(0.0);
   int oy = fieldToScreenY(0.0);
   pros::screen::draw_line(ox - 5, oy, ox + 5, oy);
@@ -186,8 +186,8 @@ void GuiDebug::DisplayFieldMapper() {
   }
 
   // ── Data panel ────────────────────────────────────────────────────────────
-  const int dx = FIELDMAPPER_DX;
-  int dy = FIELDMAPPER_FIELDY1;
+  const int dx = DX;
+  int dy = FIELDY1;
   const int rowH = 22;
 
   // Current pose values (from last map point, or zeros)
@@ -228,8 +228,8 @@ void GuiDebug::DisplayFieldMapper() {
   dy += rowH;
 
   // Separator
-  pros::screen::set_eraser(FIELDMAPPER_COLOR_GRID);
-  pros::screen::erase_rect(dx, dy, dx + FIELDMAPPER_DW, dy + 1);
+  pros::screen::set_eraser(COLOR_GRID);
+  pros::screen::erase_rect(dx, dy, dx + DW, dy + 1);
   dy += 6;
 
   // ── Stats panel ──────────────────────────────────────────────────────────
@@ -274,11 +274,11 @@ void GuiDebug::DisplayFieldMapper() {
 
       dy += rowH * 2; // padding to match row count
     } else if (arcStartIndex >= 0) {
-      pros::screen::set_pen(FIELDMAPPER_COLOR_LABEL_DIM);
+      pros::screen::set_pen(COLOR_LABEL_DIM);
       pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "-- mark end --");
       dy += rowH * 3;
     } else {
-      pros::screen::set_pen(FIELDMAPPER_COLOR_LABEL_DIM);
+      pros::screen::set_pen(COLOR_LABEL_DIM);
       pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "-- mark start --");
       dy += rowH * 3;
     }
@@ -333,13 +333,13 @@ void GuiDebug::DisplayFieldMapper() {
       }
       dy += rowH;
     } else {
-      pros::screen::set_pen(FIELDMAPPER_COLOR_LABEL_DIM);
+      pros::screen::set_pen(COLOR_LABEL_DIM);
       pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "ARC: --");
       dy += rowH * 4;
     }
   } else {
     // SELECT mode — prompt
-    pros::screen::set_pen(FIELDMAPPER_COLOR_LABEL_HINT);
+    pros::screen::set_pen(COLOR_LABEL_HINT);
     pros::screen::print(pros::E_TEXT_SMALL, dx, dy, "Select mode below:");
     dy += rowH * 4;
   }
@@ -347,46 +347,46 @@ void GuiDebug::DisplayFieldMapper() {
   // ── Bottom buttons ────────────────────────────────────────────────────────
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 35;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 5;
-  const int halfW = (FIELDMAPPER_DW - 6) / 2;
+  const int halfW = (DW - 6) / 2;
 
   if (mapMode == MapMode::SELECT) {
     // [DISPLACE]  [ARC MEAS]
-    pros::screen::set_eraser(FIELDMAPPER_COLOR_BTN_DISPLACE);
+    pros::screen::set_eraser(COLOR_BTN_DISPLACE);
     pros::screen::erase_rect(dx, btnY1, dx + halfW, btnY2);
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_SMALL, dx + 4, btnY1 + 8, "DISPLACE");
 
-    pros::screen::set_eraser(FIELDMAPPER_COLOR_BTN_ARC_IDLE);
-    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + FIELDMAPPER_DW, btnY2);
+    pros::screen::set_eraser(COLOR_BTN_ARC_IDLE);
+    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + DW, btnY2);
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_SMALL, dx + halfW + 10, btnY1 + 8, "ARC MEAS");
   } else if (mapMode == MapMode::DISPLACEMENT) {
     // [MARK START]  [MARK END]
-    uint32_t startColor = (arcStartIndex >= 0) ? COLOR_DARK_GREEN : FIELDMAPPER_COLOR_BTN_ARC_IDLE;
+    uint32_t startColor = (arcStartIndex >= 0) ? COLOR_DARK_GREEN : COLOR_BTN_ARC_IDLE;
     pros::screen::set_eraser(startColor);
     pros::screen::erase_rect(dx, btnY1, dx + halfW, btnY2);
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_SMALL, dx + 4, btnY1 + 8,
                         (arcStartIndex >= 0) ? "START SET" : "MARK START");
 
-    uint32_t endColor = (dispEndIndex >= 0) ? COLOR_DARK_BLUE : FIELDMAPPER_COLOR_BTN_END_IDLE;
+    uint32_t endColor = (dispEndIndex >= 0) ? COLOR_DARK_BLUE : COLOR_BTN_END_IDLE;
     pros::screen::set_eraser(endColor);
-    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + FIELDMAPPER_DW, btnY2);
+    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + DW, btnY2);
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_SMALL, dx + halfW + 10, btnY1 + 8,
                         (dispEndIndex >= 0) ? "END SET" : "MARK END");
   } else {
     // ARC mode — [MARK START]  [MARK END]
-    uint32_t markSColor = (arcStartIndex >= 0) ? COLOR_DARK_GREEN : FIELDMAPPER_COLOR_BTN_ARC_IDLE;
+    uint32_t markSColor = (arcStartIndex >= 0) ? COLOR_DARK_GREEN : COLOR_BTN_ARC_IDLE;
     pros::screen::set_eraser(markSColor);
     pros::screen::erase_rect(dx, btnY1, dx + halfW, btnY2);
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_SMALL, dx + 4, btnY1 + 8,
                         (arcStartIndex >= 0) ? "START SET" : "MARK START");
 
-    uint32_t markEColor = arcMeasured ? COLOR_DARK_BLUE : FIELDMAPPER_COLOR_BTN_END_IDLE;
+    uint32_t markEColor = arcMeasured ? COLOR_DARK_BLUE : COLOR_BTN_END_IDLE;
     pros::screen::set_eraser(markEColor);
-    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + FIELDMAPPER_DW, btnY2);
+    pros::screen::erase_rect(dx + halfW + 6, btnY1, dx + DW, btnY2);
     pros::screen::set_pen(COLOR_WHITE);
     pros::screen::print(pros::E_TEXT_SMALL, dx + halfW + 10, btnY1 + 8, "MARK END");
   }
@@ -430,12 +430,12 @@ void GuiDebug::HandleFieldMapperTouch() {
   {
     const int btnY1 = BRAIN_SCREEN_HEIGHT - 35;
     const int btnY2 = BRAIN_SCREEN_HEIGHT - 5;
-    const int halfW = (FIELDMAPPER_DW - 6) / 2;
-    const int startBtnX2 = FIELDMAPPER_DX + halfW;          // right edge of start button
-    const int endBtnX1   = FIELDMAPPER_DX + halfW + 6;       // left edge of end button
-    const int endBtnX2   = FIELDMAPPER_DX + FIELDMAPPER_DW;  // right edge of end button
+    const int halfW = (DW - 6) / 2;
+    const int startBtnX2 = DX + halfW;          // right edge of start button
+    const int endBtnX1   = DX + halfW + 6;       // left edge of end button
+    const int endBtnX2   = DX + DW;  // right edge of end button
 
-    if (x >= FIELDMAPPER_DX && x <= startBtnX2 && y >= btnY1 && y <= btnY2) {
+    if (x >= DX && x <= startBtnX2 && y >= btnY1 && y <= btnY2) {
       if (mapMode == MapMode::SELECT) {
         // Enter DISPLACEMENT mode
         mapMode = MapMode::DISPLACEMENT;

@@ -137,8 +137,10 @@ void GuiDebug::DisplayDebugMenu() {
   pros::screen::print(pros::E_TEXT_MEDIUM, 20, 18, "BACK");
 
   // Buttons for debug options
-  int btnWidth = 100, btnHeight = 55, gap = 10;
-  int startX = 20, startY = 65;
+  const int cols = 3, rows = 2, gap = 10;
+  const int startX = 20, startY = 65;
+  const int btnWidth = (BRAIN_SCREEN_WIDTH - 2 * startX - (cols - 1) * gap) / cols;
+  const int btnHeight = (BRAIN_SCREEN_HEIGHT - startY - startX - (rows - 1) * gap) / rows;
   
   struct BtnInfo {
     const char* text1;
@@ -230,8 +232,10 @@ void GuiDebug::HandleDebugMenuTouch() {
       return;
     }
 
-    int btnWidth = 100, btnHeight = 55, gap = 10;
-    int startX = 20, startY = 65;
+    const int cols = 3, rows = 2, gap = 10;
+    const int startX = 20, startY = 65;
+    const int btnWidth = (BRAIN_SCREEN_WIDTH - 2 * startX - (cols - 1) * gap) / cols;
+    const int btnHeight = (BRAIN_SCREEN_HEIGHT - startY - startX - (rows - 1) * gap) / rows;
     struct BtnPos { int col, row; };
     BtnPos buttons[] = {
       {0, 0}, // Registered Autons
