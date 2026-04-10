@@ -75,8 +75,8 @@ class Intake {
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
-         char scorerPistonPort, char cartPistonPort,
-         int distanceSensorPort, int colorSensorPort);
+         char scorerPistonPort, char cartPistonPort, int distanceSensorPort,
+         int colorSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -131,8 +131,8 @@ class Intake {
   double distance();
 
   /// @brief Getter for internal boolean
-  /// @return Whether or not there is a donut as determined by the distance
-  /// sensor
+  /// @return Whether or not there is an object in front of the intake as
+  /// determined by the distance sensor
   bool isObjectDetected();
 
   /// @brief Runs a background loop to auto-pick-up blocks when scanning is
