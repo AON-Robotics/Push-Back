@@ -47,7 +47,7 @@ void deactivateBrooks() { brooksPiston.set_value(LOW); }
 #else
 
 // aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
-aon::Odometry odometry = aon::Odometry(-5, 6, 0, 0, 7);
+aon::Odometry odometry = aon::Odometry(-5, 6, 14, 0, 7);
 
 aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, std::make_unique<aon::Odometry>(odometry));
 
