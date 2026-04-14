@@ -236,26 +236,17 @@ void GuiDebug::HandleDebugMenuTouch() {
     const int startX = 20, startY = 65;
     const int btnWidth = (BRAIN_SCREEN_WIDTH - 2 * startX - (cols - 1) * gap) / cols;
     const int btnHeight = (BRAIN_SCREEN_HEIGHT - startY - startX - (rows - 1) * gap) / rows;
-    struct BtnPos { int col, row; };
-    BtnPos buttons[] = {
-      {0, 0}, // Registered Autons
-      {1, 0}, // Live Graph
-      {2, 0}, // Variables
-      {0, 1}, // Auton Runner
-      {1, 1}, // Data
-      {2, 1}, // Field Map
-    };
-    
-    for (int i = 0; i < 6; ++i) {
-      int btnX = startX + buttons[i].col * (btnWidth + gap);
-      int btnY = startY + buttons[i].row * (btnHeight + gap);
+
+    for (int i = 0; i < cols * rows; ++i) {
+      int btnX = startX + (i % cols) * (btnWidth + gap);
+      int btnY = startY + (i / cols) * (btnHeight + gap);
       
       if (x >= btnX && x <= btnX + btnWidth && y >= btnY && y <= btnY + btnHeight) {
         switch (i) {
           case 0: DisplayRegisteredAutonsMenu(); currentScreen = RegisteredFunctions; break;
           case 1: DisplayLiveGraph(); currentScreen = LiveGraph; break;
-          case 2: DisplayAutonRunner(); currentScreen = AutonRunner; break;
-          case 3: previousScreen = DebugMenu; DisplayVariablesMenu(); currentScreen = VARS; break;
+          case 2: previousScreen = DebugMenu; DisplayVariablesMenu(); currentScreen = VARS; break;
+          case 3: DisplayAutonRunner(); currentScreen = AutonRunner; break;
           case 4: DisplayDataMenu(); currentScreen = DATA; break;
           case 5: DisplayFieldMapper(); currentScreen = FieldMapper; break;
         }
