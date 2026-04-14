@@ -390,7 +390,7 @@ int BlueRoutine(){
 void safeBigBotRoutine(){
   intake.activateScan();
   drivetrain.strafe(28.5); // Align with match loader.
-  intake.dropShrimp(); // Prepare loader mechanism.
+  intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(6); // Move to match loader.
   drivetrain.motors(MAX_RPM / 2); // Push into loader
   pros::delay(200); // for a bit of time,
@@ -400,7 +400,7 @@ void safeBigBotRoutine(){
   drivetrain.motors(-MAX_RPM / 2); // Push into goal
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
-  intake.raiseShrimp(); // Reset loader mechanism.
+  intake.raiseCart(); // Reset loader mechanism.
   intake.score(Intake::TOP, 8000); // Score all 9 blocks.
   drivetrain.move(15); // Go back a little.
   drivetrain.turn(-90); // Orient towards parking.
@@ -417,26 +417,28 @@ void safeBigBotRoutine(){
 
 void BigBotSkillsRoutine(){
   drivetrain.strafe(28.5);
-  intake.dropShrimp(); 
+  intake.dropCart(); 
   drivetrain.move(6); 
   drivetrain.motors(MAX_RPM / 2); 
   pros::delay(200); 
   drivetrain.stop(); 
   pros::delay(8000); 
-  drivetrain.move(-22); 
+  drivetrain.move(-22);
+  intake.raiseCart();
   drivetrain.motors(-MAX_RPM / 2);
   drivetrain.move(22);
   drivetrain.turn(180);
   drivetrain.strafe(-10.5);
   drivetrain.move(50);
   drivetrain.strafe(10.5);
-  intake.dropShrimp(); 
+  intake.dropCart(); 
   drivetrain.move(6); 
   drivetrain.motors(MAX_RPM / 2); 
   pros::delay(200); 
   drivetrain.stop(); 
   pros::delay(8000); 
-  drivetrain.strafe(10); 
+  drivetrain.strafe(10);
+  intake.dropCart(); 
   drivetrain.turn(90);
   drivetrain.motors(MAX_RPM);
   pros::delay(1000); 

@@ -25,7 +25,7 @@ class Intake {
  private:
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
-  pros::ADIDigitalOut shrimpPistons;
+  pros::ADIDigitalOut cartPistons;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
   pros::ADIDigitalIn proximitySensor;
@@ -38,7 +38,7 @@ class Intake {
  public:
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
-         char shrimpPistonsPort, int distanceSensorPort, int colorSensorPort);
+         char cartPistonsPort, int distanceSensorPort, int colorSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -48,11 +48,11 @@ class Intake {
   /// @param rpm The rpm at which to set the judge
   void judge(const int& rpm = INTAKE_VELOCITY);
 
-  /// @brief Drops the shrimp by activating its pistons
-  void dropShrimp();
+  /// @brief Drops the cart by activating its pistons
+  void dropCart();
 
-  /// @brief Raises the shrimp by deactivating its pistons
-  void raiseShrimp();
+  /// @brief Raises the cart by deactivating its pistons
+  void raiseCart();
 
   /// @brief This small subroutine moves the intake such that a block is scored
   /// on a goal.
@@ -80,6 +80,7 @@ class Intake {
   volatile bool scoreDown = false;
 
  public:
+  std::shared_ptr<okapi::AsyncPositionController<double, double>> leverController = nullptr;
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
@@ -140,8 +141,8 @@ class Intake {
   double distance();
 
   /// @brief Getter for internal boolean
-  /// @return Whether or not there is a donut as determined by the distance
-  /// sensor
+  /// @return Whether or not there is an object in front of the intake as
+  /// determined by the distance sensor
   bool isObjectDetected();
 
   /// @brief Runs a background loop to auto-pick-up blocks when scanning is

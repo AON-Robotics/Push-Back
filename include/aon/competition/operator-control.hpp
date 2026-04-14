@@ -58,7 +58,7 @@ inline double ApplySpeed(const double& input, const double& percentage){
 // ============================================================================
 
 #if USING_BIG_ROBOT
-bool shrimpOut = false;
+bool cartOut = false;
 bool brooksUp = false;
 bool semOut = false;
 #else
@@ -96,7 +96,10 @@ inline void DriveDefault() {
   }
   else if(mainController.get_digital(DIGITAL_R2)){
     intake.score(Intake::BOTTOM);
-  } 
+  }
+  else if(mainController.get_digital(DIGITAL_R1)){
+    intake.store();
+  }
   else if(!intake.isScanning()){
     intake.stop();
   }
@@ -106,12 +109,12 @@ inline void DriveDefault() {
     toggle(brooksUp) ? activateBrooks() : deactivateBrooks();
   }
   // Toggle SEM
-  else if(mainController.get_digital_new_press(DIGITAL_R1)) {
+  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
     toggle(semOut) ? activateSEM() : deactivateSEM();
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_L1)) {
-    toggle(shrimpOut) ? intake.dropShrimp() : intake.raiseShrimp();
+  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
+    toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
   }
 
   else if(mainController.get_digital_new_press(DIGITAL_X)) {
@@ -132,14 +135,20 @@ inline void DriveDefault() {
   else if(mainController.get_digital(DIGITAL_L1)) {
     intake.score(Intake::BOTTOM);
   }
-  // Score Top
-  if(mainController.get_digital(DIGITAL_R1)) {
-    intake.scorer();
-  }
+
+  // Lever // TODO: make this behavior native to the intake class
+  if(mainController.get_digital_new_press(DIGITAL_R1) && intake.leverController->isSettled()) {
+    intake.leverController->setMaxVelocity(100);
+    intake.leverController->setTarget(140);
+  } else if (intake.leverController->getError() < 10) {
+    intake.leverController->setMaxVelocity(100);
+    intake.leverController->setTarget(0);
+  } 
   
-  if(!(mainController.get_digital(DIGITAL_R1) || mainController.get_digital(DIGITAL_L1))){
-    intake.scorer(0);
+  if (mainController.get_digital_new_press(DIGITAL_R1)) {
+    intake.leverController->setMaxVelocity(200);
   }
+
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
     intake.elevator(0);
     intake.judge(0);
