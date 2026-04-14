@@ -9,6 +9,7 @@
 #include <functional>
 #include "../../../api.h"
 #include "aon/constants.hpp"
+#include "aon/math/pose.hpp"
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
 
@@ -42,6 +43,7 @@ enum GuiScreen {
   VARS,
   DATA,
   LiveGraph,
+  FieldMapper,
 };
 
 // Auton selection system
@@ -113,12 +115,21 @@ public:
   virtual void handleRedAutonMenuTouch();
   virtual void handleBlueAutonMenuTouch();
   virtual void handleSkillsMenuTouch();
-
-  // Debug-related APIs (no-op defaults). These are implemented fully in
-  // `GuiDebug`. Declaring them here lets user code call them whether the
-  // concrete GUI is `Gui` or `GuiDebug`.
-  virtual void setVariableRegister(const std::function<void()>& /*Register*/ ) {}
-  virtual void variableChanger(double& /*variableRef*/, const std::string& /*name*/) {}
+  virtual void setVariableRegister(const std::function<void()>&) {}
+  virtual void variableChangerImpl(const std::string&,std::function<double()>,std::function<void(double)>) {}
+  template <
+    typename T,
+    typename = std::void_t<
+      decltype(std::declval<T>() + std::declval<T>()),
+      decltype(std::declval<T>() - std::declval<T>())
+    >
+  >
+  void variableChanger(T& variableRef, const std::string& name) {
+    variableChangerImpl(name,
+      [&variableRef]() -> double { return static_cast<double>(variableRef); },
+      [&variableRef](double delta) { variableRef += static_cast<T>(delta); }
+    );
+  }
   virtual void setTestRegister(const std::function<void()>& /*Register*/ ) {}
   virtual void registerTestFunction(int (* /*func*/)(), const std::string& /*name*/) {}
   virtual void registerTestFunction(const std::function<int()>& /*func*/, const std::string& /*name*/) {}
@@ -128,6 +139,7 @@ public:
   virtual void setDataRegister(const std::function<void()>& /*Register*/) {}
   virtual void registerResetHandler(const std::string& /*name*/, const std::function<void()>& /*cb*/) {}
   virtual void invokeResetHandler() {}
+  virtual void setMapDataProvider(std::function<Pose()> /*getPose*/) {}
 
   // Auton selection helper
   void selectAutonByList(Alliance alliance, int index1Based);

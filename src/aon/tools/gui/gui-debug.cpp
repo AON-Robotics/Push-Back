@@ -90,6 +90,35 @@ void GuiDebug::AddGraphPoint(double x, double y) {
 }
 
 // ============================================================================
+// Field Mapper Methods
+// ============================================================================
+
+void GuiDebug::setMapDataProvider(std::function<Pose()> getPose) {
+  mapGetPose = std::move(getPose);
+}
+
+void GuiDebug::AddMapPoint(double x, double y, double theta) {
+  if (mapBufferCount >= MAP_BUFFER_SIZE) return;
+  if (mapBufferCount > 0) {
+    const auto& prev = mapBuffer[mapBufferCount - 1];
+    double dx = x - prev.x;
+    double dy = y - prev.y;
+    mapTotalDist += std::sqrt(dx * dx + dy * dy);
+  }
+  mapBuffer[mapBufferCount++] = {x, y, theta};
+}
+
+void GuiDebug::ClearMapPath() {
+  mapBufferCount = 0;
+  mapTotalDist   = 0.0;
+  arcStartIndex  = -1;
+  dispEndIndex   = -1;
+  arcMeasured    = false;
+  arcResult      = {};
+  mapMode        = MapMode::SELECT;
+}
+
+// ============================================================================
 // Debug Display Methods (Delegated to Subsystems)
 // ============================================================================
 
@@ -108,8 +137,10 @@ void GuiDebug::DisplayDebugMenu() {
   pros::screen::print(pros::E_TEXT_MEDIUM, 20, 18, "BACK");
 
   // Buttons for debug options
-  int btnWidth = 100, btnHeight = 55, gap = 10;
-  int startX = 20, startY = 65;
+  const int cols = 3, rows = 2, gap = 10;
+  const int startX = 20, startY = 65;
+  const int btnWidth = (BRAIN_SCREEN_WIDTH - 2 * startX - (cols - 1) * gap) / cols;
+  const int btnHeight = (BRAIN_SCREEN_HEIGHT - startY - startX - (rows - 1) * gap) / rows;
   
   struct BtnInfo {
     const char* text1;
@@ -122,10 +153,11 @@ void GuiDebug::DisplayDebugMenu() {
     {"Live", "Graph", 1, 0},
     {"Variables", "", 2, 0},
     {"Auton", "Runner", 0, 1},
-    {"Data", "", 1, 1}
+    {"Data", "", 1, 1},
+    {"Field", "Map", 2, 1},
   };
   
-  for (int i = 0; i < 5; ++i) {
+  for (int i = 0; i < 6; ++i) {
     int x = startX + buttons[i].col * (btnWidth + gap);
     int y = startY + buttons[i].row * (btnHeight + gap);
     
@@ -200,28 +232,23 @@ void GuiDebug::HandleDebugMenuTouch() {
       return;
     }
 
-    int btnWidth = 100, btnHeight = 55, gap = 10;
-    int startX = 20, startY = 65;
-    struct BtnPos { int col, row, index; };
-    BtnPos buttons[] = {
-      {0, 0, 0}, // Registered Autons
-      {1, 0, 1}, // Live Graph
-      {2, 0, 3}, // Variables
-      {0, 1, 2}, // Auton Runner
-      {1, 1, 4}  // Odometry
-    };
-    
-    for (int i = 0; i < 5; ++i) {
-      int btnX = startX + buttons[i].col * (btnWidth + gap);
-      int btnY = startY + buttons[i].row * (btnHeight + gap);
+    const int cols = 3, rows = 2, gap = 10;
+    const int startX = 20, startY = 65;
+    const int btnWidth = (BRAIN_SCREEN_WIDTH - 2 * startX - (cols - 1) * gap) / cols;
+    const int btnHeight = (BRAIN_SCREEN_HEIGHT - startY - startX - (rows - 1) * gap) / rows;
+
+    for (int i = 0; i < cols * rows; ++i) {
+      int btnX = startX + (i % cols) * (btnWidth + gap);
+      int btnY = startY + (i / cols) * (btnHeight + gap);
       
       if (x >= btnX && x <= btnX + btnWidth && y >= btnY && y <= btnY + btnHeight) {
-        switch (buttons[i].index) {
+        switch (i) {
           case 0: DisplayRegisteredAutonsMenu(); currentScreen = RegisteredFunctions; break;
           case 1: DisplayLiveGraph(); currentScreen = LiveGraph; break;
-          case 2: DisplayAutonRunner(); currentScreen = AutonRunner; break;
-          case 3: previousScreen = DebugMenu; DisplayVariablesMenu(); currentScreen = VARS; break;
+          case 2: previousScreen = DebugMenu; DisplayVariablesMenu(); currentScreen = VARS; break;
+          case 3: DisplayAutonRunner(); currentScreen = AutonRunner; break;
           case 4: DisplayDataMenu(); currentScreen = DATA; break;
+          case 5: DisplayFieldMapper(); currentScreen = FieldMapper; break;
         }
         pros::delay(400);
         return;
@@ -277,6 +304,9 @@ void GuiDebug::mainLoop() {
         case LiveGraph:
           HandleLiveGraphTouch();
           break;
+        case FieldMapper:
+          HandleFieldMapperTouch();
+          break;
         default:
           break;
       }
@@ -311,6 +341,12 @@ void GuiDebug::mainLoop() {
         if (graphGetX && graphGetY) {
           AddGraphPoint(graphGetX(), graphGetY());
         }
+      } else if (currentScreen == FieldMapper) {
+        if (mapGetPose) {
+          Pose p = mapGetPose();
+          AddMapPoint(p.x, p.y, p.theta);
+        }
+        DisplayFieldMapper();
       }
       refreshCounter = 0;
     }
