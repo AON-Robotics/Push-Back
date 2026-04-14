@@ -65,11 +65,8 @@ aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, s
 //   scorerPistonPort,    'Z'
 //   cartPistonPort,      'Z'
 //   distanceSensorPort,  0
-//   colorSensorPort,     8
-//   proximitySensorPort, 'Z' // TODO: set proximity sensor port
-//   acceptSensorPort,    'Z' // TODO: set accept sensor port
-// )
-aon::Intake intake = aon::Intake({-11, 20}, {15}, {0}, 'Z', 'Z', 0, 8);
+//   colorSensorPort,     8)
+aon::Intake intake = aon::Intake({-11, 20}, {15}, {-12}, 'Z', 'Z', 0, 8);
 
 pros::ADIDigitalOut arrowPiston('Z');
 
