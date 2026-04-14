@@ -6,11 +6,11 @@ namespace aon {
 
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
-               char shrimpPistonsPort, int distanceSensorPort,
+               char cartPistonsPort, int distanceSensorPort,
                int colorSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
-      shrimpPistons(shrimpPistonsPort),
+      cartPistons(cartPistonsPort),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {}
 
@@ -133,9 +133,9 @@ void Intake::score(const Height& to, const int& delay) {
   this->stop();
 }
 
-void Intake::dropShrimp() { shrimpPistons.set_value(HIGH); }
+void Intake::dropCart() { cartPistons.set_value(HIGH); }
 
-void Intake::raiseShrimp() { shrimpPistons.set_value(LOW); }
+void Intake::raiseCart() { cartPistons.set_value(LOW); }
 
 #else
 

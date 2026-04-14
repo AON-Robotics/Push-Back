@@ -25,7 +25,7 @@ class Intake {
  private:
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
-  pros::ADIDigitalOut shrimpPistons;
+  pros::ADIDigitalOut cartPistons;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
 
@@ -34,7 +34,7 @@ class Intake {
  public:
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
-         char shrimpPistonsPort, int distanceSensorPort, int colorSensorPort);
+         char cartPistonsPort, int distanceSensorPort, int colorSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -44,11 +44,11 @@ class Intake {
   /// @param rpm The rpm at which to set the judge
   void judge(const int& rpm = INTAKE_VELOCITY);
 
-  /// @brief Drops the shrimp by activating its pistons
-  void dropShrimp();
+  /// @brief Drops the cart by activating its pistons
+  void dropCart();
 
-  /// @brief Raises the shrimp by deactivating its pistons
-  void raiseShrimp();
+  /// @brief Raises the cart by deactivating its pistons
+  void raiseCart();
 
   /// @brief This small subroutine moves the intake such that a block is scored
   /// on a goal.
