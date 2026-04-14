@@ -7,7 +7,8 @@ namespace aon {
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                char cartPistonsPort, int distanceSensorPort,
-               int colorSensorPort)
+               int colorSensorPort, 
+               char proximitySensorPort, char acceptSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       cartPistons(cartPistonsPort),
@@ -59,59 +60,57 @@ void Intake::scan() {
 }
 
 void Intake::sort() {
-  // NOTE: sensor values are inverted — HIGH means blocked, LOW means clear
-  // LOW  = waiting (nothing blocking sensor)
-  // HIGH = block is here (blocking sensor)
-  // LOW  = block is gone (sensor cleared)
-  enum SortState {
-    IDLE,
-    EJECT_WAITING,   // motors reversed, waiting for block to reach proximitySensor (sensor=LOW → HIGH when block arrives)
-    EJECT_HERE,      // block at proximitySensor (HIGH), waiting for it to clear (LOW, debounced)
-    ACCEPT_WAITING,  // motors forward, waiting for block to reach acceptSensor (sensor=LOW → HIGH when block arrives)
-    ACCEPT_HERE,     // block at acceptSensor (HIGH), waiting for it to clear (LOW, debounced)
-  };
-  SortState sortState = IDLE;
-  int clearedCount = 0;  // debounce counter shared between eject and accept paths
-  const int CLEARED_THRESHOLD = 5;
-  const uint32_t SENSOR_TIMEOUT_MS = 3000;
-  uint32_t stateDeadline = 0;  // absolute time after which a stuck state resets to IDLE
-
   while (true) {
     if (scanning) {
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
-      if (pros::millis() >= checkTime && (red || blue)) {
-        // Schedule Corresponding Action
-        if ((blue && BLUE_ALLIANCE) || (red && RED_ALLIANCE)) {
-          action = ACCEPT;
-          actionTime = pros::millis() + ACTION_DELAY;
-        } else if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
-          action = REJECT;
-          actionTime = pros::millis() + 0;
-        }
-        checkTime = pros::millis() + CHECK_DELAY;
-      }
-
-      if (pros::millis() >= actionTime) {
-        // Execute Scheduled Action
-        if (action == ACCEPT) {
-          this->judge();
-          stopTime = pros::millis() + ACCEPTANCE_DELAY;
-        } else if (action == REJECT) {
+      if (red || blue) {
+        if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
+          // Wrong alliance color detected — reverse motor to eject
+          // NOTE: If the ejection motor is mounted inverted, negate the velocity below
           this->judge(-INTAKE_VELOCITY);
-          stopTime = pros::millis() + REJECTION_DELAY;
-        }
-        actionTime = UINT32_MAX;
-      }
 
-      if (pros::millis() >= stopTime) {
-        // Stop Scheduled Action after the given delay
-        this->judge(0);
-        stopTime = UINT32_MAX;
+          // Wait for proximity sensor: LOW (clear) → HIGH (block arrives) → LOW (block cleared)
+          // 3-second timeout in case the sensor never triggers
+          const uint32_t SENSOR_TIMEOUT_MS = 3000;
+          uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
+          while (scanning && proximitySensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
+          deadline = pros::millis() + SENSOR_TIMEOUT_MS;
+          while (scanning && proximitySensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
+
+          // Block confirmed removed (or scanning stopped / timed out) — stop rejection motor
+          this->judge(0);
+        } else if ((red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE)) {
+          const uint32_t SENSOR_TIMEOUT_MS = 3000;
+          if (scoreDown) {
+            // scoreDown enabled — send correct-color block down (reverse path,
+            // tracked by proximitySensor same as ejection)
+            this->judge(-INTAKE_VELOCITY);
+
+            // NOTE: sensor inverted — HIGH = block present, LOW = clear
+            uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
+            while (scanning && proximitySensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
+            deadline = pros::millis() + SENSOR_TIMEOUT_MS;
+            while (scanning && proximitySensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
+
+            this->judge(0);
+          } else {
+            // scoreDown disabled — send block forward, tracked by acceptSensor
+            this->judge(INTAKE_VELOCITY);
+
+            // NOTE: sensor inverted — HIGH = block present, LOW = clear
+            uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
+            while (scanning && acceptSensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
+            deadline = pros::millis() + SENSOR_TIMEOUT_MS;
+            while (scanning && acceptSensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
+
+            this->judge(0);
+          }
+        }
       }
     }
-    pros::delay(5);
+    pros::delay(25);
   }
 }
 
@@ -154,17 +153,15 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
                char scorerPistonPort, char cartPistonPort,
-               int distanceSensorPort, int colorSensorPort,
-               char proximitySensorPort, char acceptSensorPort)
+               int distanceSensorPort, int colorSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
       scorerPiston(scorerPistonPort),
       cartPiston(cartPistonPort),
       distanceSensor(distanceSensorPort),
-      colorSensor(colorSensorPort),
-      proximitySensor(proximitySensorPort),
-      acceptSensor(acceptSensorPort) {}
+      colorSensor(colorSensorPort){}
+       
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
@@ -226,43 +223,17 @@ void Intake::sort() {
       if (red || blue) {
         if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
           // Wrong alliance color detected — reverse motor to eject
-          // NOTE: If the ejection motor is mounted inverted, negate the velocity below
           this->judge(-INTAKE_VELOCITY);
-
-          // Wait for proximity sensor: LOW (clear) → HIGH (block arrives) → LOW (block cleared)
-          // 3-second timeout in case the sensor never triggers
-          const uint32_t SENSOR_TIMEOUT_MS = 3000;
-          uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-          while (scanning && proximitySensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
-          deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-          while (scanning && proximitySensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
-
-          // Block confirmed removed (or scanning stopped / timed out) — stop rejection motor
+          pros::delay(500);
           this->judge(0);
         } else if ((red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE)) {
-          const uint32_t SENSOR_TIMEOUT_MS = 3000;
           if (scoreDown) {
-            // scoreDown enabled — send correct-color block down (reverse path,
-            // tracked by proximitySensor same as ejection)
             this->judge(-INTAKE_VELOCITY);
-
-            // NOTE: sensor inverted — HIGH = block present, LOW = clear
-            uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && proximitySensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
-            deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && proximitySensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
-
+            pros::delay(500);
             this->judge(0);
           } else {
-            // scoreDown disabled — send block forward, tracked by acceptSensor
             this->judge(INTAKE_VELOCITY);
-
-            // NOTE: sensor inverted — HIGH = block present, LOW = clear
-            uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && acceptSensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
-            deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && acceptSensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
-
+            pros::delay(500);
             this->judge(0);
           }
         }

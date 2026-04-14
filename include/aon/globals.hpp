@@ -38,7 +38,7 @@ aon::HDrive drivetrain = aon::HDrive({-1, 2, 3, -4}, {12, -13, -18, 19}, {15}, s
 //   distanceSensorPort,  0
 //   colorSensorPort,     0
 // )
-aon::Intake intake = aon::Intake({20, -11, -16}, {17}, 'Z', 0, 0);
+aon::Intake intake = aon::Intake({20, -11, -16}, {17}, 'Z', 0, 0, 'Z', 'Z');
 
 pros::ADIDigitalOut semPiston('G'); // Shrek Ear Mechanism
 pros::ADIDigitalOut brooksPiston('D');
@@ -69,7 +69,7 @@ aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, s
 //   proximitySensorPort, 'Z' // TODO: set proximity sensor port
 //   acceptSensorPort,    'Z' // TODO: set accept sensor port
 // )
-aon::Intake intake = aon::Intake({-11, 20}, {15}, {0 /*-12*/}, 'Z', 'Z', 0, 8, 'Z', 'Z');
+aon::Intake intake = aon::Intake({-11, 20}, {15}, {0}, 'Z', 'Z', 0, 8);
 
 pros::ADIDigitalOut arrowPiston('Z');
 

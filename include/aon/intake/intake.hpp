@@ -38,7 +38,8 @@ class Intake {
  public:
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
-         char cartPistonsPort, int distanceSensorPort, int colorSensorPort);
+         char cartPistonsPort, int distanceSensorPort, int colorSensorPort,
+         char proximitySensorPort, char acceptSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -72,8 +73,6 @@ class Intake {
   pros::ADIDigitalOut cartPiston;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
-  pros::ADIDigitalIn proximitySensor;
-  pros::ADIDigitalIn acceptSensor;
 
   volatile bool scanning = true;
   volatile bool ejecting = false;
@@ -85,8 +84,7 @@ class Intake {
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
          char scorerPistonPort, char cartPistonPort,
-         int distanceSensorPort, int colorSensorPort,
-         char proximitySensorPort, char acceptSensorPort);
+         int distanceSensorPort, int colorSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
