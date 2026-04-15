@@ -131,12 +131,20 @@ void GuiDebug::DisplayAutonRunner() {
   }
 
   // VARS button
-  const int vcY1 = 70, vcY2 = vcY1 + 40;
-  const int vcX1 = BRAIN_SCREEN_WIDTH - 140, vcX2 = BRAIN_SCREEN_WIDTH - 40;
+  const int varsY1 = 70, varsY2 = varsY1 + 40;
+  const int varsX1 = BRAIN_SCREEN_WIDTH - 140, varsX2 = BRAIN_SCREEN_WIDTH - 40;
   pros::screen::set_eraser(COLOR_ORANGE);
-  pros::screen::erase_rect(vcX1, vcY1, vcX2, vcY2);
+  pros::screen::erase_rect(varsX1, varsY1, varsX2, varsY2);
   pros::screen::set_pen(COLOR_BLACK);
-  pros::screen::print(pros::E_TEXT_MEDIUM, vcX1 + 18, vcY1 + 8, "VARS");
+  pros::screen::print(pros::E_TEXT_MEDIUM, varsX1 + 18, varsY1 + 8, "VARS");
+
+  // RESET button
+  const int resetY1 = varsY2 + 10, resetY2 = resetY1 + 40;
+  const int resetX1 = varsX1, resetX2 = varsX2;
+  pros::screen::set_eraser(COLOR_RED);
+  pros::screen::erase_rect(resetX1, resetY1, resetX2, resetY2);
+  pros::screen::set_pen(COLOR_WHITE);
+  pros::screen::print(pros::E_TEXT_MEDIUM, resetX1 + 8, resetY1 + 8, "RESET");
 
   // Bottom RUN/MOV button - centered
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 70;
@@ -254,9 +262,9 @@ void GuiDebug::HandleAutonRunnerTouch() {
 
   // VARS button
   {
-    const int vcY1 = 70, vcY2 = vcY1 + 40;
-    const int vcX1 = BRAIN_SCREEN_WIDTH - 140, vcX2 = BRAIN_SCREEN_WIDTH - 40;
-    if (x >= vcX1 && x <= vcX2 && y >= vcY1 && y <= vcY2) {
+    const int varsY1 = 70, varsY2 = varsY1 + 40;
+    const int varsX1 = BRAIN_SCREEN_WIDTH - 140, varsX2 = BRAIN_SCREEN_WIDTH - 40;
+    if (x >= varsX1 && x <= varsX2 && y >= varsY1 && y <= varsY2) {
       if (variableEntries.empty() && variableRegister) {
         variableRegister();
       }
@@ -268,6 +276,20 @@ void GuiDebug::HandleAutonRunnerTouch() {
     }
   }
 
+    // RESET button
+  {
+    const int varsY2 = 70 + 40;
+    const int resetY1 = varsY2 + 10, resetY2 = resetY1 + 40;
+    const int resetX1 = BRAIN_SCREEN_WIDTH - 140, resetX2 = BRAIN_SCREEN_WIDTH - 40;
+    if (x >= resetX1 && x <= resetX2 && y >= resetY1 && y <= resetY2) {
+      invokeResetHandler();
+      DisplayAutonRunner();
+      pros::delay(300);
+      return;
+    }
+  }
+
+  
   // Bottom RUN/MOV button coordinates (must match display)
   const int btnY1 = BRAIN_SCREEN_HEIGHT - 70;
   const int btnY2 = BRAIN_SCREEN_HEIGHT - 20;

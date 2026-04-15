@@ -29,7 +29,7 @@
 aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
 
 // Drivetrain
-aon::HDrive drivetrain = aon::HDrive({-1, 2, 3, -4}, {12, -13, -18, 19}, {15}, std::make_unique<aon::Odometry>(odometry));
+aon::HDrive drivetrain = aon::HDrive({-1, 2, 3, -4}, {12, -13, -18, 19}, {-15}, std::make_unique<aon::Odometry>(odometry));
 
 // aon::Intake(
 //   elevatorPorts,       {20, -11, -16}
@@ -56,19 +56,11 @@ void deactivateBrooks() { brooksPiston.set_value(LOW); }
 #else
 
 // aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
-aon::Odometry odometry = aon::Odometry(-5, 6, 14, 0, 7);
+aon::Odometry odometry = aon::Odometry(19, -18, 5, 0, 16);
 
-aon::TankDrive drivetrain = aon::TankDrive({1, 2, -3, -4}, {-16, -17, 18, 19}, std::make_unique<aon::Odometry>(odometry));
+aon::TankDrive drivetrain = aon::TankDrive({11, -12, 13, -14}, {1, -2, 3, -4}, std::make_unique<aon::Odometry>(odometry));
 
-// aon::Intake(
-//   elevatorPorts,       {-11, 20}
-//   judgePorts,          {15}
-//   scorerPorts,         {0 /*-12*/}
-//   scorerPistonPort,    'Z'
-//   cartPistonPort,      'Z'
-//   distanceSensorPort,  0
-//   colorSensorPort,     8)
-aon::Intake intake = aon::Intake({-11, 20}, {15}, {-12}, 'Z', 'Z', 0, 8);
+aon::Intake intake = aon::Intake({-9, 6}, {7}, {-8}, 'Z', 'Z', 20, 17);
 
 pros::ADIDigitalOut arrowPiston('Z');
 
