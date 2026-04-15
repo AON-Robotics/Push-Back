@@ -4,6 +4,7 @@
 #include "../../api.h"
 #include "../../okapi/api.hpp"
 #include "../tools/general.hpp"
+#include <queue>
 
 namespace aon {
 
@@ -28,18 +29,21 @@ class Intake {
   pros::ADIDigitalOut cartPistons;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
-  pros::ADIDigitalIn proximitySensor;
   pros::ADIDigitalIn acceptSensor;
+  pros::ADIDigitalIn rejectSensor;
 
   volatile bool scanning = false;
   volatile bool ejecting = false;
   volatile bool scoreDown = false;
+  volatile bool releasing = false;
+  Height acceptHeight = TOP;
+  Height rejectHeight = MIDDLE;
 
  public:
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          char cartPistonsPort, int distanceSensorPort, int colorSensorPort,
-         char proximitySensorPort, char acceptSensorPort);
+         char acceptSensorPort, char rejectSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -64,6 +68,15 @@ class Intake {
   /// @note A delay of 0 will never stop moving the intake.
   void score(const Height& to = TOP, const int& delay = 0);
 
+  /// @brief Sets the exit heights for the sort routine mid-run.
+  /// @param accept Where correct-color blocks exit
+  /// @param reject Where wrong-color blocks exit
+  void setSortHeights(Height accept, Height reject);
+
+  /// @brief Allows the sort queue to start processing.
+  /// @details Detection and queuing always run; call this to start sorting.
+  void release();
+  //made by pablo(chatgpt) in the span of 9 months
 #else
  private:
   okapi::MotorGroup elevatorMG;

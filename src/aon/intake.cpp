@@ -8,14 +8,14 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                char cartPistonsPort, int distanceSensorPort,
                int colorSensorPort, 
-               char proximitySensorPort, char acceptSensorPort)
+               char acceptSensorPort, char rejectSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       cartPistons(cartPistonsPort),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort),
-      proximitySensor(proximitySensorPort),
-      acceptSensor(acceptSensorPort) {}
+      acceptSensor(acceptSensorPort),
+      rejectSensor(rejectSensorPort) {}
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
 
@@ -42,7 +42,7 @@ void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
 void Intake::scan() {
   size_t stopTime = UINT32_MAX;
-  const short DELAY_PER_BALL = 1500;  // ms
+  const short DELAY_PER_BALL = 2200;  // ms
   while (true) {
     if (scanning) {
       if (this->isObjectDetected()) {
@@ -60,57 +60,82 @@ void Intake::scan() {
 }
 
 void Intake::sort() {
+  enum State { IDLE, WAITING_ARRIVAL, WAITING_PASS };
+  std::queue<bool> colorQueue;
+  State state = IDLE;
+  bool currentCorrect = false;
+  pros::ADIDigitalIn* currentSensor = nullptr;
+
+  // Distance sensor block detection (32–37mm range)
+  bool lastInRange = false;
+  int distCount = 0;
+
+  // Color sensor detection
+  bool lastColorSeen = false;
+  int colorCount = 0;
+  bool lastColorCorrect = false; // last color the sensor actually identified
+
   while (true) {
     if (scanning) {
+      // --- Distance sensor: count blocks passing through 32–37mm window ---
+      const double dist = this->distance();
+      const bool inRange = (dist >= 32 && dist <= 37);
+      if (inRange && !lastInRange) {
+        distCount++;
+      }
+      lastInRange = inRange;
+
+      // --- Color sensor: count detected blocks and record color ---
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
+      const bool colorSeen = red || blue;
+      if (colorSeen && !lastColorSeen) {
+        colorCount++;
+        lastColorCorrect = (red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE);
+        colorQueue.push(lastColorCorrect);
+      }
+      lastColorSeen = colorSeen;
 
-      if (red || blue) {
-        if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
-          // Wrong alliance color detected — reverse motor to eject
-          // NOTE: If the ejection motor is mounted inverted, negate the velocity below
-          this->judge(-INTAKE_VELOCITY);
+      // --- Reconciliation: distance saw a block the color sensor missed ---
+      if (distCount > colorCount) {
+        // Unknown color — eject (rejectHeight)
+        colorQueue.push(false);
+        colorCount++; // balance the counts
+      }
 
-          // Wait for proximity sensor: LOW (clear) → HIGH (block arrives) → LOW (block cleared)
-          // 3-second timeout in case the sensor never triggers
-          const uint32_t SENSOR_TIMEOUT_MS = 3000;
-          uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-          while (scanning && proximitySensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
-          deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-          while (scanning && proximitySensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
-
-          // Block confirmed removed (or scanning stopped / timed out) — stop rejection motor
-          this->judge(0);
-        } else if ((red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE)) {
-          const uint32_t SENSOR_TIMEOUT_MS = 3000;
-          if (scoreDown) {
-            // scoreDown enabled — send correct-color block down (reverse path,
-            // tracked by proximitySensor same as ejection)
-            this->judge(-INTAKE_VELOCITY);
-
-            // NOTE: sensor inverted — HIGH = block present, LOW = clear
-            uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && proximitySensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
-            deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && proximitySensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
-
-            this->judge(0);
-          } else {
-            // scoreDown disabled — send block forward, tracked by acceptSensor
-            this->judge(INTAKE_VELOCITY);
-
-            // NOTE: sensor inverted — HIGH = block present, LOW = clear
-            uint32_t deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && acceptSensor.get_value() == HIGH && pros::millis() < deadline) pros::delay(5);
-            deadline = pros::millis() + SENSOR_TIMEOUT_MS;
-            while (scanning && acceptSensor.get_value() == LOW && pros::millis() < deadline) pros::delay(5);
-
-            this->judge(0);
+      // --- State machine: only runs after release() is called ---
+      if (releasing) {
+        switch (state) {
+        case IDLE:
+          if (!colorQueue.empty()) {
+            currentCorrect = colorQueue.front();
+            colorQueue.pop();
+            const Height height = currentCorrect ? this->acceptHeight : this->rejectHeight;
+            currentSensor = (height == TOP) ? &acceptSensor : &rejectSensor;
+            ejecting = true;
+            this->judge(height == TOP ? INTAKE_VELOCITY : -INTAKE_VELOCITY);
+            state = WAITING_ARRIVAL;
           }
+          break;
+
+        case WAITING_ARRIVAL:
+          if (currentSensor->get_value() == HIGH) {
+            state = WAITING_PASS;
+          }
+          break;
+
+        case WAITING_PASS:
+          if (currentSensor->get_value() == LOW) {
+            this->judge(0);
+            ejecting = false;
+            currentSensor = nullptr;
+            state = IDLE;
+          }
+          break;
         }
       }
     }
-    pros::delay(25);
+    pros::delay(5);
   }
 }
 
@@ -146,6 +171,13 @@ void Intake::score(const Height& to, const int& delay) {
 void Intake::dropCart() { cartPistons.set_value(HIGH); }
 
 void Intake::raiseCart() { cartPistons.set_value(LOW); }
+
+void Intake::setSortHeights(Height accept, Height reject) {
+  acceptHeight = accept;
+  rejectHeight = reject;
+}
+
+void Intake::release() { releasing = true; }
 
 #else
 
@@ -305,7 +337,6 @@ bool Intake::isScanning(){ return this->scanning; }
 
 void Intake::activateScan() {
   scanning = true;
-  colorSensor.set_led_pwm(100);
 }
 
 void Intake::stopScan() {
