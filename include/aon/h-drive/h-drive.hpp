@@ -49,7 +49,7 @@ class HDrive : public Drivetrain {
   void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
     Drivetrain::configure(brakeMode, gearset);
     midMotors.setBrakeMode(brakeMode);
-    midMotors.setGearing(okapi::AbstractMotor::gearset::green);
+    midMotors.setGearing(okapi::AbstractMotor::gearset::red);
     midMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
     midMotors.tarePosition();
   }
