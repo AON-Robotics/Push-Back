@@ -120,7 +120,8 @@ class Drivetrain {
   /// auton and `brake` for drivers
   /// @param gearset The gearbox the physical motors contain, they MUST be all
   /// the same
-  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
+  /// @param slew The slew rate for the motors, if 0, slew rate is `inf`
+  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset, double slew) {
     this->setBrakeMode(brakeMode);
     this->setGearset(gearset);
     this->setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -128,7 +129,7 @@ class Drivetrain {
     if(brakeMode == okapi::AbstractMotor::brakeMode::hold){
       this->setSlewRate(0);
     } else {
-      this->setSlewRate(MAX_ACCEL);
+      this->setSlewRate(slew);
     }
   }
 
