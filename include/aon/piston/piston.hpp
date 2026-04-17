@@ -27,6 +27,8 @@ class Piston {
     this->set(state);
   }
 
+  /// @brief Returns the current state of the piston
+  /// @return The current state of the piston
   State getState() const;
 
   /// @brief Extends the piston
