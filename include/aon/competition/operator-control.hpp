@@ -61,6 +61,7 @@ inline double ApplySpeed(const double& input, const double& percentage){
 bool cartOut = false;
 bool brooksUp = false;
 bool semOut = false;
+bool sortActive = false;
 #else
 bool cartOut = false;
 bool scorerUp = false;
@@ -89,19 +90,39 @@ inline void DriveDefault() {
   // }
 
   if(mainController.get_digital(DIGITAL_L1)){
-    intake.score(Intake::TOP);
+    intake.elevator();
   }
   else if(mainController.get_digital(DIGITAL_L2)){
-    intake.score(Intake::MIDDLE);
+    intake.elevator(-INTAKE_VELOCITY);
   }
-  else if(mainController.get_digital(DIGITAL_R2)){
-    intake.score(Intake::BOTTOM);
-  }
-  else if(mainController.get_digital(DIGITAL_R1)){
-    intake.store();
-  }
-  else if(!intake.isScanning()){
+  else if(!sortActive){
     intake.stop();
+  }
+
+  // Evaluate new_press unconditionally so internal state resets on release
+  bool r1NewPress = mainController.get_digital_new_press(DIGITAL_R1);
+  bool r2NewPress = mainController.get_digital_new_press(DIGITAL_R2);
+
+  // R1 held — sort normally (correct→TOP, wrong→MIDDLE)
+  if(mainController.get_digital(DIGITAL_R1)) {
+    if(r1NewPress) {
+      intake.setSortHeights(Intake::TOP, Intake::MIDDLE);
+      intake.release();
+      sortActive = true;
+    }
+  }
+  // R2 held — sort inverted (correct→MIDDLE, wrong→TOP)
+  else if(mainController.get_digital(DIGITAL_R2)) {
+    if(r2NewPress) {
+      intake.setSortHeights(Intake::MIDDLE, Intake::TOP);
+      intake.release();
+      sortActive = true;
+    }
+  }
+  // neither held — stop sorting only if it was previously active
+  else if(sortActive) {
+    intake.stopRelease();
+    sortActive = false;
   }
 
   // Change Brooks Height

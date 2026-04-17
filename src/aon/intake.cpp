@@ -50,7 +50,8 @@ void Intake::scan() {
         stopTime = pros::millis() + DELAY_PER_BALL;
         pros::delay(500);  // this is to avoid counting the same block multiple times
       }
-      if (pros::millis() >= stopTime) {
+      // Only stop the elevator if sort isn't actively controlling it
+      if (!releasing && pros::millis() >= stopTime) {
         this->elevator(0);
         stopTime = INT_MAX;
       }
@@ -60,81 +61,117 @@ void Intake::scan() {
 }
 
 void Intake::sort() {
-  enum State { IDLE, WAITING_ARRIVAL, WAITING_PASS };
-  std::queue<bool> colorQueue;
-  State state = IDLE;
-  bool currentCorrect = false;
-  pros::ADIDigitalIn* currentSensor = nullptr;
-
-  // Distance sensor block detection (32–37mm range)
-  bool lastInRange = false;
-  int distCount = 0;
-
-  // Color sensor detection
-  bool lastColorSeen = false;
-  int colorCount = 0;
-  bool lastColorCorrect = false; // last color the sensor actually identified
+  enum State { INIT, IDLE, KICKBACK, SETTLE, WAIT_ACCEPT, CONFIRM_ACCEPT, WAIT_REJECT, CONFIRM_REJECT };
+  State state = INIT;
+  bool lastReleasing = false;
+  bool armed = true;
+  bool pendingCorrect = false;
+  uint32_t timerEnd = 0;
 
   while (true) {
-    if (scanning) {
-      // --- Distance sensor: count blocks passing through 32–37mm window ---
-      const double dist = this->distance();
-      const bool inRange = (dist >= 32 && dist <= 37);
-      if (inRange && !lastInRange) {
-        distCount++;
-      }
-      lastInRange = inRange;
+    const double hue = this->hue();
+    const bool red = isRed(hue), blue = isBlue(hue);
 
-      // --- Color sensor: count detected blocks and record color ---
-      const double hue = this->hue();
-      const bool red = isRed(hue), blue = isBlue(hue);
-      const bool colorSeen = red || blue;
-      if (colorSeen && !lastColorSeen) {
-        colorCount++;
-        lastColorCorrect = (red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE);
-        colorQueue.push(lastColorCorrect);
-      }
-      lastColorSeen = colorSeen;
+    if (releasing) {
+        if (!lastReleasing) {
+          // Rising edge — start init reverse non-blocking
+          this->elevator(-INTAKE_VELOCITY);
+          this->judge(-INTAKE_VELOCITY);
+          timerEnd = pros::millis() + 350;
+          state = INIT;
+          armed = true;
+          lastReleasing = true;
+        }
 
-      // --- Reconciliation: distance saw a block the color sensor missed ---
-      if (distCount > colorCount) {
-        // Unknown color — eject (rejectHeight)
-        colorQueue.push(false);
-        colorCount++; // balance the counts
-      }
-
-      // --- State machine: only runs after release() is called ---
-      if (releasing) {
         switch (state) {
-        case IDLE:
-          if (!colorQueue.empty()) {
-            currentCorrect = colorQueue.front();
-            colorQueue.pop();
-            const Height height = currentCorrect ? this->acceptHeight : this->rejectHeight;
-            currentSensor = (height == TOP) ? &acceptSensor : &rejectSensor;
-            ejecting = true;
-            this->judge(height == TOP ? INTAKE_VELOCITY : -INTAKE_VELOCITY);
-            state = WAITING_ARRIVAL;
-          }
-          break;
-
-        case WAITING_ARRIVAL:
-          if (currentSensor->get_value() == HIGH) {
-            state = WAITING_PASS;
-          }
-          break;
-
-        case WAITING_PASS:
-          if (currentSensor->get_value() == LOW) {
+        case INIT:
+          // Wait for init reverse to finish, then go to IDLE
+          if (pros::millis() >= timerEnd) {
+            this->elevator(0);
             this->judge(0);
-            ejecting = false;
-            currentSensor = nullptr;
             state = IDLE;
           }
           break;
+
+        case IDLE:
+          this->elevator(INTAKE_VELOCITY * 2 / 3);
+          if (armed && (red || blue)) {
+            armed = false;
+            pendingCorrect = (red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE);
+            const Height& height = pendingCorrect ? acceptHeight : rejectHeight;
+            if (height != TOP) {
+              // Kickback — reverse briefly before routing
+              this->elevator(-INTAKE_VELOCITY);
+              timerEnd = pros::millis() + 265;
+              state = KICKBACK;
+            } else {
+              this->elevator(INTAKE_VELOCITY * 2 / 3);
+              this->judge(INTAKE_VELOCITY);
+              state = WAIT_ACCEPT;
+            }
+          }
+          break;
+
+        case KICKBACK:
+          // Wait for kickback to finish, then spin judge
+          if (pros::millis() >= timerEnd) {
+            const Height& height = pendingCorrect ? acceptHeight : rejectHeight;
+            this->elevator(INTAKE_VELOCITY * 2 / 3);
+            this->judge(height == TOP ? INTAKE_VELOCITY : -INTAKE_VELOCITY);
+            state = pendingCorrect ? WAIT_ACCEPT : WAIT_REJECT;
+          }
+          break;
+
+        case WAIT_ACCEPT: {
+          auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == HIGH) state = CONFIRM_ACCEPT;
+          break;
         }
+
+        case CONFIRM_ACCEPT: {
+          auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == LOW) {
+            this->judge(0);
+            timerEnd = pros::millis() + 105;
+            state = SETTLE;
+          }
+          break;
+        }
+
+        case WAIT_REJECT: {
+          auto& sensor = (rejectHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == HIGH) state = CONFIRM_REJECT;
+          break;
+        }
+
+        case CONFIRM_REJECT: {
+          auto& sensor = (rejectHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == LOW) {
+            this->judge(0);
+            timerEnd = pros::millis() + 105;
+            state = SETTLE;
+          }
+          break;
+        }
+
+        case SETTLE:
+          // Brief pause after block clears before re-arming
+          if (pros::millis() >= timerEnd) {
+            state = IDLE;
+            armed = true;
+          }
+          break;
+        }
+      } else {
+        if (lastReleasing) {
+          // Falling edge — stop motors and reset for next press
+          this->elevator(0);
+          this->judge(0);
+          state = INIT;
+          timerEnd = UINT32_MAX; // prevent stale timer from skipping init on next press
+        }
+        lastReleasing = false;
       }
-    }
     pros::delay(5);
   }
 }
@@ -177,7 +214,13 @@ void Intake::setSortHeights(Height accept, Height reject) {
   rejectHeight = reject;
 }
 
-void Intake::release() { releasing = true; }
+void Intake::release() {
+  releasing = false;  // force falling edge so sort task fully resets
+  pros::delay(10);    // give sort task one cycle to see the false
+  releasing = true;
+}
+
+void Intake::stopRelease() { releasing = false; }
 
 #else
 
@@ -341,6 +384,7 @@ void Intake::activateScan() {
 
 void Intake::stopScan() {
   scanning = false;
+  this->elevator(0);
   colorSensor.set_led_pwm(0);
 }
 
@@ -354,8 +398,7 @@ double Intake::hue() { return colorSensor.get_hue(); }
 
 void Intake::setScoreDown(bool down) { scoreDown = down; }
 
-bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 25; }
-
-bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 230; }
+bool Intake::isRed(const double& hue) { return (hue >= 356 && hue <= 359) || (hue >= 1 && hue <= 25); }
+bool Intake::isBlue(const double& hue) { return 170 <= hue && hue <= 230; }
 
 }  // namespace aon

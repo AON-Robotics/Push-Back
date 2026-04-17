@@ -33,9 +33,9 @@ class Intake {
   pros::ADIDigitalIn rejectSensor;
 
   volatile bool scanning = false;
-  volatile bool ejecting = false;
   volatile bool scoreDown = false;
   volatile bool releasing = false;
+  volatile bool lastColorSeen = false;
   Height acceptHeight = TOP;
   Height rejectHeight = MIDDLE;
 
@@ -76,6 +76,7 @@ class Intake {
   /// @brief Allows the sort queue to start processing.
   /// @details Detection and queuing always run; call this to start sorting.
   void release();
+  void stopRelease();
   //made by pablo(chatgpt) in the span of 9 months
 #else
  private:
@@ -88,7 +89,6 @@ class Intake {
   pros::Optical colorSensor;
 
   volatile bool scanning = true;
-  volatile bool ejecting = false;
   volatile bool scoreDown = false;
 
  public:
