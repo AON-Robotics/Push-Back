@@ -144,12 +144,12 @@ inline void Configure(const bool opcontrol = true) {
   okapi::AbstractMotor::brakeMode brakeMode = opcontrol ? okapi::AbstractMotor::brakeMode::brake : okapi::AbstractMotor::brakeMode::hold;
 
   #if USING_BIG_ROBOT
-  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
+  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue, MAX_ACCEL * 0.4);
   
   intake.configure(okapi::AbstractMotor::brakeMode::brake, okapi::AbstractMotor::gearset::blue);
   
   #else
-  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue);
+  drivetrain.configure(brakeMode, okapi::AbstractMotor::gearset::blue, MAX_ACCEL);
   
   intake.configure(okapi::AbstractMotor::brakeMode::coast, okapi::AbstractMotor::gearset::blue);
 

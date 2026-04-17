@@ -46,10 +46,10 @@ class HDrive : public Drivetrain {
   /// auton and `brake` for drivers
   /// @param gearset The gearbox the physical motors contain, they MUST be all
   /// the same
-  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
-    Drivetrain::configure(brakeMode, gearset);
+  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset, double slew) {
+    Drivetrain::configure(brakeMode, gearset, slew);
     midMotors.setBrakeMode(brakeMode);
-    midMotors.setGearing(okapi::AbstractMotor::gearset::green);
+    midMotors.setGearing(okapi::AbstractMotor::gearset::red);
     midMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
     midMotors.tarePosition();
   }
