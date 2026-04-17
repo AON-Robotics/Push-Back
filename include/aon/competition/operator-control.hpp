@@ -57,16 +57,6 @@ inline double ApplySpeed(const double& input, const double& percentage){
 //
 // ============================================================================
 
-#if USING_BIG_ROBOT
-bool cartOut = false;
-bool brooksUp = false;
-bool semOut = false;
-#else
-bool cartOut = false;
-bool scorerUp = false;
-bool arrowOut = false;
-#endif
-
 /// Default Operator Control configuration
 inline void DriveDefault() { 
   //////////// DRIVE ////////////
@@ -106,15 +96,15 @@ inline void DriveDefault() {
 
   // Change Brooks Height
   if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    toggle(brooksUp) ? activateBrooks() : deactivateBrooks();
+    brooks.toggle();
   }
-  // Toggle SEM
+
   else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
-    toggle(semOut) ? activateSEM() : deactivateSEM();
+    sem.toggle();
   }
   // Match loaders mechanism
   else if(mainController.get_digital_new_press(DIGITAL_UP)) {
-    toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
+    intake.toggleCart();
   }
 
   else if(mainController.get_digital_new_press(DIGITAL_X)) {
@@ -138,16 +128,12 @@ inline void DriveDefault() {
 
   // Lever // TODO: make this behavior native to the intake class
   if(mainController.get_digital_new_press(DIGITAL_R1) && intake.leverController->isSettled()) {
-    intake.leverController->setMaxVelocity(100);
+    intake.leverController->setMaxVelocity(150);
     intake.leverController->setTarget(140);
   } else if (intake.leverController->getError() < 10) {
-    intake.leverController->setMaxVelocity(100);
+    intake.leverController->setMaxVelocity(150);
     intake.leverController->setTarget(0);
   } 
-  
-  if (mainController.get_digital_new_press(DIGITAL_R1)) {
-    intake.leverController->setMaxVelocity(200);
-  }
 
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
     intake.elevator(0);
@@ -156,11 +142,11 @@ inline void DriveDefault() {
   
   // Change Height
   if(mainController.get_digital_new_press(DIGITAL_B)) {
-    intake.setScorerHeight(toggle(scorerUp) ? HIGH : LOW);
+    intake.toggleScorerHeight();
   }
   // Match loaders mechanism
   else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
+    intake.toggleCart();
   }
 
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
@@ -168,7 +154,7 @@ inline void DriveDefault() {
   }
   // Toggle Arrow
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
-    toggle(arrowOut) ? activateArrow() : deactivateArrow();
+    arrow.toggle();
   }
 
   #endif

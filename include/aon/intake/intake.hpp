@@ -4,6 +4,7 @@
 #include "../../api.h"
 #include "../../okapi/api.hpp"
 #include "../tools/general.hpp"
+#include "../piston/piston.hpp"
 
 namespace aon {
 
@@ -25,7 +26,7 @@ class Intake {
  private:
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
-  pros::ADIDigitalOut cartPistons;
+  Piston cart;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
 
@@ -43,6 +44,9 @@ class Intake {
   /// @brief Moves only the judge at the given `rpm`
   /// @param rpm The rpm at which to set the judge
   void judge(const int& rpm = INTAKE_VELOCITY);
+
+  /// @brief  Sets the cart state to the opposite of what it currently is
+  void toggleCart();
 
   /// @brief Drops the cart by activating its pistons
   void dropCart();
@@ -64,8 +68,8 @@ class Intake {
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
   okapi::MotorGroup scorerMG;
-  pros::ADIDigitalOut scorerPiston;
-  pros::ADIDigitalOut cartPiston;
+  Piston scorerPiston;
+  Piston cart;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
 
@@ -101,10 +105,17 @@ class Intake {
   /// @brief Discards blocks through the back of the robot
   void reject(const int& delay = 0);
 
-  /// @brief Moves the piston of the scorer to set its desired state (`HIGH` or
-  /// `LOW` only)
-  /// @param height The next height of the scorer in `{HIGH, LOW}`
-  void setScorerHeight(const short& height);
+  /// @brief Sets the scorer height to the opposite of what it currently is
+  void toggleScorerHeight();
+
+  /// @brief Raises the scorer to allow for scoring in the top goals
+  void raiseScorer();
+
+  /// @brief Lowers the scorer to allow for scoring in the middle goal
+  void lowerScorer();
+
+  /// @brief  Sets the cart state to the opposite of what it currently is
+  void toggleCart();
 
   /// @brief Drops the cart by activating its pistons
   void dropCart();

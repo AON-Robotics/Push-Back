@@ -410,7 +410,7 @@ void safeBigBotRoutine(){
   drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
   pros::delay(1000); // for a bit of time,
   drivetrain.stop(); // then stop.
-  activateBrooks(); // Park.
+  brooks.activate(); // Park.
   intake.stopScan();
   //* Works till here
 }
@@ -443,7 +443,7 @@ void BigBotSkillsRoutine(){
   drivetrain.motors(MAX_RPM);
   pros::delay(1000); 
   drivetrain.stop(); 
-  activateBrooks(); 
+  brooks.activate();
   //empy the match loader 
   //empty match loader across 
   //Park
@@ -477,7 +477,7 @@ void smallBotRoutine(){
   intake.raiseCart(); // Reset loader mechanism
   drivetrain.turn(85);
   drivetrain.turn(85);
-  intake.setScorerHeight(HIGH);
+  intake.raiseScorer();
   drivetrain.move(6.5);
   intake.score(Intake::TOP, 3000); // Score all blocks
   drivetrain.move(-23); // Go back a little
@@ -506,7 +506,7 @@ void smallBotRoutineWorlds(){
   intake.stopScan();
   drivetrain.move(13); // Move to Long goal
   intake.raiseCart(); // Reset loader mechanism // TODO: replace with function of the back mechanism
-  intake.setScorerHeight(HIGH);
+  intake.raiseScorer();
   drivetrain.move(6.5);
   intake.score(Intake::TOP, 3000); // Score all blocks
   drivetrain.move(-23); // Go back a little
@@ -537,7 +537,7 @@ void smallbotjorgeg(){
   drivetrain.turn(85);
   drivetrain.move(1);
   drivetrain.turn(85);
-  intake.setScorerHeight(HIGH);
+  intake.raiseScorer();
   drivetrain.move(6.5);
   intake.score(Intake::TOP, 1000); // Score all blocks
   drivetrain.move(-6.5); // reset long goal distance

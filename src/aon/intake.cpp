@@ -10,7 +10,7 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                int colorSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
-      cartPistons(cartPistonsPort),
+      cart(cartPistonsPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {}
 
@@ -133,9 +133,11 @@ void Intake::score(const Height& to, const int& delay) {
   this->stop();
 }
 
-void Intake::dropCart() { cartPistons.set_value(HIGH); }
+void Intake::toggleCart() { cart.toggle(); }
 
-void Intake::raiseCart() { cartPistons.set_value(LOW); }
+void Intake::dropCart() { cart.activate(); }
+
+void Intake::raiseCart() { cart.deactivate(); }
 
 #else
 
@@ -147,8 +149,8 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
-      scorerPiston(scorerPistonPort),
-      cartPiston(cartPistonPort),
+      scorerPiston(scorerPistonPort, Piston::RETRACTED),
+      cart(cartPistonPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {
         this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
@@ -289,13 +291,17 @@ void Intake::score(const Height& height, const int& delay) {
   this->stop();
 }
 
-void Intake::setScorerHeight(const short& height) {
-  scorerPiston.set_value(height);
-}
+void Intake::toggleScorerHeight() { scorerPiston.toggle(); }
 
-void Intake::dropCart() { cartPiston.set_value(HIGH); }
+void Intake::raiseScorer() { scorerPiston.activate(); }
 
-void Intake::raiseCart() { cartPiston.set_value(LOW); }
+void Intake::lowerScorer() { scorerPiston.deactivate(); }
+
+void Intake::toggleCart() { cart.toggle(); }
+
+void Intake::dropCart() { cart.activate(); }
+
+void Intake::raiseCart() { cart.deactivate(); }
 
 void Intake::scorer(const int& rpm) {
   // TODO: modify logic for the lever
