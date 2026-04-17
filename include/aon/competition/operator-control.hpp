@@ -79,16 +79,16 @@ inline void DriveDefault() {
   // }
 
   if(mainController.get_digital(DIGITAL_L1)){
-    intake.score(Intake::TOP);
+    intake.store();
   }
   else if(mainController.get_digital(DIGITAL_L2)){
-    intake.score(Intake::MIDDLE);
-  }
-  else if(mainController.get_digital(DIGITAL_R2)){
     intake.score(Intake::BOTTOM);
   }
+  else if(mainController.get_digital(DIGITAL_R2)){
+    intake.score(Intake::MIDDLE);
+  }
   else if(mainController.get_digital(DIGITAL_R1)){
-    intake.store();
+    intake.score(Intake::TOP);
   }
   else if(!intake.isScanning()){
     intake.stop();
