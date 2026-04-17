@@ -13,9 +13,6 @@
 #define USING_BIG_ROBOT false
 #define TESTING_AUTONOMOUS false
 
-#define RED_ALLIANCE true
-#define BLUE_ALLIANCE !RED_ALLIANCE
-
 #if USING_BIG_ROBOT
 
 #define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
@@ -135,5 +132,8 @@
 #define ORBIT_LEFT_LIMIT 210
 #define ORBIT_RIGHT_LIMIT 90
 #endif // NOT USING_BIG_ROBOT
+
+/// Alliance color selected from the GUI before the match.
+enum Alliance : int { Red, Blue, Skills };
 
 #endif  // AON_CONSTANTS_HPP_

@@ -6,6 +6,8 @@
 #include "../tools/general.hpp"
 #include <queue>
 
+extern volatile Alliance ALLIANCE;
+
 namespace aon {
 
 class Intake {

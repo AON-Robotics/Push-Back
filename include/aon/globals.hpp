@@ -90,12 +90,15 @@ pros::ADIEncoder opticalEncoder('Z', 'Z');
 
 // Colors
 enum Colors {
-  RED = 1,
+  RED, 
   BLUE,
   STAKE,
 };
 
 Colors COLOR = RED;
+
+/// Set by the GUI; drives color-sort accept/reject logic at runtime.
+volatile Alliance ALLIANCE = Alliance::Red;
 
 volatile bool turretFollowing = false;
 volatile bool turretBraking = true;

@@ -13,6 +13,8 @@
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
 
+extern volatile Alliance ALLIANCE;
+
 namespace aon {
   class Gui;
   // Owning GUI instance. Created once in gui.cpp; type selected by the
@@ -47,7 +49,7 @@ enum GuiScreen {
 };
 
 // Auton selection system
-enum Alliance { Red, Blue, Skills };
+// Alliance enum is declared above (global scope); ALLIANCE extern is above too.
 
 struct AutonOption {
   const char* name;

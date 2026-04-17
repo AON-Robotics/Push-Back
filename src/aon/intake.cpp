@@ -97,7 +97,8 @@ void Intake::sort() {
           this->elevator(INTAKE_VELOCITY * 2 / 3);
           if (armed && (red || blue)) {
             armed = false;
-            pendingCorrect = (red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE);
+            pendingCorrect = (ALLIANCE == Alliance::Skills) ||
+                             (red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue);
             const Height& height = pendingCorrect ? acceptHeight : rejectHeight;
             if (height != TOP) {
               // Kickback — reverse briefly before routing
@@ -296,12 +297,12 @@ void Intake::sort() {
       const bool red = isRed(hue), blue = isBlue(hue);
 
       if (red || blue) {
-        if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
+        if (ALLIANCE != Alliance::Skills && ((red && ALLIANCE == Alliance::Blue) || (blue && ALLIANCE == Alliance::Red))) {
           // Wrong alliance color detected — reverse motor to eject
           this->judge(-INTAKE_VELOCITY);
           pros::delay(500);
           this->judge(0);
-        } else if ((red && RED_ALLIANCE) || (blue && BLUE_ALLIANCE)) {
+        } else if ((red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue)) {
           if (scoreDown) {
             this->judge(-INTAKE_VELOCITY);
             pros::delay(500);
