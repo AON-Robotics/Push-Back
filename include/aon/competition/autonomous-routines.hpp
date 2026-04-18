@@ -520,31 +520,29 @@ void smallBotRoutineWorlds(){
 
 void smallBotCurves(){
   intake.dropCart(); // Prepare loader mechanism
-  drivetrain.driveAngleOfArc(16.5, 160); // Align with match loader
+  drivetrain.driveAngleOfArc(17, 160); // Align with match loader
   intake.activateScan(); 
   drivetrain.move(4); // Go to match loader
   pros::delay(200);
-  drivetrain.motors(-MAX_RPM / 2); // Jerk back
-  pros::delay(100); // for an instance,
-  drivetrain.motors(MAX_RPM / 2); // then push into loader
-  pros::delay(400); // for a bit of time,
-  drivetrain.stop(); // and stop.
-  pros::delay(5000); // Take up some blocks (6);
+  drivetrain.motors(-MAX_RPM / 2, 100); // Jerk back for an instance,
+  drivetrain.motors(MAX_RPM / 2, 400); // then push into loader for a bit of time,
+  pros::delay(3000); // Take up some blocks (6);
   intake.stopScan();
   drivetrain.move(-6); // Move to Long goal
   intake.raiseCart(); // Reset loader mechanism
   drivetrain.turn(195);
   intake.raiseScorer();
-  drivetrain.move(15);
+  drivetrain.move(16);
+  drivetrain.turn(-10);
   // intake.score(Intake::TOP, 3000); // Score all blocks
-  intake.store(2500);
-  intake.lever();
+  intake.store(1000);
+  intake.lever(); // Score some blocks
+  drivetrain.motors(MAX_RPM / 2, 200);
+  pros::delay(200);
   drivetrain.move(-20); // Go back a little
-  drivetrain.turn(-95); // Orient towards parking
-  drivetrain.move(20); // Go to parking
-  drivetrain.motors(MAX_RPM);
-  pros::delay(1000);
-  drivetrain.stop(); 
+  drivetrain.turn(-100); // Orient towards parking
+  drivetrain.move(20); // Go to parking,
+  drivetrain.motors(MAX_RPM, 1000); // and push into it.
 }
 
 void smallbotjorgeg(){

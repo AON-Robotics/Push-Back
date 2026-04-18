@@ -7,9 +7,12 @@ void HDrive::initialize() {
   this->odometry->initialize();
 }
 
-void HDrive::motors(const double &rpm) {
+void HDrive::motors(const double &rpm, const int& delay) {
   this->leftMotors.moveVelocity(rpm);
   this->rightMotors.moveVelocity(rpm);
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->stop();
 }
 
 void HDrive::sideways(const double &rpm) {

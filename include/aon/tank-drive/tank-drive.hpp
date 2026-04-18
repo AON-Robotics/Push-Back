@@ -37,7 +37,8 @@ class TankDrive : public Drivetrain {
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
-  void motors(const double &rpm) override;
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  void motors(const double &rpm = MAX_RPM, const int& delay = 0) override;
 
   /// @brief Moves all motors the same `rpm` to rotate clockwise
   /// @param rpm The speed in which to move all motors in \b rpm

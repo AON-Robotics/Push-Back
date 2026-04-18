@@ -279,16 +279,9 @@ void Intake::reject(const int& delay) {
 void Intake::lever() {
   this->leverController->setMaxVelocity(150);
   this->leverController->setTarget(150);
-  this->leverController->waitUntilSettled();
+  while(this->leverController->getError() > 10){ pros::delay(5); }
   this->leverController->setMaxVelocity(150);
   this->leverController->setTarget(0);
-  // if(this->leverController->isSettled()) {
-  //   this->leverController->setMaxVelocity(150);
-  //   this->leverController->setTarget(140);
-  // } else if (this->leverController->getError() < 10) {
-  //   this->leverController->setMaxVelocity(150);
-  //   this->leverController->setTarget(0);
-  // }
 }
 
 void Intake::score(const Height& height, const int& delay) {
