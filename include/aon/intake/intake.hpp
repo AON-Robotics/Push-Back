@@ -102,6 +102,9 @@ class Intake {
   /// @note A delay of 0 will never stop moving the intake.
   void score(const Height& height = TOP, const int& delay = 0);
 
+  /// @brief Actuates the lever in its back and forth action
+  void lever();
+
   /// @brief Discards blocks through the back of the robot
   void reject(const int& delay = 0);
 

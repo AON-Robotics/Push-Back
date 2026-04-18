@@ -28,7 +28,7 @@ void HDrive::driveWhileTurning(const double &forward, const double &turn){
 
 void HDrive::drive(double leftX, double leftY, double rightX, double rightY) {
   double forward = applySpeed(leftY, this->isTurbo() ? 1 : 0.5);
-  double sideways = applySpeed(leftX, this->isTurbo() ? 1 : 0.5);
+  double sideways = applySpeed(leftX, this->isTurbo() ? 1 : 0.75);
   double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.5);
 
   this->driveWhileTurning(forward, turn);

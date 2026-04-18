@@ -12,7 +12,7 @@ class Drivetrain {
  protected:
   std::unique_ptr<Odometry> odometry;
   Pose pose;
-  bool turbo = true;
+  bool turbo = false;
   
   public:
 

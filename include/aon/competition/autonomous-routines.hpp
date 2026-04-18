@@ -492,28 +492,58 @@ void smallBotRoutine(){
 // TODO: test
 void smallBotRoutineWorlds(){
   drivetrain.move(31); // Align with match loader
-  drivetrain.turn(-90);
-  drivetrain.move(4); // Go to match loader
+  drivetrain.turn(90);
+  intake.dropCart(); // Prepare loader mechanism
   intake.activateScan(); 
-  intake.dropCart(); // Prepare loader mechanism // TODO: replace with function of the back mechanism
+  drivetrain.move(4); // Go to match loader
   pros::delay(200);
-  drivetrain.motors(MAX_RPM / 2); // Jerk back
+  drivetrain.motors(-MAX_RPM / 2); // Jerk back
   pros::delay(100); // for an instance,
-  drivetrain.motors(-MAX_RPM / 2); // then push into loader
+  drivetrain.motors(MAX_RPM / 2); // then push into loader
   pros::delay(400); // for a bit of time,
   drivetrain.stop(); // and stop.
   pros::delay(5000); // Take up some blocks (6);
   intake.stopScan();
-  drivetrain.move(13); // Move to Long goal
-  intake.raiseCart(); // Reset loader mechanism // TODO: replace with function of the back mechanism
+  drivetrain.move(-6); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  drivetrain.turn(-180);
   intake.raiseScorer();
-  drivetrain.move(6.5);
+  drivetrain.move(13);
   intake.score(Intake::TOP, 3000); // Score all blocks
   drivetrain.move(-23); // Go back a little
   drivetrain.turn(-90); // Orient towards parking
   drivetrain.move(20); // Go to parking
   drivetrain.motors(MAX_RPM);
   pros::delay(1200);
+  drivetrain.stop(); 
+}
+
+void smallBotCurves(){
+  intake.dropCart(); // Prepare loader mechanism
+  drivetrain.driveAngleOfArc(16.5, 160); // Align with match loader
+  intake.activateScan(); 
+  drivetrain.move(4); // Go to match loader
+  pros::delay(200);
+  drivetrain.motors(-MAX_RPM / 2); // Jerk back
+  pros::delay(100); // for an instance,
+  drivetrain.motors(MAX_RPM / 2); // then push into loader
+  pros::delay(400); // for a bit of time,
+  drivetrain.stop(); // and stop.
+  pros::delay(5000); // Take up some blocks (6);
+  intake.stopScan();
+  drivetrain.move(-6); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  drivetrain.turn(195);
+  intake.raiseScorer();
+  drivetrain.move(15);
+  // intake.score(Intake::TOP, 3000); // Score all blocks
+  intake.store(2500);
+  intake.lever();
+  drivetrain.move(-20); // Go back a little
+  drivetrain.turn(-95); // Orient towards parking
+  drivetrain.move(20); // Go to parking
+  drivetrain.motors(MAX_RPM);
+  pros::delay(1000);
   drivetrain.stop(); 
 }
 

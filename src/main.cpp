@@ -23,7 +23,7 @@ void autonomous() {
   #if USING_BIG_ROBOT
   aon::routines::safeBigBotRoutine();
   #else
-  aon::routines::smallBotRoutine();
+  aon::routines::smallBotCurves();
   #endif
   // aon::autonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
@@ -42,8 +42,7 @@ void opcontrol() {
     #if USING_BIG_ROBOT
     aon::routines::safeBigBotRoutine();
     #else
-    // aon::routines::smallBotRoutine();
-    aon::tests::square();
+    aon::routines::smallBotRoutineWorlds();
     #endif
 
     pros::delay(5000);

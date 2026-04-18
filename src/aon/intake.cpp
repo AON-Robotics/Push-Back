@@ -15,7 +15,6 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
       colorSensor(colorSensorPort) {}
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
-
   elevatorMG.setBrakeMode(brakeMode);
   elevatorMG.setGearing(gearset);
   elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -33,7 +32,6 @@ void Intake::move(const int& rpm) {
 }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
-
 
 void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
@@ -153,8 +151,8 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
       cart(cartPistonPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {
-        this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
-      }
+  this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
+}
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
@@ -178,7 +176,6 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
 void Intake::move(const int& rpm) {
   this->elevator(rpm);
   this->judge(rpm);
-  this->scorer(rpm);
 }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
@@ -279,9 +276,24 @@ void Intake::reject(const int& delay) {
   this->judge(0);
 }
 
+void Intake::lever() {
+  this->leverController->setMaxVelocity(150);
+  this->leverController->setTarget(150);
+  this->leverController->waitUntilSettled();
+  this->leverController->setMaxVelocity(150);
+  this->leverController->setTarget(0);
+  // if(this->leverController->isSettled()) {
+  //   this->leverController->setMaxVelocity(150);
+  //   this->leverController->setTarget(140);
+  // } else if (this->leverController->getError() < 10) {
+  //   this->leverController->setMaxVelocity(150);
+  //   this->leverController->setTarget(0);
+  // }
+}
+
 void Intake::score(const Height& height, const int& delay) {
   if (height == TOP) {
-    this->move();
+    this->store();
   } else if (height == BOTTOM) {
     this->move(-INTAKE_VELOCITY);
   } else
@@ -316,7 +328,7 @@ double Intake::distance() { return distanceSensor.get(); }
 
 bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
 
-bool Intake::isScanning(){ return this->scanning; }
+bool Intake::isScanning() { return this->scanning; }
 
 void Intake::activateScan() {
   scanning = true;
