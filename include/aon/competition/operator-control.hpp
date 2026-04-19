@@ -55,6 +55,9 @@ bool brooksUp = false;
 bool semOut = false;
 bool sortActive = false;
 #else
+int r1PressCount = 0;
+size_t lastPressTime = 0;
+const int DOUBLE_TAP_TIME = 250;
 bool cartOut = false;
 bool scorerUp = false;
 bool arrowOut = false;
