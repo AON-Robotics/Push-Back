@@ -44,7 +44,7 @@ aon::Odometry odometry = aon::Odometry(19, -18, 5, 0, 16);
 
 aon::TankDrive drivetrain = aon::TankDrive({11, -12, 13, -14}, {1, -2, 3, -4}, std::make_unique<aon::Odometry>(odometry));
 
-aon::Intake intake = aon::Intake({-9, 6}, {7}, {-8}, 'Z', 'Z', 20, 17);
+aon::Intake intake = aon::Intake({-9, 6}, {7}, {-8}, 'Z', 'H', 'A', 20, 17);
 
 aon::Piston arrow('Z', aon::Piston::RETRACTED);
 

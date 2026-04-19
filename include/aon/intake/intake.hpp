@@ -70,6 +70,7 @@ class Intake {
   okapi::MotorGroup scorerMG;
   Piston scorerPiston;
   Piston cart;
+  Piston trapdoor;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
 
@@ -80,8 +81,8 @@ class Intake {
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
-         char scorerPistonPort, char cartPistonPort, int distanceSensorPort,
-         int colorSensorPort);
+         char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
+         int distanceSensorPort, int colorSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -117,7 +118,7 @@ class Intake {
   /// @brief Lowers the scorer to allow for scoring in the middle goal
   void lowerScorer();
 
-  /// @brief  Sets the cart state to the opposite of what it currently is
+  /// @brief Sets the cart state to the opposite of what it currently is
   void toggleCart();
 
   /// @brief Drops the cart by activating its pistons
@@ -125,6 +126,15 @@ class Intake {
 
   /// @brief Raises the cart by deactivating its pistons
   void raiseCart();
+
+  /// @brief Sets the trapdoor state to the opposite of what it currently is
+  void toggleTrapdoor();
+
+  /// @brief Opens the trapdoor by activating its pistons
+  void openTrapdoor();
+
+  /// @brief Closes the trapdoor by deactivating its pistons
+  void closeTrapdoor();
 
 #endif
 

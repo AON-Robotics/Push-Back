@@ -378,15 +378,7 @@ namespace routines {
 
 #if USING_BIG_ROBOT
 
-int RedRoutine(){
-  return 1;
-}
-
-int BlueRoutine(){
-  return 1;
-}
-
-/// @brief Starting position is the left side of the parking facing towards the drive team, placed paralele to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
+/// @brief Starting position is the left side of the parking facing towards the drive team, placed parallel to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
 void safeBigBotRoutine(){
   intake.activateScan();
   drivetrain.strafe(28.5); // Align with match loader.
@@ -413,6 +405,28 @@ void safeBigBotRoutine(){
   brooks.activate(); // Park.
   intake.stopScan();
   //* Works till here
+}
+
+void bigBotCurves(){
+  intake.activateScan();
+  drivetrain.strafe(28.5); // Align with match loader.
+  intake.dropCart(); // Prepare loader mechanism.
+  drivetrain.move(6); // Move to match loader.
+  drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
+  pros::delay(8000); // Take up all the blocks (9).
+  drivetrain.move(-22); // Move to long goal.
+  drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
+  intake.raiseCart(); // Reset loader mechanism.
+  intake.score(Intake::TOP, 8000); // Score all 9 blocks.
+  drivetrain.move(15); // Go back a little.
+  drivetrain.turn(-90); // Orient towards parking.
+  drivetrain.move(12); // Move towards parking.
+  drivetrain.strafe(12); // Align with parking.
+  // drivetrain.goToPose(Pose(0,0,-90));
+  drivetrain.move(11); // Move to parking.
+  drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
+  brooks.activate(); // Park.
+  intake.stopScan();
 }
 
 void BigBotSkillsRoutine(){
@@ -449,15 +463,54 @@ void BigBotSkillsRoutine(){
   //Park
 }
 
+// Wrappers for the GUI
+
+int RedRoutine1(){
+  bigBotCurves();
+  return 1;
+}
+
+int RedRoutine2(){
+  aon::tests::square();
+  return 1;
+}
+
+int RedRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
+int BlueRoutine1(){
+  safeBigBotRoutine();
+  return 1;
+}
+
+int BlueRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int BlueRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
+int SkillsRoutine1(){
+  safeBigBotRoutine();
+  return 1;
+}
+
+int SkillsRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int SkillsRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
 #else
-
-int RedRoutine(){
-  return 1;
-}
-
-int BlueRoutine(){
-  return 1;
-}
 
 void smallBotRoutine(){
   drivetrain.move(31); // Align with match loader
@@ -528,18 +581,19 @@ void smallBotCurves(){
   drivetrain.motors(MAX_RPM / 2, 400); // then push into loader for a bit of time,
   pros::delay(3000); // Take up some blocks (6);
   intake.stopScan();
-  drivetrain.move(-6); // Move to Long goal
+  drivetrain.driveAngleOfArc(-10, -90); // Move to Long goal
   intake.raiseCart(); // Reset loader mechanism
-  drivetrain.turn(195);
+  drivetrain.driveAngleOfArc(10, 90); 
   intake.raiseScorer();
-  drivetrain.move(16);
-  drivetrain.turn(-10);
-  // intake.score(Intake::TOP, 3000); // Score all blocks
-  intake.store(1000);
+  intake.openTrapdoor();
+  drivetrain.move(5);
+  intake.store(500);
   intake.lever(); // Score some blocks
   drivetrain.motors(MAX_RPM / 2, 200);
   pros::delay(200);
   drivetrain.move(-20); // Go back a little
+  intake.closeTrapdoor();
+  intake.lowerScorer();
   drivetrain.turn(-100); // Orient towards parking
   drivetrain.move(20); // Go to parking,
   drivetrain.motors(MAX_RPM, 1000); // and push into it.
@@ -578,6 +632,53 @@ void smallbotjorgeg(){
   drivetrain.move(20);
   drivetrain.turn(-45);
   drivetrain.move();  
+}
+
+// Wrappers for the GUI
+
+int RedRoutine1(){
+  smallBotRoutine();
+  return 1;
+}
+
+int RedRoutine2(){
+  aon::tests::square();
+  return 1;
+}
+
+int RedRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
+int BlueRoutine1(){
+  smallBotRoutine();
+  return 1;
+}
+
+int BlueRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int BlueRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
+int SkillsRoutine1(){
+  smallBotRoutine();
+  return 1;
+}
+
+int SkillsRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int SkillsRoutine3(){
+  aon::tests::turns();
+  return 1;
 }
 
 #endif

@@ -66,7 +66,7 @@
 /// @see https://www.desmos.com/calculator/f523970d6f
 #define MAX_DECEL 500.0 // 100.0 // 2413.22817284
 
-#define INTAKE_ACTIVATION_DISTANCE 160
+#define INTAKE_ACTIVATION_DISTANCE 90
 
 #define ORBIT_HEIGHT 12.5
 // ORBIT Limiting to protect when it does not have 360° of freedom

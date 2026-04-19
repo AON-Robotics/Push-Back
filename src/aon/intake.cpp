@@ -142,13 +142,14 @@ void Intake::raiseCart() { cart.deactivate(); }
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
-               char scorerPistonPort, char cartPistonPort,
+               char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
                int distanceSensorPort, int colorSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
       scorerPiston(scorerPistonPort, Piston::RETRACTED),
       cart(cartPistonPort, Piston::RETRACTED),
+      trapdoor(trapdoorPistonPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {
   this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
@@ -307,6 +308,12 @@ void Intake::toggleCart() { cart.toggle(); }
 void Intake::dropCart() { cart.activate(); }
 
 void Intake::raiseCart() { cart.deactivate(); }
+
+void Intake::toggleTrapdoor() { trapdoor.toggle(); }
+
+void Intake::openTrapdoor() { trapdoor.activate(); }
+
+void Intake::closeTrapdoor() { trapdoor.deactivate(); }
 
 void Intake::scorer(const int& rpm) {
   // TODO: modify logic for the lever
