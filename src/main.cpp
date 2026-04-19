@@ -20,12 +20,8 @@ void competition_initialize() {}
 
 void autonomous() {
   aon::Configure(false); // Set drivetrain to hold for auton
-  #if USING_BIG_ROBOT
-  aon::routines::safeBigBotRoutine();
-  #else
-  aon::routines::smallBotCurves();
-  #endif
-  // aon::autonomousReader->ExecuteFunction("autonomous");
+  // TODO: add presetFunction
+  aon::autonomousReader->ExecuteFunction("autonomous");
   pros::delay(10);
 }
 
@@ -39,11 +35,8 @@ void opcontrol() {
     #if TESTING_AUTONOMOUS
     aon::Configure(false); // Set drivetrain to hold for auton testing
 
-    #if USING_BIG_ROBOT
-    aon::routines::safeBigBotRoutine();
-    #else
-    aon::routines::smallBotRoutineWorlds();
-    #endif
+    // TODO: add presetFunction
+    aon::autonomousReader->ExecuteFunction("autonomous");
 
     pros::delay(5000);
     #else

@@ -137,6 +137,10 @@ void Intake::dropCart() { cart.activate(); }
 
 void Intake::raiseCart() { cart.deactivate(); }
 
+void Intake::activateScan() { scanning = true; }
+
+void Intake::stopScan() { scanning = false; }
+
 #else
 
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
@@ -318,16 +322,6 @@ void Intake::scorer(const int& rpm) {
   scorerMG.moveVelocity(rpm);
 }
 
-#endif
-
-void Intake::stop() { this->move(0); }
-
-double Intake::distance() { return distanceSensor.get(); }
-
-bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
-
-bool Intake::isScanning() { return this->scanning; }
-
 void Intake::activateScan() {
   scanning = true;
   colorSensor.set_led_pwm(100);
@@ -338,6 +332,16 @@ void Intake::stopScan() {
   colorSensor.set_led_pwm(0);
 }
 
+#endif
+
+void Intake::stop() { this->move(0); }
+
+double Intake::distance() { return distanceSensor.get(); }
+
+bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
+
+bool Intake::isScanning() { return this->scanning; }
+
 void Intake::kickBack() {
   this->move(-100);
   pros::delay(150);
@@ -346,7 +350,7 @@ void Intake::kickBack() {
 
 double Intake::hue() { return colorSensor.get_hue(); }
 
-bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 25; }
+bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 15; }
 
 bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 230; }
 

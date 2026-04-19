@@ -346,6 +346,10 @@ void square(){
   }
 }
 
+void colorSorting(){
+  intake.activateScan();
+}
+
 #if USING_BIG_ROBOT
 
 
@@ -418,11 +422,15 @@ void bigBotCurves(){
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
   intake.raiseCart(); // Reset loader mechanism.
   intake.score(Intake::TOP, 8000); // Score all 9 blocks.
-  drivetrain.move(15); // Go back a little.
-  drivetrain.turn(-90); // Orient towards parking.
-  drivetrain.move(12); // Move towards parking.
+
+  drivetrain.driveAngleOfArc(-18, 90);
+
+  // drivetrain.move(15); // Go back a little.
+  // drivetrain.turn(-90); // Orient towards parking.
+  // drivetrain.move(12); // Move towards parking.
+  
+  // drivetrain.goToPose(Pose(0,0,-90)); // TODO: doing this depends on whether the new odom works
   drivetrain.strafe(12); // Align with parking.
-  // drivetrain.goToPose(Pose(0,0,-90));
   drivetrain.move(11); // Move to parking.
   drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
   brooks.activate(); // Park.
@@ -476,7 +484,7 @@ int RedRoutine2(){
 }
 
 int RedRoutine3(){
-  aon::tests::turns();
+  aon::tests::colorSorting();
   return 1;
 }
 
