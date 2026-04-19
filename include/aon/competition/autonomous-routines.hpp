@@ -637,17 +637,17 @@ void smallbotjorgeg(){
 // Wrappers for the GUI
 
 int RedRoutine1(){
-  smallBotRoutine();
+  smallBotCurves();
   return 1;
 }
 
 int RedRoutine2(){
-  aon::tests::square();
+  smallBotRoutineWorlds();
   return 1;
 }
 
 int RedRoutine3(){
-  aon::tests::turns();
+  aon::tests::square();
   return 1;
 }
 
