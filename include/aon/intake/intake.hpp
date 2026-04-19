@@ -4,6 +4,7 @@
 #include "../../api.h"
 #include "../../okapi/api.hpp"
 #include "../tools/general.hpp"
+#include "../piston/piston.hpp"
 #include <queue>
 
 extern volatile Alliance ALLIANCE;
@@ -28,7 +29,7 @@ class Intake {
  private:
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
-  pros::ADIDigitalOut cartPistons;
+  Piston cart;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
   pros::ADIDigitalIn acceptSensor;
@@ -54,6 +55,9 @@ class Intake {
   /// @brief Moves only the judge at the given `rpm`
   /// @param rpm The rpm at which to set the judge
   void judge(const int& rpm = INTAKE_VELOCITY);
+
+  /// @brief  Sets the cart state to the opposite of what it currently is
+  void toggleCart();
 
   /// @brief Drops the cart by activating its pistons
   void dropCart();
@@ -85,8 +89,9 @@ class Intake {
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
   okapi::MotorGroup scorerMG;
-  pros::ADIDigitalOut scorerPiston;
-  pros::ADIDigitalOut cartPiston;
+  Piston scorerPiston;
+  Piston cart;
+  Piston trapdoor;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
 
@@ -98,7 +103,7 @@ class Intake {
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
-         char scorerPistonPort, char cartPistonPort,
+         char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
          int distanceSensorPort, int colorSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
@@ -120,19 +125,38 @@ class Intake {
   /// @note A delay of 0 will never stop moving the intake.
   void score(const Height& height = TOP, const int& delay = 0);
 
+  /// @brief Actuates the lever in its back and forth action (blocking)
+  void lever();
+
   /// @brief Discards blocks through the back of the robot
   void reject(const int& delay = 0);
 
-  /// @brief Moves the piston of the scorer to set its desired state (`HIGH` or
-  /// `LOW` only)
-  /// @param height The next height of the scorer in `{HIGH, LOW}`
-  void setScorerHeight(const short& height);
+  /// @brief Sets the scorer height to the opposite of what it currently is
+  void toggleScorerHeight();
+
+  /// @brief Raises the scorer to allow for scoring in the top goals
+  void raiseScorer();
+
+  /// @brief Lowers the scorer to allow for scoring in the middle goal
+  void lowerScorer();
+
+  /// @brief Sets the cart state to the opposite of what it currently is
+  void toggleCart();
 
   /// @brief Drops the cart by activating its pistons
   void dropCart();
 
   /// @brief Raises the cart by deactivating its pistons
   void raiseCart();
+
+  /// @brief Sets the trapdoor state to the opposite of what it currently is
+  void toggleTrapdoor();
+
+  /// @brief Opens the trapdoor by activating its pistons
+  void openTrapdoor();
+
+  /// @brief Closes the trapdoor by deactivating its pistons
+  void closeTrapdoor();
 
 #endif
 

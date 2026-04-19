@@ -41,14 +41,6 @@ inline double AnalogInputScaling(const double& x, const double& t) {
   return (a + b * (1 - a)) * x / 127.0;
 }
 
-/// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
-/// @param input The joystick input to be scaled
-/// @param percentage The percentage of the drivetrain's `MAX_RPM` to scale to
-/// @return The `input` scaled to the `MAX_RPM` of the drivetrain as per `percentage`
-inline double ApplySpeed(const double& input, const double& percentage){
-  return input * MAX_RPM * percentage;
-}
-
 // ============================================================================
 //    ___      _
 //   |   \ _ _(_)_ _____ _ _ ___
@@ -127,15 +119,15 @@ inline void DriveDefault() {
 
   // Change Brooks Height
   if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    toggle(brooksUp) ? activateBrooks() : deactivateBrooks();
+    brooks.toggle();
   }
-  // Toggle SEM
+
   else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
-    toggle(semOut) ? activateSEM() : deactivateSEM();
+    sem.toggle();
   }
   // Match loaders mechanism
   else if(mainController.get_digital_new_press(DIGITAL_UP)) {
-    toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
+    intake.toggleCart();
   }
 
   else if(mainController.get_digital_new_press(DIGITAL_X)) {
@@ -158,17 +150,29 @@ inline void DriveDefault() {
   }
 
   // Lever // TODO: make this behavior native to the intake class
-  if(mainController.get_digital_new_press(DIGITAL_R1) && intake.leverController->isSettled()) {
-    intake.leverController->setMaxVelocity(100);
-    intake.leverController->setTarget(140);
+  if(mainController.get_digital_new_press(DIGITAL_R1)) {
+    size_t currentTime = pros::millis();
+
+    if(currentTime - lastPressTime < DOUBLE_TAP_TIME){
+      intake.leverController->setTarget(0);
+    } else {
+      intake.leverController->setTarget(150);
+    }
+
+    lastPressTime = currentTime;
   } else if (intake.leverController->getError() < 10) {
-    intake.leverController->setMaxVelocity(100);
     intake.leverController->setTarget(0);
-  } 
-  
-  if (mainController.get_digital_new_press(DIGITAL_R1)) {
-    intake.leverController->setMaxVelocity(200);
   }
+
+  // Optional single tap
+  // Lever
+  // const bool pressedR1 = mainController.get_digital_new_press(DIGITAL_R1);
+  // if(pressedR1 && intake.leverController->getTarget() == 0 && intake.leverController->getError() < 10){
+  //   intake.leverController->setTarget(140);
+  // } else if ((pressedR1 && intake.leverController->getTarget() == 140 && !intake.leverController->isSettled())
+  //             || (intake.leverController->getTarget() == 140 && intake.leverController->getError() < 10)){
+  //   intake.leverController->setTarget(0);
+  // } 
 
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
     intake.elevator(0);
@@ -177,19 +181,20 @@ inline void DriveDefault() {
   
   // Change Height
   if(mainController.get_digital_new_press(DIGITAL_B)) {
-    intake.setScorerHeight(toggle(scorerUp) ? HIGH : LOW);
+    intake.toggleScorerHeight();
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
+  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
+    intake.toggleCart();
   }
-
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
     drivetrain.toggleTurbo();
   }
-  // Toggle Arrow
+  else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
+    arrow.toggle();
+  }
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
-    toggle(arrowOut) ? activateArrow() : deactivateArrow();
+    intake.toggleTrapdoor();
   }
 
   #endif

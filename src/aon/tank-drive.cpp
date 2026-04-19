@@ -8,9 +8,12 @@ void TankDrive::initialize(){
   this->odometry->initialize();
 }
 
-void TankDrive::motors(const double &rpm) {
+void TankDrive::motors(const double &rpm, const int& delay) {
   this->leftMotors.moveVelocity(rpm);
   this->rightMotors.moveVelocity(rpm);
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->stop();
 }
 
 void TankDrive::rotate(const double &rpm) {

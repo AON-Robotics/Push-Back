@@ -14,6 +14,7 @@
 #include "./orbit/orbit.hpp"
 #include "./drivetrain.hpp"
 #include "./odometry/odometry.hpp"
+#include "./piston/piston.hpp"
 
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
@@ -42,16 +43,8 @@ aon::HDrive drivetrain = aon::HDrive({-1, 2, 3, -4}, {12, -13, -18, 19}, {-15}, 
 // )
 aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16, 'F', 'E');
 
-pros::ADIDigitalOut semPiston('G'); // Shrek Ear Mechanism
-pros::ADIDigitalOut brooksPiston('D');
-
-void activateSEM() { semPiston.set_value(HIGH); }
-
-void deactivateSEM() { semPiston.set_value(LOW); }
-
-void activateBrooks() { brooksPiston.set_value(HIGH); }
-
-void deactivateBrooks() { brooksPiston.set_value(LOW); }
+aon::Piston sem('G', aon::Piston::RETRACTED);
+aon::Piston brooks('D', aon::Piston::RETRACTED);
 
 #else
 
@@ -60,18 +53,14 @@ aon::Odometry odometry = aon::Odometry(19, -18, 5, 0, 16);
 
 aon::TankDrive drivetrain = aon::TankDrive({11, -12, 13, -14}, {1, -2, 3, -4}, std::make_unique<aon::Odometry>(odometry));
 
-aon::Intake intake = aon::Intake({-9, 6}, {7}, {-8}, 'Z', 'Z', 20, 17);
+aon::Intake intake = aon::Intake({-9, 6}, {7}, {-8}, 'H', 'Z', 'A', 20, 17);
 
-pros::ADIDigitalOut arrowPiston('Z');
-
-void activateArrow() { arrowPiston.set_value(HIGH); }
-
-void deactivateArrow() { arrowPiston.set_value(LOW); }
+aon::Piston arrow('Z', aon::Piston::RETRACTED);
 
 #endif
 
 // Misc
-aon::Orbit orbit(0,true,0,0);
+aon::Orbit orbit(0, true, 0, 0);
 
 // ============================================================================
 //   ___ ___ _  _ ___  ___  ___  ___ 

@@ -700,15 +700,18 @@ Open [gui.hpp](gui.hpp) and jump directly to the `AutonOption` arrays:
 - [Blue Auton Options](gui.hpp#L82)
 - [Skills Auton Options](gui.hpp#L88)
 
-Note: when adding a new preset auton, also add a forward declaration for the function in the `aon` namespace at the top of `gui.hpp` so the GUI can reference it (for example: `int ForwardBackTurnRoutine();`). Then implement the function in [autonomous-routines.hpp](../../competition/autonomous-routines.hpp). Ensure the function is in the `aon::` namespace and returns an `int`.
+Note: when adding a new preset auton, also add a forward declaration for the function in the `aon` namespace at the top of `gui.hpp` so the GUI can reference it (for example: `int ForwardBackTurnRoutine();`). Then implement the function in [autonomous-routines.hpp](../../competition/autonomous-routines.hpp). Ensure the function is in the `aon::routines` namespace and returns an `int`.
 
 ```cpp
 // Forward declarations at top of gui.hpp (inside namespace aon)
 namespace aon {
-  int RedRingsRoutine();
-  int BlueRingsRoutine();
-  int ForwardBackTurnRoutine();
-  // Add other auton routine declarations as needed
+
+  namespace routines {
+    int RedRingsRoutine();
+    int BlueRingsRoutine();
+    int ForwardBackTurnRoutine();
+    // Add other auton routine declarations as needed
+  }
 
 
 // Auton option arrays (instance members of the Gui class — no static/inline)
@@ -761,7 +764,7 @@ Navigate to **AUTONS** menu on the brain to see your updated options.
 ### Notes
 
 - **Names must match**: Ensure the function names match exactly with forward declarations or actual function definitions
-- **Naming style**: Functions should be in the `aon::` namespace and return `int` 
+- **Naming style**: Functions should be in the `aon::routines::` namespace and return `int` 
 - **Array size**: Don't change `AutonOptionsCount` (set to 3) unless you also change all three arrays
 - **Only for preset autons**: If you want to dynamically register autons, use the Debug Menu's **Registered Autons** feature instead (see [Registering Test Functions](#registering-test-functions))
 

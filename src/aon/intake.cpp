@@ -11,14 +11,13 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                char acceptSensorPort, char rejectSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
-      cartPistons(cartPistonsPort),
+      cart(cartPistonsPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort),
       acceptSensor(acceptSensorPort),
       rejectSensor(rejectSensorPort) {}
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
-
   elevatorMG.setBrakeMode(brakeMode);
   elevatorMG.setGearing(gearset);
   elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -36,7 +35,6 @@ void Intake::move(const int& rpm) {
 }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
-
 
 void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
@@ -206,9 +204,15 @@ void Intake::score(const Height& to, const int& delay) {
   this->stop();
 }
 
-void Intake::dropCart() { cartPistons.set_value(HIGH); }
+void Intake::toggleCart() { cart.toggle(); }
 
-void Intake::raiseCart() { cartPistons.set_value(LOW); }
+void Intake::dropCart() { cart.activate(); }
+
+void Intake::raiseCart() { cart.deactivate(); }
+
+void Intake::activateScan() { scanning = true; }
+
+void Intake::stopScan() { scanning = false; }
 
 void Intake::setSortHeights(Height accept, Height reject) {
   acceptHeight = accept;
@@ -228,16 +232,18 @@ void Intake::stopRelease() { releasing = false; }
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
-               char scorerPistonPort, char cartPistonPort,
+               char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
                int distanceSensorPort, int colorSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
-      scorerPiston(scorerPistonPort),
-      cartPiston(cartPistonPort),
+      scorerPiston(scorerPistonPort, Piston::RETRACTED),
+      cart(cartPistonPort, Piston::RETRACTED),
+      trapdoor(trapdoorPistonPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
-      colorSensor(colorSensorPort){}
-       
+      colorSensor(colorSensorPort) {
+  this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
+}
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
@@ -261,7 +267,6 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
 void Intake::move(const int& rpm) {
   this->elevator(rpm);
   this->judge(rpm);
-  this->scorer(rpm);
 }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
@@ -344,9 +349,15 @@ void Intake::reject(const int& delay) {
   this->judge(0);
 }
 
+void Intake::lever() {
+  this->leverController->setTarget(150);
+  while(this->leverController->getError() > 10){ pros::delay(5); }
+  this->leverController->setTarget(0);
+}
+
 void Intake::score(const Height& height, const int& delay) {
   if (height == TOP) {
-    this->move();
+    this->store();
   } else if (height == BOTTOM) {
     this->move(-INTAKE_VELOCITY);
   } else
@@ -356,28 +367,28 @@ void Intake::score(const Height& height, const int& delay) {
   this->stop();
 }
 
-void Intake::setScorerHeight(const short& height) {
-  scorerPiston.set_value(height);
-}
+void Intake::toggleScorerHeight() { scorerPiston.toggle(); }
 
-void Intake::dropCart() { cartPiston.set_value(HIGH); }
+void Intake::raiseScorer() { scorerPiston.activate(); }
 
-void Intake::raiseCart() { cartPiston.set_value(LOW); }
+void Intake::lowerScorer() { scorerPiston.deactivate(); }
+
+void Intake::toggleCart() { cart.toggle(); }
+
+void Intake::dropCart() { cart.activate(); }
+
+void Intake::raiseCart() { cart.deactivate(); }
+
+void Intake::toggleTrapdoor() { trapdoor.toggle(); }
+
+void Intake::openTrapdoor() { trapdoor.activate(); }
+
+void Intake::closeTrapdoor() { trapdoor.deactivate(); }
 
 void Intake::scorer(const int& rpm) {
   // TODO: modify logic for the lever
   scorerMG.moveVelocity(rpm);
 }
-
-#endif
-
-void Intake::stop() { this->move(0); }
-
-double Intake::distance() { return distanceSensor.get(); }
-
-bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
-
-bool Intake::isScanning(){ return this->scanning; }
 
 void Intake::activateScan() {
   scanning = true;
@@ -388,6 +399,16 @@ void Intake::stopScan() {
   this->elevator(0);
   colorSensor.set_led_pwm(0);
 }
+
+#endif
+
+void Intake::stop() { this->move(0); }
+
+double Intake::distance() { return distanceSensor.get(); }
+
+bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
+
+bool Intake::isScanning() { return this->scanning; }
 
 void Intake::kickBack() {
   this->move(-100);

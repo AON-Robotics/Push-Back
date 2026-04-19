@@ -22,8 +22,15 @@ namespace aon {
   extern std::unique_ptr<Gui> gui;
   
   namespace routines {
-    int RedRoutine();
-    int BlueRoutine();
+    int RedRoutine1();
+    int RedRoutine2();
+    int RedRoutine3();
+    int BlueRoutine1();
+    int BlueRoutine2();
+    int BlueRoutine3();
+    int SkillsRoutine1();
+    int SkillsRoutine2();
+    int SkillsRoutine3();
   }
     
   // Add other auton routine declarations as needed
@@ -83,21 +90,21 @@ public:
   // TODO: move this to be only parameter based
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
-    {"Red AUT1", aon::routines::RedRoutine},
-    {"Red AUT2", aon::routines::RedRoutine},
-    {"Red AUT3", aon::routines::RedRoutine},
+    {"Red AUT1", aon::routines::RedRoutine1},
+    {"Red AUT2", aon::routines::RedRoutine2},
+    {"Red AUT3", aon::routines::RedRoutine3},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {
-    {"Blue AUT1", aon::routines::BlueRoutine},
-    {"Blue AUT2", aon::routines::BlueRoutine},
-    {"Blue AUT3", aon::routines::BlueRoutine},
+    {"Blue AUT1", aon::routines::BlueRoutine1},
+    {"Blue AUT2", aon::routines::BlueRoutine2},
+    {"Blue AUT3", aon::routines::BlueRoutine3},
   };
   
   AutonOption skillsAutonOptions[autonOptionsCount] = {
-    {"Skills AUT1", aon::routines::RedRoutine},
-    {"Skills AUT2", aon::routines::RedRoutine},
-    {"Skills AUT3", aon::routines::RedRoutine},
+    {"Skills AUT1", aon::routines::SkillsRoutine1},
+    {"Skills AUT2", aon::routines::SkillsRoutine2},
+    {"Skills AUT3", aon::routines::SkillsRoutine3},
   };
 
 
