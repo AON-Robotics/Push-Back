@@ -305,16 +305,16 @@ void Intake::sort() {
         if (ALLIANCE != Alliance::Skills && ((red && ALLIANCE == Alliance::Blue) || (blue && ALLIANCE == Alliance::Red))) {
           // Wrong alliance color detected — reverse motor to eject
           this->judge(-INTAKE_VELOCITY);
-          pros::delay(500);
+          pros::delay(200);
           this->judge(0);
         } else if ((red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue)) {
           if (scoreDown) {
             this->judge(-INTAKE_VELOCITY);
-            pros::delay(500);
+            pros::delay(175);
             this->judge(0);
           } else {
             this->judge(INTAKE_VELOCITY);
-            pros::delay(500);
+            pros::delay(200);
             this->judge(0);
           }
         }
