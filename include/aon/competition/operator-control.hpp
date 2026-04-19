@@ -135,7 +135,17 @@ inline void DriveDefault() {
     lastPressTime = currentTime;
   } else if (intake.leverController->getError() < 10) {
     intake.leverController->setTarget(0);
-  } 
+  }
+
+  // Optional single tap
+  // Lever
+  // const bool pressedR1 = mainController.get_digital_new_press(DIGITAL_R1);
+  // if(pressedR1 && intake.leverController->getTarget() == 0 && intake.leverController->getError() < 10){
+  //   intake.leverController->setTarget(140);
+  // } else if ((pressedR1 && intake.leverController->getTarget() == 140 && !intake.leverController->isSettled())
+  //             || (intake.leverController->getTarget() == 140 && intake.leverController->getError() < 10)){
+  //   intake.leverController->setTarget(0);
+  // } 
 
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
     intake.elevator(0);
