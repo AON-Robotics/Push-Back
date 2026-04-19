@@ -5,6 +5,9 @@
 #include "../../okapi/api.hpp"
 #include "../tools/general.hpp"
 #include "../piston/piston.hpp"
+#include <queue>
+
+extern volatile Alliance ALLIANCE;
 
 namespace aon {
 
@@ -29,13 +32,21 @@ class Intake {
   Piston cart;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
+  pros::ADIDigitalIn acceptSensor;
+  pros::ADIDigitalIn rejectSensor;
 
   volatile bool scanning = false;
+  volatile bool scoreDown = false;
+  volatile bool releasing = false;
+  volatile bool lastColorSeen = false;
+  Height acceptHeight = TOP;
+  Height rejectHeight = MIDDLE;
 
  public:
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
-         char cartPistonsPort, int distanceSensorPort, int colorSensorPort);
+         char cartPistonsPort, int distanceSensorPort, int colorSensorPort,
+         char acceptSensorPort, char rejectSensorPort);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator
@@ -63,6 +74,16 @@ class Intake {
   /// @note A delay of 0 will never stop moving the intake.
   void score(const Height& to = TOP, const int& delay = 0);
 
+  /// @brief Sets the exit heights for the sort routine mid-run.
+  /// @param accept Where correct-color blocks exit
+  /// @param reject Where wrong-color blocks exit
+  void setSortHeights(Height accept, Height reject);
+
+  /// @brief Allows the sort queue to start processing.
+  /// @details Detection and queuing always run; call this to start sorting.
+  void release();
+  void stopRelease();
+  //made by pablo(chatgpt) in the span of 9 months
 #else
  private:
   okapi::MotorGroup elevatorMG;
@@ -75,6 +96,7 @@ class Intake {
   pros::Optical colorSensor;
 
   volatile bool scanning = true;
+  volatile bool scoreDown = false;
 
  public:
   std::shared_ptr<okapi::AsyncPositionController<double, double>> leverController = nullptr;
@@ -170,6 +192,11 @@ class Intake {
   /// @brief Runs a background loop to color sort blocks when scanning is
   /// active.
   void sort();
+
+  /// @brief When enabled, correct-alliance blocks are sent down (reverse)
+  /// instead of up, so the eject path doubles as a score-down path.
+  /// @param down Pass `true` to score down, `false` to score up (default).
+  void setScoreDown(bool down);
 
   /// @brief Sets the flag for the scanning async task to start/resume runnning
   void activateScan();

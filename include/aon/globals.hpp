@@ -32,7 +32,16 @@ aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
 // Drivetrain
 aon::HDrive drivetrain = aon::HDrive({-1, 2, 3, -4}, {12, -13, -18, 19}, {-15}, std::make_unique<aon::Odometry>(odometry));
 
-aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16);
+// aon::Intake(
+//   elevatorPorts,       {20, -11, -16}
+//   judgePorts,          {17}
+//   shrimpPistonsPort,   'Z'
+//   distanceSensorPort,  0
+//   colorSensorPort,     0
+//  acceptSensorPort,    'Z'
+//  rejectSensorPort,    'Z'
+// )
+aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16, 'F', 'E');
 
 aon::Piston sem('G', aon::Piston::RETRACTED);
 aon::Piston brooks('D', aon::Piston::RETRACTED);
@@ -70,12 +79,15 @@ pros::ADIEncoder opticalEncoder('Z', 'Z');
 
 // Colors
 enum Colors {
-  RED = 1,
+  RED, 
   BLUE,
   STAKE,
 };
 
 Colors COLOR = RED;
+
+/// Set by the GUI; drives color-sort accept/reject logic at runtime.
+volatile Alliance ALLIANCE = Alliance::Red;
 
 volatile bool turretFollowing = false;
 volatile bool turretBraking = true;
