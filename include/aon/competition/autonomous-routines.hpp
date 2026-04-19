@@ -346,6 +346,10 @@ void square(){
   }
 }
 
+void colorSorting(){
+  intake.activateScan();
+}
+
 #if USING_BIG_ROBOT
 
 
@@ -378,19 +382,11 @@ namespace routines {
 
 #if USING_BIG_ROBOT
 
-int RedRoutine(){
-  return 1;
-}
-
-int BlueRoutine(){
-  return 1;
-}
-
-/// @brief Starting position is the left side of the parking facing towards the drive team, placed paralele to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
+/// @brief Starting position is the left side of the parking facing towards the drive team, placed parallel to the side of the parking with the second shaft of the drivetrain aligned with the end of the goal
 void safeBigBotRoutine(){
   intake.activateScan();
   drivetrain.strafe(28.5); // Align with match loader.
-  intake.dropShrimp(); // Prepare loader mechanism.
+  intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(6); // Move to match loader.
   drivetrain.motors(MAX_RPM / 2); // Push into loader
   pros::delay(200); // for a bit of time,
@@ -400,7 +396,7 @@ void safeBigBotRoutine(){
   drivetrain.motors(-MAX_RPM / 2); // Push into goal
   pros::delay(200); // for a bit of time,
   drivetrain.stop(); // then stop.
-  intake.raiseShrimp(); // Reset loader mechanism.
+  intake.raiseCart(); // Reset loader mechanism.
   intake.score(Intake::TOP, 8000); // Score all 9 blocks.
   drivetrain.move(15); // Go back a little.
   drivetrain.turn(-90); // Orient towards parking.
@@ -410,59 +406,119 @@ void safeBigBotRoutine(){
   drivetrain.motors(MAX_RPM); // Push into parking to put a row of wheels over
   pros::delay(1000); // for a bit of time,
   drivetrain.stop(); // then stop.
-  activateBrooks(); // Park.
+  brooks.activate(); // Park.
   intake.stopScan();
   //* Works till here
 }
 
+void bigBotCurves(){
+  intake.activateScan();
+  drivetrain.strafe(28.5); // Align with match loader.
+  intake.dropCart(); // Prepare loader mechanism.
+  drivetrain.move(6); // Move to match loader.
+  drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
+  pros::delay(8000); // Take up all the blocks (9).
+  drivetrain.move(-22); // Move to long goal.
+  drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
+  intake.raiseCart(); // Reset loader mechanism.
+  intake.score(Intake::TOP, 8000); // Score all 9 blocks.
+
+  drivetrain.driveAngleOfArc(-18, 90);
+
+  // drivetrain.move(15); // Go back a little.
+  // drivetrain.turn(-90); // Orient towards parking.
+  // drivetrain.move(12); // Move towards parking.
+  
+  // drivetrain.goToPose(Pose(0,0,-90)); // TODO: doing this depends on whether the new odom works
+  drivetrain.strafe(12); // Align with parking.
+  drivetrain.move(11); // Move to parking.
+  drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
+  brooks.activate(); // Park.
+  intake.stopScan();
+}
+
 void BigBotSkillsRoutine(){
   drivetrain.strafe(28.5);
-  intake.dropShrimp(); 
+  intake.dropCart(); 
   drivetrain.move(6); 
   drivetrain.motors(MAX_RPM / 2); 
   pros::delay(200); 
   drivetrain.stop(); 
   pros::delay(8000); 
-  drivetrain.move(-22); 
+  drivetrain.move(-22);
+  intake.raiseCart();
   drivetrain.motors(-MAX_RPM / 2);
   drivetrain.move(22);
   drivetrain.turn(180);
   drivetrain.strafe(-10.5);
   drivetrain.move(50);
   drivetrain.strafe(10.5);
-  intake.dropShrimp(); 
+  intake.dropCart(); 
   drivetrain.move(6); 
   drivetrain.motors(MAX_RPM / 2); 
   pros::delay(200); 
   drivetrain.stop(); 
   pros::delay(8000); 
-  drivetrain.strafe(10); 
+  drivetrain.strafe(10);
+  intake.dropCart(); 
   drivetrain.turn(90);
   drivetrain.motors(MAX_RPM);
   pros::delay(1000); 
   drivetrain.stop(); 
-  activateBrooks(); 
+  brooks.activate();
   //empy the match loader 
   //empty match loader across 
   //Park
 }
 
-#else
+// Wrappers for the GUI
 
-int RedRoutine() {
-  drivetrain.driveAngleOfArc(INCHES,ANGLE);
-  intake.move(-600);
-  pros::delay(800);
-  intake.stop();
-  drivetrain.driveAngleOfArc(TWOINCHES, TWOANGLE);
-  pros::delay(50);
-  drivetrain.driveAngleOfArc(THREEINCHES, THREEANGLE);
-  return 0;
-}
-
-int BlueRoutine(){
+int RedRoutine1(){
+  bigBotCurves();
   return 1;
 }
+
+int RedRoutine2(){
+  aon::tests::square();
+  return 1;
+}
+
+int RedRoutine3(){
+  aon::tests::colorSorting();
+  return 1;
+}
+
+int BlueRoutine1(){
+  safeBigBotRoutine();
+  return 1;
+}
+
+int BlueRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int BlueRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
+int SkillsRoutine1(){
+  safeBigBotRoutine();
+  return 1;
+}
+
+int SkillsRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int SkillsRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
+#else
 
 void smallBotRoutine(){
   drivetrain.move(31); // Align with match loader
@@ -482,7 +538,7 @@ void smallBotRoutine(){
   intake.raiseCart(); // Reset loader mechanism
   drivetrain.turn(85);
   drivetrain.turn(85);
-  intake.setScorerHeight(HIGH);
+  intake.raiseScorer();
   drivetrain.move(6.5);
   intake.score(Intake::TOP, 3000); // Score all blocks
   drivetrain.move(-23); // Go back a little
@@ -497,22 +553,23 @@ void smallBotRoutine(){
 // TODO: test
 void smallBotRoutineWorlds(){
   drivetrain.move(31); // Align with match loader
-  drivetrain.turn(-90);
-  drivetrain.move(4); // Go to match loader
+  drivetrain.turn(90);
+  intake.dropCart(); // Prepare loader mechanism
   intake.activateScan(); 
-  intake.dropCart(); // Prepare loader mechanism // TODO: replace with function of the back mechanism
+  drivetrain.move(4); // Go to match loader
   pros::delay(200);
-  drivetrain.motors(MAX_RPM / 2); // Jerk back
+  drivetrain.motors(-MAX_RPM / 2); // Jerk back
   pros::delay(100); // for an instance,
-  drivetrain.motors(-MAX_RPM / 2); // then push into loader
+  drivetrain.motors(MAX_RPM / 2); // then push into loader
   pros::delay(400); // for a bit of time,
   drivetrain.stop(); // and stop.
   pros::delay(5000); // Take up some blocks (6);
   intake.stopScan();
-  drivetrain.move(13); // Move to Long goal
-  intake.raiseCart(); // Reset loader mechanism // TODO: replace with function of the back mechanism
-  intake.setScorerHeight(HIGH);
-  drivetrain.move(6.5);
+  drivetrain.move(-6); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  drivetrain.turn(-180);
+  intake.raiseScorer();
+  drivetrain.move(13);
   intake.score(Intake::TOP, 3000); // Score all blocks
   drivetrain.move(-23); // Go back a little
   drivetrain.turn(-90); // Orient towards parking
@@ -520,6 +577,34 @@ void smallBotRoutineWorlds(){
   drivetrain.motors(MAX_RPM);
   pros::delay(1200);
   drivetrain.stop(); 
+}
+
+void smallBotCurves(){
+  intake.dropCart(); // Prepare loader mechanism
+  drivetrain.driveAngleOfArc(17, 160); // Align with match loader
+  intake.activateScan(); 
+  drivetrain.move(4); // Go to match loader
+  pros::delay(200);
+  drivetrain.motors(-MAX_RPM / 2, 100); // Jerk back for an instance,
+  drivetrain.motors(MAX_RPM / 2, 400); // then push into loader for a bit of time,
+  pros::delay(3000); // Take up some blocks (6);
+  intake.stopScan();
+  drivetrain.driveAngleOfArc(-10, -90); // Move to Long goal
+  intake.raiseCart(); // Reset loader mechanism
+  drivetrain.driveAngleOfArc(10, 90); 
+  intake.raiseScorer();
+  intake.openTrapdoor();
+  drivetrain.move(5);
+  intake.store(500);
+  intake.lever(); // Score some blocks
+  drivetrain.motors(MAX_RPM / 2, 200);
+  pros::delay(200);
+  drivetrain.move(-20); // Go back a little
+  intake.closeTrapdoor();
+  intake.lowerScorer();
+  drivetrain.turn(-100); // Orient towards parking
+  drivetrain.move(20); // Go to parking,
+  drivetrain.motors(MAX_RPM, 1000); // and push into it.
 }
 
 void smallbotjorgeg(){
@@ -542,7 +627,7 @@ void smallbotjorgeg(){
   drivetrain.turn(85);
   drivetrain.move(1);
   drivetrain.turn(85);
-  intake.setScorerHeight(HIGH);
+  intake.raiseScorer();
   drivetrain.move(6.5);
   intake.score(Intake::TOP, 1000); // Score all blocks
   drivetrain.move(-6.5); // reset long goal distance
@@ -555,6 +640,53 @@ void smallbotjorgeg(){
   drivetrain.move(20);
   drivetrain.turn(-45);
   drivetrain.move();  
+}
+
+// Wrappers for the GUI
+
+int RedRoutine1(){
+  smallBotCurves();
+  return 1;
+}
+
+int RedRoutine2(){
+  smallBotRoutineWorlds();
+  return 1;
+}
+
+int RedRoutine3(){
+  aon::tests::square();
+  return 1;
+}
+
+int BlueRoutine1(){
+  smallBotRoutine();
+  return 1;
+}
+
+int BlueRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int BlueRoutine3(){
+  aon::tests::turns();
+  return 1;
+}
+
+int SkillsRoutine1(){
+  smallBotRoutine();
+  return 1;
+}
+
+int SkillsRoutine2(){ 
+  aon::tests::square();
+  return 1;
+}
+
+int SkillsRoutine3(){
+  aon::tests::turns();
+  return 1;
 }
 
 #endif

@@ -46,10 +46,10 @@ class HDrive : public Drivetrain {
   /// auton and `brake` for drivers
   /// @param gearset The gearbox the physical motors contain, they MUST be all
   /// the same
-  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
-    Drivetrain::configure(brakeMode, gearset);
+  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset, double slew) {
+    Drivetrain::configure(brakeMode, gearset, slew);
     midMotors.setBrakeMode(brakeMode);
-    midMotors.setGearing(okapi::AbstractMotor::gearset::green);
+    midMotors.setGearing(okapi::AbstractMotor::gearset::red);
     midMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
     midMotors.tarePosition();
   }
@@ -58,7 +58,8 @@ class HDrive : public Drivetrain {
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
-  void motors(const double &rpm) override;
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  void motors(const double &rpm = MAX_RPM, const int& delay = 0) override;
 
   /// @brief Moves all motors the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm (positive is right and negative is left)

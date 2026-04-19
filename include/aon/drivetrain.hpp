@@ -12,7 +12,7 @@ class Drivetrain {
  protected:
   std::unique_ptr<Odometry> odometry;
   Pose pose;
-  bool turbo = true;
+  bool turbo = false;
   
   public:
 
@@ -40,13 +40,19 @@ class Drivetrain {
   }
   void setTheta(double theta) { this->pose.theta = theta; }
 
+  void resetPose(double x = 0.0, double y = 0.0, double theta = 0.0) {
+  this->odometry->resetCurrent(x, y, theta);
+  }
+
+
   bool isTurbo() { return this->turbo; }
   void setTurbo(bool turbo) { this->turbo = turbo; }
   void toggleTurbo() { this->turbo = !this->turbo; }
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
-  virtual void motors(const double &rpm) = 0;
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  virtual void motors(const double &rpm = MAX_RPM, const int& delay = 0) = 0;
 
   /// @brief Moves all motors the same `rpm` to rotate clockwise
   /// @param rpm The speed in which to move all motors in \b rpm
@@ -115,7 +121,8 @@ class Drivetrain {
   /// auton and `brake` for drivers
   /// @param gearset The gearbox the physical motors contain, they MUST be all
   /// the same
-  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
+  /// @param slew The slew rate for the motors, if 0, slew rate is `inf`
+  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset, double slew) {
     this->setBrakeMode(brakeMode);
     this->setGearset(gearset);
     this->setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -123,7 +130,7 @@ class Drivetrain {
     if(brakeMode == okapi::AbstractMotor::brakeMode::hold){
       this->setSlewRate(0);
     } else {
-      this->setSlewRate(MAX_ACCEL);
+      this->setSlewRate(slew);
     }
   }
 

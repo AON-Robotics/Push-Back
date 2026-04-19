@@ -7,11 +7,14 @@ void XDrive::initialize() {
   this->odometry->initialize();
 }
 
-void XDrive::motors(const double &rpm) {
+void XDrive::motors(const double &rpm, const int& delay) {
   this->frontLeftMotors.moveVelocity(rpm);
   this->frontRightMotors.moveVelocity(rpm);
   this->backLeftMotors.moveVelocity(rpm);
   this->backRightMotors.moveVelocity(rpm);
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->stop();
 }
 
 void XDrive::sideways(const double &rpm) {

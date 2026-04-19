@@ -41,14 +41,6 @@ inline double AnalogInputScaling(const double& x, const double& t) {
   return (a + b * (1 - a)) * x / 127.0;
 }
 
-/// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
-/// @param input The joystick input to be scaled
-/// @param percentage The percentage of the drivetrain's `MAX_RPM` to scale to
-/// @return The `input` scaled to the `MAX_RPM` of the drivetrain as per `percentage`
-inline double ApplySpeed(const double& input, const double& percentage){
-  return input * MAX_RPM * percentage;
-}
-
 // ============================================================================
 //    ___      _
 //   |   \ _ _(_)_ _____ _ _ ___
@@ -57,15 +49,9 @@ inline double ApplySpeed(const double& input, const double& percentage){
 //
 // ============================================================================
 
-#if USING_BIG_ROBOT
-bool shrimpOut = false;
-bool brooksUp = false;
-bool semOut = false;
-#else
-bool cartOut = false;
-bool scorerUp = false;
-bool arrowOut = false;
-#endif
+int r1PressCount = 0;
+size_t lastPressTime = 0;
+const int DOUBLE_TAP_TIME = 250;
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
@@ -89,29 +75,32 @@ inline void DriveDefault() {
   // }
 
   if(mainController.get_digital(DIGITAL_L1)){
-    intake.score(Intake::TOP);
+    intake.store();
   }
   else if(mainController.get_digital(DIGITAL_L2)){
-    intake.score(Intake::MIDDLE);
+    intake.score(Intake::BOTTOM);
   }
   else if(mainController.get_digital(DIGITAL_R2)){
-    intake.score(Intake::BOTTOM);
-  } 
+    intake.score(Intake::MIDDLE);
+  }
+  else if(mainController.get_digital(DIGITAL_R1)){
+    intake.score(Intake::TOP);
+  }
   else if(!intake.isScanning()){
     intake.stop();
   }
 
   // Change Brooks Height
   if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    toggle(brooksUp) ? activateBrooks() : deactivateBrooks();
+    brooks.toggle();
   }
-  // Toggle SEM
-  else if(mainController.get_digital_new_press(DIGITAL_R1)) {
-    toggle(semOut) ? activateSEM() : deactivateSEM();
+
+  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
+    sem.toggle();
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_L1)) {
-    toggle(shrimpOut) ? intake.dropShrimp() : intake.raiseShrimp();
+  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
+    intake.toggleCart();
   }
 
   else if(mainController.get_digital_new_press(DIGITAL_X)) {
@@ -132,14 +121,32 @@ inline void DriveDefault() {
   else if(mainController.get_digital(DIGITAL_L1)) {
     intake.score(Intake::BOTTOM);
   }
-  // Score Top
-  if(mainController.get_digital(DIGITAL_R1)) {
-    intake.scorer();
+
+  // Lever // TODO: make this behavior native to the intake class
+  if(mainController.get_digital_new_press(DIGITAL_R1)) {
+    size_t currentTime = pros::millis();
+
+    if(currentTime - lastPressTime < DOUBLE_TAP_TIME){
+      intake.leverController->setTarget(0);
+    } else {
+      intake.leverController->setTarget(150);
+    }
+
+    lastPressTime = currentTime;
+  } else if (intake.leverController->getError() < 10) {
+    intake.leverController->setTarget(0);
   }
-  
-  if(!(mainController.get_digital(DIGITAL_R1) || mainController.get_digital(DIGITAL_L1))){
-    intake.scorer(0);
-  }
+
+  // Optional single tap
+  // Lever
+  // const bool pressedR1 = mainController.get_digital_new_press(DIGITAL_R1);
+  // if(pressedR1 && intake.leverController->getTarget() == 0 && intake.leverController->getError() < 10){
+  //   intake.leverController->setTarget(140);
+  // } else if ((pressedR1 && intake.leverController->getTarget() == 140 && !intake.leverController->isSettled())
+  //             || (intake.leverController->getTarget() == 140 && intake.leverController->getError() < 10)){
+  //   intake.leverController->setTarget(0);
+  // } 
+
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
     intake.elevator(0);
     intake.judge(0);
@@ -147,19 +154,20 @@ inline void DriveDefault() {
   
   // Change Height
   if(mainController.get_digital_new_press(DIGITAL_B)) {
-    intake.setScorerHeight(toggle(scorerUp) ? HIGH : LOW);
+    intake.toggleScorerHeight();
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    toggle(cartOut) ? intake.dropCart() : intake.raiseCart();
+  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
+    intake.toggleCart();
   }
-
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
     drivetrain.toggleTurbo();
   }
-  // Toggle Arrow
+  else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
+    arrow.toggle();
+  }
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
-    toggle(arrowOut) ? activateArrow() : deactivateArrow();
+    intake.toggleTrapdoor();
   }
 
   #endif
