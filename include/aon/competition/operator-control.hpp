@@ -129,7 +129,7 @@ inline void DriveDefault() {
     if(currentTime - lastPressTime < DOUBLE_TAP_TIME){
       intake.leverController->setTarget(0);
     } else {
-      intake.leverController->setTarget(140);
+      intake.leverController->setTarget(150);
     }
 
     lastPressTime = currentTime;
