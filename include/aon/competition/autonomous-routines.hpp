@@ -423,7 +423,7 @@ void bigBotCurves(){
   intake.raiseCart(); // Reset loader mechanism.
   intake.score(Intake::TOP, 8000); // Score all 9 blocks.
 
-  drivetrain.driveAngleOfArc(-18, 90);
+  drivetrain.driveAngleOfArc(-15, 90);
 
   // drivetrain.move(15); // Go back a little.
   // drivetrain.turn(-90); // Orient towards parking.
