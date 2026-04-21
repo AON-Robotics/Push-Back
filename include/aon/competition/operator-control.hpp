@@ -49,7 +49,6 @@ inline double AnalogInputScaling(const double& x, const double& t) {
 //
 // ============================================================================
 
-
 int r1PressCount = 0;
 size_t lastPressTime = 0;
 const int DOUBLE_TAP_TIME = 250;
