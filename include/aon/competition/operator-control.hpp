@@ -49,19 +49,9 @@ inline double AnalogInputScaling(const double& x, const double& t) {
 //
 // ============================================================================
 
-#if USING_BIG_ROBOT
-bool cartOut = false;
-bool brooksUp = false;
-bool semOut = false;
-bool sortActive = false;
-#else
 int r1PressCount = 0;
 size_t lastPressTime = 0;
 const int DOUBLE_TAP_TIME = 250;
-bool cartOut = false;
-bool scorerUp = false;
-bool arrowOut = false;
-#endif
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
@@ -198,6 +188,9 @@ inline void DriveDefault() {
   }
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
     intake.toggleTrapdoor();
+  }
+  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
+    brooks.toggle();
   }
 
   #endif

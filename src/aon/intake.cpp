@@ -274,6 +274,7 @@ void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
 void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
 void Intake::scan() {
+  colorSensor.set_led_pwm(50);
   size_t stopTime = UINT32_MAX;
   const short DELAY_PER_BALL = 2450;  // ms
   while (true) {
@@ -305,16 +306,12 @@ void Intake::sort() {
         if (ALLIANCE != Alliance::Skills && ((red && ALLIANCE == Alliance::Blue) || (blue && ALLIANCE == Alliance::Red))) {
           // Wrong alliance color detected — reverse motor to eject
           this->judge(-INTAKE_VELOCITY);
-          pros::delay(200);
+          pros::delay(100);
           this->judge(0);
         } else if ((red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue)) {
-          if (scoreDown) {
-            this->judge(-INTAKE_VELOCITY);
-            pros::delay(175);
-            this->judge(0);
-          } else {
+          // Correct alliance color detected — move motor to accept
             this->judge(INTAKE_VELOCITY);
-            pros::delay(200);
+            pros::delay(125);
             this->judge(0);
           }
         }
@@ -322,7 +319,6 @@ void Intake::sort() {
     }
     pros::delay(25);
   }
-}
 
 void Intake::pickUp(const int& delay) {
   this->elevator();

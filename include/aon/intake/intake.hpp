@@ -5,7 +5,6 @@
 #include "../../okapi/api.hpp"
 #include "../tools/general.hpp"
 #include "../piston/piston.hpp"
-#include <queue>
 
 extern volatile Alliance ALLIANCE;
 
