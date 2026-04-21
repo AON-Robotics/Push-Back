@@ -21,9 +21,20 @@
 namespace aon {
 
 class MotionProfile {
+ public:
+  enum Stage {
+    SETTLED,
+    ACCELERATING,
+    CRUISING,
+    DECELERATING,
+  };
+
+ private:
   double MAX_VELOCITY, MAX_ACCELERATION, MAX_DECELERATION, JERK;
   double currVelocity = 0;
   double currAccel = 0;
+  double targetFinalVelocity = 0;
+  Stage stage = SETTLED;
 
  public:
   MotionProfile(double MAX_VELOCITY, double MAX_ACCELERATION,
@@ -34,6 +45,10 @@ class MotionProfile {
     this->JERK = std::abs(JERK);  // RPM/(s^2)
   }
 
+  /// @brief Returns the current stage of the motion profile
+  /// @return The stage of the motion profile
+  Stage getStage() { return this->stage; }
+
   // TODO: Desmos this function below
 
   /// @brief Calculates the target velocity to send to the motors for smooth and precise movements using an S-curve profile.
@@ -41,29 +56,41 @@ class MotionProfile {
   /// @param dt The time elapsed since the last function call in \b seconds.
   /// @return The updated velocity in \b RPM.
   double update(const double& remainingDist, const double& dt = 0.02) {
+    const double velocity = math::linearSpeed(this->currVelocity);
+    const double finalVelocity = math::linearSpeed(this->targetFinalVelocity);
+    const double deltaVSquared = (velocity * velocity) - (finalVelocity * finalVelocity);
+    // Decelerate early using half the deceleration for better accuracy.
+    //* Note: Without this, the system consistently overshoots by about half an inch. Needs further investigation.
+    const double decel = math::linearSpeed(this->MAX_DECELERATION * 0.5);
     // Stop the profile when the target is reached.
     if (remainingDist <= 0) {
       this->currAccel = 0;
-      this->currVelocity = 0;
+      this->currVelocity = this->targetFinalVelocity;
+      if (this->targetFinalVelocity == 0){
+        this->stage = SETTLED;
+      } else {
+        this->stage = CRUISING;
+      }
     }
     // Deceleration
-    // Decelerate early using half the deceleration for better accuracy.
-    //* Note: Without this, the system consistently overshoots by about half an
-    //* inch. Needs further investigation.
-    else if (remainingDist <= math::linearSpeed(this->currVelocity) * math::linearSpeed(this->currVelocity) / (2 * math::linearSpeed(this->MAX_DECELERATION * 0.5))) {
+    else if (remainingDist <=  deltaVSquared / (2 * decel)) {
       this->currAccel = -this->MAX_DECELERATION;
+      this->stage = DECELERATING;
     }
     // Decelerate if the current velocity exceeds the updated `MAX_VELOCITY`.
     else if (this->currVelocity > this->MAX_VELOCITY) {
       this->currAccel = std::min(this->currAccel - (this->JERK * dt), this->MAX_DECELERATION);
+      this->stage = DECELERATING;
     }
     // Maintain constant velocity (no acceleration needed).
     else if (this->currVelocity == this->MAX_VELOCITY) {
       this->currAccel = 0;
+      this->stage = CRUISING;
     }
     // Increase acceleration up to the maximum allowed value.
     else {
       this->currAccel = std::min(this->currAccel + (this->JERK * dt), this->MAX_ACCELERATION);
+      this->stage = ACCELERATING;
     }
 
     this->currVelocity += this->currAccel * dt;
@@ -76,12 +103,15 @@ class MotionProfile {
     this->currVelocity = 0;
     this->MAX_VELOCITY = MAX_RPM;
     this->currAccel = 0;
+    this->stage = SETTLED;
   }
 
   /// @brief Sets the velocity in case profile is not started from rest
   /// @param velocity The current velocity of the profile
   void setVelocity(const double& velocity = 0) {
     this->currVelocity = velocity;
+    if (velocity == 0) { this->stage = SETTLED; }
+    else { this->stage = CRUISING; }
   }
 
   /// @brief Sets the max velocity for the profile
@@ -93,6 +123,12 @@ class MotionProfile {
   /// @brief Sets the acceleration in case profile is not started from rest
   /// @param accel The current acceleration of the profile
   void setAccel(const double& accel = 0) { this->currAccel = accel; }
+
+  /// @brief Sets the final velocity for the profile
+  /// @param velocity The new final velocity
+  void setFinalVelocity(const double& velocity){
+    this->targetFinalVelocity = velocity;
+  }
 };
 
 }

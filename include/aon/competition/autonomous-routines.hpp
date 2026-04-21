@@ -346,6 +346,15 @@ void square(){
   }
 }
 
+void continuity(){
+  drivetrain.driveAngleOfArc(8, 180, false);
+  drivetrain.driveAngleOfArc(-8, 180, false);
+  drivetrain.move(6);
+  drivetrain.move(-6, false);
+  drivetrain.driveAngleOfArc(-8, -180, false);
+  drivetrain.driveAngleOfArc(8, -180);
+}
+
 void colorSorting(){
   intake.activateScan();
 }
@@ -417,7 +426,7 @@ void bigBotCurves(){
   intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(6); // Move to match loader.
   drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
-  pros::delay(8000); // Take up all the blocks (9).
+  pros::delay(7000); // Take up all the blocks (9).
   drivetrain.move(-22); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
   intake.raiseCart(); // Reset loader mechanism.
@@ -432,6 +441,32 @@ void bigBotCurves(){
   // drivetrain.goToPose(Pose(0,0,-90)); // TODO: doing this depends on whether the new odom works
   drivetrain.strafe(12); // Align with parking.
   drivetrain.move(11); // Move to parking.
+  drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
+  brooks.activate(); // Park.
+  intake.stopScan();
+}
+
+void bigBotContinuity(){
+  // intake.activateScan();
+  drivetrain.strafe(28.5); // Align with match loader.
+  intake.dropCart(); // Prepare loader mechanism.
+  drivetrain.move(6, false); // Move to match loader.
+  drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
+  pros::delay(7000); // Take up all the blocks (9).
+  drivetrain.move(-22, false); // Move to long goal.
+  drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
+  intake.raiseCart(); // Reset loader mechanism.
+  intake.score(Intake::TOP, 8000); // Score all 9 blocks.
+
+  drivetrain.driveAngleOfArc(-15, 90);
+
+  // drivetrain.move(15); // Go back a little.
+  // drivetrain.turn(-90); // Orient towards parking.
+  // drivetrain.move(12); // Move towards parking.
+  
+  // drivetrain.goToPose(Pose(0,0,-90)); // TODO: doing this depends on whether the new odom works
+  drivetrain.strafe(12); // Align with parking.
+  drivetrain.move(11, false); // Move to parking.
   drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
   brooks.activate(); // Park.
   intake.stopScan();
@@ -489,7 +524,7 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  safeBigBotRoutine();
+  bigBotContinuity();
   return 1;
 }
 
@@ -504,7 +539,7 @@ int BlueRoutine3(){
 }
 
 int SkillsRoutine1(){
-  safeBigBotRoutine();
+  aon::tests::continuity();
   return 1;
 }
 
@@ -675,7 +710,7 @@ int BlueRoutine3(){
 }
 
 int SkillsRoutine1(){
-  smallBotRoutine();
+  aon::tests::continuity();
   return 1;
 }
 
