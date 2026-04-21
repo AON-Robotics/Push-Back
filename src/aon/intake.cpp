@@ -274,6 +274,7 @@ void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
 void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
 void Intake::scan() {
+  colorSensor.set_led_pwm(50);
   size_t stopTime = UINT32_MAX;
   const short DELAY_PER_BALL = 2450;  // ms
   while (true) {
