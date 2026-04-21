@@ -199,6 +199,9 @@ inline void DriveDefault() {
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
     intake.toggleTrapdoor();
   }
+  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
+    brooks.toggle();
+  }
 
   #endif
 }
