@@ -125,7 +125,7 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
   #undef time
 }
 
-void TankDrive::driveProfiled(double dist) {
+void TankDrive::driveProfiled(double dist, bool settle) {
   if (dist == 0) { return; }
   const int sign = dist / abs(dist);  // Direction of the movement
   dist = abs(dist);                   // Setting the magnitude to positive
@@ -143,7 +143,7 @@ void TankDrive::driveProfiled(double dist) {
   double lastTime = now;
   
   this->motionProfile.setVelocity(this->getRPM());
-
+  this->motionProfile.setFinalVelocity(settle ? 0 : 100);
 
   while (traveledDist < dist && timeout > pros::millis()) {
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -164,10 +164,10 @@ void TankDrive::driveProfiled(double dist) {
     pros::delay(20);
   }
 
-  this->stop();
+  if (settle) { this->stop(); }
 }
 
-void TankDrive::turnProfiled(double angle) {
+void TankDrive::turnProfiled(double angle, bool settle) {
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
@@ -188,6 +188,7 @@ void TankDrive::turnProfiled(double angle) {
   double now;
   double lastTime = pros::micros() / 1E6;
 
+  this->turningProfile.setFinalVelocity(settle ? 0 : 50);
 
   while (traveledAngle < angle && timeout > pros::millis()) {
     currAngle = odometry->gyroscope.get_rotation();
@@ -209,16 +210,16 @@ void TankDrive::turnProfiled(double angle) {
 
     pros::delay(20);
   }
-  this->stop();
+  if (settle) this->stop();
 }
 
 
-void TankDrive::move(const double &dist) {
-  driveProfiled(dist);
+void TankDrive::move(const double &dist, bool settle) {
+  driveProfiled(dist, settle);
 }
 
-void TankDrive::turn(const double &angle) {
-  turnProfiled(angle);
+void TankDrive::turn(const double &angle, bool settle) {
+  turnProfiled(angle, settle);
 }
 
 void TankDrive::setMaxVelocity(const double &rpm){
@@ -257,10 +258,10 @@ void TankDrive::driveInArc(double radius, const double &midSpeed) {
   rightMotors.moveVelocity(rightSpeed);
 }
 
-void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
+void TankDrive::driveAngleOfArc(const double &radius, const double &angle, bool settle) {
   if(angle == 0) { return; }
   if(radius == 0) {
-    turn(angle);
+    turn(angle, settle);
     return;
   }
   const short sign = angle / std::abs(angle);
@@ -272,6 +273,8 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
   double lastTime = now;
   const double rightEncStartPos = odometry->encoderRight.get_position(); //! Temporary
   const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
+  this->motionProfile.setVelocity(this->getRPM());
+  this->motionProfile.setFinalVelocity(settle ? 0 : 100);
   // const double startDist = odometry::getTraveledDistance();
   while(traveledDist < distance){
     // traveledDist = odometry::getTraveledDistance() - startDist;
@@ -289,7 +292,7 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
     pros::delay(20);
   }
 
-  this->stop();
+  if(settle) this->stop();
 }
 
 void TankDrive::driveInArcTo(const double &x, const double &y){

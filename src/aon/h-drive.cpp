@@ -141,7 +141,7 @@ void HDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
   #undef time
 }
 
-void HDrive::driveProfiled(double dist){
+void HDrive::driveProfiled(double dist, bool settle){
   if(dist == 0) { return; }
   const int sign = dist / abs(dist); // Getting the direction of the movement
   dist = abs(dist); // Setting the magnitude to positive
@@ -159,6 +159,7 @@ void HDrive::driveProfiled(double dist){
   double lastTime = now;
 
   this->yProfile.setVelocity(this->getRPM());
+  this->yProfile.setFinalVelocity(settle ? 0 : 100);
 
   while(traveledDist < dist){
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -175,10 +176,10 @@ void HDrive::driveProfiled(double dist){
     pros::delay(20);
   }
 
-  this->stop();
+  if(settle) this->stop();
 }
 
-void HDrive::strafeProfiled(double dist){
+void HDrive::strafeProfiled(double dist, bool settle){
   if(dist == 0) { return; }
   const int sign = dist / abs(dist); // Getting the direction of the movement
   dist = abs(dist); // Setting the magnitude to positive
@@ -196,6 +197,7 @@ void HDrive::strafeProfiled(double dist){
   double lastTime = now;
 
   this->xProfile.setVelocity(this->getRPM());
+  this->xProfile.setFinalVelocity(settle ? 0 : 100);
 
   while(traveledDist < dist && timeout > pros::millis()){
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -214,10 +216,10 @@ void HDrive::strafeProfiled(double dist){
     pros::delay(20);
   }
 
-  this->stop();
+  if (settle) this->stop();
 }
 
-void HDrive::turnProfiled(double angle){
+void HDrive::turnProfiled(double angle, bool settle){
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
@@ -235,6 +237,8 @@ void HDrive::turnProfiled(double angle){
 
   double now;
   double lastTime = pros::micros() / 1E6;
+
+  this->thetaProfile.setFinalVelocity(settle ? 0 : 100);
   
   while(traveledAngle < angle){
     traveledAngle = abs(odometry->getDegrees() - startAngle);
@@ -254,7 +258,7 @@ void HDrive::turnProfiled(double angle){
 
     pros::delay(20);
   }
-  this->stop();
+  if(settle) this->stop();
 }
 
 void HDrive::stop(){
@@ -262,16 +266,16 @@ void HDrive::stop(){
   this->sideways(0);
 }
 
-void HDrive::move(const double &dist){
-  driveProfiled(dist);
+void HDrive::move(const double &dist, bool settle){
+  driveProfiled(dist, settle);
 }
 
-void HDrive::strafe(const double &dist){
-  strafeProfiled(dist);
+void HDrive::strafe(const double &dist, bool settle){
+  strafeProfiled(dist, settle);
 }
 
-void HDrive::turn(const double &angle){
-  turnProfiled(angle);
+void HDrive::turn(const double &angle, bool settle){
+  turnProfiled(angle, settle);
 }
 
 void HDrive::setMaxVelocity(const double &rpm){
@@ -310,10 +314,10 @@ void HDrive::driveInArc(double radius, const double &midSpeed) {
   rightMotors.moveVelocity(rightSpeed);
 }
 
-void HDrive::driveAngleOfArc(const double &radius, const double &angle) {
+void HDrive::driveAngleOfArc(const double &radius, const double &angle, bool settle) {
   if(angle == 0) { return; }
   if(radius == 0) {
-    turn(angle);
+    turn(angle, settle);
     return;
   }
   const short sign = angle / std::abs(angle);
@@ -325,6 +329,8 @@ void HDrive::driveAngleOfArc(const double &radius, const double &angle) {
   double lastTime = now;
   const double rightEncStartPos = odometry->encoderRight.get_position(); //! Temporary
   const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
+  this->yProfile.setVelocity(this->getRPM());
+  this->yProfile.setFinalVelocity(settle ? 0 : 100);
   // const double startDist = odometry::getTraveledDistance();
   while(traveledDist < distance){
     // traveledDist = odometry::getTraveledDistance() - startDist;
@@ -342,7 +348,7 @@ void HDrive::driveAngleOfArc(const double &radius, const double &angle) {
     pros::delay(20);
   }
 
-  this->stop();
+  if (settle) this->stop();
 }
 
 void HDrive::driveInArcTo(const double &x, const double &y){
