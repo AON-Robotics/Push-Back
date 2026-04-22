@@ -62,8 +62,6 @@ aon::Orbit orbit(0, true, 0, 0);
 //
 // ============================================================================
 
-// Encoders
-pros::Rotation turretEncoder(0, true);
 
 pros::ADIEncoder opticalEncoder('Z', 'Z');
 
