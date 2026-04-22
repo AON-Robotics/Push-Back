@@ -56,15 +56,15 @@ const int DOUBLE_TAP_TIME = 250;
 /// Default Operator Control configuration
 inline void DriveDefault() { 
   //////////// DRIVE ////////////
-  //# From now on, all drivetrains used will need to use this format for driving
-  double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
-  double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
-  double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
-  double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
-  drivetrain.drive(leftX, leftY, rightX, rightY);
-
+  
   #if USING_BIG_ROBOT
-
+  //# From now on, all drivetrains used will need to use this format for driving
+  double leftX = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+  double leftY = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+  double rightX = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
+  double rightY = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
+  drivetrain.drive(leftX, leftY, rightX, rightY);
+  
   // TODO: discuss with driver if he wants this functionality (probably will)
   // if(mainController.get_digital(DIGITAL_R1)){
   //   intake.activateScan();
@@ -91,7 +91,7 @@ inline void DriveDefault() {
   }
 
   // Change Brooks Height
-  if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
+  if(mainController.get_digital_new_press(DIGITAL_B)) {
     brooks.toggle();
   }
 
@@ -108,6 +108,13 @@ inline void DriveDefault() {
   }
 
   #else
+
+  //# From now on, all drivetrains used will need to use this format for driving
+  double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+  double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+  double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
+  double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
+  drivetrain.drive(leftX, leftY, rightX, rightY);
 
   // Storing
   if(mainController.get_digital(DIGITAL_R2)) {
