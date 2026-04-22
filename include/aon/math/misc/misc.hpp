@@ -4,28 +4,42 @@
 #include <cmath>
 #include "../../constants.hpp"
 #include "../../tools/vector.hpp"
+#include "../pose.hpp"
 
 namespace aon::math {
 
-/// @brief Determines the speed of the robot given drivetrain motors' RPM
-/// @param RPM The RPM for which to calculate the velocity (default current RPM)
+/// @brief Determines the linear speed of the robot given drivetrain motors' RPM
+/// @param rpm The RPM for which to calculate the velocity (default current RPM)
 /// @returns The speed in \b in/s at which the robot would move at the given RPM
 /// @note Test the accuracy precision of the `getActualVelocity()` method,
 /// @note it may be possible to need to use `get_velocity()` from `pros::Rotation` which uses \b centidegrees.
 /// @note The distance units depend on the units used for measuring `DRIVE_WHEEL_DIAMETER`.
-inline double getSpeed(const double &RPM){
+inline double linearSpeed(const double &rpm = MAX_RPM){
   double circumference = DRIVE_WHEEL_DIAMETER * M_PI;
-  double RPS = RPM / 60;
-  double speed = MOTOR_TO_DRIVE_RATIO * circumference * RPS;
+  double rps = rpm / 60;
+  double speed = MOTOR_TO_DRIVE_RATIO * circumference * rps;
   return speed;
+}
+
+/// @brief Determines the rotational speed of the robot given drivetrain motors' RPM
+/// @param rpm The RPM for which to calculate the velocity (default current RPM)
+/// @return The speed in \b deg/s at which the robot would move at the given RPM
+inline double rotationalSpeed(const double &rpm){
+  const double drive_width = 10.5;
+  const double drive_length = 8.25;
+  const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
+  double wheelCircumference = DRIVE_WHEEL_DIAMETER * M_PI;
+  double rps = rpm / 60;
+  double tangentialSpeed = MOTOR_TO_DRIVE_RATIO * wheelCircumference * rps;
+  return (tangentialSpeed * 180 / M_PI) / ROBOT_RADIUS;
 }
 
 
 /// @brief Calculates time for the robot to reach a given distance
 /// @param distance Distance from the robot to the target (remains constant) in \b inches
 /// @returns The approximate time necessary to reach the target (overestimation) in \b seconds
-inline double estimateTimetoTarget(const double &distance, const double &RPM = MAX_RPM){
-  double time = 4 * distance / getSpeed(RPM);
+inline double estimateTimetoTarget(const double &distance, const double &rpm = MAX_RPM){
+  double time = 4 * distance / linearSpeed(rpm);
   return time;
 }
 
@@ -33,9 +47,9 @@ inline double estimateTimetoTarget(const double &distance, const double &RPM = M
 /// @param radians Angle remaining from the robot's current angle to the target (remains constant) in \b radians
 /// @details The arc length formula is used as s = theta * radius (theta in radians)
 /// @returns The approximate time necessary to reach the target (overestimation) in \b seconds
-inline double getTimetoTurnRad(const double &radians, const double &RPM = MAX_RPM / 4){
+inline double getTimetoTurnRad(const double &radians, const double &rpm = MAX_RPM / 4){
   double arcLength = radians * AVG_DRIVETRAIN_RADIUS; // Of the turn (inches)
-  double time = 6 * arcLength / getSpeed(RPM); // Calculated time (seconds)
+  double time = 6 * arcLength / linearSpeed(rpm); // Calculated time (seconds)
   return time;
 }
 
@@ -143,6 +157,41 @@ inline double getPercentDifference(const double &a, const double &b) { return (s
 inline double findDistance(Vector target, Vector current){
   double distInMeters = (target - current).GetMagnitude();
   return metersToInches(distInMeters);
+}
+
+/**
+ * \brief Determines the angle needed to be turned in order to face a specific point in the field
+ *
+ * \param target The point we wish to face
+ * \param current Where the robot is now
+ *
+ * \returns The angle the robot needs to turn in order to face the target location
+ *
+ * \note The result must be passed into functions such as `drivetrain.turn()` and `drivetrain.turnPID()` as negative because of the GPS convention
+ */
+inline double calculateTurn(Vector target, Pose current) {
+  Vector position = Vector().SetPos(current.x, current.y);
+  // Get and change the heading to the common cartesian plane
+  double heading = 90 - current.theta;
+
+  // Limiting the heading to the 0-360 range
+  if (heading < 0) heading += 360;
+  else if (heading > 360) heading -= 360;
+ 
+  // This number is in respect to the common cartesian plane if odometry position is used
+  double toTarget = (target - position).GetDegrees();
+ 
+  // Limiting the the target to the 0-360 range
+  if (toTarget < 0) toTarget += 360;
+  else if (toTarget >= 360) toTarget -= 360;
+
+  double angle = toTarget - heading; // Calculate the angle to turn
+ 
+  // Limiting the heading to the -180-180 range
+  if (angle > 180) angle -= 360;
+  else if (angle < -180) angle += 360;
+
+  return angle;
 }
 
 } // namespace name

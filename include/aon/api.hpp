@@ -15,11 +15,16 @@
 
 #include "./tools/logging.hpp"
 #include "./tools/json.hpp"
-#include "./tools/gui/GUI_V2.hpp"
+#include "./tools/gui/gui.hpp"
+#include "./tools/gui/gui-debug.hpp"
 
 #include "./controls/trapezoid-profile/trapezoid.hpp"
 #include "./controls/exponential-profile.hpp"
-#include "./sensing/odometry.hpp"
+#include "./odometry/odometry.hpp"
+
+#include "./autonomy/trajectory_builder.hpp"
+#include "./autonomy/goto_pose.hpp"
+#include "./autonomy/routine.hpp"
 
 #if !USING_BLACK_ROBOT
 #include "./controls/holonomic-motion.hpp"

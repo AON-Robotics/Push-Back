@@ -1,6 +1,13 @@
 // EKF.cpp
 
 #include "../../../include/EKF/EKF.hpp"
+#include <limits>
+
+namespace {
+double quietNaN() {
+  return std::numeric_limits<double>::quiet_NaN();
+}
+}  // namespace
 
 // ---------------- Constructors ----------------
 EKF::EKF(const TankConfig& cfg)
@@ -77,11 +84,11 @@ double EKF::compensateLateralVy(double vy_measured_in_per_s, double omega_rad_pe
 }
 
 void EKF::predictTank(double v_in_per_s, double omega_rad_per_s, double dt_s) {
+  resetDebugForPredict();
+
   // Unicycle/tank model:
   // X += v*cos(theta)*dt
-  // Y += v*sin(theta)*dt   (NOTE: with +Y right convention, this still holds
-  //                         if theta is measured CCW from +X and Y axis points right.
-  //                         It is a valid coordinate frame as long as consistent.)
+  // Y += v*sin(theta)*dt   
   // theta += omega*dt
   const double th = x_.theta_rad;
   const double c = std::cos(th);
@@ -102,15 +109,25 @@ void EKF::predictTank(double v_in_per_s, double omega_rad_per_s, double dt_s) {
 
   propagateCovariance(F);
   addProcessNoiseScaled(dt_s);
+
+  debug_.x_pred_in = x_.x_in;
+  debug_.y_pred_in = x_.y_in;
+  debug_.theta_pred_rad = x_.theta_rad;
+  debug_.Pxx_pred = P_[0][0];
+  debug_.Pyy_pred = P_[1][1];
+  debug_.Ptt_pred = P_[2][2];
+  updateDebugPostEstimate();
 }
 
 void EKF::predictHolonomic(double vx_in_per_s, double vy_in_per_s, double omega_rad_per_s, double dt_s) {
+  resetDebugForPredict();
+
   // Holonomic model (H-Drive) with body-frame velocities:
   // X += ( vx*cos(theta) - vy*sin(theta) ) * dt
   // Y += ( vx*sin(theta) + vy*cos(theta) ) * dt
   // theta += omega*dt
   //
-  // vy is +right in your convention. This formula is consistent as long as theta is defined CCW from +X.
+  // vy is +right in this convention. This formula is consistent as long as theta is defined CCW from +X.
   const double th = x_.theta_rad;
   const double c = std::cos(th);
   const double s = std::sin(th);
@@ -133,6 +150,14 @@ void EKF::predictHolonomic(double vx_in_per_s, double vy_in_per_s, double omega_
 
   propagateCovariance(F);
   addProcessNoiseScaled(dt_s);
+
+  debug_.x_pred_in = x_.x_in;
+  debug_.y_pred_in = x_.y_in;
+  debug_.theta_pred_rad = x_.theta_rad;
+  debug_.Pxx_pred = P_[0][0];
+  debug_.Pyy_pred = P_[1][1];
+  debug_.Ptt_pred = P_[2][2];
+  updateDebugPostEstimate();
 }
 
 void EKF::propagateCovariance(const double F[3][3]) {
@@ -170,6 +195,8 @@ void EKF::updateGPS(double x_gps_in, double y_gps_in, double r_x_in2, double r_y
 
   const double z[2] = { x_gps_in, y_gps_in };
   const double h[2] = { x_.x_in,  x_.y_in  };
+  debug_.innovation_x = z[0] - h[0];
+  debug_.innovation_y = z[1] - h[1];
 
   // H = [ [1 0 0],
   //       [0 1 0] ]
@@ -184,6 +211,7 @@ void EKF::updateGPS(double x_gps_in, double y_gps_in, double r_x_in2, double r_y
   };
 
   update2D(z, h, H, R);
+  updateDebugPostEstimate();
 }
 
 void EKF::updateHeading(double theta_meas_rad, double r_theta_rad2) {
@@ -191,11 +219,16 @@ void EKF::updateHeading(double theta_meas_rad, double r_theta_rad2) {
 
   const double z = normalizeAngle(theta_meas_rad);
   const double h = x_.theta_rad;
+  const double innovation = angleDiff(z, h);
+  const double S = P_[2][2] + R;
+  debug_.innovation_theta = innovation;
+  debug_.NIS_theta = (S > 1e-12) ? ((innovation * innovation) / S) : quietNaN();
 
   const double H[1][3] = { 0.0, 0.0, 1.0 };
 
   // residual must be angle-wrapped
   update1D(z, h, H, R);
+  updateDebugPostEstimate();
 }
 
 // Generic 1D update (theta)
@@ -440,4 +473,24 @@ bool EKF::inv2x2(const double A[2][2], double invA[2][2], double* det_out) {
   invA[1][0] = -A[1][0] * invdet;
   invA[1][1] =  A[0][0] * invdet;
   return true;
+}
+
+void EKF::resetDebugForPredict() {
+  debug_.innovation_theta = quietNaN();
+  debug_.innovation_x = quietNaN();
+  debug_.innovation_y = quietNaN();
+  debug_.NIS_theta = quietNaN();
+  debug_.dx_update_in = 0.0;
+  debug_.dy_update_in = 0.0;
+  debug_.dtheta_update_rad = 0.0;
+}
+
+void EKF::updateDebugPostEstimate() {
+  debug_.Pxx_est = P_[0][0];
+  debug_.Pyy_est = P_[1][1];
+  debug_.Ptt_est = P_[2][2];
+
+  debug_.dx_update_in = x_.x_in - debug_.x_pred_in;
+  debug_.dy_update_in = x_.y_in - debug_.y_pred_in;
+  debug_.dtheta_update_rad = angleDiff(x_.theta_rad, debug_.theta_pred_rad);
 }

@@ -1,9 +1,8 @@
-// EKF.hpp
-
 #pragma once
 
 #include <cstdint>
 #include <cmath>
+#include <limits>
 
 /// Pose-only EKF for 2D localization.
 /// Units:
@@ -21,6 +20,30 @@ public:
     double x_in{0.0};
     double y_in{0.0};
     double theta_rad{0.0};
+  };
+
+  /// Snapshot of EKF internals for deterministic telemetry logging.
+  struct DebugSnapshot {
+    double x_pred_in{0.0};
+    double y_pred_in{0.0};
+    double theta_pred_rad{0.0};
+
+    double Pxx_pred{0.0};
+    double Pyy_pred{0.0};
+    double Ptt_pred{0.0};
+
+    double Pxx_est{0.0};
+    double Pyy_est{0.0};
+    double Ptt_est{0.0};
+
+    double innovation_theta{std::numeric_limits<double>::quiet_NaN()};
+    double innovation_x{std::numeric_limits<double>::quiet_NaN()};
+    double innovation_y{std::numeric_limits<double>::quiet_NaN()};
+    double NIS_theta{std::numeric_limits<double>::quiet_NaN()};
+
+    double dx_update_in{0.0};
+    double dy_update_in{0.0};
+    double dtheta_update_rad{0.0};
   };
 
   /// Noise parameters for tuning.
@@ -46,7 +69,7 @@ public:
     Noise noise{};
     // Lateral tracking wheel / sensor X offset from robot center, in inches.
     // Positive if the lateral wheel is forward (+X), negative if backward (-X).
-    double lateral_wheel_x_offset_in{0.0};
+    double lateral_wheel_x_offset_in{7.25};
   };
 
   /// Constructs a tank/unicycle EKF instance using the provided initial state and noise.
@@ -64,6 +87,9 @@ public:
 
   /// Sets the EKF state estimate and normalizes the heading.
   void  setState(const State& s);
+
+  /// Returns the latest EKF debug snapshot (prediction + update telemetry).
+  DebugSnapshot getDebugSnapshot() const { return debug_; }
 
   // Covariance P access (3x3)
   /// Copies the current covariance matrix P into outP.
@@ -120,6 +146,12 @@ private:
   /// Clamps covariance diagonal entries to be >= eps.
   void clampPDiag(double eps);
 
+  /// Resets per-tick debug values at the start of a prediction step.
+  void resetDebugForPredict();
+
+  /// Updates post-estimate debug values from current state and covariance.
+  void updateDebugPostEstimate();
+
   // EKF generic update for:
   //   z dimension 1: theta
   //   z dimension 2: gps xy
@@ -163,4 +195,7 @@ private:
 
   // GPS-to-heading correction policy
   bool gps_updates_theta_{false};
+
+  // EKF telemetry snapshot for external logging.
+  DebugSnapshot debug_{};
 };

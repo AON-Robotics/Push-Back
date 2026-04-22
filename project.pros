@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "High-Stakes",
+    "project_name": "Push-Back",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -309,8 +309,8 @@
       }
     },
     "upload_options": {
-      "slot": 3,
-      "icon": "alien",
+      "slot": 2,
+      "icon": "pizza",
       "description": " "
     }
   }

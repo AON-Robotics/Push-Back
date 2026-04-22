@@ -3,14 +3,12 @@
 #include "pros/rtos.hpp"
 #include "pros/imu.hpp"
 #include "pros/gps.hpp"
-
 #include <cmath>
-
 #include "EKF/EKF.hpp"
-#include "EKF/Sensor_Feeder.hpp"
+#include "EKF/sensor_feeder.hpp"
 
-// Call from opcontrol() and/or autonomous loops.
-// Requires pros::lcd::initialize() called once in initialize().
+// Call from autonomous loops.
+
 void ekf_lcd_debug_update(const aon::SensorFeeder& feeder,
                           const EKF& ekf,
                           const pros::Imu& imu,

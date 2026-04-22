@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 #include "pros/rotation.hpp"
 #include "pros/imu.hpp"
@@ -86,7 +87,15 @@ struct EKFConfig {
   // Lateral wheel offset from robot center (inches)
   // Needed to remove fake sideways motion when rotating
   double lateral_wheel_x_offset_in = 3.5;
+  double track_width_in = 0.0;  // Distance between left/right tracking paths (in)
 
+  // ---------------------------
+  // Initial EKF state at reset
+  // ---------------------------
+  double initial_x_in = 0.0;
+  double initial_y_in = 0.0;
+  double initial_theta_rad = 0.0;
+  double init_heading_deg = -180.0;
 
   // ---------------------------
   // Timing safety
@@ -127,6 +136,18 @@ struct EKFConfig {
 //
 class SensorFeeder {
  public:
+  struct StepDebug {
+    double dt_s{0.0};
+    double left_delta_in{0.0};
+    double right_delta_in{0.0};
+    double ds_in{0.0};
+    double dtheta_enc_rad{std::numeric_limits<double>::quiet_NaN()};
+    double imu_theta_rad{0.0};
+    double imu_dtheta_rad{0.0};
+    double vx_inps{0.0};
+    double omega_radps{0.0};
+  };
+
   // rotLat == nullptr  -> Tank drive
   // gps == nullptr     -> No GPS present
   SensorFeeder(pros::Rotation& rotL,
@@ -136,17 +157,15 @@ class SensorFeeder {
                pros::Gps* gps,
                const EKFConfig& cfg);
 
-  // Resets time and encoder baselines
-  void reset();
+  // Resets time and encoder baselines.
+  // If ekf != nullptr, also resets EKF state/covariance to absolute origin.
+  void reset(EKF* ekf = nullptr);
 
   // Loads Q and R defaults into the EKF
   void applyEkfDefaults(EKF& ekf) const;
 
   // Runs one full EKF update cycle
   void step(EKF& ekf);
-
-  // Initializes EKF x/y from a single GPS snapshot, if available
-  bool initializeGpsSnapshot(EKF& ekf);
 
   // ---------------------------
   // Debug / telemetry
@@ -158,6 +177,7 @@ class SensorFeeder {
   double last_theta_meas_rad() const { return last_theta_meas_rad_; }
   double last_gps_x_in() const { return last_gps_x_in_; }
   double last_gps_y_in() const { return last_gps_y_in_; }
+  const StepDebug &last_debug() const { return last_debug_; }
 
  private:
   // Angle wrapping helpers
@@ -200,6 +220,7 @@ class SensorFeeder {
   double last_theta_meas_rad_ = 0.0;
   double last_gps_x_in_ = 0.0;
   double last_gps_y_in_ = 0.0;
+  StepDebug last_debug_{};
 };
 
 } // namespace aon
