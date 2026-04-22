@@ -13,14 +13,11 @@
 #define USING_BIG_ROBOT false
 #define TESTING_AUTONOMOUS false
 
-#define RED_ALLIANCE true
-#define BLUE_ALLIANCE !RED_ALLIANCE
-
 #if USING_BIG_ROBOT
 
 #define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
-#define DRIVE_WHEEL_DIAMETER 2.75
-#define TRACKING_WHEEL_DIAMETER 1.959
+#define DRIVE_WHEEL_DIAMETER 3.25
+#define TRACKING_WHEEL_DIAMETER 2
 #define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 1.572
 #define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 1.572
 #define DISTANCE_BACK_TRACKING_WHEEL_CENTER 1.572
@@ -66,7 +63,7 @@
 /// @see https://www.desmos.com/calculator/f523970d6f
 #define MAX_DECEL 500.0 // 100.0 // 2413.22817284
 
-#define INTAKE_ACTIVATION_DISTANCE 160
+#define INTAKE_ACTIVATION_DISTANCE 45
 
 #define ORBIT_HEIGHT 12.5
 // ORBIT Limiting to protect when it does not have 360° of freedom
@@ -91,7 +88,7 @@
 #define ENCODER_CONFIDENCE 0
 #define OFFSET_X_ENCODER_MID 3.250
 
-#define DRIVE_WIDTH 11.0625 // distance between front wheels
+#define DRIVE_WIDTH 12.5 // distance between front wheels // TODO: check with 12.5 inches because that is what i measured - kevin g
 #define DRIVE_LENGTH 10.5 // distance from back wheel to front wheel
 #define DISTANCE_FRONT_LEFT_DRIVE_WHEEL_CENTER 7.77817459305
 #define DISTANCE_BACK_LEFT_DRIVE_WHEEL_CENTER 7.77817459305
@@ -135,5 +132,8 @@
 #define ORBIT_LEFT_LIMIT 210
 #define ORBIT_RIGHT_LIMIT 90
 #endif // NOT USING_BIG_ROBOT
+
+/// Alliance color selected from the GUI before the match.
+enum Alliance : int { Red, Blue, Skills };
 
 #endif  // AON_CONSTANTS_HPP_

@@ -7,9 +7,12 @@ void HDrive::initialize() {
   this->odometry->initialize();
 }
 
-void HDrive::motors(const double &rpm) {
+void HDrive::motors(const double &rpm, const int& delay) {
   this->leftMotors.moveVelocity(rpm);
   this->rightMotors.moveVelocity(rpm);
+  if (delay == 0) return;
+  pros::delay(delay);
+  this->stop();
 }
 
 void HDrive::sideways(const double &rpm) {
@@ -28,7 +31,7 @@ void HDrive::driveWhileTurning(const double &forward, const double &turn){
 
 void HDrive::drive(double leftX, double leftY, double rightX, double rightY) {
   double forward = applySpeed(leftY, this->isTurbo() ? 1 : 0.5);
-  double sideways = applySpeed(leftX, this->isTurbo() ? 1 : 0.5);
+  double sideways = applySpeed(leftX, this->isTurbo() ? 1 : 0.75);
   double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.5);
 
   this->driveWhileTurning(forward, turn);
@@ -138,7 +141,7 @@ void HDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
   #undef time
 }
 
-void HDrive::driveProfiled(double dist){
+void HDrive::driveProfiled(double dist, bool settle){
   if(dist == 0) { return; }
   const int sign = dist / abs(dist); // Getting the direction of the movement
   dist = abs(dist); // Setting the magnitude to positive
@@ -156,8 +159,9 @@ void HDrive::driveProfiled(double dist){
   double lastTime = now;
 
   this->yProfile.setVelocity(this->getRPM());
+  this->yProfile.setFinalVelocity(settle ? 0 : 100);
 
-  while(traveledDist < dist){
+  while(traveledDist < dist && timeout > pros::millis()){
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
@@ -172,10 +176,10 @@ void HDrive::driveProfiled(double dist){
     pros::delay(20);
   }
 
-  this->stop();
+  if(settle) this->stop();
 }
 
-void HDrive::strafeProfiled(double dist){
+void HDrive::strafeProfiled(double dist, bool settle){
   if(dist == 0) { return; }
   const int sign = dist / abs(dist); // Getting the direction of the movement
   dist = abs(dist); // Setting the magnitude to positive
@@ -187,15 +191,18 @@ void HDrive::strafeProfiled(double dist){
   double dt = 0.02; // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  Vector startPos = odometry->getPosition();
+  // Vector startPos = odometry->getPosition();
+  const double backStartPos = odometry->encoderBack.get_position(); //! Temporary
 
   double now = pros::micros() / 1E6;
   double lastTime = now;
 
   this->xProfile.setVelocity(this->getRPM());
+  this->xProfile.setFinalVelocity(settle ? 0 : 100);
 
   while(traveledDist < dist && timeout > pros::millis()){
-    traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
+    // traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
+    traveledDist = (std::abs(odometry->encoderBack.get_position() - backStartPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     // traveledDist += getSpeed(this->getRPM()) * dt; //# in case of odom failure
 
     double remainingDist = dist - traveledDist;
@@ -211,10 +218,10 @@ void HDrive::strafeProfiled(double dist){
     pros::delay(20);
   }
 
-  this->stop();
+  if (settle) this->stop();
 }
 
-void HDrive::turnProfiled(double angle){
+void HDrive::turnProfiled(double angle, bool settle){
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
@@ -232,6 +239,8 @@ void HDrive::turnProfiled(double angle){
 
   double now;
   double lastTime = pros::micros() / 1E6;
+
+  this->thetaProfile.setFinalVelocity(settle ? 0 : 100);
   
   while(traveledAngle < angle){
     traveledAngle = abs(odometry->getDegrees() - startAngle);
@@ -251,7 +260,7 @@ void HDrive::turnProfiled(double angle){
 
     pros::delay(20);
   }
-  this->stop();
+  if(settle) this->stop();
 }
 
 void HDrive::stop(){
@@ -259,16 +268,16 @@ void HDrive::stop(){
   this->sideways(0);
 }
 
-void HDrive::move(const double &dist){
-  driveProfiled(dist);
+void HDrive::move(const double &dist, bool settle){
+  driveProfiled(dist, settle);
 }
 
-void HDrive::strafe(const double &dist){
-  strafeProfiled(dist);
+void HDrive::strafe(const double &dist, bool settle){
+  strafeProfiled(dist, settle);
 }
 
-void HDrive::turn(const double &angle){
-  turnProfiled(angle);
+void HDrive::turn(const double &angle, bool settle){
+  turnProfiled(angle, settle);
 }
 
 void HDrive::setMaxVelocity(const double &rpm){
@@ -307,10 +316,10 @@ void HDrive::driveInArc(double radius, const double &midSpeed) {
   rightMotors.moveVelocity(rightSpeed);
 }
 
-void HDrive::driveAngleOfArc(const double &radius, const double &angle) {
+void HDrive::driveAngleOfArc(const double &radius, const double &angle, bool settle) {
   if(angle == 0) { return; }
   if(radius == 0) {
-    turn(angle);
+    turn(angle, settle);
     return;
   }
   const short sign = angle / std::abs(angle);
@@ -322,8 +331,15 @@ void HDrive::driveAngleOfArc(const double &radius, const double &angle) {
   double lastTime = now;
   const double rightEncStartPos = odometry->encoderRight.get_position(); //! Temporary
   const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
+  this->yProfile.setVelocity(this->getRPM());
+  this->yProfile.setFinalVelocity(settle ? 0 : 100);
+
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (distance / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+
   // const double startDist = odometry::getTraveledDistance();
-  while(traveledDist < distance){
+  while(traveledDist < distance && timeout > pros::millis()){
     // traveledDist = odometry::getTraveledDistance() - startDist;
     const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
@@ -339,7 +355,7 @@ void HDrive::driveAngleOfArc(const double &radius, const double &angle) {
     pros::delay(20);
   }
 
-  this->stop();
+  if (settle) this->stop();
 }
 
 void HDrive::driveInArcTo(const double &x, const double &y){

@@ -6,16 +6,18 @@ namespace aon {
 
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
-               char shrimpPistonsPort, int distanceSensorPort,
-               int colorSensorPort)
+               char cartPistonsPort, int distanceSensorPort,
+               int colorSensorPort, 
+               char acceptSensorPort, char rejectSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
-      shrimpPistons(shrimpPistonsPort),
+      cart(cartPistonsPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
-      colorSensor(colorSensorPort) {}
+      colorSensor(colorSensorPort),
+      acceptSensor(acceptSensorPort),
+      rejectSensor(rejectSensorPort) {}
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
-
   elevatorMG.setBrakeMode(brakeMode);
   elevatorMG.setGearing(gearset);
   elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -34,12 +36,11 @@ void Intake::move(const int& rpm) {
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
 
-
 void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
 void Intake::scan() {
   size_t stopTime = UINT32_MAX;
-  const short DELAY_PER_BALL = 1500;  // ms
+  const short DELAY_PER_BALL = 2200;  // ms
   while (true) {
     if (scanning) {
       if (this->isObjectDetected()) {
@@ -47,7 +48,8 @@ void Intake::scan() {
         stopTime = pros::millis() + DELAY_PER_BALL;
         pros::delay(500);  // this is to avoid counting the same block multiple times
       }
-      if (pros::millis() >= stopTime) {
+      // Only stop the elevator if sort isn't actively controlling it
+      if (!releasing && pros::millis() >= stopTime) {
         this->elevator(0);
         stopTime = INT_MAX;
       }
@@ -57,50 +59,119 @@ void Intake::scan() {
 }
 
 void Intake::sort() {
-  size_t checkTime = 0;
-  size_t actionTime = UINT32_MAX;
-  size_t stopTime = UINT32_MAX;
-  const short ACTION_DELAY = 5;        // ms
-  const short CHECK_DELAY = 200;       // ms
-  const short ACCEPTANCE_DELAY = 700;  // ms
-  const short REJECTION_DELAY = 450;   // ms
-  Action action = NONE;
+  enum State { INIT, IDLE, KICKBACK, SETTLE, WAIT_ACCEPT, CONFIRM_ACCEPT, WAIT_REJECT, CONFIRM_REJECT };
+  State state = INIT;
+  bool lastReleasing = false;
+  bool armed = true;
+  bool pendingCorrect = false;
+  uint32_t timerEnd = 0;
+
   while (true) {
-    if (scanning) {
-      const double hue = this->hue();
-      const bool red = isRed(hue), blue = isBlue(hue);
+    const double hue = this->hue();
+    const bool red = isRed(hue), blue = isBlue(hue);
 
-      if (pros::millis() >= checkTime && (red || blue)) {
-        // Schedule Corresponding Action
-        if ((blue && BLUE_ALLIANCE) || (red && RED_ALLIANCE)) {
-          action = ACCEPT;
-          actionTime = pros::millis() + ACTION_DELAY;
-        } else if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
-          action = REJECT;
-          actionTime = pros::millis() + 0;
-        }
-        checkTime = pros::millis() + CHECK_DELAY;
-      }
-
-      if (pros::millis() >= actionTime) {
-        // Execute Scheduled Action
-        if (action == ACCEPT) {
-          this->judge();
-          stopTime = pros::millis() + ACCEPTANCE_DELAY;
-        } else if (action == REJECT) {
+    if (releasing) {
+        if (!lastReleasing) {
+          // Rising edge — start init reverse non-blocking
+          this->elevator(-INTAKE_VELOCITY);
           this->judge(-INTAKE_VELOCITY);
-          stopTime = pros::millis() + REJECTION_DELAY;
+          timerEnd = pros::millis() + 350;
+          state = INIT;
+          armed = true;
+          lastReleasing = true;
         }
-        actionTime = UINT32_MAX;
-      }
 
-      if (pros::millis() >= stopTime) {
-        // Stop Scheduled Action after the given delay
-        this->judge(0);
-        stopTime = UINT32_MAX;
+        switch (state) {
+        case INIT:
+          // Wait for init reverse to finish, then go to IDLE
+          if (pros::millis() >= timerEnd) {
+            this->elevator(0);
+            this->judge(0);
+            state = IDLE;
+          }
+          break;
+
+        case IDLE:
+          this->elevator(INTAKE_VELOCITY * 2 / 3);
+          if (armed && (red || blue)) {
+            armed = false;
+            pendingCorrect = (ALLIANCE == Alliance::Skills) ||
+                             (red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue);
+            const Height& height = pendingCorrect ? acceptHeight : rejectHeight;
+            if (height != TOP) {
+              // Kickback — reverse briefly before routing
+              this->elevator(-INTAKE_VELOCITY);
+              timerEnd = pros::millis() + 265;
+              state = KICKBACK;
+            } else {
+              this->elevator(INTAKE_VELOCITY * 2 / 3);
+              this->judge(INTAKE_VELOCITY);
+              state = WAIT_ACCEPT;
+            }
+          }
+          break;
+
+        case KICKBACK:
+          // Wait for kickback to finish, then spin judge
+          if (pros::millis() >= timerEnd) {
+            const Height& height = pendingCorrect ? acceptHeight : rejectHeight;
+            this->elevator(INTAKE_VELOCITY * 2 / 3);
+            this->judge(height == TOP ? INTAKE_VELOCITY : -INTAKE_VELOCITY);
+            state = pendingCorrect ? WAIT_ACCEPT : WAIT_REJECT;
+          }
+          break;
+
+        case WAIT_ACCEPT: {
+          auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == HIGH) state = CONFIRM_ACCEPT;
+          break;
+        }
+
+        case CONFIRM_ACCEPT: {
+          auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == LOW) {
+            this->judge(0);
+            timerEnd = pros::millis() + 105;
+            state = SETTLE;
+          }
+          break;
+        }
+
+        case WAIT_REJECT: {
+          auto& sensor = (rejectHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == HIGH) state = CONFIRM_REJECT;
+          break;
+        }
+
+        case CONFIRM_REJECT: {
+          auto& sensor = (rejectHeight == TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == LOW) {
+            this->judge(0);
+            timerEnd = pros::millis() + 105;
+            state = SETTLE;
+          }
+          break;
+        }
+
+        case SETTLE:
+          // Brief pause after block clears before re-arming
+          if (pros::millis() >= timerEnd) {
+            state = IDLE;
+            armed = true;
+          }
+          break;
+        }
+      } else {
+        if (lastReleasing) {
+          // Falling edge — stop motors and reset for next press
+          this->elevator(0);
+          this->judge(0);
+          state = INIT;
+          timerEnd = UINT32_MAX; // prevent stale timer from skipping init on next press
+        }
+        lastReleasing = false;
       }
-    }
-    pros::delay(25);
+    pros::delay(5);
   }
 }
 
@@ -133,24 +204,46 @@ void Intake::score(const Height& to, const int& delay) {
   this->stop();
 }
 
-void Intake::dropShrimp() { shrimpPistons.set_value(HIGH); }
+void Intake::toggleCart() { cart.toggle(); }
 
-void Intake::raiseShrimp() { shrimpPistons.set_value(LOW); }
+void Intake::dropCart() { cart.activate(); }
+
+void Intake::raiseCart() { cart.deactivate(); }
+
+void Intake::activateScan() { scanning = true; }
+
+void Intake::stopScan() { scanning = false; }
+
+void Intake::setSortHeights(Height accept, Height reject) {
+  acceptHeight = accept;
+  rejectHeight = reject;
+}
+
+void Intake::release() {
+  releasing = false;  // force falling edge so sort task fully resets
+  pros::delay(10);    // give sort task one cycle to see the false
+  releasing = true;
+}
+
+void Intake::stopRelease() { releasing = false; }
 
 #else
 
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
-               char scorerPistonPort, char cartPistonPort,
+               char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
                int distanceSensorPort, int colorSensorPort)
     : elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
-      scorerPiston(scorerPistonPort),
-      cartPiston(cartPistonPort),
+      scorerPiston(scorerPistonPort, Piston::RETRACTED),
+      cart(cartPistonPort, Piston::RETRACTED),
+      trapdoor(trapdoorPistonPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
-      colorSensor(colorSensorPort) {}
+      colorSensor(colorSensorPort) {
+        this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
+      }
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
@@ -163,16 +256,17 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
   judgeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   judgeMG.tarePosition();
 
-  scorerMG.setBrakeMode(brakeMode);
-  scorerMG.setGearing(gearset);
+  scorerMG.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  scorerMG.setGearing(okapi::AbstractMotor::gearset::red);
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
+
+  leverController->tarePosition();
 }
 
 void Intake::move(const int& rpm) {
   this->elevator(rpm);
   this->judge(rpm);
-  this->scorer(rpm);
 }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
@@ -180,6 +274,7 @@ void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
 void Intake::judge(const int& rpm) { judgeMG.moveVelocity(rpm); }
 
 void Intake::scan() {
+  colorSensor.set_led_pwm(50);
   size_t stopTime = UINT32_MAX;
   const short DELAY_PER_BALL = 2450;  // ms
   while (true) {
@@ -193,7 +288,7 @@ void Intake::scan() {
 
       if (pros::millis() >= stopTime) {
         this->elevator(0);
-        stopTime = INT_MAX;
+        stopTime = UINT32_MAX;
       }
     }
 
@@ -202,51 +297,28 @@ void Intake::scan() {
 }
 
 void Intake::sort() {
-  size_t checkTime = 0;
-  size_t actionTime = UINT32_MAX;
-  size_t stopTime = UINT32_MAX;
-  const short ACTION_DELAY = 20;       // ms
-  const short CHECK_DELAY = 100;       // ms
-  const short ACCEPTANCE_DELAY = 800;  // ms
-  const short REJECTION_DELAY = 400;   // ms
-  Action action;
   while (true) {
     if (scanning) {
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
 
-      if (pros::millis() >= checkTime && (red || blue)) {
-        // Schedule Corresponding Action
-        if ((blue && BLUE_ALLIANCE) || (red && RED_ALLIANCE)) {
-          action = ACCEPT;
-        } else if ((red && BLUE_ALLIANCE) || (blue && RED_ALLIANCE)) {
-          action = REJECT;
-        }
-        actionTime = pros::millis() + ACTION_DELAY;
-        checkTime = pros::millis() + CHECK_DELAY;
-      }
-
-      if (pros::millis() >= actionTime) {
-        // Execute Scheduled Action
-        if (action == ACCEPT) {
-          this->judge();
-          stopTime = pros::millis() + ACCEPTANCE_DELAY;
-        } else if (action == REJECT) {
+      if (red || blue) {
+        if (ALLIANCE != Alliance::Skills && ((red && ALLIANCE == Alliance::Blue) || (blue && ALLIANCE == Alliance::Red))) {
+          // Wrong alliance color detected — reverse motor to eject
           this->judge(-INTAKE_VELOCITY);
-          stopTime = pros::millis() + REJECTION_DELAY;
+          pros::delay(100);
+          this->judge(0);
+        } else if ((red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue)) {
+          // Correct alliance color detected — move motor to accept
+            this->judge(INTAKE_VELOCITY);
+            pros::delay(125);
+            this->judge(0);
+          }
         }
-        actionTime = UINT32_MAX;
-      }
-
-      if (pros::millis() >= stopTime) {
-        // Stop Scheduled Action after the given delay
-        this->judge(0);
-        stopTime = UINT32_MAX;
       }
     }
     pros::delay(25);
   }
-}
 
 void Intake::pickUp(const int& delay) {
   this->elevator();
@@ -273,9 +345,15 @@ void Intake::reject(const int& delay) {
   this->judge(0);
 }
 
+void Intake::lever() {
+  this->leverController->setTarget(150);
+  while(this->leverController->getError() > 10){ pros::delay(5); }
+  this->leverController->setTarget(0);
+}
+
 void Intake::score(const Height& height, const int& delay) {
   if (height == TOP) {
-    this->move();
+    this->store();
   } else if (height == BOTTOM) {
     this->move(-INTAKE_VELOCITY);
   } else
@@ -285,15 +363,38 @@ void Intake::score(const Height& height, const int& delay) {
   this->stop();
 }
 
-void Intake::setScorerHeight(const short& height) {
-  scorerPiston.set_value(height);
+void Intake::toggleScorerHeight() { scorerPiston.toggle(); }
+
+void Intake::raiseScorer() { scorerPiston.activate(); }
+
+void Intake::lowerScorer() { scorerPiston.deactivate(); }
+
+void Intake::toggleCart() { cart.toggle(); }
+
+void Intake::dropCart() { cart.activate(); }
+
+void Intake::raiseCart() { cart.deactivate(); }
+
+void Intake::toggleTrapdoor() { trapdoor.toggle(); }
+
+void Intake::openTrapdoor() { trapdoor.activate(); }
+
+void Intake::closeTrapdoor() { trapdoor.deactivate(); }
+
+void Intake::scorer(const int& rpm) {
+  // TODO: modify logic for the lever
+  scorerMG.moveVelocity(rpm);
 }
 
-void Intake::dropCart() { cartPiston.set_value(HIGH); }
+void Intake::activateScan() {
+  scanning = true;
+}
 
-void Intake::raiseCart() { cartPiston.set_value(LOW); }
-
-void Intake::scorer(const int& rpm) { scorerMG.moveVelocity(rpm); }
+void Intake::stopScan() {
+  scanning = false;
+  this->elevator(0);
+  colorSensor.set_led_pwm(0);
+}
 
 #endif
 
@@ -303,17 +404,7 @@ double Intake::distance() { return distanceSensor.get(); }
 
 bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
 
-bool Intake::isScanning(){ return this->scanning; }
-
-void Intake::activateScan() {
-  scanning = true;
-  colorSensor.set_led_pwm(100);
-}
-
-void Intake::stopScan() {
-  scanning = false;
-  colorSensor.set_led_pwm(0);
-}
+bool Intake::isScanning() { return this->scanning; }
 
 void Intake::kickBack() {
   this->move(-100);
@@ -323,8 +414,9 @@ void Intake::kickBack() {
 
 double Intake::hue() { return colorSensor.get_hue(); }
 
-bool Intake::isRed(const double& hue) { return 0 <= hue && hue <= 25; }
+void Intake::setScoreDown(bool down) { scoreDown = down; }
 
-bool Intake::isBlue(const double& hue) { return 185 <= hue && hue <= 230; }
+bool Intake::isRed(const double& hue) { return (hue >= 356 && hue <= 359) || (hue >= 1 && hue <= 25); }
+bool Intake::isBlue(const double& hue) { return 170 <= hue && hue <= 230; }
 
 }  // namespace aon

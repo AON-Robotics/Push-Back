@@ -37,7 +37,8 @@ class TankDrive : public Drivetrain {
 
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
-  void motors(const double &rpm) override;
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  void motors(const double &rpm = MAX_RPM, const int& delay = 0) override;
 
   /// @brief Moves all motors the same `rpm` to rotate clockwise
   /// @param rpm The speed in which to move all motors in \b rpm
@@ -68,6 +69,7 @@ class TankDrive : public Drivetrain {
   /// right when positive and in the left when negative
   /// @param angle The angle of the arc we want to cover in \b degrees, a
   /// negative angle will cause the robot to go in reverse
+  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
   /// @note A positive `radius` will cause a rotation with reference to a point
   /// to the right, while a negative `radius` will cause a rotation with
   /// reference to a point to the left
@@ -75,7 +77,8 @@ class TankDrive : public Drivetrain {
   /// `angle` will cause a backwards movement
   /// @see https://www.desmos.com/calculator/91cbd82e8b
   void driveAngleOfArc(const double &radius = DRIVE_WIDTH,
-                       const double &angle = 90) override;
+                       const double &angle = 90, 
+                       bool settle = true) override;
 
   /// @brief Makes the robot drive in an arc motion to a specified point in the
   /// field
@@ -134,23 +137,27 @@ class TankDrive : public Drivetrain {
   /// @brief S-graph motion profile for linear movement
   /// @param dist The distance to be moved in \b inches, positive values will
   /// move forward and negative values backwards
-  void driveProfiled(double dist = TILE_WIDTH) override;
+  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
+  void driveProfiled(double dist = TILE_WIDTH, bool settle = true) override;
 
   /// @brief S-graph motion profile for rotations
   /// @param angle The angle in \b degrees we wish to rotate the robot, positive
   /// is clockwise and negative is counter-clockwise
-  void turnProfiled(double angle = 90) override;
+  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
+  void turnProfiled(double angle = 90, bool settle = true) override;
 
   /// @brief Moves the robot a given distance
   /// @param dist The distance to move in \b inches
+  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
   /// @details A positive `dist` makes the robot go forward while a negative
   /// `dist` makes the robot go backwards
-  void move(const double &dist = TILE_WIDTH) override;
+  void move(const double &dist = TILE_WIDTH, bool settle = true) override;
 
   /// @brief Turn the robot a given angle (default is clockwise)
   /// @param angle The angle to turn in \b degrees
+  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
   /// @details Clockwise is positive and counter-clockwise is negative
-  void turn(const double &angle = 90) override;
+  void turn(const double &angle = 90, bool settle = true) override;
 
   /// @brief Sets the max velocity for the drivetrains motion profile
   /// @param rpm The max velocity in \b RPM to pass to the motion profile

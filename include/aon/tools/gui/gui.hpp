@@ -9,8 +9,11 @@
 #include <functional>
 #include "../../../api.h"
 #include "aon/constants.hpp"
+#include "aon/math/pose.hpp"
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
+
+extern volatile Alliance ALLIANCE;
 
 namespace aon {
   class Gui;
@@ -19,8 +22,15 @@ namespace aon {
   extern std::unique_ptr<Gui> gui;
   
   namespace routines {
-    int RedRoutine();
-    int BlueRoutine();
+    int RedRoutine1();
+    int RedRoutine2();
+    int RedRoutine3();
+    int BlueRoutine1();
+    int BlueRoutine2();
+    int BlueRoutine3();
+    int SkillsRoutine1();
+    int SkillsRoutine2();
+    int SkillsRoutine3();
   }
     
   // Add other auton routine declarations as needed
@@ -42,10 +52,11 @@ enum GuiScreen {
   VARS,
   DATA,
   LiveGraph,
+  FieldMapper,
 };
 
 // Auton selection system
-enum Alliance { Red, Blue, Skills };
+// Alliance enum is declared above (global scope); ALLIANCE extern is above too.
 
 struct AutonOption {
   const char* name;
@@ -79,21 +90,21 @@ public:
   // TODO: move this to be only parameter based
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
-    {"Red AUT1", aon::routines::RedRoutine},
-    {"Red AUT2", aon::routines::RedRoutine},
-    {"Red AUT3", aon::routines::RedRoutine},
+    {"Red AUT1", aon::routines::RedRoutine1},
+    {"Red AUT2", aon::routines::RedRoutine2},
+    {"Red AUT3", aon::routines::RedRoutine3},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {
-    {"Blue AUT1", aon::routines::BlueRoutine},
-    {"Blue AUT2", aon::routines::BlueRoutine},
-    {"Blue AUT3", aon::routines::BlueRoutine},
+    {"Blue AUT1", aon::routines::BlueRoutine1},
+    {"Blue AUT2", aon::routines::BlueRoutine2},
+    {"Blue AUT3", aon::routines::BlueRoutine3},
   };
   
   AutonOption skillsAutonOptions[autonOptionsCount] = {
-    {"Skills AUT1", aon::routines::RedRoutine},
-    {"Skills AUT2", aon::routines::RedRoutine},
-    {"Skills AUT3", aon::routines::RedRoutine},
+    {"Skills AUT1", aon::routines::SkillsRoutine1},
+    {"Skills AUT2", aon::routines::SkillsRoutine2},
+    {"Skills AUT3", aon::routines::SkillsRoutine3},
   };
 
 
@@ -113,12 +124,21 @@ public:
   virtual void handleRedAutonMenuTouch();
   virtual void handleBlueAutonMenuTouch();
   virtual void handleSkillsMenuTouch();
-
-  // Debug-related APIs (no-op defaults). These are implemented fully in
-  // `GuiDebug`. Declaring them here lets user code call them whether the
-  // concrete GUI is `Gui` or `GuiDebug`.
-  virtual void setVariableRegister(const std::function<void()>& /*Register*/ ) {}
-  virtual void variableChanger(double& /*variableRef*/, const std::string& /*name*/) {}
+  virtual void setVariableRegister(const std::function<void()>&) {}
+  virtual void variableChangerImpl(const std::string&,std::function<double()>,std::function<void(double)>) {}
+  template <
+    typename T,
+    typename = std::void_t<
+      decltype(std::declval<T>() + std::declval<T>()),
+      decltype(std::declval<T>() - std::declval<T>())
+    >
+  >
+  void variableChanger(T& variableRef, const std::string& name) {
+    variableChangerImpl(name,
+      [&variableRef]() -> double { return static_cast<double>(variableRef); },
+      [&variableRef](double delta) { variableRef += static_cast<T>(delta); }
+    );
+  }
   virtual void setTestRegister(const std::function<void()>& /*Register*/ ) {}
   virtual void registerTestFunction(int (* /*func*/)(), const std::string& /*name*/) {}
   virtual void registerTestFunction(const std::function<int()>& /*func*/, const std::string& /*name*/) {}
@@ -128,6 +148,7 @@ public:
   virtual void setDataRegister(const std::function<void()>& /*Register*/) {}
   virtual void registerResetHandler(const std::string& /*name*/, const std::function<void()>& /*cb*/) {}
   virtual void invokeResetHandler() {}
+  virtual void setMapDataProvider(std::function<Pose()> /*getPose*/) {}
 
   // Auton selection helper
   void selectAutonByList(Alliance alliance, int index1Based);
