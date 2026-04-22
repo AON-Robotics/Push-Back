@@ -25,7 +25,11 @@ class Intake {
   };
 
 #if USING_BIG_ROBOT
+ public:
+  enum SortState { INIT, IDLE, KICKBACK, SETTLE, WAIT_ACCEPT, CONFIRM_ACCEPT, WAIT_REJECT, CONFIRM_REJECT };
+
  private:
+  SortState sortState = INIT;
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
   Piston cart;
@@ -39,7 +43,6 @@ class Intake {
   volatile bool releasing = false;
   volatile bool lastColorSeen = false;
   Height acceptHeight = TOP;
-  Height rejectHeight = MIDDLE;
 
  public:
   Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
@@ -76,13 +79,15 @@ class Intake {
   /// @brief Sets the exit heights for the sort routine mid-run.
   /// @param accept Where correct-color blocks exit
   /// @param reject Where wrong-color blocks exit
-  void setSortHeights(Height accept, Height reject);
+  void setSortHeights(Height accept);
 
   /// @brief Allows the sort queue to start processing.
   /// @details Detection and queuing always run; call this to start sorting.
-  void release();
-  void stopRelease();
-  //made by pablo(chatgpt) in the span of 9 months
+  void startReleasing();
+  void stopReleasing();
+
+  /// @brief Returns the current state of the sort state machine.
+  SortState getSortingState() const;
 #else
  private:
   okapi::MotorGroup elevatorMG;
