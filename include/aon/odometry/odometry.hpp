@@ -13,6 +13,8 @@
 #include "../tools/vector.hpp"
 #include "../math/pose.hpp"
 
+#include <cstdio>
+
 
 namespace aon {
 
@@ -53,11 +55,8 @@ namespace aon {
         Vector deltaDlocal;
         Angle orientation;
         Vector position;
-        Vector changeWeb;
 
-        Vector changeMine;
-        Vector changeVideo;
-        Vector changeEasy;
+        Vector changeMine; // testing
         
         const double conversionFactor;
 
@@ -78,6 +77,8 @@ namespace aon {
         double getY();
         void setX(double x);
         void setY(double y);
+
+        FILE* _logFile = nullptr;
 
         Vector getPosition();
         void setPosition(double x, double y);
@@ -105,7 +106,9 @@ namespace aon {
 
         pros::Rotation encoderRight;
         pros::Rotation encoderLeft;//was in private 
+        #if ENCODER_BACK_ENABLED
         pros::Rotation encoderBack;
+        #endif  
         pros::Gps gps;
 
         #if GYRO_ENABLED

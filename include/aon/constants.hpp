@@ -30,6 +30,7 @@
 #define GYRO_FILTER_LENGTH 1
 #define ENCODER_CONFIDENCE 0
 #define OFFSET_X_ENCODER_MID 3.250
+#define BACK_ENCODER_ENABLED true
 
 #define DRIVE_WIDTH 15.5 // distance between front wheels
 #define DRIVE_LENGTH 9 // distance from back wheel to front wheel
@@ -45,7 +46,7 @@
 #define INITIAL_ODOMETRY_X 0.0
 #define INITIAL_ODOMETRY_Y 0.0
 #define INITIAL_ODOMETRY_THETA 0.0
-#define TURNING_THRESHOLD 0.01
+#define TURNING_THRESHOLD 0.001
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD

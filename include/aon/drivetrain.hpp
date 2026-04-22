@@ -4,29 +4,26 @@
 #include "./controls/s-curve-profile.hpp"
 #include "./controls/pid/pid.hpp"
 #include "./odometry/odometry.hpp"
-#include "./odometry/odometry.hpp"
 
 namespace aon {
+
 
 class Drivetrain {
  protected:
   std::unique_ptr<Odometry> odometry;
   Pose pose;
-  bool turbo = false;
-  aon::Odometry odom;
-  std::unique_ptr<pros::Task> odomTask;
+  bool turbo = true;
+  
+  public:
 
-  static void odomTaskFn(void* param) {
-    Drivetrain* dt = static_cast<Drivetrain*>(param);
-    dt->odom.sense();
-  }
+  Drivetrain(std::unique_ptr<Odometry> odom): pose(), odometry(std::move(odom)) {}
 
- public:
-  // Drivetrain() : pose(), odometry(),
-  Drivetrain() : odom() {}
 
-  // Pose getPose() { return this->pose; }
-  // void setPose(Pose p) { this->pose = p; }
+  virtual void initialize() = 0;
+  
+
+  Pose getPose() { return this->pose; }
+  void setPose(Pose p) { this->pose = p; }
 
   double getX() { 
     return this->odometry->getX();
