@@ -78,8 +78,6 @@ namespace aon {
         void setX(double x);
         void setY(double y);
 
-        FILE* _logFile = nullptr;
-
         Vector getPosition();
         void setPosition(double x, double y);
 
