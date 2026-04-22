@@ -19,6 +19,7 @@ class TankDrive : public Drivetrain {
   SmartMotorGroup leftMotors;
   SmartMotorGroup rightMotors;
   MotionProfile motionProfile;
+  MotionProfile turningProfile;
 
 
  public:
