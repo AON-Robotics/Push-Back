@@ -52,6 +52,8 @@ inline double AnalogInputScaling(const double& x, const double& t) {
 int r1PressCount = 0;
 size_t lastPressTime = 0;
 const int DOUBLE_TAP_TIME = 250;
+bool sortActive = false;
+bool sortEnabled = true;
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
@@ -80,14 +82,45 @@ inline void DriveDefault() {
   else if(mainController.get_digital(DIGITAL_L2)){
     intake.score(Intake::BOTTOM);
   }
-  else if(mainController.get_digital(DIGITAL_R2)){
-    intake.score(Intake::MIDDLE);
-  }
-  else if(mainController.get_digital(DIGITAL_R1)){
-    intake.score(Intake::TOP);
-  }
-  else if(!intake.isScanning()){
+  else if(!sortActive){
     intake.stop();
+  }
+
+  // Evaluate new_press unconditionally so internal state resets on release
+  bool r1NewPress = mainController.get_digital_new_press(DIGITAL_R1);
+  bool r2NewPress = mainController.get_digital_new_press(DIGITAL_R2);
+
+  if (sortEnabled) {
+    // R1 held — sort normally (correct→TOP, wrong→MIDDLE)
+    if(mainController.get_digital(DIGITAL_R1)) {
+      if(r1NewPress) {
+        intake.setSortHeights(Intake::TOP);
+        intake.startReleasing();
+        sortActive = true;
+      }
+    }
+    // R2 held — sort inverted (correct→MIDDLE, wrong→TOP)
+    else if(mainController.get_digital(DIGITAL_R2)) {
+      if(r2NewPress) {
+        intake.setSortHeights(Intake::MIDDLE);
+        intake.startReleasing();
+        sortActive = true;
+      }
+    }
+    // neither held — stop sorting only if it was previously active
+    else if(sortActive) {
+      intake.stopReleasing();
+      sortActive = false;
+    }
+  } else {
+    // Sort off — R1: elevator+judge forward, R2: elevator forward judge reverse
+    if(mainController.get_digital(DIGITAL_R1)) {
+      intake.elevator();
+      intake.judge();
+    } else if(mainController.get_digital(DIGITAL_R2)) {
+      intake.elevator();
+      intake.judge(-INTAKE_VELOCITY);
+    }
   }
 
   // Change Brooks Height
@@ -106,6 +139,14 @@ inline void DriveDefault() {
   else if(mainController.get_digital_new_press(DIGITAL_X)) {
     drivetrain.toggleTurbo();
   }
+  else if(mainController.get_digital_new_press(DIGITAL_Y)) {
+    sortEnabled = !sortEnabled;
+    if (!sortEnabled && sortActive) {
+      intake.stopReleasing();
+      sortActive = false;
+    }
+  }
+
 
   #else
 
