@@ -156,8 +156,8 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
       trapdoor(trapdoorPistonPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {
-  this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
-}
+        this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
+      }
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
@@ -170,8 +170,8 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
   judgeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   judgeMG.tarePosition();
 
-  scorerMG.setBrakeMode(brakeMode);
-  scorerMG.setGearing(gearset);
+  scorerMG.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  scorerMG.setGearing(okapi::AbstractMotor::gearset::red);
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
 
