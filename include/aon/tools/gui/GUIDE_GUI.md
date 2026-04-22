@@ -2,13 +2,14 @@
 
 ## Overview
 
-The GUI system provides five main features:
+The GUI system provides six main features:
 
 1. **Registered Autons** — Register functions and select them from the Debug Menu
 2. **Auton Runner** — Execute autonomous routines on-demand during testing
 3. **Tunable Variables** — Live adjustment of parameters without rebuilding
 4. **Data Menu** — Live display of registered numeric values with reset controls
 5. **Live Graph** — Real-time visualization of X/Y data (e.g., odometry)
+6. **Field Mapper** — Real-time robot path trace on a top-down field view with arc measurement
 
 ---
 
@@ -22,6 +23,7 @@ The GUI system provides five main features:
 - [Tunable Variables](#tunable-variables)
 - [Data Menu](#data-menu)
 - [Live Graph](#live-graph)
+- [Field Mapper](#field-mapper)
 - [Complete Example](#complete-example)
 - [API Reference](#api-reference)
 - [Troubleshooting](#troubleshooting)
@@ -356,6 +358,106 @@ aon::gui.SetGraphDataProviders(
 
 ---
 
+## Field Mapper
+
+The Field Mapper (**Debug Menu → Field Mapper**) draws a top-down trace of the robot's path on a 6-tile VEX field. It also lets you measure arc geometry between any two points on the path so you can directly copy the values into `driveAngleOfArc()`.
+
+### API
+
+```cpp
+aon::gui->setMapDataProvider([]() -> aon::Pose {
+  return {drivetrain.getX(), drivetrain.getY(),
+          drivetrain.getTheta() * M_PI / 180.0};
+});
+```
+
+`Pose` fields:
+- `x` — robot X position in **inches**
+- `y` — robot Y position in **inches**
+- `theta` — robot heading in **radians**
+
+> `getTheta()` returns degrees — multiply by `M_PI / 180.0` before passing it.
+
+### How It Works
+
+1. `setMapDataProvider(callback)` stores the pose provider.
+2. While the Field Mapper screen is open, the pose is sampled periodically and appended to the path buffer (up to 1 000 points).
+3. The full path is drawn in **cyan**. The most recent position shows a heading arrow.
+4. **CLEAR** erases the recorded path and resets arc state.
+
+### Screen Layout
+
+```
+┌────────────────────────────────────────────────────────────┐
+│ [BACK]           FIELD MAPPER                    [CLEAR]   │
+├─────────────────────┬──────────────────────────────────────┤
+│                     │  X:  12.34"                          │
+│   6-tile field      │  Y:  -5.67"                          │
+│   (cyan path,       │  H:  90.0°                           │
+│    yellow arc seg,  │  D:  47.83"                          │
+│    green dot =      │ ────────────────────                 │
+│    arc start)       │  ARC:                                │
+│                     │  Radius: 12.50"  ΔHdg: 90°           │
+│                     │  ArcLen: 19.63"                      │
+│                     │  Chord:  17.68"                      │
+│                     │  Inner: 6.97"  Out: 18.03"           │
+├─────────────────────┼──────────────────────────────────────┤
+│                     │  [MARK S]         [MARK E]           │
+└─────────────────────┴──────────────────────────────────────┘
+```
+
+### Data Panel
+
+| Field | Description |
+|-------|-------------|
+| **X** | Current robot X in inches |
+| **Y** | Current robot Y in inches |
+| **H** | Current heading in degrees |
+| **D** | Total path distance traveled in inches |
+
+### Arc Measurement
+
+Use the two buttons at the bottom of the data panel:
+
+| Button | Color | Action |
+|--------|-------|--------|
+| **MARK S** | Dark green | Mark the current end of the path as the arc start; arc segment highlights yellow |
+| **MARK E** | Dark blue | Compute arc from marked start to current end |
+
+Once measured, the arc segment highlights in **yellow** (green dot marks the start) and the panel displays:
+
+| Field | Description | Use in code |
+|-------|-------------|-------------|
+| **Radius** | Robot-center arc radius in inches | First arg of `driveAngleOfArc(radius, angle)` |
+| **ΔHdg** | Total heading change in degrees (shown beside Radius) | Second arg of `driveAngleOfArc(radius, angle)` |
+| **ArcLen** | Cumulative path length along the arc in inches | — |
+| **Chord** | Straight-line distance start → end in inches | — |
+| **Inner** | Inner drive-wheel radius (`Radius − DRIVE_WIDTH/2`) | Reference only |
+| **Out** | Outer drive-wheel radius (`Radius + DRIVE_WIDTH/2`) | Reference only |
+
+### Using Arc Results in Autonomous
+
+```cpp
+// Field Mapper showed: Radius: 12.50", ΔHdg: 90°, turning right (clockwise)
+drivetrain.driveAngleOfArc(12.5, 90.0);   // positive radius = clockwise
+
+// Turning left (counter-clockwise): negate the radius
+drivetrain.driveAngleOfArc(-12.5, 90.0);
+```
+
+- **Radius** is already the robot-center radius — pass it directly, no adjustment needed.
+- **ΔHdg** is the arc angle — use it as the `angle` parameter.
+- The Field Mapper does not auto-detect turn direction: use **positive radius for clockwise**, **negative for counter-clockwise**.
+
+### Notes
+
+- Only active under `GuiDebug` (`TESTING_AUTONOMOUS true`). No-op on base `Gui`.
+- Call `setMapDataProvider()` **before** `aon::gui->initialize()`.
+- Buffer holds up to 600 points; once full, new points are dropped until **CLEAR** is pressed.
+- Arc results use `DRIVE_WIDTH` from `constants.hpp` for Inner/Out values, so they automatically reflect whichever robot is selected via `USING_BIG_ROBOT`.
+
+---
+
 ## Complete Example
 
 ```cpp
@@ -388,6 +490,11 @@ void initialize() {
     []() { return drivetrain.odom.getX(); },
     []() { return drivetrain.odom.getY(); }
   );
+
+  aon::gui->setMapDataProvider([]() -> aon::Pose {
+    return {drivetrain.getX(), drivetrain.getY(),
+            drivetrain.getTheta() * M_PI / 180.0};
+  });
 
   aon::gui.RegisterResetHandler("ResetOdom", []{
     drivetrain.odom.resetCurrent(0.0, 0.0, 0.0);
@@ -449,6 +556,12 @@ Supported signatures: `int(*)()`, `void(*)()`, `std::function<int()>`, lambda.
 | Function | Description |
 |----------|-------------|
 | `aon::gui.SetGraphDataProviders(xFunc, yFunc)` | Set X and Y data provider callbacks |
+
+### Field Mapper
+
+| Function | Description |
+|----------|-------------|
+| `aon::gui->setMapDataProvider(poseFunc)` | Set a `std::function<Pose()>` callback; `Pose.theta` must be in **radians** |
 
 ### State Properties
 
@@ -587,15 +700,18 @@ Open [gui.hpp](gui.hpp) and jump directly to the `AutonOption` arrays:
 - [Blue Auton Options](gui.hpp#L82)
 - [Skills Auton Options](gui.hpp#L88)
 
-Note: when adding a new preset auton, also add a forward declaration for the function in the `aon` namespace at the top of `gui.hpp` so the GUI can reference it (for example: `int ForwardBackTurnRoutine();`). Then implement the function in [autonomous-routines.hpp](../../competition/autonomous-routines.hpp). Ensure the function is in the `aon::` namespace and returns an `int`.
+Note: when adding a new preset auton, also add a forward declaration for the function in the `aon` namespace at the top of `gui.hpp` so the GUI can reference it (for example: `int ForwardBackTurnRoutine();`). Then implement the function in [autonomous-routines.hpp](../../competition/autonomous-routines.hpp). Ensure the function is in the `aon::routines` namespace and returns an `int`.
 
 ```cpp
 // Forward declarations at top of gui.hpp (inside namespace aon)
 namespace aon {
-  int RedRingsRoutine();
-  int BlueRingsRoutine();
-  int ForwardBackTurnRoutine();
-  // Add other auton routine declarations as needed
+
+  namespace routines {
+    int RedRingsRoutine();
+    int BlueRingsRoutine();
+    int ForwardBackTurnRoutine();
+    // Add other auton routine declarations as needed
+  }
 
 
 // Auton option arrays (instance members of the Gui class — no static/inline)
@@ -648,7 +764,7 @@ Navigate to **AUTONS** menu on the brain to see your updated options.
 ### Notes
 
 - **Names must match**: Ensure the function names match exactly with forward declarations or actual function definitions
-- **Naming style**: Functions should be in the `aon::` namespace and return `int` 
+- **Naming style**: Functions should be in the `aon::routines::` namespace and return `int` 
 - **Array size**: Don't change `AutonOptionsCount` (set to 3) unless you also change all three arrays
 - **Only for preset autons**: If you want to dynamically register autons, use the Debug Menu's **Registered Autons** feature instead (see [Registering Test Functions](#registering-test-functions))
 

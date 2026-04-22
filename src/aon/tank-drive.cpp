@@ -8,17 +8,8 @@ void TankDrive::initialize(){
   this->odometry->initialize();
 }
 
-void TankDrive::motors(const double &rpm) {
+void TankDrive::motors(const double &rpm, const int& delay) {
   this->leftMotors.moveVelocity(rpm);
-  this->rightMotors.moveVelocity(rpm);
-}
-
-void TankDrive::motorsLeft(const double &rpm) {
-  this->leftMotors.moveVelocity(rpm);
-}
-
-void TankDrive::motorsRight(const double &rpm) {
-  // pros::lcd::print(3, "RPM right: %0.3f", rpm);
   this->rightMotors.moveVelocity(rpm);
 }
 
@@ -28,11 +19,8 @@ void TankDrive::rotate(const double &rpm) {
 }
 
 void TankDrive::driveWhileTurning(const double &forward, const double &turn){
-  // pros::lcd::print(1, "Forward: %0.3f", forward);
-  // pros::lcd::print(2, "Turn:    %0.3f", turn);
   this->leftMotors.moveVelocity(forward + turn);
-  // this->rightMotors.moveVelocity(forward - turn);
-  this->motorsRight(forward - turn);
+  this->rightMotors.moveVelocity(forward - turn);
 }
 
 void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {
@@ -133,7 +121,7 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
   #undef time
 }
 
-void TankDrive::driveProfiled(double dist) {
+void TankDrive::driveProfiled(double dist, bool settle) {
   if (dist == 0) { return; }
   const int sign = dist / abs(dist);  // Direction of the movement
   dist = abs(dist);                   // Setting the magnitude to positive
@@ -151,7 +139,7 @@ void TankDrive::driveProfiled(double dist) {
   double lastTime = now;
   
   this->motionProfile.setVelocity(this->getRPM());
-
+  this->motionProfile.setFinalVelocity(settle ? 0 : 100);
 
   while (traveledDist < dist && timeout > pros::millis()) {
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -171,13 +159,11 @@ void TankDrive::driveProfiled(double dist) {
 
     pros::delay(20);
   }
-  currVelocity=0;
-  this->stop();
-  // std::cout << "Robot move to front\n";
-  // pros::delay(5000);
+
+  if (settle) { this->stop(); }
 }
 
-void TankDrive::turnProfiled(double angle) {
+void TankDrive::turnProfiled(double angle, bool settle) {
   if (angle == 0) { return; }
   const int sign = angle / abs(angle);  // Getting the direction of the movement
   angle = abs(angle);                   // Setting the magnitude to positive
@@ -198,6 +184,7 @@ void TankDrive::turnProfiled(double angle) {
   double now;
   double lastTime = pros::micros() / 1E6;
 
+  this->turningProfile.setFinalVelocity(settle ? 0 : 50);
 
   while (traveledAngle < angle && timeout > pros::millis()) {
     currAngle = odometry->gyroscope.get_rotation();
@@ -219,19 +206,16 @@ void TankDrive::turnProfiled(double angle) {
 
     pros::delay(20);
   }
-  currVelocity=0;
-  this->stop();
-  // std::cout << "Turn do\n";
-  // pros::delay(5000);
+  if (settle) this->stop();
 }
 
 
-void TankDrive::move(const double &dist) {
-  driveProfiled(dist);
+void TankDrive::move(const double &dist, bool settle) {
+  driveProfiled(dist, settle);
 }
 
-void TankDrive::turn(const double &angle) {
-  turnProfiled(angle);
+void TankDrive::turn(const double &angle, bool settle) {
+  turnProfiled(angle, settle);
 }
 
 void TankDrive::setMaxVelocity(const double &rpm){
@@ -270,10 +254,10 @@ void TankDrive::driveInArc(double radius, const double &midSpeed) {
   rightMotors.moveVelocity(rightSpeed);
 }
 
-void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
+void TankDrive::driveAngleOfArc(const double &radius, const double &angle, bool settle) {
   if(angle == 0) { return; }
   if(radius == 0) {
-    turn(angle);
+    turn(angle, settle);
     return;
   }
   const short sign = angle / std::abs(angle);
@@ -285,8 +269,15 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
   double lastTime = now;
   const double rightEncStartPos = odometry->encoderRight.get_position(); //! Temporary
   const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
+  this->motionProfile.setVelocity(this->getRPM());
+  this->motionProfile.setFinalVelocity(settle ? 0 : 100);
   // const double startDist = odometry::getTraveledDistance();
-  while(traveledDist < distance){
+
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (distance / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+
+  while(traveledDist < distance && timeout > pros::millis()){
     // traveledDist = odometry::getTraveledDistance() - startDist;
     const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
@@ -302,7 +293,7 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle) {
     pros::delay(20);
   }
 
-  this->stop();
+  if(settle) this->stop();
 }
 
 void TankDrive::driveInArcTo(const double &x, const double &y){
