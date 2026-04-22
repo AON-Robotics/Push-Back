@@ -10,7 +10,7 @@
 #define TILE_DIAG_LENGTH 33.4066195836 // Calculated with the Pythagorean theorem
 
 // NOT using big robot = Using small robot
-#define USING_BIG_ROBOT true
+#define USING_BIG_ROBOT false
 #define TESTING_AUTONOMOUS false
 
 #define RED_ALLIANCE true

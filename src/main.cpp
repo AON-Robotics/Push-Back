@@ -54,10 +54,18 @@ void autonomous() {
 }
 
 void opcontrol() {
-autonomous();
+  aon::Configure();
+  while (true) {
+    #if TESTING_AUTONOMOUS
+    aon::Configure(false); // Set drivetrain to hold for auton testing
+
+    // TODO: add presetFunction
+    aon::autonomousReader->ExecuteFunction("autonomous");
+
+    pros::delay(5000);
+    #else
+    aon::operator_control::Run(aon::operator_control::DEFAULT);
+    #endif
+    pros::delay(10);
+  }
 }
-
-void disabled() {}
-
-void competition_initialize() {}
-

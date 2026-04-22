@@ -121,7 +121,7 @@ void Intake::score(const Height& to, const int& delay) {
     this->move();
   } else if (to == MIDDLE) {
     this->elevator();
-    this->judge(-((INTAKE_VELOCITY * 3) / 4));
+    this->judge(-INTAKE_VELOCITY);
   } else if (to == BOTTOM) {
     this->elevator(-INTAKE_VELOCITY);
     this->judge(-INTAKE_VELOCITY);
@@ -156,8 +156,8 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
       trapdoor(trapdoorPistonPort, Piston::RETRACTED),
       distanceSensor(distanceSensorPort),
       colorSensor(colorSensorPort) {
-  this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
-}
+        this->leverController = okapi::AsyncPosControllerBuilder().withMotor(scorerPorts).build();
+      }
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
   elevatorMG.setBrakeMode(brakeMode);
@@ -170,8 +170,8 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
   judgeMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   judgeMG.tarePosition();
 
-  scorerMG.setBrakeMode(brakeMode);
-  scorerMG.setGearing(gearset);
+  scorerMG.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
+  scorerMG.setGearing(okapi::AbstractMotor::gearset::red);
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
 

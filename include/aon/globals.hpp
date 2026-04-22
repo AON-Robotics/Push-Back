@@ -73,7 +73,7 @@ aon::hpp::Controller hpp(hppCfg);
 aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
 
 // Drivetrain
-aon::HDrive drivetrain = aon::HDrive({-1, 2, 3, -4}, {12, -13, -18, 19}, {-15}, std::make_unique<aon::Odometry>(odometry));
+aon::HDrive drivetrain = aon::HDrive({12, -13, -18, 19}, {-1, 2, 3, -4}, {-15}, std::make_unique<aon::Odometry>(odometry));
 
 aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16);
 
@@ -87,7 +87,7 @@ aon::Odometry odometry = aon::Odometry(19, -18, 5, 0, 16);
 
 aon::TankDrive drivetrain = aon::TankDrive({11, -12, 13, -14}, {1, -2, 3, -4}, std::make_unique<aon::Odometry>(odometry));
 
-aon::Intake intake = aon::Intake({-9, 6}, {7}, {-8}, 'H', 'B', 'A', 20, 17);
+aon::Intake intake = aon::Intake({-9, -6}, {7}, {-8}, 'H', 'B', 'A', 20, 17);
 
 aon::Piston arrow('C', aon::Piston::RETRACTED);
 aon::Piston brooks('G', aon::Piston::RETRACTED);
@@ -105,8 +105,6 @@ aon::Orbit orbit(0, true, 0, 0);
 //
 // ============================================================================
 
-// Encoders
-pros::Rotation turretEncoder(0, true);
 
 pros::ADIEncoder opticalEncoder('Z', 'Z');
 
