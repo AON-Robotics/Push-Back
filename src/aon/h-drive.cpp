@@ -161,7 +161,7 @@ void HDrive::driveProfiled(double dist, bool settle){
   this->yProfile.setVelocity(this->getRPM());
   this->yProfile.setFinalVelocity(settle ? 0 : 100);
 
-  while(traveledDist < dist){
+  while(traveledDist < dist && timeout > pros::millis()){
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
@@ -191,7 +191,8 @@ void HDrive::strafeProfiled(double dist, bool settle){
   double dt = 0.02; // (s)
   double currVelocity = 0;
   double traveledDist = 0;
-  Vector startPos = odometry->getPosition();
+  // Vector startPos = odometry->getPosition();
+  const double backStartPos = odometry->encoderBack.get_position(); //! Temporary
 
   double now = pros::micros() / 1E6;
   double lastTime = now;
@@ -200,7 +201,8 @@ void HDrive::strafeProfiled(double dist, bool settle){
   this->xProfile.setFinalVelocity(settle ? 0 : 100);
 
   while(traveledDist < dist && timeout > pros::millis()){
-    traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
+    // traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
+    traveledDist = (std::abs(odometry->encoderBack.get_position() - backStartPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     // traveledDist += getSpeed(this->getRPM()) * dt; //# in case of odom failure
 
     double remainingDist = dist - traveledDist;
@@ -331,8 +333,13 @@ void HDrive::driveAngleOfArc(const double &radius, const double &angle, bool set
   const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
   this->yProfile.setVelocity(this->getRPM());
   this->yProfile.setFinalVelocity(settle ? 0 : 100);
+
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (distance / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+
   // const double startDist = odometry::getTraveledDistance();
-  while(traveledDist < distance){
+  while(traveledDist < distance && timeout > pros::millis()){
     // traveledDist = odometry::getTraveledDistance() - startDist;
     const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
