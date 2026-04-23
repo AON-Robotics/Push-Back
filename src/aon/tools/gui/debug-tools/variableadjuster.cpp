@@ -82,13 +82,13 @@ void GuiDebug::DisplayVariablesMenu() {
 
     int bx = 20, by = y + 20, bw = 70, bh = 30, gap = 10;
     ui::Button btns[6];
-    btns[0] = {bx, by, bx+bw, by+bh, "-10",  COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-10.0); }}; bx += bw + gap;
-    btns[1] = {bx, by, bx+bw, by+bh, "-1",   COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-1.0); }};  bx += bw + gap;
-    btns[2] = {bx, by, bx+bw, by+bh, "-0.1", COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.1); }};
+    btns[0] = {bx, by, bx+bw, by+bh, "-1",  COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-1.0); }}; bx += bw + gap;
+    btns[1] = {bx, by, bx+bw, by+bh, "-0.1",   COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.1); }};  bx += bw + gap;
+    btns[2] = {bx, by, bx+bw, by+bh, "-0.01", COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.01); }};
     bx = BRAIN_SCREEN_WIDTH - (bw * 3 + gap * 2) - 20;
-    btns[3] = {bx, by, bx+bw, by+bh, "+0.1", COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.1); }};  bx += bw + gap;
-    btns[4] = {bx, by, bx+bw, by+bh, "+1",   COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+1.0); }};  bx += bw + gap;
-    btns[5] = {bx, by, bx+bw, by+bh, "+10",  COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+10.0); }};
+    btns[3] = {bx, by, bx+bw, by+bh, "+0.01", COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.01); }};  bx += bw + gap;
+    btns[4] = {bx, by, bx+bw, by+bh, "+0.1",   COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.1); }};  bx += bw + gap;
+    btns[5] = {bx, by, bx+bw, by+bh, "+1",  COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+1.0); }};
 
     for (auto& btn : btns) btn.draw();
 
@@ -170,13 +170,13 @@ void GuiDebug::HandleVariablesMenuTouch() {
     auto& e = variableEntries[i];
     int bx = 20, by = y + 20, bw = 70, bh = 30, gap = 10;
     ui::Button btns[6];
-    btns[0] = {bx, by, bx+bw, by+bh, "-10",  COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-10.0); }}; bx += bw + gap;
-    btns[1] = {bx, by, bx+bw, by+bh, "-1",   COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-1.0); }};  bx += bw + gap;
-    btns[2] = {bx, by, bx+bw, by+bh, "-0.1", COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.1); }};
+    btns[0] = {bx, by, bx+bw, by+bh, "-1",  COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-1.0); }}; bx += bw + gap;
+    btns[1] = {bx, by, bx+bw, by+bh, "-0.1",   COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.1); }};  bx += bw + gap;
+    btns[2] = {bx, by, bx+bw, by+bh, "-0.01", COLOR_DARK_RED,   COLOR_WHITE, [&e]() { e.apply(-0.01); }};
     bx = BRAIN_SCREEN_WIDTH - (bw * 3 + gap * 2) - 20;
-    btns[3] = {bx, by, bx+bw, by+bh, "+0.1", COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.1); }};  bx += bw + gap;
-    btns[4] = {bx, by, bx+bw, by+bh, "+1",   COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+1.0); }};  bx += bw + gap;
-    btns[5] = {bx, by, bx+bw, by+bh, "+10",  COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+10.0); }};
+    btns[3] = {bx, by, bx+bw, by+bh, "+0.01", COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.01); }};  bx += bw + gap;
+    btns[4] = {bx, by, bx+bw, by+bh, "+0.1",   COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+0.1); }};  bx += bw + gap;
+    btns[5] = {bx, by, bx+bw, by+bh, "+1",  COLOR_DARK_GREEN, COLOR_WHITE, [&e]() { e.apply(+1.0); }};
 
     for (auto& btn : btns) {
       if (btn.isHit(touch.x, touch.y)) {

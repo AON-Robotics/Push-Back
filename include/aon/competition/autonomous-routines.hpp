@@ -719,8 +719,55 @@ void smallbotjorgeg(){
 
 // Wrappers for the GUI
 
-int RedRoutine1(){
-  smallBotCurves();
+int BlackBeard(){
+  intake.stopScan();
+  drivetrain.move(30, false);
+  drivetrain.driveAngleOfArc(-9, 50);
+  intake.elevator(-400);
+  pros::delay(750);
+  intake.elevator(0);
+  drivetrain.move(-9, false);
+  drivetrain.driveAngleOfArc(-5, -165,false);
+  intake.toggleCart();
+  drivetrain.move(33);
+  drivetrain.driveAngleOfArc(6, 57);
+  drivetrain.move(10.5);
+  intake.activateScan();
+  intake.move();
+  drivetrain.jiggle(5, 110, 200);
+  pros::delay(200);
+  intake.stop();
+  drivetrain.move( -13);
+  intake.toggleCart();
+  intake.toggleScorerHeight();
+  drivetrain.turnToHeading(7);
+  intake.toggleTrapdoor();
+  drivetrain.move(11);
+  intake.store();
+  pros::delay(500);
+  intake.lever(750);
+  pros::delay(500);
+  intake.lever(750);
+  pros::delay(500);
+  drivetrain.move(-10);
+  intake.toggleScorerHeight();
+  intake.toggleTrapdoor();
+  drivetrain.turn(-177);
+  intake.toggleCart();
+  drivetrain.move(14);
+  drivetrain.jiggle(9, 110, 200);
+  drivetrain.move(-10);
+  intake.toggleCart();
+  drivetrain.turnToHeading(7);
+  intake.toggleScorerHeight();
+  intake.toggleTrapdoor();
+  drivetrain.move(10.5);
+  pros::delay(500);
+  intake.lever(750);
+  intake.lever(750);
+  drivetrain.move(-9);
+  drivetrain.move(10.5);
+
   return 1;
 }
 
