@@ -54,7 +54,6 @@ void alignRobotTo(const Colors &color = orbit.getColor()){
     drivetrain.rotate(SPEED);
     pros::delay(20);
   }
-  #undef TURRET_ANGLE
   drivetrain.stop();  
   orbit.deactivateFollow();
   if(color == STAKE){
@@ -112,7 +111,6 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
   okapi::EKFFilter ekf;
   const double tolerance = 5; //? Probably adjust this
   double difference;
-  #define TURRET_ANGLE turretEncoder.get_angle() / 100
 
   const double dt = 0.02;
 
@@ -142,7 +140,6 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
     drivetrain.driveWhileTurning(FORWARD, TURN);
     pros::delay(20);
   }
-  #undef TURRET_ANGLE
   #undef TIME
   orbit.deactivateFollow();
   orbit.deactivateScan();
@@ -447,29 +444,72 @@ void bigBotCurves(){
 }
 
 void bigBotContinuity(){
-  // intake.activateScan();
+  // TODO: check color sorting integration
   drivetrain.strafe(28.5); // Align with match loader.
   intake.dropCart(); // Prepare loader mechanism.
-  drivetrain.move(6, false); // Move to match loader.
+  drivetrain.move(5, false); // Move to match loader.
   drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
-  pros::delay(7000); // Take up all the blocks (9).
-  drivetrain.move(-22, false); // Move to long goal.
+  intake.store(6000); // Take up all the blocks (12).
+  drivetrain.move(-20, false); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
   intake.raiseCart(); // Reset loader mechanism.
-  intake.score(Intake::TOP, 8000); // Score all 9 blocks.
+  intake.score(Intake::TOP, 900); // Score 3 blocks.
+  intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
+  intake.score(Intake::MIDDLE, 2000); // Reject 3 blocks.
+  intake.score(Intake::TOP, 2000); // Score 3 blocks.
+  drivetrain.driveAngleOfArc(-16, 40); // Align with middle goal
+  drivetrain.move(-47.5); // Go to middle goal
+  intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
+  intake.score(Intake::MIDDLE, 2000); // Score 3 blocks.
+  drivetrain.move(44.5); // Go back to long goal
+  drivetrain.turn(-45); // Align with long goal
+  drivetrain.strafe(9); // Push against it to block descoring
+}
 
-  drivetrain.driveAngleOfArc(-15, 90);
+void bigBotStayThere(){
+  // TODO: check color sorting integration
+  drivetrain.strafe(28.5); // Align with match loader.
+  intake.dropCart(); // Prepare loader mechanism.
+  drivetrain.move(5, false); // Move to match loader.
+  drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
+  intake.store(6000); // Take up all the blocks (12).
+  drivetrain.move(-20, false); // Move to long goal.
+  drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
+  intake.raiseCart(); // Reset loader mechanism.
+  intake.score(Intake::TOP, 900); // Score 3 blocks.
+  intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
+  intake.score(Intake::MIDDLE, 2000); // Reject 3 blocks.
+  intake.score(Intake::TOP, 5000); // Score 6 blocks.
+  drivetrain.move(6); // Move back a bit
+  drivetrain.turn(-90); // Align wall with long goal
+  drivetrain.strafe(9); // Push against it to block descoring
+}
 
-  // drivetrain.move(15); // Go back a little.
-  // drivetrain.turn(-90); // Orient towards parking.
-  // drivetrain.move(12); // Move towards parking.
-  
-  // drivetrain.goToPose(Pose(0,0,-90)); // TODO: doing this depends on whether the new odom works
-  drivetrain.strafe(12); // Align with parking.
-  drivetrain.move(11, false); // Move to parking.
+// TODO: tune distances
+void bigBotLongGoalThenPark(){
+  // TODO: check color sorting integration
+  drivetrain.strafe(28.5); // Align with match loader.
+  intake.dropCart(); // Prepare loader mechanism.
+  drivetrain.move(5, false); // Move to match loader.
+  drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
+  intake.store(6000); // Take up all the blocks (12).
+  drivetrain.move(-20, false); // Move to long goal.
+  drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
+  intake.raiseCart(); // Reset loader mechanism.
+  intake.score(Intake::TOP, 900); // Score 3 blocks.
+  intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
+  intake.score(Intake::MIDDLE, 2000); // Reject 3 blocks.
+  intake.score(Intake::TOP, 5000); // Score 6 blocks.
+  drivetrain.driveAngleOfArc(16, 80); // Start aligning with goal
+  drivetrain.strafe(20); // Align with goal
+  drivetrain.move(6, false); // Get close to goal,
+  drivetrain.motors(MAX_RPM, 1000); // then push in
+  brooks.activate(); // and park.
+}
+
+void bigBotPark(){
   drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
   brooks.activate(); // Park.
-  intake.stopScan();
 }
 
 void BigBotSkillsRoutine(){
@@ -514,22 +554,22 @@ int RedRoutine1(){
 }
 
 int RedRoutine2(){
-  aon::tests::square();
-  return 1;
-}
-
-int RedRoutine3(){
-  aon::tests::colorSorting();
-  return 1;
-}
-
-int BlueRoutine1(){
   bigBotContinuity();
   return 1;
 }
 
+int RedRoutine3(){
+  bigBotLongGoalThenPark();
+  return 1;
+}
+
+int BlueRoutine1(){
+  bigBotPark();
+  return 1;
+}
+
 int BlueRoutine2(){ 
-  aon::tests::square();
+  bigBotStayThere();
   return 1;
 }
 
