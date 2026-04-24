@@ -69,7 +69,7 @@ pros::ADIEncoder opticalEncoder('Z', 'Z');
 
 // Colors
 enum Colors {
-  RED, 
+  RED = 1, 
   BLUE,
   STAKE,
 };

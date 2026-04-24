@@ -682,6 +682,13 @@ void smallBotCurves(){
   drivetrain.motors(MAX_RPM, 1000); // and push into it.
 }
 
+void smallBotPark(){
+  drivetrain.move(-5, false);
+  drivetrain.move(2, false);
+  drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
+  brooks.activate(); // Park.
+}
+
 void smallbotjorgeg(){
   drivetrain.move(31); // Align with match loader
   drivetrain.turn(87);
@@ -777,7 +784,7 @@ int RedRoutine2(){
 }
 
 int RedRoutine3(){
-  aon::tests::square();
+  smallBotPark();
   return 1;
 }
 

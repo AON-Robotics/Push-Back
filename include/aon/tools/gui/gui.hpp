@@ -56,7 +56,6 @@ enum GuiScreen {
 };
 
 // Auton selection system
-// Alliance enum is declared above (global scope); ALLIANCE extern is above too.
 
 struct AutonOption {
   const char* name;

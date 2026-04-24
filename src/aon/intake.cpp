@@ -59,8 +59,7 @@ void Intake::scan() {
 }
 
 void Intake::sort() {
-  enum State { INIT, IDLE, KICKBACK, SETTLE, WAIT_ACCEPT, CONFIRM_ACCEPT, WAIT_REJECT, CONFIRM_REJECT };
-  State state = INIT;
+  sortState = INIT;
   bool lastReleasing = false;
   bool armed = true;
   bool pendingCorrect = false;
@@ -73,21 +72,21 @@ void Intake::sort() {
     if (releasing) {
         if (!lastReleasing) {
           // Rising edge — start init reverse non-blocking
-          this->elevator(-INTAKE_VELOCITY);
+          this->score(Intake::BOTTOM);
           this->judge(-INTAKE_VELOCITY);
           timerEnd = pros::millis() + 350;
-          state = INIT;
+          sortState = INIT;
           armed = true;
           lastReleasing = true;
         }
 
-        switch (state) {
+        switch (sortState) {
         case INIT:
           // Wait for init reverse to finish, then go to IDLE
           if (pros::millis() >= timerEnd) {
             this->elevator(0);
             this->judge(0);
-            state = IDLE;
+            sortState = IDLE;
           }
           break;
 
@@ -97,16 +96,16 @@ void Intake::sort() {
             armed = false;
             pendingCorrect = (ALLIANCE == Alliance::Skills) ||
                              (red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue);
-            const Height& height = pendingCorrect ? acceptHeight : rejectHeight;
+            const Height height = pendingCorrect ? acceptHeight : (acceptHeight == TOP ? MIDDLE : TOP);
             if (height != TOP) {
               // Kickback — reverse briefly before routing
               this->elevator(-INTAKE_VELOCITY);
               timerEnd = pros::millis() + 265;
-              state = KICKBACK;
+              sortState = KICKBACK;
             } else {
               this->elevator(INTAKE_VELOCITY * 2 / 3);
               this->judge(INTAKE_VELOCITY);
-              state = WAIT_ACCEPT;
+              sortState = WAIT_ACCEPT;
             }
           }
           break;
@@ -114,16 +113,16 @@ void Intake::sort() {
         case KICKBACK:
           // Wait for kickback to finish, then spin judge
           if (pros::millis() >= timerEnd) {
-            const Height& height = pendingCorrect ? acceptHeight : rejectHeight;
+            const Height height = pendingCorrect ? acceptHeight : (acceptHeight == TOP ? MIDDLE : TOP);
             this->elevator(INTAKE_VELOCITY * 2 / 3);
             this->judge(height == TOP ? INTAKE_VELOCITY : -INTAKE_VELOCITY);
-            state = pendingCorrect ? WAIT_ACCEPT : WAIT_REJECT;
+            sortState = pendingCorrect ? WAIT_ACCEPT : WAIT_REJECT;
           }
           break;
 
         case WAIT_ACCEPT: {
           auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
-          if (sensor.get_value() == HIGH) state = CONFIRM_ACCEPT;
+          if (sensor.get_value() == HIGH) sortState = CONFIRM_ACCEPT;
           break;
         }
 
@@ -132,23 +131,23 @@ void Intake::sort() {
           if (sensor.get_value() == LOW) {
             this->judge(0);
             timerEnd = pros::millis() + 105;
-            state = SETTLE;
+            sortState = SETTLE;
           }
           break;
         }
 
         case WAIT_REJECT: {
-          auto& sensor = (rejectHeight == TOP) ? acceptSensor : rejectSensor;
-          if (sensor.get_value() == HIGH) state = CONFIRM_REJECT;
+          auto& sensor = (acceptHeight != TOP) ? acceptSensor : rejectSensor;
+          if (sensor.get_value() == HIGH) sortState = CONFIRM_REJECT;
           break;
         }
 
         case CONFIRM_REJECT: {
-          auto& sensor = (rejectHeight == TOP) ? acceptSensor : rejectSensor;
+          auto& sensor = (acceptHeight != TOP) ? acceptSensor : rejectSensor;
           if (sensor.get_value() == LOW) {
             this->judge(0);
             timerEnd = pros::millis() + 105;
-            state = SETTLE;
+            sortState = SETTLE;
           }
           break;
         }
@@ -156,7 +155,7 @@ void Intake::sort() {
         case SETTLE:
           // Brief pause after block clears before re-arming
           if (pros::millis() >= timerEnd) {
-            state = IDLE;
+            sortState = IDLE;
             armed = true;
           }
           break;
@@ -166,12 +165,12 @@ void Intake::sort() {
           // Falling edge — stop motors and reset for next press
           this->elevator(0);
           this->judge(0);
-          state = INIT;
+          sortState = INIT;
           timerEnd = UINT32_MAX; // prevent stale timer from skipping init on next press
         }
         lastReleasing = false;
       }
-    pros::delay(5);
+    pros::delay(10);
   }
 }
 
@@ -214,19 +213,20 @@ void Intake::activateScan() { scanning = true; }
 
 void Intake::stopScan() { scanning = false; }
 
-void Intake::setSortHeights(Height accept, Height reject) {
+void Intake::setSortHeights(Height accept) {
   acceptHeight = accept;
-  rejectHeight = reject;
 }
 
-void Intake::release() {
+void Intake::startReleasing() {
   releasing = false;  // force falling edge so sort task fully resets
   pros::delay(10);    // give sort task one cycle to see the false
   releasing = true;
 }
 
-void Intake::stopRelease() { releasing = false; }
+void Intake::stopReleasing() { releasing = false; }
 
+Intake::SortState Intake::getSortingState() const { return sortState; }
+  
 #else
 
 Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
@@ -394,7 +394,6 @@ void Intake::activateScan() {
 void Intake::stopScan() {
   scanning = false;
   this->elevator(0);
-  colorSensor.set_led_pwm(0);
 }
 
 #endif
