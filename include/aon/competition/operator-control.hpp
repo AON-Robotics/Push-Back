@@ -203,7 +203,7 @@ inline void DriveDefault() {
     intake.toggleScorerHeight();
   }
   // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
+  else if(mainController.get_digital_new_press(DIGITAL_A)) {
     intake.toggleCart();
   }
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {

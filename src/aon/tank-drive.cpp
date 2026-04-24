@@ -276,7 +276,12 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle, bool 
   this->motionProfile.setVelocity(this->getRPM());
   this->motionProfile.setFinalVelocity(settle ? 0 : 100);
   // const double startDist = odometry::getTraveledDistance();
-  while(traveledDist < distance){
+
+  // Timeout determined experimentally
+  const uint32_t estimatedTime = (distance / 3.0) * 1E3;
+  const uint32_t timeout = pros::millis() + estimatedTime;
+
+  while(traveledDist < distance && timeout > pros::millis()){
     // traveledDist = odometry::getTraveledDistance() - startDist;
     const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
