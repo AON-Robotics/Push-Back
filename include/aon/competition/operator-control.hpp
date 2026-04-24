@@ -113,13 +113,11 @@ inline void DriveDefault() {
       sortActive = false;
     }
   } else {
-    // Sort off — R1: elevator+judge forward, R2: elevator forward judge reverse
+    // Sort off — reuse scoring behavior
     if(mainController.get_digital(DIGITAL_R1)) {
-      intake.elevator();
-      intake.judge();
+      intake.score(Intake::TOP);
     } else if(mainController.get_digital(DIGITAL_R2)) {
-      intake.elevator();
-      intake.judge(-INTAKE_VELOCITY);
+      intake.score(Intake::MIDDLE);
     }
   }
 
