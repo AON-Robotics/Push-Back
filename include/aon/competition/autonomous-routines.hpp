@@ -684,8 +684,7 @@ void smallBotCurves(){
 
 void smallBotPark(){
   drivetrain.move(-5, false);
-  drivetrain.move(2, false);
-  drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
+  drivetrain.motors(MAX_RPM, 500); // Push into parking to put a row of wheels over for a bit of time, then stop.
   brooks.activate(); // Park.
 }
 
