@@ -640,7 +640,7 @@ void blackBeard(){
   drivetrain.move(10.5);
   intake.activateScan();
   intake.move();
-  drivetrain.jiggle(5, 110, 200);
+  drivetrain.jiggle(7, 110, 200);
   pros::delay(200);
   intake.stop();
   drivetrain.move( -13);
@@ -667,12 +667,13 @@ void blackBeard(){
   drivetrain.turnToHeading(7);
   intake.toggleScorerHeight();
   intake.toggleTrapdoor();
-  drivetrain.move(10.5);
+  drivetrain.move(12);
   pros::delay(500);
   intake.lever(750);
   intake.lever(750);
-  drivetrain.move(-9);
-  drivetrain.move(10.5);
+  drivetrain.move(-6);
+  intake.closeTrapdoor();
+  drivetrain.move(7);
 }
 
 // TODO: test

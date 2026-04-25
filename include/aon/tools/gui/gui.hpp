@@ -90,7 +90,7 @@ public:
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
     {"Red AUT1", aon::routines::RedRoutine1},
-    {"Black Beard", aon::routines::RedRoutine2},
+    {"Red AUT2", aon::routines::RedRoutine2},
     {"Red AUT3", aon::routines::RedRoutine3},
   };
   
