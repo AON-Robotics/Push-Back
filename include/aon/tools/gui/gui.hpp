@@ -89,13 +89,13 @@ public:
   // TODO: move this to be only parameter based
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
-    {"Red AUT1", aon::routines::RedRoutine1},
+    {"Black Beard", aon::routines::RedRoutine1},
     {"Red AUT2", aon::routines::RedRoutine2},
     {"Red AUT3", aon::routines::RedRoutine3},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {
-    {"Blue AUT1", aon::routines::BlueRoutine1},
+    {"Black Beard", aon::routines::BlueRoutine1},
     {"Blue AUT2", aon::routines::BlueRoutine2},
     {"Blue AUT3", aon::routines::BlueRoutine3},
   };

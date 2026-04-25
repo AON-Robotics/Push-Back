@@ -792,7 +792,7 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  smallBotRoutine();
+  blackBeard();
   return 1;
 }
 
