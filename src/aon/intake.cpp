@@ -229,12 +229,14 @@ Intake::SortState Intake::getSortingState() const { return sortState; }
   
 #else
 
-Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
+Intake::Intake(const std::initializer_list<okapi::Motor>& corridorPorts,
+               const std::initializer_list<okapi::Motor>& elevatorPorts,
                const std::initializer_list<okapi::Motor>& judgePorts,
                const std::initializer_list<okapi::Motor>& scorerPorts,
                char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
                int distanceSensorPort, int colorSensorPort)
-    : elevatorMG(elevatorPorts),
+    : corridorMG(corridorPorts),
+      elevatorMG(elevatorPorts),
       judgeMG(judgePorts),
       scorerMG(scorerPorts),
       scorerPiston(scorerPistonPort, Piston::RETRACTED),
@@ -246,6 +248,11 @@ Intake::Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
       }
 
 void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset) {
+  corridorMG.setBrakeMode(brakeMode);
+  corridorMG.setGearing(gearset);
+  corridorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+  corridorMG.tarePosition();
+
   elevatorMG.setBrakeMode(brakeMode);
   elevatorMG.setGearing(gearset);
   elevatorMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
@@ -265,9 +272,12 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
 }
 
 void Intake::move(const int& rpm) {
+  this->corridor(rpm);
   this->elevator(rpm);
   this->judge(rpm);
 }
+
+void Intake::corridor(const int& rpm) { corridorMG.moveVelocity(rpm); }
 
 void Intake::elevator(const int& rpm) { elevatorMG.moveVelocity(rpm); }
 
@@ -287,6 +297,7 @@ void Intake::scan() {
       }
 
       if (pros::millis() >= stopTime) {
+        this->corridor(0);
         this->elevator(0);
         stopTime = UINT32_MAX;
       }
@@ -321,26 +332,28 @@ void Intake::sort() {
   }
 
 void Intake::pickUp(const int& delay) {
+  this->corridor();
   this->elevator();
   if (delay == 0) return;
   pros::delay(delay);
+  this->corridor(0);
   this->elevator(0);
 }
 
 void Intake::store(const int& delay) {
-  this->elevator();
-  this->judge();
+  this->move();
   if (delay == 0) return;
   pros::delay(delay);
-  this->elevator(0);
-  this->judge(0);
+  this->stop();
 }
 
 void Intake::reject(const int& delay) {
+  this->corridor();
   this->elevator();
   this->judge(-INTAKE_VELOCITY);
   if (delay == 0) return;
   pros::delay(delay);
+  this->corridor(0);
   this->elevator(0);
   this->judge(0);
 }
@@ -392,6 +405,7 @@ void Intake::activateScan() {
 
 void Intake::stopScan() {
   scanning = false;
+  this->corridor(0);
   this->elevator(0);
 }
 
