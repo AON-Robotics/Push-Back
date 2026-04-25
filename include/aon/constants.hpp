@@ -88,7 +88,7 @@
 #define ENCODER_CONFIDENCE 0
 #define OFFSET_X_ENCODER_MID 3.250
 
-#define DRIVE_WIDTH 11.0625 // distance between front wheels
+#define DRIVE_WIDTH 12.5 // distance between front wheels // TODO: check with 12.5 inches because that is what i measured - kevin g
 #define DRIVE_LENGTH 10.5 // distance from back wheel to front wheel
 #define DISTANCE_FRONT_LEFT_DRIVE_WHEEL_CENTER 7.77817459305
 #define DISTANCE_BACK_LEFT_DRIVE_WHEEL_CENTER 7.77817459305

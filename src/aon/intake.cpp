@@ -358,9 +358,10 @@ void Intake::reject(const int& delay) {
   this->judge(0);
 }
 
-void Intake::lever() {
+void Intake::lever(const uint32_t timeout) {
   this->leverController->setTarget(150);
-  while(this->leverController->getError() > 10){ pros::delay(5); }
+  const uint32_t deadline = pros::millis() + timeout;
+  while(this->leverController->getError() > 10 && pros::millis() < deadline){ pros::delay(5); }
   this->leverController->setTarget(0);
 }
 
