@@ -46,7 +46,7 @@
 #define INITIAL_ODOMETRY_X 0.0
 #define INITIAL_ODOMETRY_Y 0.0
 #define INITIAL_ODOMETRY_THETA 0.0
-#define TURNING_THRESHOLD 0.001
+#define TURNING_THRESHOLD 0.1 * (180*M_PI)
 
 // These next four (4) are in meters (all else is inches)
 #define GPS_X_OFFSET 0 // CAD

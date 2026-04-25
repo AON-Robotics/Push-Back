@@ -65,8 +65,6 @@ void HDrive::setSlewRate(double slew){
   midMotors.SetAcceleration(slew);
 }
 
-
-
 double HDrive::getRPM(){
   double left = leftMotors.getActualVelocity();
   double right = rightMotors.getActualVelocity();
@@ -121,6 +119,7 @@ void HDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
   #define time (pros::micros() / 1E6) - startTime
 
   while(time < timeLimit){
+    odometry->turn = true;
 
     double traveledAngle = abs(odometry->getDegrees() - startAngle);
 
@@ -136,6 +135,7 @@ void HDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
     pros::delay(10);
   }
 
+  odometry->turn = false;
   this->stop();
 
   #undef time
@@ -192,7 +192,7 @@ void HDrive::strafeProfiled(double dist, bool settle){
   double currVelocity = 0;
   double traveledDist = 0;
   // Vector startPos = odometry->getPosition();
-  const double backStartPos = odometry->encoderBack.get_position(); //! Temporary
+  const double backStartPos = odometry->getY(); //! Temporary
 
   double now = pros::micros() / 1E6;
   double lastTime = now;
@@ -202,7 +202,7 @@ void HDrive::strafeProfiled(double dist, bool settle){
 
   while(traveledDist < dist && timeout > pros::millis()){
     // traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
-    traveledDist = (std::abs(odometry->encoderBack.get_position() - backStartPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
+    traveledDist = (std::abs(odometry->getY() - backStartPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     // traveledDist += getSpeed(this->getRPM()) * dt; //# in case of odom failure
 
     double remainingDist = dist - traveledDist;
@@ -243,6 +243,8 @@ void HDrive::turnProfiled(double angle, bool settle){
   this->thetaProfile.setFinalVelocity(settle ? 0 : 100);
   
   while(traveledAngle < angle){
+    odometry->turn = true;
+
     traveledAngle = abs(odometry->getDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
@@ -260,7 +262,10 @@ void HDrive::turnProfiled(double angle, bool settle){
 
     pros::delay(20);
   }
-  if(settle) this->stop();
+  if(settle) { 
+    this->stop();
+    odometry->turn = false;
+  }
 }
 
 void HDrive::stop(){

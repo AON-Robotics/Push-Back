@@ -101,6 +101,7 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
   #define time (pros::micros() / 1E6) - startTime
 
   while (time < 3 * timeLimit) {
+    odometry->turn = true;
 
     double traveledAngle = abs(odometry->getDegrees() - startAngle);
     
@@ -116,6 +117,7 @@ void TankDrive::turnPID(PID pid, double angle, const double &MAX_REVS) {
     pros::delay(10);
   }
 
+  odometry->turn = false;
   this->stop();
 
   #undef time
@@ -187,6 +189,7 @@ void TankDrive::turnProfiled(double angle, bool settle) {
   this->turningProfile.setFinalVelocity(settle ? 0 : 50);
 
   while (traveledAngle < angle && timeout > pros::millis()) {
+    odometry->turn = true;
     currAngle = odometry->gyroscope.get_rotation();
     traveledAngle = abs(currAngle - startAngle);
     // traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
@@ -206,7 +209,10 @@ void TankDrive::turnProfiled(double angle, bool settle) {
 
     pros::delay(20);
   }
-  if (settle) this->stop();
+  if (settle) {
+    this->stop();
+    odometry->turn = false;
+  }
 }
 
 

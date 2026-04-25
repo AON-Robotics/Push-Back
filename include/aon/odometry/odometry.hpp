@@ -15,7 +15,6 @@
 
 #include <cstdio>
 
-
 namespace aon {
 
     /**
@@ -55,8 +54,6 @@ namespace aon {
         Vector deltaDlocal;
         Angle orientation;
         Vector position;
-
-        Vector changeMine; // testing
         
         const double conversionFactor;
 
@@ -87,6 +84,8 @@ namespace aon {
         double getRadians();
         void setRadians(double radians);
 
+        bool turn = false;
+
         // MAIN functions
         void resetInitial();
         void initialize();
@@ -104,7 +103,7 @@ namespace aon {
 
         pros::Rotation encoderRight;
         pros::Rotation encoderLeft;//was in private 
-        #if ENCODER_BACK_ENABLED
+        #if BACK_ENCODER_ENABLED
         pros::Rotation encoderBack;
         #endif  
         pros::Gps gps;
@@ -112,8 +111,6 @@ namespace aon {
         #if GYRO_ENABLED
         pros::Imu gyroscope;
         #endif
-
-    
 
     };
 }

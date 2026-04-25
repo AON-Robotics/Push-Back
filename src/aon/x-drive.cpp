@@ -147,6 +147,7 @@ void XDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
   #define time (pros::micros() / 1E6) - startTime
 
   while(time < timeLimit){
+    odometry->turn = true;
 
     double traveledAngle = abs(odometry->getDegrees() - startAngle);
 
@@ -162,6 +163,7 @@ void XDrive::turnPID(PID pid, double angle, const double &MAX_REVS){
     pros::delay(10);
   }
 
+  odometry->turn = false;
   this->stop();
 
   #undef time
@@ -267,6 +269,7 @@ void XDrive::turnProfiled(double angle, bool settle){
   this->thetaProfile.setFinalVelocity(settle ? 0 : 100);
   
   while(traveledAngle < angle){
+    odometry->turn = true;
     traveledAngle = abs(odometry->getDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
@@ -284,7 +287,10 @@ void XDrive::turnProfiled(double angle, bool settle){
 
     pros::delay(20);
   }
-  if(settle) this->stop();
+  if(settle) {
+    this->stop();
+    odometry->turn = false;
+  }
 }
 
 void XDrive::move(const double &dist, bool settle){

@@ -36,43 +36,19 @@ void opcontrol() {
     #if TESTING_AUTONOMOUS
     aon::Configure(false); // Set drivetrain to hold for auton testing
 
-    // drivetrain.debugOdometry();
-    // aon::AutonomousReader->ExecuteFunction("autonomous");
-    // pros::delay(10000);
-    // pros::delay(10000);
-    // for (int i = 0; i < 4; i++){
-      //   drivetrain.move(12);
-      //   drivetrain.turn(90);
-      // }
-      // drivetrain.strafe(12);
-      // drivetrain.move(12);
-      // drivetrain.turn(180);
-      // drivetrain.move(12);
-      // drivetrain.turn(90);
-      // drivetrain.move(12);
-      drivetrain.turn(90);
+    odometry.debug();
 
-      
-    // aon::Pose target = aon::Pose(12, 12, 90);
-    // drivetrain.goToPose(target);
-    // #if USING_BIG_ROBOT
-    // aon::safeBigBotRoutine();
-    // // intake.activateScan();
-    // #else
-    // aon::testSmallBotRoutine();
-    // // intake.activateScan();
-    // #endif
     #if USING_BIG_ROBOT
-    aon::routines::safeBigBotRoutine();
+    // aon::routines::safeBigBotRoutine();
     #else
     // aon::routines::smallBotRoutine();
     aon::tests::square();
     #endif
 
-    pros::delay(5000);
+    // pros::delay(5000);
     #else
     aon::operator_control::Run(aon::operator_control::DEFAULT);
     #endif
-    pros::delay(10);
+    // pros::delay(10);
   }
 }
