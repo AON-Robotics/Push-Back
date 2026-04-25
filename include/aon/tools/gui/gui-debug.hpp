@@ -136,7 +136,7 @@ public:
     }
     variableEntries.push_back({name, std::move(get), std::move(apply)});
   }
-  
+
   // Allow user code to provide a register
   void setVariableRegister(const std::function<void()>& Register);
 
