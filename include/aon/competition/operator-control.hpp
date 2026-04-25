@@ -50,14 +50,15 @@ inline double AnalogInputScaling(const double& x, const double& t) {
 // ============================================================================
 
 #if USING_BIG_BOT
-bool sortActive = false;
-bool sortEnabled = true;
 #else
 size_t lastR1PressTime = 0;
 size_t lastR2PressTime = 0;
 const int DOUBLE_TAP_TIME = 250;
 bool mergeCorridorAndElevator = true;
 #endif
+
+bool sortActive = false;
+bool sortEnabled = true;
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
