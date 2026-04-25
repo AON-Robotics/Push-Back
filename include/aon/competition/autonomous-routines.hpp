@@ -555,7 +555,7 @@ void BigBotSkillsRoutine(){
 // Wrappers for the GUI
 
 int RedRoutine1(){
-  bigBotCurves();
+  bigBotStayThere();
   return 1;
 }
 
@@ -570,12 +570,12 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  bigBotPark();
+  bigBotStayThere();
   return 1;
 }
 
 int BlueRoutine2(){ 
-  bigBotStayThere();
+  bigBotPark();
   return 1;
 }
 
