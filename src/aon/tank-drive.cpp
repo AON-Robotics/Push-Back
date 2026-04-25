@@ -365,6 +365,14 @@ void TankDrive::turnTo(const double &x, const double &y) {
   turn(-math::calculateTurn(target, current));
 }
 
+void TankDrive::turnToHeading(const double &heading, bool settle) {
+  double delta = heading - odometry->getDegrees();
+  // Normalize to [-180, 180] for the shortest path
+  if (delta > 180) delta -= 360;
+  else if (delta < -180) delta += 360;
+  turn(delta, settle);
+}
+
 // TODO: refactor so it uses `Pose()`
 void TankDrive::goTo(const double &x, const double &y) {
   Vector target = Vector().SetPosition(x, y);

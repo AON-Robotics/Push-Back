@@ -136,7 +136,7 @@ class Intake {
   void score(const Height& height = TOP, const int& delay = 0);
 
   /// @brief Actuates the lever in its back and forth action (blocking)
-  void lever();
+  void lever(uint32_t timeout = 2000);
 
   /// @brief Discards blocks through the back of the robot
   void reject(const int& delay = 0);

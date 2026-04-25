@@ -23,7 +23,7 @@ namespace aon {
   
   namespace routines {
     int RedRoutine1();
-    int RedRoutine2();
+    int BlackBeard();
     int RedRoutine3();
     int BlueRoutine1();
     int BlueRoutine2();
@@ -90,7 +90,7 @@ public:
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
     {"Red AUT1", aon::routines::RedRoutine1},
-    {"Red AUT2", aon::routines::RedRoutine2},
+    {"Black Beard", aon::routines::BlackBeard},
     {"Red AUT3", aon::routines::RedRoutine3},
   };
   
