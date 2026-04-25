@@ -136,6 +136,17 @@ class Drivetrain {
     }
   }
 
+  /// @brief Moves the robot back and forth a set amount of times
+  /// @param count The amount of jiggles to do
+  /// @param rpm The revolutions per minute at which to do the jiggles
+  /// @param delay The time each jiggle lasts
+  void jiggle(int count = 3, double rpm = 125, int delay = 225){
+    while(count--) {
+      this->motors(rpm, delay);
+      this->motors(-rpm, delay);
+    }
+  }
+
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain
   virtual void setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode) = 0;

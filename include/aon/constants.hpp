@@ -13,9 +13,6 @@
 #define USING_BIG_ROBOT true
 #define TESTING_AUTONOMOUS false
 
-#define RED_ALLIANCE true
-#define BLUE_ALLIANCE !RED_ALLIANCE
-
 #if USING_BIG_ROBOT
 
 #define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
@@ -68,7 +65,7 @@
 /// @see https://www.desmos.com/calculator/f523970d6f
 #define MAX_DECEL 500.0 // 100.0 // 2413.22817284
 
-#define INTAKE_ACTIVATION_DISTANCE 90
+#define INTAKE_ACTIVATION_DISTANCE 45
 
 #define ORBIT_HEIGHT 12.5
 // ORBIT Limiting to protect when it does not have 360° of freedom
@@ -137,5 +134,8 @@
 #define ORBIT_LEFT_LIMIT 210
 #define ORBIT_RIGHT_LIMIT 90
 #endif // NOT USING_BIG_ROBOT
+
+/// Alliance color selected from the GUI before the match.
+enum Alliance : int { Red, Blue, Skills };
 
 #endif  // AON_CONSTANTS_HPP_
