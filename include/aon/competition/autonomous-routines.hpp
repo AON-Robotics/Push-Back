@@ -476,10 +476,16 @@ void bigBotStayThere(){
   drivetrain.move(-20, false); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
   intake.raiseCart(); // Reset loader mechanism.
-  intake.score(Intake::TOP, 900); // Score 3 blocks.
-  intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
-  intake.score(Intake::MIDDLE, 2000); // Reject 3 blocks.
-  intake.score(Intake::TOP, 5000); // Score 6 blocks.
+  intake.setSortHeights(Intake::Height::TOP);
+  intake.activateScan();
+  intake.startReleasing();
+  pros::delay(8000);
+  intake.stopScan();
+  intake.stopReleasing();
+  // intake.score(Intake::TOP, 900); // Score 3 blocks.
+  // intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
+  // intake.score(Intake::MIDDLE, 2000); // Reject 3 blocks.
+  // intake.score(Intake::TOP, 5000); // Score 6 blocks.
   drivetrain.move(6); // Move back a bit
   drivetrain.turn(-90); // Align wall with long goal
   drivetrain.strafe(9); // Push against it to block descoring

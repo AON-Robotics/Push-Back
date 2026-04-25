@@ -213,7 +213,7 @@ void Intake::activateScan() { scanning = true; }
 
 void Intake::stopScan() { scanning = false; }
 
-void Intake::setSortHeights(Height accept) {
+void Intake::setSortHeights(Height accept) { // TODO: rename
   acceptHeight = accept;
 }
 
