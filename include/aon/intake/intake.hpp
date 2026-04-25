@@ -90,6 +90,7 @@ class Intake {
   SortState getSortingState() const;
 #else
  private:
+  okapi::MotorGroup corridorMG;
   okapi::MotorGroup elevatorMG;
   okapi::MotorGroup judgeMG;
   okapi::MotorGroup scorerMG;
@@ -104,11 +105,16 @@ class Intake {
 
  public:
   std::shared_ptr<okapi::AsyncPositionController<double, double>> leverController = nullptr;
-  Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
+  Intake(const std::initializer_list<okapi::Motor>& corridorPorts,
+         const std::initializer_list<okapi::Motor>& elevatorPorts,
          const std::initializer_list<okapi::Motor>& judgePorts,
          const std::initializer_list<okapi::Motor>& scorerPorts,
          char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
          int distanceSensorPort, int colorSensorPort);
+
+  /// @brief Moves only the corridor at the given `rpm`
+  /// @param rpm The rpm at which to set the corridor
+  void corridor(const int& rpm = INTAKE_VELOCITY);
 
   /// @brief Moves only the elevator at the given `rpm`
   /// @param rpm The rpm at which to set the elevator

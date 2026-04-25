@@ -49,11 +49,15 @@ inline double AnalogInputScaling(const double& x, const double& t) {
 //
 // ============================================================================
 
-int r1PressCount = 0;
-size_t lastPressTime = 0;
-const int DOUBLE_TAP_TIME = 250;
+#if USING_BIG_BOT
 bool sortActive = false;
 bool sortEnabled = true;
+#else
+size_t lastR1PressTime = 0;
+size_t lastR2PressTime = 0;
+const int DOUBLE_TAP_TIME = 250;
+bool mergeCorridorAndElevator = true;
+#endif
 
 /// Default Operator Control configuration
 inline void DriveDefault() { 
@@ -155,9 +159,23 @@ inline void DriveDefault() {
   double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
   drivetrain.drive(leftX, leftY, rightX, rightY);
 
+  if(mainController.get_digital_new_press(DIGITAL_R2)) {
+    size_t currentTime = pros::millis();
+
+    if(currentTime - lastR2PressTime < DOUBLE_TAP_TIME){
+      toggle(mergeCorridorAndElevator);
+    }
+
+    lastR2PressTime = currentTime;
+  }
+
   // Storing
   if(mainController.get_digital(DIGITAL_R2)) {
-    intake.store();
+    if (mergeCorridorAndElevator){
+      intake.store();
+    } else {
+      intake.corridor();
+    }
   }
   // Reject
   else if(mainController.get_digital(DIGITAL_L2)) {
@@ -172,13 +190,13 @@ inline void DriveDefault() {
   if(mainController.get_digital_new_press(DIGITAL_R1)) {
     size_t currentTime = pros::millis();
 
-    if(currentTime - lastPressTime < DOUBLE_TAP_TIME){
+    if(currentTime - lastR1PressTime < DOUBLE_TAP_TIME){
       intake.leverController->setTarget(0);
     } else {
       intake.leverController->setTarget(150);
     }
 
-    lastPressTime = currentTime;
+    lastR1PressTime = currentTime;
   } else if (intake.leverController->getError() < 10) {
     intake.leverController->setTarget(0);
   }
@@ -194,6 +212,7 @@ inline void DriveDefault() {
   // } 
 
   if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
+    intake.corridor(0);
     intake.elevator(0);
     intake.judge(0);
   }
