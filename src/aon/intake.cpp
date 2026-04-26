@@ -264,7 +264,7 @@ void Intake::configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::Abstrac
   judgeMG.tarePosition();
 
   scorerMG.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  scorerMG.setGearing(okapi::AbstractMotor::gearset::red);
+  scorerMG.setGearing(okapi::AbstractMotor::gearset::green);
   scorerMG.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
   scorerMG.tarePosition();
 

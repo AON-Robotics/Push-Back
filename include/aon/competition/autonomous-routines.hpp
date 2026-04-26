@@ -471,13 +471,17 @@ void bigBotStayThere(){
   drivetrain.strafe(28.5); // Align with match loader.
   intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(5, false); // Move to match loader.
+  intake.activateScan();
   drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
-  intake.store(6000); // Take up all the blocks (12).
+
+  drivetrain.jiggle(16, 120, 200); // Use if cart kinda works
+  // pros::delay(8000); // Use if cart works
+  
   drivetrain.move(-20, false); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
   intake.raiseCart(); // Reset loader mechanism.
+
   intake.setSortHeights(Intake::Height::TOP);
-  intake.activateScan();
   intake.startReleasing();
   pros::delay(8000);
   intake.stopScan();
@@ -486,6 +490,7 @@ void bigBotStayThere(){
   // intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
   // intake.score(Intake::MIDDLE, 2000); // Reject 3 blocks.
   // intake.score(Intake::TOP, 5000); // Score 6 blocks.
+
   drivetrain.move(6); // Move back a bit
   drivetrain.turn(-90); // Align wall with long goal
   drivetrain.strafe(9); // Push against it to block descoring

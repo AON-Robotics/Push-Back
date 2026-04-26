@@ -229,14 +229,17 @@ inline void DriveDefault() {
   else if(mainController.get_digital_new_press(DIGITAL_RIGHT)) {
     drivetrain.toggleTurbo();
   }
-  else if(mainController.get_digital_new_press(DIGITAL_DOWN)) {
-    arrow.toggle();
-  }
   else if(mainController.get_digital_new_press(DIGITAL_Y)) {
     intake.toggleTrapdoor();
   }
   else if(mainController.get_digital_new_press(DIGITAL_UP)) {
     brooks.toggle();
+  }
+
+  if(mainController.get_digital(DIGITAL_DOWN)) {
+    arrow.activate();
+  } else {
+    arrow.deactivate();
   }
 
   #endif
