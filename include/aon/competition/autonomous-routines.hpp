@@ -644,8 +644,8 @@ void blackBeard(){
   drivetrain.move(-9, false);
   drivetrain.driveAngleOfArc(-5, -155, false);
   intake.toggleCart();
-  drivetrain.move(38);
-  drivetrain.driveAngleOfArc(6, 65);
+  drivetrain.move(28, false);
+  drivetrain.driveAngleOfArc(6, 75);
   drivetrain.move(10.5);
   intake.activateScan();
   intake.move();
@@ -664,25 +664,11 @@ void blackBeard(){
   pros::delay(500);
   intake.lever(750);
   pros::delay(500);
-  drivetrain.move(-10);
-  intake.toggleScorerHeight();
-  intake.toggleTrapdoor();
-  drivetrain.turn(-177);
-  intake.toggleCart();
-  drivetrain.move(14);
-  drivetrain.jiggle(9, 110, 200);
-  drivetrain.move(-10);
-  intake.toggleCart();
-  drivetrain.turnToHeading(7);
-  intake.toggleScorerHeight();
-  intake.toggleTrapdoor();
-  drivetrain.move(12);
+  intake.lever(750);
   pros::delay(500);
-  intake.lever(750);
-  intake.lever(750);
-  drivetrain.move(-6);
-  intake.closeTrapdoor();
-  drivetrain.move(7);
+  drivetrain.driveAngleOfArc(8, -120, false);
+  drivetrain.move(20, false);
+  drivetrain.motors(MAX_RPM, 1000);
 }
 
 void jackSparrow(){
@@ -830,12 +816,12 @@ int BlueRoutine3(){
 }
 
 int SkillsRoutine1(){
-  aon::tests::continuity();
+  blackBeard();
   return 1;
 }
 
 int SkillsRoutine2(){ 
-  aon::tests::square();
+  jackSparrow();
   return 1;
 }
 
