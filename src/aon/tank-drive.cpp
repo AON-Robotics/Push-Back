@@ -27,8 +27,8 @@ void TankDrive::driveWhileTurning(const double &forward, const double &turn){
 }
 
 void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-  const double vertical = applySpeed(leftY, this->isTurbo() ? 1 : 0.6);
-  const double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.4);
+  const double vertical = applySpeed(leftY, this->isTurbo() ? 1.0 : 0.6);
+  const double turn = applySpeed(rightX, this->isTurbo() ? (1.0 * (4.0/6.0)) : 0.4); // TODO: make these settable
 
   this->driveWhileTurning(vertical, turn);
 }

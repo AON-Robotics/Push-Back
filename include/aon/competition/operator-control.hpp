@@ -237,9 +237,9 @@ inline void DriveDefault() {
   }
 
   if(mainController.get_digital(DIGITAL_DOWN)) {
-    arrow.activate();
-  } else {
     arrow.deactivate();
+  } else {
+    arrow.activate();
   }
 
   #endif
