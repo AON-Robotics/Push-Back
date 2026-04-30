@@ -5,6 +5,7 @@
 #include "../../okapi/api.hpp"
 #include "../tools/general.hpp"
 #include "../piston/piston.hpp"
+#include "../proximity/proximity.hpp"
 
 extern volatile Alliance ALLIANCE;
 
@@ -35,8 +36,8 @@ class Intake {
   Piston cart;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
-  pros::ADIDigitalIn acceptSensor;
-  pros::ADIDigitalIn rejectSensor;
+  Proximity acceptSensor;
+  Proximity rejectSensor;
 
   volatile bool scanning = false;
   volatile bool scoreDown = false;
@@ -71,7 +72,6 @@ class Intake {
   /// on a goal.
   /// @param to The location out of which we will score the balls (HIGHER,
   /// MIDDLE, LOWER)
-  /// @param from The location of the balls to be scored (HIGHER, LOWER)
   /// @param delay The time in \b milliseconds to leave the scorer running.
   /// @note A delay of 0 will never stop moving the intake.
   void score(const Height& to = TOP, const int& delay = 0);

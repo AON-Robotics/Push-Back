@@ -122,13 +122,13 @@ void Intake::sort() {
 
         case WAIT_ACCEPT: {
           auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
-          if (sensor.get_value() == HIGH) sortState = CONFIRM_ACCEPT;
+          if (sensor.isDetecting()) sortState = CONFIRM_ACCEPT;
           break;
         }
 
         case CONFIRM_ACCEPT: {
           auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
-          if (sensor.get_value() == LOW) {
+          if (!sensor.isDetecting()) {
             this->judge(0);
             timerEnd = pros::millis() + 105;
             sortState = SETTLE;
@@ -138,13 +138,13 @@ void Intake::sort() {
 
         case WAIT_REJECT: {
           auto& sensor = (acceptHeight != TOP) ? acceptSensor : rejectSensor;
-          if (sensor.get_value() == HIGH) sortState = CONFIRM_REJECT;
+          if (sensor.isDetecting()) sortState = CONFIRM_REJECT;
           break;
         }
 
         case CONFIRM_REJECT: {
           auto& sensor = (acceptHeight != TOP) ? acceptSensor : rejectSensor;
-          if (sensor.get_value() == LOW) {
+          if (!sensor.isDetecting()) {
             this->judge(0);
             timerEnd = pros::millis() + 105;
             sortState = SETTLE;

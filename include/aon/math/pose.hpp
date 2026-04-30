@@ -16,5 +16,7 @@ class Pose {
 
   Pose(double x = 0, double y = 0, double theta = 0)
       : x(x), y(y), theta(theta) {}
+    
+  // TODO: implement operators (specifically `operator-` to get errors between all attributes)
 };
 }  // namespace aon
