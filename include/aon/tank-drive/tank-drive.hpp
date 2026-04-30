@@ -5,6 +5,7 @@
 #include "../controls/s-curve-profile.hpp"
 #include "../controls/smart_motor.hpp"
 #include "../odometry/odometry.hpp"
+#include "../include/aon/math/timer.hpp"
 
 #include "../math/misc/misc.hpp"
 #include "../controls/pid/pid.hpp"
@@ -192,6 +193,11 @@ class TankDrive : public Drivetrain {
   /// @brief Goes to the target point
   /// @param pose The target pose
   /// @note Uses coordinate system from GPS in \b meters
-  void goToPose(const Pose &pose) override;
+  void goToPose(const Pose &pose) override; // TODO: add optional `settle` boolean
+
+  /// @brief Follows a path using a pure pursuit controller
+  /// @param path The path to follow
+  /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
+  void follow(std::vector<Pose> path) override;
 };
 }  // namespace aon

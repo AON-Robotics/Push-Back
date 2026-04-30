@@ -198,7 +198,7 @@ class Drivetrain {
   /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
   /// @details A positive `dist` makes the robot go forward while a negative
   /// `dist` makes the robot go backwards
-  virtual void move(const double &dist = TILE_WIDTH, bool settle = true) = 0;
+  virtual void move(const double &dist = TILE_WIDTH, bool settle = true) = 0; // TODO: change this settle variable to a more direct `double finalVelocity = 0` or similar (ideally same concept just a better name)
 
   /// @brief Turn the robot a given angle (default is clockwise)
   /// @param angle The angle to turn in \b degrees
@@ -235,6 +235,11 @@ class Drivetrain {
   /// @param pose The target pose
   /// @note Uses coordinate system from GPS in \b meters
   virtual void goToPose(const Pose &pose) = 0;
+
+  /// @brief Follows a path using a pure pursuit controller
+  /// @param path The path to follow
+  /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
+  virtual void follow(std::vector<Pose> path) = 0;
 
   /// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
   /// @param input The joystick input to be scaled

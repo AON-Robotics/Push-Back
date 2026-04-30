@@ -11,6 +11,7 @@
 #include "../drivetrain.hpp"
 #include "../controls/smart_motor.hpp"
 #include "../tools/general.hpp"
+#include "../include/aon/math/timer.hpp"
 
 #include "../math/pose.hpp"
 
@@ -201,7 +202,12 @@ class HDrive : public Drivetrain {
   /// @brief Goes to the target point
   /// @param target The intended destination using the gps coordinate system (x, y) both need to be in the range (-1.8, 1.8)
   /// @note Uses coordinate system from GPS in \b meters
-  void goToPose(const Pose& target);
+  void goToPose(const Pose& target) override;
+
+  /// @brief Follows a path using a pure pursuit controller
+  /// @param path The path to follow
+  /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
+  void follow(std::vector<Pose> path) override;
 };
 
 }  // namespace aon

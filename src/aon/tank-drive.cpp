@@ -1,6 +1,5 @@
 #include "../include/aon/tank-drive/tank-drive.hpp"
 
-
 namespace aon {
 
 
@@ -131,8 +130,9 @@ void TankDrive::driveProfiled(double dist, bool settle) {
   dist = abs(dist);                   // Setting the magnitude to positive
   
   // Timeout determined experimentally
-  const uint32_t estimatedTime = (dist / 3.0) * 1E3;
-  const uint32_t timeout = pros::millis() + estimatedTime;
+  const uint32_t timeoutMs = (dist / 3.0) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
   
   double dt = 0.02;                   // (s)
   double currVelocity = 0;
@@ -145,7 +145,7 @@ void TankDrive::driveProfiled(double dist, bool settle) {
   this->motionProfile.setVelocity(this->getRPM());
   this->motionProfile.setFinalVelocity(settle ? 0 : 100);
 
-  while (traveledDist < dist && timeout > pros::millis()) {
+  while (traveledDist < dist && !timer.isCompleted()) {
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
@@ -173,8 +173,9 @@ void TankDrive::turnProfiled(double angle, bool settle) {
   angle = abs(angle);                   // Setting the magnitude to positive
 
   // Timeout determined experimentally
-  const uint32_t estimatedTime = (std::sqrt(angle / 2)) * 1E3;
-  const uint32_t timeout = pros::millis() + estimatedTime;
+  const uint32_t timeoutMs = (std::sqrt(angle / 2)) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
 
   const double circumference = DRIVE_WIDTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
   double dt = 0.02;                     // (s)
@@ -190,7 +191,7 @@ void TankDrive::turnProfiled(double angle, bool settle) {
 
   this->turningProfile.setFinalVelocity(settle ? 0 : 50);
 
-  while (traveledAngle < angle && timeout > pros::millis()) {
+  while (traveledAngle < angle && !timer.isCompleted()) {
     currAngle = odometry->gyroscope.get_rotation();
     traveledAngle = abs(currAngle - startAngle);
     // traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
@@ -278,10 +279,11 @@ void TankDrive::driveAngleOfArc(const double &radius, const double &angle, bool 
   // const double startDist = odometry::getTraveledDistance();
 
   // Timeout determined experimentally
-  const uint32_t estimatedTime = (distance / 3.0) * 1E3;
-  const uint32_t timeout = pros::millis() + estimatedTime;
+  const uint32_t timeoutMs = (distance / 3.0) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
 
-  while(traveledDist < distance && timeout > pros::millis()){
+  while(traveledDist < distance && !timer.isCompleted()){
     // traveledDist = odometry::getTraveledDistance() - startDist;
     const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
@@ -385,7 +387,8 @@ void TankDrive::goTo(const double &x, const double &y) {
 
 // TODO: replace with "Pure Pursuit" implementation
 void TankDrive::goToPose(const Pose& pose){
-  
+}
+void TankDrive::follow(std::vector<Pose> path){
 }
 
 }  // namespace aon

@@ -1,4 +1,5 @@
 #include "../include/aon/h-drive/h-drive.hpp"
+#include "../include/aon/math/timer.hpp"
 
 
 namespace aon {
@@ -147,8 +148,9 @@ void HDrive::driveProfiled(double dist, bool settle){
   dist = abs(dist); // Setting the magnitude to positive
 
   // Timeout determined experimentally
-  const uint32_t estimatedTime = (dist / 3.0) * 1E3;
-  const uint32_t timeout = pros::millis() + estimatedTime;
+  const uint32_t timeoutMs = (dist / 3.0) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
   
   double dt = 0.02; // (s)
   double currVelocity = 0;
@@ -161,7 +163,7 @@ void HDrive::driveProfiled(double dist, bool settle){
   this->yProfile.setVelocity(this->getRPM());
   this->yProfile.setFinalVelocity(settle ? 0 : 100);
 
-  while(traveledDist < dist && timeout > pros::millis()){
+  while(traveledDist < dist && !timer.isCompleted()){
     traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     double remainingDist = dist - traveledDist;
     now = pros::micros() / 1E6;
@@ -185,8 +187,9 @@ void HDrive::strafeProfiled(double dist, bool settle){
   dist = abs(dist); // Setting the magnitude to positive
 
   // Timeout determined experimentally
-  const uint32_t estimatedTime = (dist / 3.0) * 1E3;
-  const uint32_t timeout = pros::millis() + estimatedTime;
+  const uint32_t timeoutMs = (dist / 3.0) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
   
   double dt = 0.02; // (s)
   double currVelocity = 0;
@@ -200,7 +203,7 @@ void HDrive::strafeProfiled(double dist, bool settle){
   this->xProfile.setVelocity(this->getRPM());
   this->xProfile.setFinalVelocity(settle ? 0 : 100);
 
-  while(traveledDist < dist && timeout > pros::millis()){
+  while(traveledDist < dist && !timer.isCompleted()){
     // traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
     traveledDist = (std::abs(odometry->encoderBack.get_position() - backStartPos) / 100) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     // traveledDist += getSpeed(this->getRPM()) * dt; //# in case of odom failure
@@ -227,8 +230,9 @@ void HDrive::turnProfiled(double angle, bool settle){
   angle = abs(angle);                   // Setting the magnitude to positive
 
   // Timeout determined experimentally
-  const uint32_t estimatedTime = (std::sqrt(angle / 2)) * 1E3;
-  const uint32_t timeout = pros::millis() + estimatedTime;
+  const uint32_t timeoutMs = (std::sqrt(angle / 2)) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
 
   const double circumference = DRIVE_WIDTH * M_PI;  // Of the robot's rotation, used in the condition to calculate the length of arc remaining
   double dt = 0.02;                     // (s)
@@ -242,7 +246,7 @@ void HDrive::turnProfiled(double angle, bool settle){
 
   this->thetaProfile.setFinalVelocity(settle ? 0 : 100);
   
-  while(traveledAngle < angle){
+  while(traveledAngle < angle && !timer.isCompleted()){
     traveledAngle = abs(odometry->getDegrees() - startAngle);
     double remainingAngle = angle - traveledAngle;
     now = pros::micros() / 1E6;
@@ -335,11 +339,12 @@ void HDrive::driveAngleOfArc(const double &radius, const double &angle, bool set
   this->yProfile.setFinalVelocity(settle ? 0 : 100);
 
   // Timeout determined experimentally
-  const uint32_t estimatedTime = (distance / 3.0) * 1E3;
-  const uint32_t timeout = pros::millis() + estimatedTime;
+  const uint32_t timeoutMs = (distance / 3.0) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
 
   // const double startDist = odometry::getTraveledDistance();
-  while(traveledDist < distance && timeout > pros::millis()){
+  while(traveledDist < distance && !timer.isCompleted()){
     // traveledDist = odometry::getTraveledDistance() - startDist;
     const double rightEncDist = (std::abs(odometry->encoderRight.get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
     const double leftEncDist = (std::abs(odometry->encoderLeft.get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
@@ -527,6 +532,9 @@ void HDrive::goToPose(const Pose& target){
 
   pros::lcd::clear();
   this->stop();
+}
+
+void HDrive::follow(std::vector<Pose> path){
 }
 
 }  // namespace aon
