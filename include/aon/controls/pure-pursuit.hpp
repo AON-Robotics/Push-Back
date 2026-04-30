@@ -11,9 +11,9 @@ namespace aon {
 // TODO: add option for holonomic drives, if necessary
 class PurePursuit {
  private:
-  // Motion Profiles
-  MotionProfile linearProfile;
-  MotionProfile angularProfile;
+  // Gains (tuneable)
+  double linearGain;
+  double angularGain;
 
   int lookaheadOffset;  // Tune
 
@@ -22,11 +22,10 @@ class PurePursuit {
   double turningThreshold;  // Tune
 
  public:
-  PurePursuit(MotionProfile linearProfile, MotionProfile angularProfile,
-              int lookaheadOffset, int deadband, double turningThreshold)
-      : linearProfile(linearProfile), angularProfile(angularProfile) {
-    this->linearProfile.setFinalVelocity(0);
-    this->angularProfile.setFinalVelocity(0);
+  PurePursuit(double linearGain, double angularGain, int lookaheadOffset,
+              int deadband, double turningThreshold) {
+    this->linearGain = linearGain;
+    this->angularGain = angularGain;
     this->lookaheadOffset = lookaheadOffset;
     this->deadband = deadband;
     this->turningThreshold = turningThreshold;
@@ -59,10 +58,8 @@ class PurePursuit {
 
     // Linear and angular velocities
     // TODO: experiment using an S-Curve Motion Profile
-    double linearVel =
-        linearProfile.update(linearError) * linearError / abs(linearError);
-    double angularVel =
-        angularProfile.update(angularError) * angularError / abs(angularError);
+    double linearVel = linearGain * linearError;
+    double angularVel = angularGain * angularError;
 
     // Convert to tank drive velocities
     // left = v + w, right = v - w
@@ -70,12 +67,8 @@ class PurePursuit {
     double right = linearVel - angularVel;
 
     // Deadband to avoid infinite loop
-    if (std::abs(left) < deadband && std::abs(linearError) <= 0.5 &&
-        std::abs(angularError) <= 2)
-      left = 0;
-    if (std::abs(right) < deadband && std::abs(linearError) <= 0.5 &&
-        std::abs(angularError) <= 2)
-      right = 0;
+    if (std::abs(left) < deadband) left = 0;
+    if (std::abs(right) < deadband) right = 0;
 
     return {left, right};
   }
@@ -98,15 +91,14 @@ class PurePursuit {
 
     // Pure turning: no linear velocity
     // TODO: experiment using an S-Curve Motion Profile
-    double angularVel =
-        angularProfile.update(angularError) * angularError / abs(angularError);
+    double angularVel = angularGain * angularError;
 
     double left = angularVel;
     double right = -angularVel;
 
     // Deadband (symmetric for turning)
-    if (std::abs(left) < deadband && std::abs(angularError) <= 2) left = 0;
-    if (std::abs(right) < deadband && std::abs(angularError) <= 2) right = 0;
+    if (std::abs(left) < deadband) left = 0;
+    if (std::abs(right) < deadband) right = 0;
 
     return {left, right};
   }
