@@ -378,9 +378,7 @@ void TankDrive::goTo(const double &x, const double &y) {
 }
 
 void TankDrive::goToPose(const Pose& pose) {
-  MotionProfile linearProfile = MotionProfile(MAX_RPM / 6, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-  MotionProfile angularProfile = MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL, MAX_ACCEL * 3);
-  PurePursuit controller = PurePursuit(linearProfile, angularProfile, 5, 2.5, 2.5);
+  PurePursuit controller = PurePursuit(this->motionProfile, this->turningProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};
 
@@ -416,9 +414,7 @@ void TankDrive::goToPose(const Pose& pose) {
 }
 
 void TankDrive::follow(const std::vector<Pose>& path) {
-  MotionProfile linearProfile = MotionProfile(MAX_RPM / 2, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-  MotionProfile angularProfile = MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL, MAX_ACCEL * 3);
-  PurePursuit controller = PurePursuit(linearProfile, angularProfile, 5, 2.5, 2.5);
+  PurePursuit controller = PurePursuit(this->motionProfile, this->turningProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};
 
