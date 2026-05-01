@@ -61,6 +61,11 @@ class PurePursuit {
     
     // Linear and angular velocities
 
+    // TODO: check if using these three lines instead of the next one maintains accuracy while reducing angular oscillations
+    // double angleFactor = std::cos(angularError * M_PI / 180.0);
+    // angleFactor = std::clamp(angleFactor, 0.0, 1.0);
+    // double linearVel = linearProfile.update(abs(linearError), dt) * * linearSign * angleFactor;
+
     double linearVel = linearProfile.update(std::abs(linearError), dt) * linearSign;
 
     const double circumference = DRIVE_WIDTH * M_PI;
