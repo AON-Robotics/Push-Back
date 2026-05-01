@@ -134,13 +134,12 @@ void Odometry::initialize() {
 
   while (true) {
     update();
-    pros::delay(20);
+    pros::delay(10);
   }
 }
 
 /// @brief Fundamental function for Odometry.
-/// @details Uses changes in encoder (right and left) and gyro to calculate
-/// position
+/// @details Uses changes in encoder (right and left) and gyro to calculate position
 void Odometry::update() { // TODO: implement odometer functions both for linear and rotational movement
   /// Read encoder values, divided by 100 to convert centidegrees to degrees
   encoderRight_data.currentValue = encoderRight.get_position() / 100.0;
@@ -229,8 +228,7 @@ void Odometry::update() { // TODO: implement odometer functions both for linear 
                               averageR * (1 - std::cos(deltaTheta)));
     }
   }
-  // If the robot is moving straight forward or backward, average encoder values
-  // for distance
+  // If the robot is moving straight forward or backward, average encoder values for distance
   else {
     double deltaD =
         (encoderLeft_data.deltaDistance + encoderRight_data.deltaDistance) /
@@ -338,22 +336,22 @@ Vector Odometry::gpsPosition() {
 /// function
 void Odometry::debug() {
   while (true) {
-    // pros::lcd::print(1, "X: %0.3f", GetX());
-    // pros::lcd::print(2, "Y: %0.3f", GetY());
-    // pros::lcd::print(0, "X: %0.3f, Y: %0.3f", GetX(), GetY());
+    pros::lcd::print(0, "X: %.3f", getX());
+    pros::lcd::print(1, "Y: %.3f", getY());
+    // pros::lcd::print(0, "X: %.3f, Y: %.3f", getX(), getY());
     pros::lcd::print(
-        0, "Left : %0.3f, %0.3f, %0.3f", encoderLeft_data.currentDistance,
+        2, "Left : %.3f, %.3f, %.3f", encoderLeft_data.currentDistance,
         encoderLeft_data.previousDistance, encoderLeft_data.deltaDistance);
     pros::lcd::print(
-        1, "Right: %0.3f, %0.3f, %0.3f", encoderRight_data.currentDistance,
+        3, "Right: %.3f, %.3f, %.3f", encoderRight_data.currentDistance,
         encoderRight_data.previousDistance, encoderRight_data.deltaDistance);
-    pros::lcd::print(2, "Heading: %0.3f", getDegrees());
-    pros::lcd::print(3, "Mine:   X: %0.3f | Y: %0.3f", getX(), getY());
-    pros::lcd::print(4, "Web:    X: %0.3f | Y: %0.3f", changeWeb.GetX(),
+    pros::lcd::print(4, "Heading: %.3f", getDegrees());
+    pros::lcd::print(5, "Mine:   X: %.3f | Y: %.3f", getX(), getY());
+    pros::lcd::print(6, "Web:    X: %.3f | Y: %.3f", changeWeb.GetX(),
                      changeWeb.GetDegrees());
 
     update();
-    pros::delay(20);
+    pros::delay(10);
   }
 }
 

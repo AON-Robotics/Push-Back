@@ -11,6 +11,7 @@
 #include "../drivetrain.hpp"
 #include "../controls/smart_motor.hpp"
 #include "../tools/general.hpp"
+#include "../controls/pure-pursuit.hpp"
 #include "../include/aon/math/timer.hpp"
 
 #include "../math/pose.hpp"
@@ -195,7 +196,7 @@ class XDrive : public Drivetrain {
   /// @brief Follows a path using a pure pursuit controller
   /// @param path The path to follow
   /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
-  void follow(std::vector<Pose> path) override;
+  void follow(const std::vector<Pose>& path) override;
 };
 
 }  // namespace aon

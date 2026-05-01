@@ -534,7 +534,41 @@ void HDrive::goToPose(const Pose& target){
   this->stop();
 }
 
-void HDrive::follow(std::vector<Pose> path){
+void HDrive::follow(const std::vector<Pose>& path) {
+  PurePursuit controller = PurePursuit(this->yProfile, this->thetaProfile, 5, 0.5, 2.0);
+
+  std::pair<double, double> output = {-1, -1};
+
+  double dt = 0.02;
+  double now = pros::micros() / 1E6;
+  double lastTime = now;
+
+  // Generous timeout
+  const uint32_t timeoutMs = (math::length(path)) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
+
+  while (odometry->getPose().distanceTo(path.back()) > 2.0 && std::abs(odometry->getDegrees() - path.back().theta) > 5.0 && !timer.isCompleted()) {
+    now = pros::micros() / 1E6;
+    dt = now - lastTime;
+    output = controller.follow(path, this->odometry->getPose(), dt);
+    lastTime = now;
+    this->leftMotors.moveVelocity(output.first);
+    this->rightMotors.moveVelocity(output.second);
+
+    pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
+    pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", path.back().x, path.back().y, path.back().theta);
+    pros::lcd::print(2, "Distance: %.2f", odometry->getPose().distanceTo(path.back()));
+    pros::c::controller_print(pros::E_CONTROLLER_MASTER, 0, 0, "Distance: %.2f", odometry->getPose().distanceTo(path.back()));
+
+    if (output.first == 0 && output.second == 0) { break; }
+
+    pros::delay(10);
+  }
+
+  this->turnToHeading(path.back().theta);
+
+  this->stop();
 }
 
 }  // namespace aon

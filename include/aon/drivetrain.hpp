@@ -223,6 +223,18 @@ class Drivetrain {
   /// @note Uses coordinate system from GPS in \b meters
   virtual void turnTo(const double &x, const double &y) = 0;
 
+  /// @brief Turns the robot to an absolute heading
+  /// @param heading The target heading in \b degrees (same convention as odometry)
+  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
+  void turnToHeading(const double &heading, bool settle = true) {
+    double delta = heading - odometry->getDegrees();
+    // Normalize to [-180, 180] for the shortest path
+    if (delta > 180) delta -= 360;
+    else if (delta < -180) delta += 360;
+    turn(delta, settle);
+  }
+  
+
   /// @brief Goes to the target point
   /// @param x The x component of the place where we want to go using the gps
   /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
@@ -239,7 +251,7 @@ class Drivetrain {
   /// @brief Follows a path using a pure pursuit controller
   /// @param path The path to follow
   /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
-  virtual void follow(std::vector<Pose> path) = 0;
+  virtual void follow(const std::vector<Pose>& path) = 0;
 
   /// @brief Scales a joystick input to drivetrain motor intensity according to a percentage
   /// @param input The joystick input to be scaled

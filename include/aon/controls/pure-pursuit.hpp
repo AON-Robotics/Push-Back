@@ -11,31 +11,31 @@ namespace aon {
 // TODO: add option for holonomic drives, if necessary
 class PurePursuit {
  private:
-  // Gains (tuneable)
-  double linearGain;
-  double angularGain;
+  // Motion Profiles
+  MotionProfile linearProfile;
+  MotionProfile angularProfile;
 
   int lookaheadOffset;  // Tune
 
-  int deadband;  // Tune
-
-  double turningThreshold;  // Tune
+  double linearDeadband;  // Tune
+  double angularDeadband;  // Tune
 
  public:
-  PurePursuit(double linearGain, double angularGain, int lookaheadOffset,
-              int deadband, double turningThreshold) {
-    this->linearGain = linearGain;
-    this->angularGain = angularGain;
+  PurePursuit(MotionProfile linearProfile, MotionProfile angularProfile,
+              int lookaheadOffset, double linearDeadband, double angularDeadband)
+      : linearProfile(linearProfile), angularProfile(angularProfile) {
+    this->linearProfile.setFinalVelocity(0);
+    this->angularProfile.setFinalVelocity(0);
     this->lookaheadOffset = lookaheadOffset;
-    this->deadband = deadband;
-    this->turningThreshold = turningThreshold;
+    this->linearDeadband = linearDeadband;
+    this->angularDeadband = angularDeadband;
   }
 
   /// @brief Calculates the action from the `current` `Pose` to the `target` `Pose`
   /// @param target The `Pose` we want the robot to get to
   /// @param current  The `Pose` the robot is currently at
   /// @return A pair of \b RPM commands for the left and right sides of the drivetrain
-  std::pair<double, double> go(Pose target, Pose current) {
+  std::pair<double, double> go(Pose target, Pose current, double dt = 0.02) {
     // Basic Pure Pursuit-style controller (simplified for single target)
 
     // Extract positions
@@ -56,10 +56,17 @@ class PurePursuit {
     while (angularError > 180) angularError -= 360;
     while (angularError < -180) angularError += 360;
 
+    double linearSign = (linearError == 0) ? 0 : (linearError / std::abs(linearError));
+    double angularSign = (angularError == 0) ? 0 : (angularError / std::abs(angularError));
+    
     // Linear and angular velocities
-    // TODO: experiment using an S-Curve Motion Profile
-    double linearVel = linearGain * linearError;
-    double angularVel = angularGain * angularError;
+
+    double linearVel = linearProfile.update(std::abs(linearError), dt) * linearSign;
+
+    const double circumference = DRIVE_WIDTH * M_PI;
+    double angularArc = circumference * (std::abs(angularError) / 360.0);
+
+    double angularVel = angularProfile.update(angularArc, dt) * angularSign;
 
     // Convert to tank drive velocities
     // left = v + w, right = v - w
@@ -67,8 +74,8 @@ class PurePursuit {
     double right = linearVel - angularVel;
 
     // Deadband to avoid infinite loop
-    if (std::abs(left) < deadband) left = 0;
-    if (std::abs(right) < deadband) right = 0;
+    if (std::abs(linearError) <= linearDeadband)
+      return {0, 0};
 
     return {left, right};
   }
@@ -77,7 +84,8 @@ class PurePursuit {
   /// @param target The `Pose` we want the robot to get to
   /// @param current  The `Pose` the robot is currently at
   /// @return A pair of \b RPM commands for the left and right sides of the drivetrain
-  std::pair<double, double> turn(Pose target, Pose current) {
+  std::pair<double, double> turn(Pose target, Pose current, double dt = 0.02) {
+    // TODO: determine if this is necessary
     // Current heading
     double currentHeading = current.theta;
 
@@ -89,18 +97,15 @@ class PurePursuit {
     while (angularError > 180) angularError -= 360;
     while (angularError < -180) angularError += 360;
 
-    // Pure turning: no linear velocity
-    // TODO: experiment using an S-Curve Motion Profile
-    double angularVel = angularGain * angularError;
+    double sign = (angularError == 0) ? 0 : (angularError / abs(angularError));
 
-    double left = angularVel;
-    double right = -angularVel;
+    // Pure turning: no linear velocity
+    double angularVel = angularProfile.update(std::abs(angularError), dt) * sign;
 
     // Deadband (symmetric for turning)
-    if (std::abs(left) < deadband) left = 0;
-    if (std::abs(right) < deadband) right = 0;
+    if (std::abs(angularError) <= angularDeadband) return {0, 0};
 
-    return {left, right};
+    return {angularVel, -angularVel};
   }
 
   /// @brief Calculates the command to follow the given path with the robot and aligns heading of the last `Pose`
@@ -108,7 +113,7 @@ class PurePursuit {
   /// @param current The `Pose` the robot is currently at
   /// @return The command of left and right motors to follow the path
   /// @note All headings that are not of the last `Pose` will be ignored
-  std::pair<double, double> follow(std::vector<Pose> path, Pose current) {
+  std::pair<double, double> follow(std::vector<Pose> path, Pose current, double dt = 0.02) {
     if (path.empty()) return {0, 0};
 
     // Find closest point on path
@@ -116,9 +121,7 @@ class PurePursuit {
     double minDist = DBL_MAX;
 
     for (int i = 0; i < path.size(); i++) {
-      double dx = path[i].x - current.x;
-      double dy = path[i].y - current.y;
-      double dist = std::hypot(dx, dy);
+      double dist = current.distanceTo(path[i]);
 
       if (dist < minDist) {
         minDist = dist;
@@ -132,14 +135,14 @@ class PurePursuit {
 
     Pose target = path[lookaheadIndex];
 
-    double distToEnd = std::hypot(target.x - current.x, target.y - current.y);
+    double distToEnd = current.distanceTo(target);
 
-    if (lookaheadIndex >= path.size() - 1 && distToEnd < turningThreshold) {
-      return turn(target, current);
-    }
+    // if (lookaheadIndex >= path.size() - 1 && distToEnd < linearDeadband) {
+    //   return turn(target, current, dt);
+    // }
 
     // Reuse single-point controller
-    return go(target, current);
+    return go(target, current, dt);
   }
 };
 

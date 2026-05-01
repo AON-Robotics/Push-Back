@@ -199,4 +199,17 @@ inline double calculateTurn(Vector target, Pose current) {
   return angle;
 }
 
+/// @brief Estimates the length of a `std::vector` of `aon::Pose`s
+/// @param path The `std::vector` of `aon::Pose`s to consider
+/// @return The euclidean length of the `path` given
+inline double length(const std::vector<Pose>& path) {
+  if (path.size() < 2) return 0;
+
+  double result = 0;
+  for(size_t i = 0; i < path.size() - 1; i++) {
+    result += path[i].distanceTo(path[i + 1]);
+  }
+  return result;
+}
+
 }  // namespace aon::math

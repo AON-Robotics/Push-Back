@@ -3,8 +3,8 @@
  * @author Kevin Javier Gomez Guzman @kevgom018
  * @brief S-Curve motion profiling class for smooth and precise robot movements
  * based on odometry.
- * @version 1.1
- * @date 2025-06-19
+ * @version 1.2.1
+ * @date 2026-04-20
  *
  * This class calculates target velocities using an S-curve motion profile to
  * ensure smooth acceleration and deceleration. It improves movement accuracy
@@ -47,7 +47,7 @@ class MotionProfile {
 
   /// @brief Returns the current stage of the motion profile
   /// @return The stage of the motion profile
-  Stage getStage() { return this->stage; }
+  Stage getStage() const { return this->stage; }
 
   // TODO: Desmos this function below
 

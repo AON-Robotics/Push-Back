@@ -367,14 +367,6 @@ void TankDrive::turnTo(const double &x, const double &y) {
   turn(-math::calculateTurn(target, current));
 }
 
-void TankDrive::turnToHeading(const double &heading, bool settle) {
-  double delta = heading - odometry->getDegrees();
-  // Normalize to [-180, 180] for the shortest path
-  if (delta > 180) delta -= 360;
-  else if (delta < -180) delta += 360;
-  turn(delta, settle);
-}
-
 // TODO: refactor so it uses `Pose()`
 void TankDrive::goTo(const double &x, const double &y) {
   Vector target = Vector().SetPosition(x, y);
@@ -385,10 +377,81 @@ void TankDrive::goTo(const double &x, const double &y) {
   move(math::findDistance(target, current));
 }
 
-// TODO: replace with "Pure Pursuit" implementation
-void TankDrive::goToPose(const Pose& pose){
+void TankDrive::goToPose(const Pose& pose) {
+  MotionProfile linearProfile = MotionProfile(MAX_RPM / 6, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
+  MotionProfile angularProfile = MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL, MAX_ACCEL * 3);
+  PurePursuit controller = PurePursuit(linearProfile, angularProfile, 5, 2.5, 2.5);
+
+  std::pair<double, double> output = {-1, -1};
+
+  double dt = 0.02;
+  double now = pros::micros() / 1E6;
+  double lastTime = now;
+
+  // Generous timeout
+  const uint32_t timeoutMs = (this->odometry->getPose().distanceTo(pose)) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
+  while (odometry->getPose().distanceTo(pose) > 2.0 && !timer.isCompleted()){
+    now = pros::micros() / 1E6;
+    dt = now - lastTime;
+    output = controller.go(pose, this->odometry->getPose(), dt);
+    lastTime = now;
+    this->leftMotors.moveVelocity(output.first);
+    this->rightMotors.moveVelocity(output.second);
+
+    pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
+    pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", pose.x, pose.y, pose.theta);
+    pros::lcd::print(2, "Distance: %.2f", odometry->getPose().distanceTo(pose));
+    pros::c::controller_print(pros::E_CONTROLLER_MASTER, 0, 0, "Distance: %.2f", odometry->getPose().distanceTo(pose));
+
+    if (output.first == 0 && output.second == 0) { break; }
+
+    pros::delay(10);
+  }
+
+  this->turnToHeading(pose.theta);
+
+  this->stop();
 }
-void TankDrive::follow(std::vector<Pose> path){
+
+void TankDrive::follow(const std::vector<Pose>& path) {
+  MotionProfile linearProfile = MotionProfile(MAX_RPM / 2, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
+  MotionProfile angularProfile = MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL, MAX_ACCEL * 3);
+  PurePursuit controller = PurePursuit(linearProfile, angularProfile, 5, 2.5, 2.5);
+
+  std::pair<double, double> output = {-1, -1};
+
+  double dt = 0.02;
+  double now = pros::micros() / 1E6;
+  double lastTime = now;
+
+  // Generous timeout
+  const uint32_t timeoutMs = (math::length(path)) * 1E3;
+  Timer timer;
+  timer.start(timeoutMs);
+
+  while (odometry->getPose().distanceTo(path.back()) > 2.0 && std::abs(odometry->getDegrees() - path.back().theta) > 5.0 && !timer.isCompleted()) {
+    now = pros::micros() / 1E6;
+    dt = now - lastTime;
+    output = controller.follow(path, this->odometry->getPose(), dt);
+    lastTime = now;
+    this->leftMotors.moveVelocity(output.first);
+    this->rightMotors.moveVelocity(output.second);
+
+    pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
+    pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", path.back().x, path.back().y, path.back().theta);
+    pros::lcd::print(2, "Distance: %.2f", odometry->getPose().distanceTo(path.back()));
+    pros::c::controller_print(pros::E_CONTROLLER_MASTER, 0, 0, "Distance: %.2f", odometry->getPose().distanceTo(path.back()));
+
+    if (output.first == 0 && output.second == 0) { break; }
+
+    pros::delay(10);
+  }
+
+  this->turnToHeading(path.back().theta);
+
+  this->stop();
 }
 
 }  // namespace aon

@@ -356,6 +356,79 @@ void colorSorting(){
   intake.activateScan();
 }
 
+void purePursuitPoint(){
+  drivetrain.goToPose(Pose(TILE_WIDTH, -TILE_WIDTH / 2, 0));
+  drivetrain.goToPose(Pose(TILE_WIDTH * 2, TILE_WIDTH / 2, 90));
+  drivetrain.goToPose(Pose(0, TILE_WIDTH / 2, 180));
+  drivetrain.goToPose(Pose(0, -TILE_WIDTH / 2, 270));
+  drivetrain.goToPose(Pose(TILE_WIDTH, TILE_WIDTH / 2, 0));
+  drivetrain.goToPose(Pose(TILE_WIDTH * 2, -TILE_WIDTH / 2, 90));
+  drivetrain.goToPose(Pose(0, 0, 0));
+}
+
+void purePursuitSimpleFollow(){
+  std::vector<Pose> path = {
+    Pose(TILE_WIDTH, 0, 0),
+    Pose(0, 12, 0),
+    Pose(-12, 12, 0),
+    Pose(0, 0, 90),
+    Pose(-12, 18, 0),
+    Pose(-TILE_WIDTH, TILE_WIDTH, 90),
+    Pose(0, 0, 0),
+   
+  };
+  drivetrain.follow(path);
+}
+
+void purePursuitPath(){
+  std::vector<Pose> path = {
+    Pose(0, 0, 0),
+    Pose(1, 0.5, 0),
+    Pose(2, 1.2, 0),
+    Pose(3, 2.0, 0),
+    Pose(4, 3.0, 0),
+    Pose(5, 4.2, 0),
+    Pose(6, 5.5, 0),
+    Pose(7, 6.8, 0),
+    Pose(8, 8.0, 0),
+    Pose(9, 9.0, 0),
+    Pose(10, 9.5, 0),
+
+    // curve back (middle of S)
+    Pose(11, 9.0, 0),
+    Pose(12, 8.0, 0),
+    Pose(13, 6.8, 0),
+    Pose(14, 5.5, 0),
+    Pose(15, 4.2, 0),
+    Pose(16, 3.0, 0),
+    Pose(17, 2.0, 0),
+    Pose(18, 1.2, 0),
+    Pose(19, 0.5, 0),
+    Pose(20, 0.0, 0),
+
+    // final curve (irregularity)
+    Pose(21, -0.8, 0),
+    Pose(22, -1.5, 0),
+    Pose(23, -2.0, 0),
+    Pose(24, -2.3, 0),
+    Pose(25, -2.5, 0),
+    Pose(26, -2.6, 0),
+    Pose(27, -2.4, 0),
+    Pose(28, -2.0, 0),
+    Pose(29, -1.2, 0),
+    Pose(30, 0.0, 0),
+    Pose(31, 1.5, 0),
+    Pose(32, 3.0, 0),
+    Pose(33, 4.5, 0),
+    Pose(34, 6.0, 0),
+    Pose(35, 7.5, 0),
+    Pose(36, 9.0, 0),
+    Pose(37, 10.5, 0),
+    Pose(38, 12.0, 270) // test with 180 as well
+  };
+  drivetrain.follow(path);
+}
+
 #if USING_BIG_ROBOT
 
 

@@ -320,16 +320,16 @@ void Intake::sort() {
           pros::delay(100);
           this->judge(0);
         } else if ((red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue)) {
-          // Correct alliance color detected — move motor to accept
-            this->judge(INTAKE_VELOCITY);
-            pros::delay(125);
-            this->judge(0);
-          }
+        // Correct alliance color detected — move motor to accept
+          this->judge(INTAKE_VELOCITY);
+          pros::delay(125);
+          this->judge(0);
         }
       }
     }
     pros::delay(25);
   }
+}
 
 void Intake::pickUp(const int& delay) {
   this->corridor();

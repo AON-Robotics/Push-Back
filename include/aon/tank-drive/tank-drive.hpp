@@ -5,6 +5,7 @@
 #include "../controls/s-curve-profile.hpp"
 #include "../controls/smart_motor.hpp"
 #include "../odometry/odometry.hpp"
+#include "../controls/pure-pursuit.hpp"
 #include "../include/aon/math/timer.hpp"
 
 #include "../math/misc/misc.hpp"
@@ -177,11 +178,6 @@ class TankDrive : public Drivetrain {
   /// @note Uses coordinate system from GPS in \b meters
   void turnTo(const double &x, const double &y) override;
 
-  /// @brief Turns the robot to an absolute heading
-  /// @param heading The target heading in \b degrees (same convention as odometry)
-  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
-  void turnToHeading(const double &heading, bool settle = true);
-
   /// @brief Goes to the target point
   /// @param x The x component of the place where we want to go using the gps
   /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
@@ -198,6 +194,6 @@ class TankDrive : public Drivetrain {
   /// @brief Follows a path using a pure pursuit controller
   /// @param path The path to follow
   /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
-  void follow(std::vector<Pose> path) override;
+  void follow(const std::vector<Pose>& path) override;
 };
 }  // namespace aon
