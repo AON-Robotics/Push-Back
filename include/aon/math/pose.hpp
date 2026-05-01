@@ -17,6 +17,55 @@ class Pose {
   Pose(double x = 0, double y = 0, double theta = 0)
       : x(x), y(y), theta(theta) {}
     
-  // TODO: implement operators (specifically `operator-` to get errors between all attributes)
+
+  Pose operator+(const Pose& other) const {
+    return Pose(x + other.x, y + other.y, theta + other.theta);
+  }
+
+  Pose operator-(const Pose& other) const {
+    return Pose(x - other.x, y - other.y, theta - other.theta);
+  }
+
+  Pose operator*(const double& scalar) const {
+    return Pose(x * scalar, y * scalar, theta * scalar);
+  }
+
+  Pose operator/(const double& scalar) const {
+    return Pose(x / scalar, y / scalar, theta / scalar);
+  }
+
+
+  Pose& operator+=(const Pose& other) {
+    x += other.x; y += other.y; theta += other.theta;
+    return *this;
+  }
+
+  Pose& operator-=(const Pose& other) {
+    x -= other.x; y -= other.y; theta -= other.theta;
+    return *this;
+  }
+
+
+  bool operator==(const Pose& other) const {
+    return x == other.x && y == other.y && theta == other.theta;
+  }
+
+  bool operator!=(const Pose& other) const {
+    return !(*this == other);
+  }
+
+  /// @brief Computes the Euclidean distance between this pose and another pose (ignores orientation).
+  /// @param other The target pose to measure distance to.
+  /// @return Distance in inches between the two positions.
+  double distanceTo(const Pose& other) const {
+    return std::hypot(other.x - x, other.y - y);
+  }
+
+  /// @brief Computes a combined error metric between this pose and another pose.
+  /// @param other The target pose to compare against.
+  /// @return Sum of absolute differences in x, y, and theta (|dx| + |dy| + |dtheta|).
+  double aggregateError(const Pose& other) const {
+    return std::abs(other.x - x) + std::abs(other.y - y) + std::abs(other.theta - theta);
+  }
 };
 }  // namespace aon
