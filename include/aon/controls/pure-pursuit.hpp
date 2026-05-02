@@ -65,13 +65,16 @@ class PurePursuit {
     // double angleFactor = std::cos(angularError * M_PI / 180.0);
     // angleFactor = std::clamp(angleFactor, 0.0, 1.0);
     // double linearVel = linearProfile.update(abs(linearError), dt) * * linearSign * angleFactor;
-
     double linearVel = linearProfile.update(std::abs(linearError), dt) * linearSign;
-
+    
     const double circumference = DRIVE_WIDTH * M_PI;
     double angularArc = circumference * (std::abs(angularError) / 360.0);
-
+    
     double angularVel = angularProfile.update(angularArc, dt) * angularSign;
+
+    // TODO: try using these to see if there is any improvement but I (Kevin G) dont expect it
+    // double curvature = (2 * sin(angularErrorRad)) / lookaheadDistance;
+    // double angularVel = curvature * linearVel;
 
     // Convert to tank drive velocities
     // left = v + w, right = v - w
