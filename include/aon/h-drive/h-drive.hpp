@@ -42,8 +42,6 @@ class HDrive : public Drivetrain {
         thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
         Drivetrain(std::move(odometry), speedFactors) {}
 
-  void initialize() override;
-
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for
   /// auton and `brake` for drivers

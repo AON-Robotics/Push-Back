@@ -3,10 +3,6 @@
 
 namespace aon {
 
-void XDrive::initialize() {
-  this->odometry->initialize();
-}
-
 void XDrive::sideways(const double &rpm, const int& delay) {
   this->frontLeftMotors.moveVelocity(rpm);
   this->frontRightMotors.moveVelocity(-rpm);

@@ -59,7 +59,8 @@ class Drivetrain {
     HOLONOMIC,
   };
 
-  virtual void initialize() = 0;
+  /// @brief Starts the underlying odometry thread
+  void initialize() { this->odometry->initialize(); }
   
   Pose getPose() { return this->pose; }
   void setPose(Pose p) { this->pose = p; }

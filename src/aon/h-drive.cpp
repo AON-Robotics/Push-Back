@@ -4,10 +4,6 @@
 
 namespace aon {
 
-void HDrive::initialize() {
-  this->odometry->initialize();
-}
-
 void HDrive::sideways(const double &rpm, const int& delay) {
   this->midMotors.moveVelocity(rpm);
   if (delay == 0) return;

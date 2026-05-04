@@ -45,8 +45,6 @@ class XDrive : public Drivetrain {
         thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
         Drivetrain(std::move(odometry), speedFactors) {}
 
-  void initialize() override;
-
   /// @brief Moves all motors the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm (positive is right and negative is left)
   /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors

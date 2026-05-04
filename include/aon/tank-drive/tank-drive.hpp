@@ -36,8 +36,6 @@ class TankDrive : public Drivetrain {
         turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
         Drivetrain(std::move(odometry), speedFactors) {}
 
-  void initialize() override;
-
   /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
   /// @param left The \b RPM to send to the left-side motors (positive is forward)
   /// @param right The \b RPM to send to the right-side motors (positive is forward)

@@ -2,11 +2,6 @@
 
 namespace aon {
 
-
-void TankDrive::initialize(){
-  this->odometry->initialize();
-}
-
 void TankDrive::tank(const double &left, const double &right){
   this->leftMotors.moveVelocity(left);
   this->rightMotors.moveVelocity(right);
