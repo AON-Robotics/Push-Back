@@ -72,6 +72,8 @@ class Drivetrain {
     HOLONOMIC,
   };
 
+  // TODO: move all implementations to a dedicated cpp file
+
   /// @brief Starts the underlying odometry thread
   void initialize() { this->odometry->initialize(); }
   
