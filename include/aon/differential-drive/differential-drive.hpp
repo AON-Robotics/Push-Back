@@ -4,13 +4,13 @@
 
 namespace aon {
 
-class TankDrive : public Drivetrain {
+class DifferentialDrive : public Drivetrain {
  private:
   SmartMotorGroup leftMotors;
   SmartMotorGroup rightMotors;
 
  public:
-  TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
+  DifferentialDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
             const std::initializer_list<okapi::Motor> &rightPorts = {0},
             Pose pose = Pose(),
             std::unique_ptr<Odometry> odometry = nullptr,

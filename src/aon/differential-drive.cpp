@@ -1,41 +1,41 @@
-#include "../include/aon/tank-drive/tank-drive.hpp"
+#include "../include/aon/differential-drive/differential-drive.hpp"
 
 namespace aon {
 
-void TankDrive::tank(const double &left, const double &right){
+void DifferentialDrive::tank(const double &left, const double &right){
   this->leftMotors.moveVelocity(left);
   this->rightMotors.moveVelocity(right);
 }
 
-void TankDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
+void DifferentialDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
   leftMotors.setBrakeMode(brakeMode);
   rightMotors.setBrakeMode(brakeMode);
 }
 
-void TankDrive::setGearset(okapi::AbstractMotor::gearset gearset){
+void DifferentialDrive::setGearset(okapi::AbstractMotor::gearset gearset){
   leftMotors.setGearing(gearset);
   rightMotors.setGearing(gearset);
 }
 
-void TankDrive::setEncoderUnits(okapi::AbstractMotor::encoderUnits units){
+void DifferentialDrive::setEncoderUnits(okapi::AbstractMotor::encoderUnits units){
   leftMotors.setEncoderUnits(units);
   leftMotors.tarePosition();
   rightMotors.setEncoderUnits(units);
   rightMotors.tarePosition();
 }
 
-void TankDrive::setSlewRate(double slew){
+void DifferentialDrive::setSlewRate(double slew){
   leftMotors.SetAcceleration(slew);
   rightMotors.SetAcceleration(slew);
 }
 
-double TankDrive::getRPM(){
+double DifferentialDrive::getRPM(){
   double left = leftMotors.getActualVelocity();
   double right = rightMotors.getActualVelocity();
   return (left + right) / 2;
 }
 
-void TankDrive::goToPose(const Pose& pose) {
+void DifferentialDrive::goToPose(const Pose& pose) {
   PurePursuit controller = PurePursuit(this->yProfile, this->thetaProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};

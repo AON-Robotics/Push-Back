@@ -10,7 +10,7 @@
 #include "./tools/vector.hpp"
 #include "./h-drive/h-drive.hpp"
 #include "./intake/intake.hpp"
-#include "./tank-drive/tank-drive.hpp"
+#include "./differential-drive/differential-drive.hpp"
 #include "./orbit/orbit.hpp"
 #include "./drivetrain.hpp"
 #include "./odometry/odometry.hpp"
@@ -54,7 +54,7 @@ aon::Drivetrain::SpeedFactors speedFactors = aon::Drivetrain::SpeedFactors(0.6, 
 aon::MotionProfile yProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
 aon::MotionProfile thetaProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3);
 
-aon::TankDrive drivetrain = aon::TankDrive({11, -12, 13, -14}, {1, -2, 3, -4}, startingPose, std::make_unique<aon::Odometry>(odometry), speedFactors, yProfile, thetaProfile);
+aon::DifferentialDrive drivetrain = aon::DifferentialDrive({11, -12, 13, -14}, {1, -2, 3, -4}, startingPose, std::make_unique<aon::Odometry>(odometry), speedFactors, yProfile, thetaProfile);
 
 aon::Intake intake = aon::Intake({-9}, {-6}, {7}, {-8}, 'H', 'B', 'A', 20, 17);
 
