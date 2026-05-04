@@ -31,7 +31,8 @@ class HDrive : public Drivetrain {
   HDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
          const std::initializer_list<okapi::Motor> &rightPorts = {0},
          const std::initializer_list<okapi::Motor> &midPorts = {0},
-         std::unique_ptr<Odometry> odometry = nullptr
+         std::unique_ptr<Odometry> odometry = nullptr,
+         SpeedFactors speedFactors = SpeedFactors()
         )
       : leftMotors(leftPorts),
         rightMotors(rightPorts),
@@ -39,7 +40,7 @@ class HDrive : public Drivetrain {
         xProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain(std::move(odometry)) {}
+        Drivetrain(std::move(odometry), speedFactors) {}
 
   void initialize() override;
 
@@ -58,23 +59,10 @@ class HDrive : public Drivetrain {
 
   void stop() override;
 
-  /// @brief Moves all motors the same `rpm` to move forward
-  /// @param rpm The speed in which to move all motors in \b rpm
-  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
-  void motors(const double &rpm = MAX_RPM, const int& delay = 0) override;
-
   /// @brief Moves all motors the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm (positive is right and negative is left)
-  void sideways(const double &rpm);
-
-  /// @brief Moves all motors the same `rpm` to rotate clockwise
-  /// @param rpm The speed in which to move all motors in \b rpm
-  void rotate(const double &rpm) override;
-
-  /// @brief Moves the robot forward while also turning
-  /// @param forward The \b RPM to send to the motors for linear movement (positive is forward)
-  /// @param turn The \b RPM to send to the motors for rotative movement (positive is clockwise)
-  void driveWhileTurning(const double &forward, const double &turn) override;
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  void sideways(const double &rpm = MAX_RPM, const int& delay = 0) override;
 
   /// @brief Makes the robot drive in an arc motion based on a given `radius`
   /// @param radius The radius of the arc of the motion in \b inches measured from the center of rotation of the robot to the reference point in the right when positive and in the left when negative
@@ -82,6 +70,11 @@ class HDrive : public Drivetrain {
   /// @note A positive `radius` will cause a clockwise rotation, while a negative `radius` will cause a counter-clockwise rotation
   /// @see https://www.desmos.com/calculator/91cbd82e8b
   void driveInArc(double radius, const double &midSpeed = 200) override;
+
+  /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
+  /// @param left The \b RPM to send to the left-side motors (positive is forward)
+  /// @param right The \b RPM to send to the right-side motors (positive is forward)
+  void tank(const double &left, const double &right) override;
 
   /// @brief Makes the robot drive in an arc motion based on a given `radius` for a given `angle`
   /// @param radius The radius of the arc of the motion in \b inches measured from the center of rotation of the robot to the reference point in the right when positive and in the left when negative
@@ -98,20 +91,6 @@ class HDrive : public Drivetrain {
   /// @note Odometry must be working for global positioning on the field
   /// @see https://www.desmos.com/calculator/5abb373276
   void driveInArcTo(const double &x, const double &y) override;
-
-  /// @brief Takes a `direction` vector and converts it into a command for the motors.
-  /// @param direction The direction with respect to the robot to move in
-  /// @return A `Vector` whose `x` component is the command for the diagonal that goes from bottom left to top right and whose `y` is the command for the other diagonal
-  /// @note See https://understandinglinearalgebra.org/sec-bases.html to understand the conversion between bases
-  /// @details The basis B is formed by the crossed wheels (in 45º and 135º angles with respect to the horizontal)
-  static Vector translateToMotorCommand(Vector direction);
-
-  /// @brief Drives the robot in the direction of the left joystick while turning it with the right joystick
-  /// @param leftX The value of the left joystick on the x-axis in the range [-1, 1]
-  /// @param leftY The value of the left joystick on the y-axis in the range [-1, 1]
-  /// @param rightX The value of the right joystick on the x-axis in the range [-1, 1]
-  /// @param rightY The value of the right joystick on the y-axis in the range [-1, 1]
-  void drive(double leftX, double leftY, double rightX, double rightY) override;
 
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain

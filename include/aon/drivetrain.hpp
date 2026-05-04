@@ -9,19 +9,58 @@ namespace aon {
 
 
 class Drivetrain {
- protected:
+  public:
+
+  struct SpeedFactors {
+    double forwardNoTurbo = 0.5;
+    double sidewaysNoTurbo = 0.5;
+    double turnNoTurbo = 0.5;
+
+    double forwardTurbo = 1;
+    double sidewaysTurbo = 1;
+    double turnTurbo = 1;
+
+    SpeedFactors(
+      double forwardNoTurbo = 0.5,
+      double sidewaysNoTurbo = 0.5,
+      double turnNoTurbo = 0.5,
+      double forwardTurbo = 1,
+      double sidewaysTurbo = 1,
+      double turnTurbo = 1
+    ) : forwardNoTurbo(forwardNoTurbo),
+        sidewaysNoTurbo(sidewaysNoTurbo),
+        turnNoTurbo(turnNoTurbo),
+        forwardTurbo(forwardTurbo),
+        sidewaysTurbo(sidewaysTurbo),
+        turnTurbo(turnTurbo) {}
+  };
+
+  protected:
+
   std::unique_ptr<Odometry> odometry;
   Pose pose;
   bool turbo = false;
+
+  /// @brief This applies only while using curvature drive to allow for turning without forward motion. Any forward motion below this will cause curvature drive to behave like arcade.
+  static constexpr double QUICK_TURN_THRESHOLD = 0.05 * MAX_RPM;
+
+  SpeedFactors speedFactors;
   
   public:
 
-  Drivetrain(std::unique_ptr<Odometry> odom): pose(), odometry(std::move(odom)) {}
+  Drivetrain(std::unique_ptr<Odometry> odom, SpeedFactors speedFactors): pose(), odometry(std::move(odom)), speedFactors(speedFactors) {}
 
+  enum DriveMode {
+    TANK,
+    ARCADE,
+    SPLIT_ARCADE,
+    CURVATURE,
+    SPLIT_CURVATURE,
+    HOLONOMIC,
+  };
 
   virtual void initialize() = 0;
   
-
   Pose getPose() { return this->pose; }
   void setPose(Pose p) { this->pose = p; }
 
@@ -52,68 +91,150 @@ class Drivetrain {
   /// @brief Moves all motors the same `rpm` to move forward
   /// @param rpm The speed in which to move all motors in \b rpm
   /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
-  virtual void motors(const double &rpm = MAX_RPM, const int& delay = 0) = 0;
+  void motors(const double &rpm = MAX_RPM, const int& delay = 0) {
+    this->tank(rpm, rpm);
+    if(delay == 0) return;
+    pros::delay(delay);
+    this->stop();
+  }
+
+  /// @brief Moves all motors the same `rpm` to move sideways
+  /// @param rpm The speed in which to move all motors in \b rpm
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  virtual void sideways(const double &rpm = MAX_RPM, const int& delay = 0) {}
 
   /// @brief Moves all motors the same `rpm` to rotate clockwise
   /// @param rpm The speed in which to move all motors in \b rpm
-  virtual void rotate(const double &rpm) = 0;
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  void rotate(const double &rpm = MAX_RPM, const int& delay = 0) {
+    this->tank(rpm, -rpm);
+    if(delay == 0) return;
+    pros::delay(delay);
+    this->stop();
+  }
 
-  /// @brief Moves the robot forward while also turning
-  /// @param forward The \b RPM to send to the motors for linear movement
-  /// (positive is forward)
-  /// @param turn The \b RPM to send to the motors for rotative movement
-  /// (positive is clockwise)
-  virtual void driveWhileTurning(const double &forward, const double &turn) = 0;
+  /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
+  /// @param left The \b RPM to send to the left-side motors (positive is forward)
+  /// @param right The \b RPM to send to the right-side motors (positive is forward)
+  virtual void tank(const double &left, const double &right) = 0;
+  
+  /// @brief Drives the robot using arcade control, combining a forward and a turn input into left/right motor outputs
+  /// @param forward The \b RPM to send to all motors for linear movement (positive is forward)
+  /// @param turn The \b RPM to add/subtract from each side for rotational movement (positive is clockwise)
+  void arcade(const double &forward, const double &turn) {
+    double left = forward + turn;
+    double right = forward - turn;
 
-  /// @brief Makes the robot drive in an arc motion based on a given `radius`
-  /// @param radius The radius of the arc of the motion in \b inches measured
-  /// from the center of rotation of the robot to the reference point in the
-  /// right when positive and in the left when negative
-  /// @param speed The speed with which to drive in \b RPM (positive speed
-  /// will go forward and negative speed will go backwards)
-  /// @note A positive `radius` will cause a clockwise rotation, while a
-  /// negative `radius` will cause a counter-clockwise rotation
-  /// @see https://www.desmos.com/calculator/91cbd82e8b
-  virtual void driveInArc(double radius, const double &speed = 200) = 0;
+    // Normalize if either side exceeds MAX_RPM
+    double maxVal = std::max(std::abs(left), std::abs(right));
+    if (maxVal > MAX_RPM) {
+      left  = left  / maxVal * MAX_RPM;
+      right = right / maxVal * MAX_RPM;
+    }
 
-  /// @brief Makes the robot drive in an arc motion based on a given `radius`
-  /// for a given `angle`
-  /// @param radius The radius of the arc of the motion in \b inches measured
-  /// from the center of rotation of the robot to the reference point in the
-  /// right when positive and in the left when negative
-  /// @param angle The angle of the arc we want to cover in \b degrees, a
-  /// negative angle will cause the robot to go in reverse
-  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
-  /// @note A positive `radius` will cause a rotation with reference to a point
-  /// to the right, while a negative `radius` will cause a rotation with
-  /// reference to a point to the left
-  /// @note A positive `angle` will cause a forward movement, while a negative
-  /// `angle` will cause a backwards movement
-  /// @see https://www.desmos.com/calculator/91cbd82e8b
-  virtual void driveAngleOfArc(const double &radius = DRIVE_WIDTH,
-                               const double &angle = 90,
-                               bool settle = true) = 0;
+    this->tank(left, right);
+  };
 
-  /// @brief Makes the robot drive in an arc motion to a specified point in the
-  /// field
-  /// @param x The x coordinate of the point we want to go to in \b meters
-  /// @param y The y coordinate of the point we want to go to in \b meters
-  /// @note Odometry must be working for global positioning on the field
-  /// @see https://www.desmos.com/calculator/5abb373276
-  virtual void driveInArcTo(const double &x, const double &y) = 0;
+  /// @brief Drives the robot using curvature (cheesy drive) control, scaling the turn rate by the forward speed for smoother high-speed arcing
+  /// @param forward The \b RPM to send to all motors for linear movement (positive is forward)
+  /// @param turn The curvature input used to scale the rotational output relative to forward speed (positive is clockwise)
+  void curvature(const double &forward, const double &turn) {
+    bool quickTurn = std::abs(forward) < QUICK_TURN_THRESHOLD;
 
-  /// @brief Drives the robot in the direction of the left joystick while
-  /// turning it with the right joystick
-  /// @param leftX The value of the left joystick on the x-axis in the range
-  /// [-1, 1]
-  /// @param leftY The value of the left joystick on the y-axis in the range
-  /// [-1, 1]
-  /// @param rightX The value of the right joystick on the x-axis in the range
-  /// [-1, 1]
-  /// @param rightY The value of the right joystick on the y-axis in the range
-  /// [-1, 1]
-  virtual void drive(double leftX, double leftY, double rightX,
-                     double rightY) = 0;
+    double left, right;
+    if (quickTurn) {
+      // Fall back to arcade-style turning in place
+      left  = forward + turn;
+      right = forward - turn;
+    } else {
+      left  = forward + std::abs(forward) * turn;
+      right = forward - std::abs(forward) * turn;
+    }
+
+    // Normalize if either side exceeds MAX_RPM
+    double maxVal = std::max(std::abs(left), std::abs(right));
+    if (maxVal > MAX_RPM) {
+      left  = left  / maxVal * MAX_RPM;
+      right = right / maxVal * MAX_RPM;
+    }
+
+    this->tank(left, right);
+  };
+
+  /// @brief Drives a holonomic (e.g. mecanum or X-drive) robot with independent forward, sideways, and rotational control
+  /// @param forward The \b RPM to send to all motors for linear forward/backward movement (positive is forward)
+  /// @param sideways The \b RPM to send to all motors for lateral strafe movement (positive is rightward)
+  /// @param turn The \b RPM to send to all motors for rotational movement (positive is clockwise)
+  virtual void holonomic(const double &forward, const double &sideways, const double &turn) {
+    this->arcade(forward, turn);
+    this->sideways(sideways);
+  };
+
+  /// @brief Drives the robot in the direction of the left joystick while turning it with the right joystick
+  /// @param leftX The value of the left joystick on the x-axis in the range [-1, 1]
+  /// @param leftY The value of the left joystick on the y-axis in the range [-1, 1]
+  /// @param rightX The value of the right joystick on the x-axis in the range [-1, 1]
+  /// @param rightY The value of the right joystick on the y-axis in the range [-1, 1]
+  void drive(double leftX, double leftY, double rightX, double rightY, DriveMode mode = HOLONOMIC) {
+    double left, right, forward, sideways, turn;
+
+    // Determine movement scaling factors depending on turbo status
+    double forwardFactor = this->isTurbo() ? speedFactors.forwardTurbo : speedFactors.forwardNoTurbo;
+    double sidewaysFactor = this->isTurbo() ? speedFactors.sidewaysTurbo : speedFactors.sidewaysNoTurbo;
+    double turnFactor = this->isTurbo() ? speedFactors.turnTurbo : speedFactors.turnNoTurbo;
+
+    switch (mode) {
+      case TANK:
+        left = applySpeed(leftY, forwardFactor);
+        right = applySpeed(rightY, forwardFactor);
+
+        this->tank(left, right);
+        break;
+
+      case ARCADE:
+        forward = applySpeed(leftY, forwardFactor);
+        turn = applySpeed(leftX, turnFactor);
+
+        this->arcade(forward, turn);
+        break;
+
+      case SPLIT_ARCADE:
+        forward = applySpeed(leftY, forwardFactor);
+        turn = applySpeed(rightX, turnFactor);
+
+        this->arcade(forward, turn);
+        break;
+
+      case CURVATURE:
+        forward = applySpeed(leftY, forwardFactor);
+        turn = applySpeed(leftX, turnFactor);
+
+        this->curvature(forward, turn);
+        break;
+
+      case SPLIT_CURVATURE:
+        forward = applySpeed(leftY, forwardFactor);
+        turn = applySpeed(rightX, turnFactor);
+
+        this->curvature(forward, turn);
+        break;
+
+      case HOLONOMIC:
+        forward = applySpeed(leftY, forwardFactor);
+        sideways = applySpeed(leftX, sidewaysFactor);
+        turn = applySpeed(rightX, turnFactor);
+
+        this->holonomic(forward, sideways, turn);
+        break;
+
+      default:
+        left = applySpeed(leftY, forwardFactor);
+        right = applySpeed(rightY, forwardFactor);
+
+        this->tank(left, right);
+        break;
+    }
+  }
 
   /// @brief Stops all motors
   virtual void stop() { this->motors(0); }
@@ -216,6 +337,43 @@ class Drivetrain {
   /// @param dt The time elapsed since the last function call in \b seconds.
   /// @return The updated velocity in \b RPM.
   virtual double updateProfile(const double &distance, const double &dt) = 0;
+
+  /// @brief Makes the robot drive in an arc motion based on a given `radius`
+  /// @param radius The radius of the arc of the motion in \b inches measured
+  /// from the center of rotation of the robot to the reference point in the
+  /// right when positive and in the left when negative
+  /// @param speed The speed with which to drive in \b RPM (positive speed
+  /// will go forward and negative speed will go backwards)
+  /// @note A positive `radius` will cause a clockwise rotation, while a
+  /// negative `radius` will cause a counter-clockwise rotation
+  /// @see https://www.desmos.com/calculator/91cbd82e8b
+  virtual void driveInArc(double radius, const double &speed = 200) = 0;
+
+  /// @brief Makes the robot drive in an arc motion based on a given `radius`
+  /// for a given `angle`
+  /// @param radius The radius of the arc of the motion in \b inches measured
+  /// from the center of rotation of the robot to the reference point in the
+  /// right when positive and in the left when negative
+  /// @param angle The angle of the arc we want to cover in \b degrees, a
+  /// negative angle will cause the robot to go in reverse
+  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
+  /// @note A positive `radius` will cause a rotation with reference to a point
+  /// to the right, while a negative `radius` will cause a rotation with
+  /// reference to a point to the left
+  /// @note A positive `angle` will cause a forward movement, while a negative
+  /// `angle` will cause a backwards movement
+  /// @see https://www.desmos.com/calculator/91cbd82e8b
+  virtual void driveAngleOfArc(const double &radius = DRIVE_WIDTH,
+                               const double &angle = 90,
+                               bool settle = true) = 0;
+
+  /// @brief Makes the robot drive in an arc motion to a specified point in the
+  /// field
+  /// @param x The x coordinate of the point we want to go to in \b meters
+  /// @param y The y coordinate of the point we want to go to in \b meters
+  /// @note Odometry must be working for global positioning on the field
+  /// @see https://www.desmos.com/calculator/5abb373276
+  virtual void driveInArcTo(const double &x, const double &y) = 0;
 
   /// @brief Turns the robot towards a specific direction
   /// @param x The x component of the point we wish to face

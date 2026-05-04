@@ -33,7 +33,8 @@ class XDrive : public Drivetrain {
          const std::initializer_list<okapi::Motor> &FRPorts = {0},
          const std::initializer_list<okapi::Motor> &BLPorts = {0},
          const std::initializer_list<okapi::Motor> &BRPorts = {0},
-         std::unique_ptr<Odometry> odometry = nullptr
+         std::unique_ptr<Odometry> odometry = nullptr,
+         SpeedFactors speedFactors = SpeedFactors()
         )
       : frontLeftMotors(FLPorts),
         frontRightMotors(FRPorts),
@@ -42,27 +43,25 @@ class XDrive : public Drivetrain {
         xProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain(std::move(odometry)) {}
+        Drivetrain(std::move(odometry), speedFactors) {}
 
   void initialize() override;
 
-  /// @brief Moves all motors the same `rpm` to move forward
-  /// @param rpm The speed in which to move all motors in \b rpm
-  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
-  void motors(const double &rpm = MAX_RPM, const int& delay = 0) override;
-
   /// @brief Moves all motors the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm (positive is right and negative is left)
-  void sideways(const double &rpm);
+  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
+  void sideways(const double &rpm = MAX_RPM, const int& delay = 0) override;
 
-  /// @brief Moves all motors the same `rpm` to rotate clockwise
-  /// @param rpm The speed in which to move all motors in \b rpm
-  void rotate(const double &rpm) override;
+  /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
+  /// @param left The \b RPM to send to the left-side motors (positive is forward)
+  /// @param right The \b RPM to send to the right-side motors (positive is forward)
+  void tank(const double &left, const double &right) override;
 
-  /// @brief Moves the robot forward while also turning
-  /// @param forward The \b RPM to send to the motors for linear movement (positive is forward)
-  /// @param turn The \b RPM to send to the motors for rotative movement (positive is clockwise)
-  void driveWhileTurning(const double &forward, const double &turn) override;
+  /// @brief Drives a holonomic (e.g. mecanum or X-drive) robot with independent forward, sideways, and rotational control
+  /// @param forward The \b RPM to send to all motors for linear forward/backward movement (positive is forward)
+  /// @param sideways The \b RPM to send to all motors for lateral strafe movement (positive is rightward)
+  /// @param turn The \b RPM to send to all motors for rotational movement (positive is clockwise)
+  void holonomic(const double &forward, const double &sideways, const double &turn) override;
 
   /// @brief Makes the robot drive in an arc motion based on a given `radius`
   /// @param radius The radius of the arc of the motion in \b inches measured from the center of rotation of the robot to the reference point in the right when positive and in the left when negative
@@ -93,13 +92,6 @@ class XDrive : public Drivetrain {
   /// @note See https://understandinglinearalgebra.org/sec-bases.html to understand the conversion between bases
   /// @details The basis B is formed by the crossed wheels (in 45º and 135º angles with respect to the horizontal)
   static Vector translateToMotorCommand(Vector direction);
-
-  /// @brief Drives the robot in the direction of the left joystick while turning it with the right joystick
-  /// @param leftX The value of the left joystick on the x-axis in the range [-1, 1]
-  /// @param leftY The value of the left joystick on the y-axis in the range [-1, 1]
-  /// @param rightX The value of the right joystick on the x-axis in the range [-1, 1]
-  /// @param rightY The value of the right joystick on the y-axis in the range [-1, 1]
-  void drive(double leftX, double leftY, double rightX, double rightY) override;
 
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain

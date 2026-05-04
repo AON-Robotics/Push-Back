@@ -29,8 +29,9 @@
 
 aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
 
-// Drivetrain
-aon::HDrive drivetrain = aon::HDrive({12, -13, -18, 19}, {-1, 2, 3, -4}, {-15}, std::make_unique<aon::Odometry>(odometry));
+aon::Drivetrain::SpeedFactors speedFactors = aon::Drivetrain::SpeedFactors(0.6, 1.0, 0.6, 1.0, 1.0, 1.0);
+
+aon::HDrive drivetrain = aon::HDrive({12, -13, -18, 19}, {-1, 2, 3, -4}, {-15}, std::make_unique<aon::Odometry>(odometry), speedFactors);
 
 aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16, 'F', 'E');
 
@@ -42,7 +43,9 @@ aon::Piston brooks('D', aon::Piston::RETRACTED);
 // aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
 aon::Odometry odometry = aon::Odometry(19, -18, 5, 0, 16);
 
-aon::TankDrive drivetrain = aon::TankDrive({11, -12, 13, -14}, {1, -2, 3, -4}, std::make_unique<aon::Odometry>(odometry));
+aon::Drivetrain::SpeedFactors speedFactors = aon::Drivetrain::SpeedFactors(0.6, 0.0, 0.6, 1.0, 0.0, 0.667);
+
+aon::TankDrive drivetrain = aon::TankDrive({11, -12, 13, -14}, {1, -2, 3, -4}, std::make_unique<aon::Odometry>(odometry), speedFactors);
 
 aon::Intake intake = aon::Intake({-9}, {-6}, {7}, {-8}, 'H', 'B', 'A', 20, 17);
 

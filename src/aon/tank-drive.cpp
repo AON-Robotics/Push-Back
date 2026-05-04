@@ -7,29 +7,9 @@ void TankDrive::initialize(){
   this->odometry->initialize();
 }
 
-void TankDrive::motors(const double &rpm, const int& delay) {
-  this->leftMotors.moveVelocity(rpm);
-  this->rightMotors.moveVelocity(rpm);
-  if (delay == 0) return;
-  pros::delay(delay);
-  this->stop();
-}
-
-void TankDrive::rotate(const double &rpm) {
-  this->leftMotors.moveVelocity(rpm);
-  this->rightMotors.moveVelocity(-rpm);
-}
-
-void TankDrive::driveWhileTurning(const double &forward, const double &turn){
-  this->leftMotors.moveVelocity(forward + turn);
-  this->rightMotors.moveVelocity(forward - turn);
-}
-
-void TankDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-  const double vertical = applySpeed(leftY, this->isTurbo() ? 1.0 : 0.6);
-  const double turn = applySpeed(rightX, this->isTurbo() ? (1.0 * (4.0/6.0)) : 0.4); // TODO: make these settable
-
-  this->driveWhileTurning(vertical, turn);
+void TankDrive::tank(const double &left, const double &right){
+  this->leftMotors.moveVelocity(left);
+  this->rightMotors.moveVelocity(right);
 }
 
 void TankDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
@@ -255,8 +235,7 @@ void TankDrive::driveInArc(double radius, const double &midSpeed) {
     leftSpeed = innerSpeed;
   }
 
-  leftMotors.moveVelocity(leftSpeed); 
-  rightMotors.moveVelocity(rightSpeed);
+  this->tank(leftSpeed, rightSpeed);
 }
 
 void TankDrive::driveAngleOfArc(const double &radius, const double &angle, bool settle) {
@@ -395,8 +374,7 @@ void TankDrive::goToPose(const Pose& pose) {
     dt = now - lastTime;
     output = controller.go(pose, this->odometry->getPose(), dt);
     lastTime = now;
-    this->leftMotors.moveVelocity(output.first);
-    this->rightMotors.moveVelocity(output.second);
+    this->tank(output.first, output.second);
 
     pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
     pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", pose.x, pose.y, pose.theta);
@@ -432,8 +410,7 @@ void TankDrive::follow(const std::vector<Pose>& path) {
     dt = now - lastTime;
     output = controller.follow(path, this->odometry->getPose(), dt);
     lastTime = now;
-    this->leftMotors.moveVelocity(output.first);
-    this->rightMotors.moveVelocity(output.second);
+    this->tank(output.first, output.second);
 
     pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
     pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", path.back().x, path.back().y, path.back().theta);

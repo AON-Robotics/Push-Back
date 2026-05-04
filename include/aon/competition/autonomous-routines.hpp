@@ -137,7 +137,7 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
 
     double FORWARD = drivetrain.updateProfile(distance, dt);
 
-    drivetrain.driveWhileTurning(FORWARD, TURN);
+    drivetrain.arcade(FORWARD, TURN);
     pros::delay(20);
   }
   #undef TIME

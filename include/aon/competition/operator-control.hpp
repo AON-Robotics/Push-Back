@@ -70,16 +70,7 @@ inline void DriveDefault() {
   double leftY = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
   double rightX = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
   double rightY = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
-  drivetrain.drive(leftX, leftY, rightX, rightY);
-  
-  // TODO: discuss with driver if he wants this functionality (probably will)
-  // if(mainController.get_digital(DIGITAL_R1)){
-  //   intake.activateScan();
-  //   intake.elevator();
-  // }
-  // else {
-  //   intake.stopScan();
-  // }
+  drivetrain.drive(leftX, leftY, rightX, rightY, Drivetrain::HOLONOMIC);
 
   if(mainController.get_digital(DIGITAL_L1)){
     intake.store();
@@ -158,7 +149,7 @@ inline void DriveDefault() {
   double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
   double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
   double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
-  drivetrain.drive(leftX, leftY, rightX, rightY);
+  drivetrain.drive(leftX, leftY, rightX, rightY, Drivetrain::SPLIT_ARCADE);
 
   if(mainController.get_digital_new_press(DIGITAL_R2)) {
     size_t currentTime = pros::millis();

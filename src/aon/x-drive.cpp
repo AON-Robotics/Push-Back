@@ -7,56 +7,41 @@ void XDrive::initialize() {
   this->odometry->initialize();
 }
 
-void XDrive::motors(const double &rpm, const int& delay) {
+void XDrive::sideways(const double &rpm, const int& delay) {
   this->frontLeftMotors.moveVelocity(rpm);
-  this->frontRightMotors.moveVelocity(rpm);
-  this->backLeftMotors.moveVelocity(rpm);
+  this->frontRightMotors.moveVelocity(-rpm);
+  this->backLeftMotors.moveVelocity(-rpm);
   this->backRightMotors.moveVelocity(rpm);
   if (delay == 0) return;
   pros::delay(delay);
   this->stop();
 }
 
-void XDrive::sideways(const double &rpm) {
-  this->frontLeftMotors.moveVelocity(rpm);
-  this->frontRightMotors.moveVelocity(-rpm);
-  this->backLeftMotors.moveVelocity(-rpm);
-  this->backRightMotors.moveVelocity(rpm);
+void XDrive::tank(const double &left, const double &right){
+  this->frontLeftMotors.moveVelocity(left);
+  this->backLeftMotors.moveVelocity(left);
+  this->frontRightMotors.moveVelocity(right);
+  this->backRightMotors.moveVelocity(right);
 }
 
-void XDrive::rotate(const double &rpm) {
-  this->frontLeftMotors.moveVelocity(rpm);
-  this->frontRightMotors.moveVelocity(-rpm);
-  this->backLeftMotors.moveVelocity(rpm);
-  this->backRightMotors.moveVelocity(-rpm);
-}
+void XDrive::holonomic(const double &forward, const double &sideways, const double &turn){
+  Vector direction = Vector().SetPosition(sideways, forward);
+  Vector command = translateToMotorCommand(direction);
+  double topRightDiag = command.GetX();
+  double topLeftDiag = command.GetY();
 
-void XDrive::driveWhileTurning(const double &forward, const double &turn){
-  this->frontLeftMotors.moveVelocity(forward + turn);
-  this->frontRightMotors.moveVelocity(forward - turn);
-  this->backLeftMotors.moveVelocity(forward + turn);
-  this->backRightMotors.moveVelocity(forward - turn);
+  // TODO: scale to ensure nothing exceeds MAX_RPM
+  this->frontLeftMotors.moveVelocity(topRightDiag + turn);
+  this->frontRightMotors.moveVelocity(topLeftDiag - turn);
+  this->backLeftMotors.moveVelocity(topLeftDiag + turn);
+  this->backRightMotors.moveVelocity(topRightDiag - turn);
 }
-
 
 Vector XDrive::translateToMotorCommand(Vector direction){
   Vector result;
   result.SetX(direction.GetX() * 0.70710678118 + direction.GetY() * 0.70710678118);
   result.SetY(direction.GetX() * -0.70710678118 + direction.GetY() * 0.70710678118);
   return result;
-}
-
-void XDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-  Vector direction = Vector().SetPosition(leftX, leftY);
-  Vector command = translateToMotorCommand(direction);
-  double topRightDiag = applySpeed(command.GetX(), this->isTurbo() ? 1 : 0.5);
-  double topLeftDiag = applySpeed(command.GetY(), this->isTurbo() ? 1 : 0.5);
-  double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.5);
-
-  this->frontLeftMotors.moveVelocity(topRightDiag + turn);
-  this->frontRightMotors.moveVelocity(topLeftDiag - turn);
-  this->backLeftMotors.moveVelocity(topLeftDiag + turn);
-  this->backRightMotors.moveVelocity(topRightDiag - turn);
 }
 
 void XDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
@@ -334,10 +319,7 @@ void XDrive::driveInArc(double radius, const double &midSpeed) {
     leftSpeed = innerSpeed;
   }
 
-  frontLeftMotors.moveVelocity(leftSpeed); 
-  backLeftMotors.moveVelocity(leftSpeed); 
-  frontRightMotors.moveVelocity(rightSpeed);
-  backRightMotors.moveVelocity(rightSpeed);
+  this->tank(leftSpeed, rightSpeed);
 }
 
 void XDrive::driveAngleOfArc(const double &radius, const double &angle, bool settle) {
@@ -538,16 +520,19 @@ void XDrive::goToPose(const Pose& target){
 
     Vector direction = Vector().SetPosition(x, y);
     direction.SetDegrees(direction.GetDegrees() + this->getTheta());// - initialPose.theta);
-    Vector command = translateToMotorCommand(direction);
-    
-    double topRightDiag = command.GetX();
-    double topLeftDiag = command.GetY();
-    double turn = theta;
 
-    this->frontLeftMotors.moveVelocity(topRightDiag + turn);
-    this->frontRightMotors.moveVelocity(topLeftDiag - turn);
-    this->backLeftMotors.moveVelocity(topLeftDiag + turn);
-    this->backRightMotors.moveVelocity(topRightDiag - turn);
+    // TODO: test that this line correctly replaces the previous (commented out) behavior (it should)
+    this->holonomic(direction.GetY(), direction.GetX(), theta);
+    // Vector command = translateToMotorCommand(direction);
+    
+    // double topRightDiag = command.GetX();
+    // double topLeftDiag = command.GetY();
+    // double turn = theta;
+
+    // this->frontLeftMotors.moveVelocity(topRightDiag + turn);
+    // this->frontRightMotors.moveVelocity(topLeftDiag - turn);
+    // this->backLeftMotors.moveVelocity(topLeftDiag + turn);
+    // this->backRightMotors.moveVelocity(topRightDiag - turn);
 
     pros::delay(delay);
 
@@ -578,10 +563,7 @@ void XDrive::follow(const std::vector<Pose>& path) {
     dt = now - lastTime;
     output = controller.go(pose, this->odometry->getPose(), dt);
     lastTime = now;
-    this->frontLeftMotors.moveVelocity(output.first);
-    this->backLeftMotors.moveVelocity(output.first);
-    this->frontRightMotors.moveVelocity(output.second);
-    this->backRightMotors.moveVelocity(output.second);
+    this->tank(output.first, output.second);
 
     pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
     pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", pose.x, pose.y, pose.theta);
@@ -592,6 +574,8 @@ void XDrive::follow(const std::vector<Pose>& path) {
 
     pros::delay(10);
   }
+
+  this->turnToHeading(path.back().theta);
 
   this->stop();
 }

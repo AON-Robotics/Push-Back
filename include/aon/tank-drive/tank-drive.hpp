@@ -27,31 +27,21 @@ class TankDrive : public Drivetrain {
  public:
   TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
             const std::initializer_list<okapi::Motor> &rightPorts = {0},
-            std::unique_ptr<Odometry> odometry = nullptr
+            std::unique_ptr<Odometry> odometry = nullptr,
+            SpeedFactors speedFactors = SpeedFactors()
           )
       : leftMotors(leftPorts, 0, MAX_ACCEL),
         rightMotors(rightPorts, 0, MAX_ACCEL),
         motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
         turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain(std::move(odometry)) {}
+        Drivetrain(std::move(odometry), speedFactors) {}
 
   void initialize() override;
 
-  /// @brief Moves all motors the same `rpm` to move forward
-  /// @param rpm The speed in which to move all motors in \b rpm
-  /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
-  void motors(const double &rpm = MAX_RPM, const int& delay = 0) override;
-
-  /// @brief Moves all motors the same `rpm` to rotate clockwise
-  /// @param rpm The speed in which to move all motors in \b rpm
-  void rotate(const double &rpm) override;
-
-  /// @brief Moves the robot forward while also turning
-  /// @param forward The \b RPM to send to the motors for linear movement
-  /// (positive is forward)
-  /// @param turn The \b RPM to send to the motors for rotative movement
-  /// (positive is clockwise)
-  void driveWhileTurning(const double &forward, const double &turn) override;
+  /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
+  /// @param left The \b RPM to send to the left-side motors (positive is forward)
+  /// @param right The \b RPM to send to the right-side motors (positive is forward)
+  void tank(const double &left, const double &right) override;
 
   /// @brief Makes the robot drive in an arc motion based on a given `radius`
   /// @param radius The radius of the arc of the motion in \b inches measured
@@ -89,18 +79,6 @@ class TankDrive : public Drivetrain {
   /// @note Odometry must be working for global positioning on the field
   /// @see https://www.desmos.com/calculator/5abb373276
   void driveInArcTo(const double &x, const double &y) override;
-
-  /// @brief Drives the robot in the direction of the left joystick while
-  /// turning it with the right joystick
-  /// @param leftX The value of the left joystick on the x-axis in the range
-  /// [-1, 1]
-  /// @param leftY The value of the left joystick on the y-axis in the range
-  /// [-1, 1]
-  /// @param rightX The value of the right joystick on the x-axis in the range
-  /// [-1, 1]
-  /// @param rightY The value of the right joystick on the y-axis in the range
-  /// [-1, 1]
-  void drive(double leftX, double leftY, double rightX, double rightY) override;
 
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain

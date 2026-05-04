@@ -8,35 +8,16 @@ void HDrive::initialize() {
   this->odometry->initialize();
 }
 
-void HDrive::motors(const double &rpm, const int& delay) {
-  this->leftMotors.moveVelocity(rpm);
-  this->rightMotors.moveVelocity(rpm);
+void HDrive::sideways(const double &rpm, const int& delay) {
+  this->midMotors.moveVelocity(rpm);
   if (delay == 0) return;
   pros::delay(delay);
   this->stop();
 }
 
-void HDrive::sideways(const double &rpm) {
-  this->midMotors.moveVelocity(rpm);
-}
-
-void HDrive::rotate(const double &rpm) {
-  this->leftMotors.moveVelocity(rpm);
-  this->rightMotors.moveVelocity(-rpm);
-}
-
-void HDrive::driveWhileTurning(const double &forward, const double &turn){
-  this->leftMotors.moveVelocity(forward + turn);
-  this->rightMotors.moveVelocity(forward - turn);
-}
-
-void HDrive::drive(double leftX, double leftY, double rightX, double rightY) {
-  double forward = applySpeed(leftY, this->isTurbo() ? 1 : 0.5);
-  double sideways = applySpeed(leftX, this->isTurbo() ? 1 : 0.75);
-  double turn = applySpeed(rightX, this->isTurbo() ? 1 : 0.5);
-
-  this->driveWhileTurning(forward, turn);
-  this->sideways(sideways);
+void HDrive::tank(const double &left, const double &right){
+  this->leftMotors.moveVelocity(left);
+  this->rightMotors.moveVelocity(right);
 }
 
 void HDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
@@ -65,8 +46,6 @@ void HDrive::setSlewRate(double slew){
   rightMotors.SetAcceleration(slew);
   midMotors.SetAcceleration(slew);
 }
-
-
 
 double HDrive::getRPM(){
   double left = leftMotors.getActualVelocity();
@@ -316,8 +295,7 @@ void HDrive::driveInArc(double radius, const double &midSpeed) {
     leftSpeed = innerSpeed;
   }
 
-  leftMotors.moveVelocity(leftSpeed); 
-  rightMotors.moveVelocity(rightSpeed);
+  this->tank(leftSpeed, rightSpeed);
 }
 
 void HDrive::driveAngleOfArc(const double &radius, const double &angle, bool settle) {
@@ -518,10 +496,8 @@ void HDrive::goToPose(const Pose& target){
 
     Vector direction = Vector().SetPosition(x, y);
     direction.SetDegrees(direction.GetDegrees() + this->getTheta());// - initialPose.theta);
-    
 
-    this->driveWhileTurning(direction.GetY(), theta);
-    this->sideways(direction.GetX());
+    this->holonomic(direction.GetY(), direction.GetX(), theta);
 
     pros::delay(delay);
 
@@ -553,8 +529,7 @@ void HDrive::follow(const std::vector<Pose>& path) {
     dt = now - lastTime;
     output = controller.follow(path, this->odometry->getPose(), dt);
     lastTime = now;
-    this->leftMotors.moveVelocity(output.first);
-    this->rightMotors.moveVelocity(output.second);
+    this->tank(output.first, output.second);
 
     pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
     pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", path.back().x, path.back().y, path.back().theta);
