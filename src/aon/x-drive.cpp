@@ -542,7 +542,7 @@ void XDrive::goToPose(const Pose& target){
 }
 
 void XDrive::follow(const std::vector<Pose>& path) {
-  PurePursuit controller = PurePursuit(this->yProfile, this->thetaProfile, 5, 0.5, 2.0);
+  PurePursuit controller = PurePursuit(this->yProfile, this->thetaProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};
 
@@ -554,7 +554,7 @@ void XDrive::follow(const std::vector<Pose>& path) {
   const uint32_t timeoutMs = (this->odometry->getPose().distanceTo(pose)) * 1E3;
   Timer timer;
   timer.start(timeoutMs);
-  while (odometry->getPose().distanceTo(pose) > 2.0 && !timer.isCompleted()){
+  while (odometry->getPose().distanceTo(path.back()) > 2.0 && !timer.isCompleted()) {
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     output = controller.go(pose, this->odometry->getPose(), dt);

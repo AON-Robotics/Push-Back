@@ -400,7 +400,7 @@ void TankDrive::follow(const std::vector<Pose>& path) {
   Timer timer;
   timer.start(timeoutMs);
 
-  while (odometry->getPose().distanceTo(path.back()) > 2.0 && std::abs(odometry->getDegrees() - path.back().theta) > 5.0 && !timer.isCompleted()) {
+  while (odometry->getPose().distanceTo(path.back()) > 2.0 && !timer.isCompleted()) {
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     output = controller.follow(path, this->odometry->getPose(), dt);
