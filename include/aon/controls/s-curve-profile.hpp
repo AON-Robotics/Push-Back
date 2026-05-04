@@ -45,6 +45,8 @@ class MotionProfile {
     this->JERK = std::abs(JERK);  // RPM/(s^2)
   }
 
+  MotionProfile(){}
+
   /// @brief Returns the current stage of the motion profile
   /// @return The stage of the motion profile
   Stage getStage() const { return this->stage; }

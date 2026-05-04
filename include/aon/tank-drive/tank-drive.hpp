@@ -1,18 +1,6 @@
 #pragma once
 
-#include "../../api.h"
-#include "../../okapi/api.hpp"
-#include "../controls/s-curve-profile.hpp"
-#include "../controls/smart_motor.hpp"
-#include "../odometry/odometry.hpp"
-#include "../controls/pure-pursuit.hpp"
-#include "../include/aon/math/timer.hpp"
-
-#include "../math/misc/misc.hpp"
-#include "../controls/pid/pid.hpp"
 #include "../drivetrain.hpp"
-#include <cfloat>
-#include "../math/pose.hpp"
 
 namespace aon {
 
@@ -20,63 +8,24 @@ class TankDrive : public Drivetrain {
  private:
   SmartMotorGroup leftMotors;
   SmartMotorGroup rightMotors;
-  MotionProfile motionProfile;
-  MotionProfile turningProfile;
-
 
  public:
   TankDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
             const std::initializer_list<okapi::Motor> &rightPorts = {0},
+            Pose pose = Pose(),
             std::unique_ptr<Odometry> odometry = nullptr,
-            SpeedFactors speedFactors = SpeedFactors()
+            SpeedFactors speedFactors = SpeedFactors(),
+            MotionProfile yProfile = MotionProfile(), 
+            MotionProfile thetaProfile = MotionProfile()
           )
       : leftMotors(leftPorts, 0, MAX_ACCEL),
         rightMotors(rightPorts, 0, MAX_ACCEL),
-        motionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
-        turningProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-        Drivetrain(std::move(odometry), speedFactors) {}
+        Drivetrain(pose, std::move(odometry), speedFactors, MotionProfile(), yProfile, thetaProfile) {}
 
   /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
   /// @param left The \b RPM to send to the left-side motors (positive is forward)
   /// @param right The \b RPM to send to the right-side motors (positive is forward)
   void tank(const double &left, const double &right) override;
-
-  /// @brief Makes the robot drive in an arc motion based on a given `radius`
-  /// @param radius The radius of the arc of the motion in \b inches measured
-  /// from the center of rotation of the robot to the reference point in the
-  /// right when positive and in the left when negative
-  /// @param midSpeed The speed with which to drive in \b RPM (positive speed
-  /// will go forward and negative speed will go backwards)
-  /// @note A positive `radius` will cause a clockwise rotation, while a
-  /// negative `radius` will cause a counter-clockwise rotation
-  /// @see https://www.desmos.com/calculator/91cbd82e8b
-  void driveInArc(double radius, const double &midSpeed = 200) override;
-
-  /// @brief Makes the robot drive in an arc motion based on a given `radius`
-  /// for a given `angle`
-  /// @param radius The radius of the arc of the motion in \b inches measured
-  /// from the center of rotation of the robot to the reference point in the
-  /// right when positive and in the left when negative
-  /// @param angle The angle of the arc we want to cover in \b degrees, a
-  /// negative angle will cause the robot to go in reverse
-  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
-  /// @note A positive `radius` will cause a rotation with reference to a point
-  /// to the right, while a negative `radius` will cause a rotation with
-  /// reference to a point to the left
-  /// @note A positive `angle` will cause a forward movement, while a negative
-  /// `angle` will cause a backwards movement
-  /// @see https://www.desmos.com/calculator/91cbd82e8b
-  void driveAngleOfArc(const double &radius = DRIVE_WIDTH,
-                       const double &angle = 90, 
-                       bool settle = true) override;
-
-  /// @brief Makes the robot drive in an arc motion to a specified point in the
-  /// field
-  /// @param x The x coordinate of the point we want to go to in \b meters
-  /// @param y The y coordinate of the point we want to go to in \b meters
-  /// @note Odometry must be working for global positioning on the field
-  /// @see https://www.desmos.com/calculator/5abb373276
-  void driveInArcTo(const double &x, const double &y) override;
 
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain
@@ -98,78 +47,11 @@ class TankDrive : public Drivetrain {
   /// @return The RPM of the motors with respect to the front of the robot
   double getRPM() override;
 
-  /// @brief Moves the robot a given distance (default forward)
-  /// @param pid The PID used for the driving
-  /// @param dist The distance to be moved in \b inches
-  /// @param MAX_REVS The maximum RPM to send to the movement
-  void drivePID(PID pid = PID(0.02, 0, 0), double dist = TILE_WIDTH,
-                const double &MAX_REVS = 100.0) override;
-
-  /// @brief Turns the robot by a given angle (default clockwise)
-  /// @param pid The PID to be used for the turn
-  /// @param angle The angle to make the robot turn in \b degrees
-  /// @param MAX_REVS The maximum RPM to send to the movement
-  void turnPID(PID pid = PID(0.002, 0, 0), double angle = 90,
-               const double &MAX_REVS = 50.0) override;
-
-  /// @brief S-graph motion profile for linear movement
-  /// @param dist The distance to be moved in \b inches, positive values will
-  /// move forward and negative values backwards
-  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
-  void driveProfiled(double dist = TILE_WIDTH, bool settle = true) override;
-
-  /// @brief S-graph motion profile for rotations
-  /// @param angle The angle in \b degrees we wish to rotate the robot, positive
-  /// is clockwise and negative is counter-clockwise
-  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
-  void turnProfiled(double angle = 90, bool settle = true) override;
-
-  /// @brief Moves the robot a given distance
-  /// @param dist The distance to move in \b inches
-  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
-  /// @details A positive `dist` makes the robot go forward while a negative
-  /// `dist` makes the robot go backwards
-  void move(const double &dist = TILE_WIDTH, bool settle = true) override;
-
-  /// @brief Turn the robot a given angle (default is clockwise)
-  /// @param angle The angle to turn in \b degrees
-  /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
-  /// @details Clockwise is positive and counter-clockwise is negative
-  void turn(const double &angle = 90, bool settle = true) override;
-
-  /// @brief Sets the max velocity for the drivetrains motion profile
-  /// @param rpm The max velocity in \b RPM to pass to the motion profile
-  void setMaxVelocity(const double &rpm) override;
-
-  /// @brief Calculates the target velocity to send to the motors for smooth and
-  /// precise movements using an S-curve profile.
-  /// @param distance The remaining distance to the target in \b inches.
-  /// @param dt The time elapsed since the last function call in \b seconds.
-  /// @return The updated velocity in \b RPM.
-  double updateProfile(const double &distance, const double &dt) override;
-
-  /// @brief Turns the robot towards a specific direction
-  /// @param x The x component of the point we wish to face
-  /// @param y The y component of the point we wish to face
-  /// @note Uses coordinate system from GPS in \b meters
-  void turnTo(const double &x, const double &y) override;
-
-  /// @brief Goes to the target point
-  /// @param x The x component of the place where we want to go using the gps
-  /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
-  /// @param y The y component of the place where we want to go using the gps
-  /// coordinate system (x, y) both need to be in the range (-1.8, 1.8)
-  /// @note Uses coordinate system from GPS in \b meters
-  void goTo(const double &x, const double &y) override;
-
   /// @brief Goes to the target point
   /// @param pose The target pose
   /// @note Uses coordinate system from GPS in \b meters
   void goToPose(const Pose &pose) override; // TODO: add optional `settle` boolean
 
-  /// @brief Follows a path using a pure pursuit controller
-  /// @param path The path to follow
-  /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
-  void follow(const std::vector<Pose>& path) override;
 };
+
 }  // namespace aon

@@ -161,16 +161,16 @@ namespace tests {
 
 /// @brief Basic Routine to make the robot go in circles around the map to test GPS setup.
 void gpsOctagon() {
-  drivetrain.goTo(.6, -1.2);
-  drivetrain.goTo(1.2, -.6);
-  drivetrain.goTo(1.2, .6);
-  drivetrain.goTo(.6, 1.2);
-  drivetrain.goTo(-.6, 1.2);
-  drivetrain.goTo(-1.2, .6);
-  drivetrain.goTo(-1.2, -.6);
-  drivetrain.goTo(-.6, -1.2);
-  drivetrain.goTo(.6, -1.2);
-  drivetrain.goTo(1.2, -.6);
+  drivetrain.goToPoint(.6, -1.2);
+  drivetrain.goToPoint(1.2, -.6);
+  drivetrain.goToPoint(1.2, .6);
+  drivetrain.goToPoint(.6, 1.2);
+  drivetrain.goToPoint(-.6, 1.2);
+  drivetrain.goToPoint(-1.2, .6);
+  drivetrain.goToPoint(-1.2, -.6);
+  drivetrain.goToPoint(-.6, -1.2);
+  drivetrain.goToPoint(.6, -1.2);
+  drivetrain.goToPoint(1.2, -.6);
 }
 
 /// @brief  Speed calculation test using the distance sensor
