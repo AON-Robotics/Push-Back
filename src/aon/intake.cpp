@@ -359,10 +359,22 @@ void Intake::reject(const int& delay) {
 }
 
 void Intake::lever(const uint32_t timeout) {
+  this->extendLever();
+  Timer timer(timeout);
+  while(!this->leverFinished() && !timer.isCompleted()){ pros::delay(5); }
+  this->resetLever();
+}
+
+void Intake::extendLever() {
   this->leverController->setTarget(150);
-  const uint32_t deadline = pros::millis() + timeout;
-  while(this->leverController->getError() > 10 && pros::millis() < deadline){ pros::delay(5); }
+}
+
+void Intake::resetLever() {
   this->leverController->setTarget(0);
+}
+
+bool Intake::leverFinished() {
+  return this->leverController->getError() < 10;
 }
 
 void Intake::score(const Height& height, const int& delay) {

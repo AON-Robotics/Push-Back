@@ -6,6 +6,7 @@
 #include "../tools/general.hpp"
 #include "../piston/piston.hpp"
 #include "../proximity/proximity.hpp"
+#include "../math/timer.hpp"
 
 extern volatile Alliance ALLIANCE;
 
@@ -137,6 +138,16 @@ class Intake {
 
   /// @brief Actuates the lever in its back and forth action (blocking)
   void lever(uint32_t timeout = 2000);
+
+  /// @brief Starts the lever controller towards 150 position
+  void extendLever();
+
+  /// @brief Starts the lever controller towards 0 position
+  void resetLever();
+
+  /// @brief Determines whether the lever is within 10 units of its set position
+  /// @return `true` if the lever is within 10 units from its set position, `false` otherwise
+  bool leverFinished();
 
   /// @brief Discards blocks through the back of the robot
   void reject(const int& delay = 0);

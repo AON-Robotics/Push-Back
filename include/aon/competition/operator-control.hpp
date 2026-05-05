@@ -178,19 +178,19 @@ inline void DriveDefault() {
     intake.score(Intake::BOTTOM);
   }
 
-  // Lever // TODO: make this behavior native to the intake class
+  // Lever
   if(mainController.get_digital_new_press(DIGITAL_R1)) {
     size_t currentTime = pros::millis();
 
     if(currentTime - lastR1PressTime < DOUBLE_TAP_TIME){
-      intake.leverController->setTarget(0);
+      intake.resetLever();
     } else {
-      intake.leverController->setTarget(150);
+      intake.extendLever();
     }
 
     lastR1PressTime = currentTime;
-  } else if (intake.leverController->getError() < 10) {
-    intake.leverController->setTarget(0);
+  } else if (intake.leverFinished()) {
+    intake.resetLever();
   }
 
   // Optional single tap
