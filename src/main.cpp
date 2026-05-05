@@ -1,6 +1,5 @@
 #include "../include/main.hpp"
 
-
 void initialize() {
   pros::Task guiLoopTask([]{aon::gui->initialize();});
   aon::logging::Initialize();
