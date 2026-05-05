@@ -113,12 +113,9 @@ void HDrive::goToPose(const Pose& target){
     remainingY = target.y - this->getY();
     remainingTheta = target.theta - this->getTheta();
 
-    double xSign = remainingX / abs(remainingX);
-    if(remainingX == 0) xSign = 1;
-    double ySign = remainingY / abs(remainingY);
-    if(remainingY == 0) ySign = 1;
-    double thetaSign = remainingTheta / abs(remainingTheta);
-    if(remainingTheta == 0) thetaSign = 1;
+    double xSign = (remainingX > 0) - (remainingX < 0);
+    double ySign = (remainingY > 0) - (remainingY < 0);
+    double thetaSign = (remainingTheta > 0) - (remainingTheta < 0);
 
     remainingX = abs(remainingX);
     remainingY = abs(remainingY);

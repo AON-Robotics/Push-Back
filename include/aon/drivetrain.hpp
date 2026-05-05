@@ -144,8 +144,8 @@ class Drivetrain {
     // Normalize if either side exceeds MAX_RPM
     double maxVal = std::max(std::abs(left), std::abs(right));
     if (maxVal > MAX_RPM) {
-      left  = left  / maxVal * MAX_RPM;
-      right = right / maxVal * MAX_RPM;
+      left  = (left  / maxVal) * MAX_RPM;
+      right = (right / maxVal) * MAX_RPM;
     }
 
     this->tank(left, right);
@@ -170,8 +170,8 @@ class Drivetrain {
     // Normalize if either side exceeds MAX_RPM
     double maxVal = std::max(std::abs(left), std::abs(right));
     if (maxVal > MAX_RPM) {
-      left  = left  / maxVal * MAX_RPM;
-      right = right / maxVal * MAX_RPM;
+      left  = (left  / maxVal) * MAX_RPM;
+      right = (right / maxVal) * MAX_RPM;
     }
 
     this->tank(left, right);
