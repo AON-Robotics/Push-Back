@@ -34,7 +34,7 @@ namespace aon::operator_control {
 ///
 /// @see Demonstration of scaling function in Desmos. https://www.desmos.com/calculator/kq9hgbxbwp
 /// @warning Make sure that the input `x` is between -127 and 127!!!
-inline double AnalogInputScaling(const double& x, const double& t) {
+inline double AnalogInputScaling(const double& x, const double& t) { // TODO: make an abstract Scaler class which has an implementation with this method, then another with a cubic, and whatever else popular methods there are, the choice of which to use will be up to the driver
   const double a = ::std::exp(-::std::fabs(t) / 10.0);
   const double b = ::std::exp((::std::fabs(x) - 127.0) / 10.0);
 
