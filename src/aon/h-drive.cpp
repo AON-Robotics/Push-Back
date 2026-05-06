@@ -121,9 +121,9 @@ void HDrive::goToPose(const Pose& target){
     remainingY = abs(remainingY);
     remainingTheta = abs(remainingTheta);
 
-    double x = this->xProfile.update(remainingX) * xSign;
-    double y = this->yProfile.update(remainingY) * ySign;
-    double theta = this->thetaProfile.update(circumference * (remainingTheta / 360.0)) * thetaSign;
+    double x = this->xProfile->update(remainingX) * xSign;
+    double y = this->yProfile->update(remainingY) * ySign;
+    double theta = this->thetaProfile->update(circumference * (remainingTheta / 360.0)) * thetaSign;
 
     Vector direction = Vector().SetPosition(x, y);
     direction.SetDegrees(direction.GetDegrees() + this->getTheta());// - initialPose.theta);
@@ -142,7 +142,7 @@ void HDrive::goToPose(const Pose& target){
 }
 
 void HDrive::follow(const std::vector<Pose>& path) {
-  PurePursuit controller = PurePursuit(this->yProfile, this->thetaProfile, 5, 2.5, 2.5);
+  PurePursuit controller = PurePursuit(*this->yProfile, *this->thetaProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};
 

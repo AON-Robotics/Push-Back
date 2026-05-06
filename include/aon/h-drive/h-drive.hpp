@@ -17,14 +17,14 @@ class HDrive : public Drivetrain {
          Pose pose = Pose(),
          std::unique_ptr<Odometry> odometry = nullptr,
          SpeedFactors speedFactors = SpeedFactors(),
-         MotionProfile xProfile = MotionProfile(),
-         MotionProfile yProfile = MotionProfile(),
-         MotionProfile thetaProfile = MotionProfile()
+         std::unique_ptr<MotionProfile> xProfile = nullptr,
+         std::unique_ptr<MotionProfile> yProfile = nullptr,
+         std::unique_ptr<MotionProfile> thetaProfile = nullptr
       )
       : leftMotors(leftPorts),
         rightMotors(rightPorts),
         midMotors(midPorts),
-        Drivetrain(pose, std::move(odometry), speedFactors, xProfile, yProfile, thetaProfile) {}
+        Drivetrain(pose, std::move(odometry), speedFactors, std::move(xProfile), std::move(yProfile), std::move(thetaProfile)) {}
 
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for

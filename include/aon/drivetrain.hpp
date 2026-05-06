@@ -52,16 +52,16 @@ class Drivetrain {
 
   SpeedFactors speedFactors;
 
-  MotionProfile xProfile;
-  MotionProfile yProfile;
-  MotionProfile thetaProfile;
+  std::unique_ptr<MotionProfile> xProfile;
+  std::unique_ptr<MotionProfile> yProfile;
+  std::unique_ptr<MotionProfile> thetaProfile;
   
   public:
 
   Drivetrain(Pose pose, std::unique_ptr<Odometry> odom, SpeedFactors speedFactors, 
-             MotionProfile xProfile, MotionProfile yProfile, MotionProfile thetaProfile): 
+             std::unique_ptr<MotionProfile> xProfile, std::unique_ptr<MotionProfile> yProfile, std::unique_ptr<MotionProfile> thetaProfile): 
              pose(pose), odometry(std::move(odom)), speedFactors(speedFactors),
-             xProfile(xProfile), yProfile(yProfile), thetaProfile(thetaProfile) {}
+             xProfile(std::move(xProfile)), yProfile(std::move(yProfile)), thetaProfile(std::move(thetaProfile)) {}
 
   enum DriveMode {
     TANK,
@@ -398,8 +398,8 @@ class Drivetrain {
     double now = pros::micros() / 1E6;
     double lastTime = now;
     
-    this->yProfile.setVelocity(this->getRPM());
-    this->yProfile.setFinalVelocity(settle ? 0 : 100);
+    this->yProfile->setVelocity(this->getRPM());
+    this->yProfile->setFinalVelocity(settle ? 0 : 100);
 
     while (traveledDist < dist && !timer.isCompleted()) {
       traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -412,7 +412,7 @@ class Drivetrain {
       pros::lcd::print(1, "Traveled %.2f / %.2f", traveledDist, dist);
       pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledDist, dist);
 
-      currVelocity = this->yProfile.update(remainingDist, dt);
+      currVelocity = this->yProfile->update(remainingDist, dt);
       this->motors(sign * currVelocity);
 
       if (remainingDist <= 0) { break; }  // Overshoot prevention
@@ -444,8 +444,8 @@ class Drivetrain {
     double now = pros::micros() / 1E6;
     double lastTime = now;
 
-    this->xProfile.setVelocity(this->getRPM());
-    this->xProfile.setFinalVelocity(settle ? 0 : 100);
+    this->xProfile->setVelocity(this->getRPM());
+    this->xProfile->setFinalVelocity(settle ? 0 : 100);
 
     while(traveledDist < dist && !timer.isCompleted()){
       traveledDist = (odometry->getPosition() - startPos).GetMagnitude();
@@ -456,7 +456,7 @@ class Drivetrain {
       dt =  now - lastTime;
       lastTime = now;
 
-      currVelocity = this->xProfile.update(remainingDist, dt);
+      currVelocity = this->xProfile->update(remainingDist, dt);
       this->sideways(sign * currVelocity);
 
       if(remainingDist <= 0) { break; } // Overshoot prevention
@@ -492,7 +492,7 @@ class Drivetrain {
     double now;
     double lastTime = pros::micros() / 1E6;
 
-    this->thetaProfile.setFinalVelocity(settle ? 0 : 50);
+    this->thetaProfile->setFinalVelocity(settle ? 0 : 50);
 
     while (traveledAngle < angle && !timer.isCompleted()) {
       currAngle = odometry->gyroscope.get_rotation();
@@ -507,7 +507,7 @@ class Drivetrain {
       pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
       // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledAngle, angle);
 
-      currVelocity = this->thetaProfile.update(circumference * (remainingAngle / 360.0), dt);
+      currVelocity = this->thetaProfile->update(circumference * (remainingAngle / 360.0), dt);
       this->rotate(sign * currVelocity);
 
       if (traveledAngle >= angle) { break; }  // Overshoot prevention
@@ -544,7 +544,7 @@ class Drivetrain {
   /// @brief Sets the max velocity for the drivetrains motion profile
   /// @param rpm The max velocity in \b RPM to pass to the motion profile
   void setMaxVelocity(const double &rpm) {
-    this->yProfile.setMaxVelocity(rpm);
+    this->yProfile->setMaxVelocity(rpm);
   }
 
   /// @brief Calculates the target velocity to send to the motors for smooth and
@@ -553,7 +553,7 @@ class Drivetrain {
   /// @param dt The time elapsed since the last function call in \b seconds.
   /// @return The updated velocity in \b RPM.
   double updateProfile(const double &distance, const double &dt) {
-    return this->yProfile.update(distance, dt);
+    return this->yProfile->update(distance, dt);
   }
 
   /// @brief Makes the robot drive in an arc motion based on a given `radius`
@@ -621,8 +621,8 @@ class Drivetrain {
     double lastTime = now;
     const double rightEncStartPos = odometry->encoderRight.get_position(); //! Temporary
     const double leftEncStartPos = odometry->encoderLeft.get_position(); //! Temporary
-    this->yProfile.setVelocity(this->getRPM());
-    this->yProfile.setFinalVelocity(settle ? 0 : 100);
+    this->yProfile->setVelocity(this->getRPM());
+    this->yProfile->setFinalVelocity(settle ? 0 : 100);
     // const double startDist = odometry::getTraveledDistance();
 
     // Timeout determined experimentally
@@ -638,7 +638,7 @@ class Drivetrain {
       remainingDist = distance - traveledDist;
       now = pros::micros() / 1E6;
       dt = now - lastTime;
-      midSpeed = this->yProfile.update(remainingDist, dt);
+      midSpeed = this->yProfile->update(remainingDist, dt);
       lastTime = now;
 
       this->driveInArc(radius, sign * midSpeed);
@@ -758,7 +758,7 @@ class Drivetrain {
   /// @param path The path to follow
   /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
   virtual void follow(const std::vector<Pose>& path) {
-    PurePursuit controller = PurePursuit(this->yProfile, this->thetaProfile, 5, 2.5, 2.5);
+    PurePursuit controller = PurePursuit(*this->yProfile, *this->thetaProfile, 5, 2.5, 2.5);
 
     std::pair<double, double> output = {-1, -1};
 

@@ -39,7 +39,7 @@ void opcontrol() {
 
     pros::delay(5000);
     #else
-    aon::operator_control::Run(aon::operator_control::DEFAULT);
+    aon::operator_control::Run(driver);
     #endif
     pros::delay(10);
   }

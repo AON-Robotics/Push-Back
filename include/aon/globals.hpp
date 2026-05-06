@@ -16,6 +16,16 @@
 #include "./odometry/odometry.hpp"
 #include "./piston/piston.hpp"
 
+namespace aon::operator_control {
+
+/// Driver profiles for all robots
+enum Driver {
+  KEVIN,
+  FABIAN,
+  DEFAULT,
+};
+}  // namespace aon::operator_control
+
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
 //  |  \/  |/ _ \_   _/ _ \| _ \/ __|
@@ -27,6 +37,8 @@
 
 #if USING_BIG_ROBOT
 
+aon::operator_control::Driver driver = aon::operator_control::FABIAN;
+
 aon::Pose startingPose = aon::Pose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y, INITIAL_ODOMETRY_THETA);
 aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
 
@@ -36,14 +48,25 @@ aon::MotionProfile xProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, 
 aon::MotionProfile yProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
 aon::MotionProfile thetaProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3);
 
-aon::HDrive drivetrain = aon::HDrive({12, -13, -18, 19}, {-1, 2, 3, -4}, {-15}, startingPose, std::make_unique<aon::Odometry>(odometry), speedFactors, xProfile, yProfile, thetaProfile);
-
-aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16, 'F', 'E');
-
-aon::Piston sem('G', aon::Piston::RETRACTED);
-aon::Piston brooks('D', aon::Piston::RETRACTED);
-
+aon::HDrive drivetrain = aon::HDrive(
+                          {12, -13, -18, 19},
+                          {-1, 2, 3, -4},
+                          {-15},
+                          startingPose,
+                          std::make_unique<aon::Odometry>(odometry),
+                          speedFactors,
+                          std::make_unique<aon::MotionProfile>(xProfile),
+                          std::make_unique<aon::MotionProfile>(yProfile),
+                          std::make_unique<aon::MotionProfile>(thetaProfile));
+                          
+                          aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16, 'F', 'E');
+                          
+                          aon::Piston sem('G', aon::Piston::RETRACTED);
+                          aon::Piston brooks('D', aon::Piston::RETRACTED);
+  
 #else
+  
+aon::operator_control::Driver driver = aon::operator_control::KEVIN;
 
 // aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
 aon::Pose startingPose = aon::Pose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y, INITIAL_ODOMETRY_THETA);
@@ -54,7 +77,14 @@ aon::Drivetrain::SpeedFactors speedFactors = aon::Drivetrain::SpeedFactors(0.6, 
 aon::MotionProfile yProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
 aon::MotionProfile thetaProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3);
 
-aon::DifferentialDrive drivetrain = aon::DifferentialDrive({11, -12, 13, -14}, {1, -2, 3, -4}, startingPose, std::make_unique<aon::Odometry>(odometry), speedFactors, yProfile, thetaProfile);
+aon::DifferentialDrive drivetrain = aon::DifferentialDrive(
+                                    {11, -12, 13, -14},
+                                    {1, -2, 3, -4},
+                                    startingPose,
+                                    std::make_unique<aon::Odometry>(odometry),
+                                    speedFactors,
+                                    std::make_unique<aon::MotionProfile>(yProfile),
+                                    std::make_unique<aon::MotionProfile>(thetaProfile));
 
 aon::Intake intake = aon::Intake({-9}, {-6}, {7}, {-8}, 'H', 'B', 'A', 20, 17);
 
@@ -75,28 +105,8 @@ aon::Orbit orbit(0, true, 0, 0);
 // ============================================================================
 
 
-pros::ADIEncoder opticalEncoder('Z', 'Z');
-
-// Vision
-
-// Colors
-enum Colors {
-  RED = 1,
-  BLUE,
-  STAKE,
-};
-
-Colors COLOR = RED;
-
 /// Set by the GUI; drives color-sort accept/reject logic at runtime.
 volatile Alliance ALLIANCE = Alliance::Red;
-
-volatile bool turretFollowing = false;
-volatile bool turretBraking = true;
-volatile bool turretScanning = false;
-pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(RED, 8973, 11143, 10058, -2119, -1053, -1586, 5.4, 0);
-pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(BLUE, -3050, -2000, -2500, 8000, 11000, 9500, 5.4, 0);
-pros::vision_signature_s_t STAKE_SIG = pros::Vision::signature_from_utility(STAKE, -2247, -1833, -2040, -5427, -4727, -5077, 4.600, 0); // RGB 4.600
 
 // Potentiometer
 pros::ADIPotentiometer potentiometer('Z');
@@ -110,15 +120,6 @@ aon::PID fastPID = aon::PID(1, 0, 0);
 /// Controller
 pros::Controller mainController = pros::Controller(CONTROLLER_MASTER);
 
-namespace aon::operator_control {
-
-/// Driver profiles for all robots
-enum Drivers {
-  KEVIN,
-  FABIAN,
-  DEFAULT,
-};
-}  // namespace aon::operator_control
 
 // ============================================================================
 //   ___ _   _ _  _  ___ _____ ___ ___  _  _ ___ 

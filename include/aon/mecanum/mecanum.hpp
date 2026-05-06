@@ -19,15 +19,15 @@ class MecanumDrive : public Drivetrain {
          Pose pose = Pose(),
          std::unique_ptr<Odometry> odometry = nullptr,
          SpeedFactors speedFactors = SpeedFactors(),
-         MotionProfile xProfile = MotionProfile(),
-         MotionProfile yProfile = MotionProfile(),
-         MotionProfile thetaProfile = MotionProfile()
+         std::unique_ptr<MotionProfile> xProfile = nullptr,
+         std::unique_ptr<MotionProfile> yProfile = nullptr,
+         std::unique_ptr<MotionProfile> thetaProfile = nullptr
         )
       : frontLeftMotors(FLPorts),
         frontRightMotors(FRPorts),
         backLeftMotors(BLPorts),
         backRightMotors(BRPorts),
-        Drivetrain(pose, std::move(odometry), speedFactors, xProfile, yProfile, thetaProfile) {}
+        Drivetrain(pose, std::move(odometry), speedFactors, std::move(xProfile), std::move(yProfile), std::move(thetaProfile)) {}
 
   /// @brief Moves all motors the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm (positive is right and negative is left)

@@ -36,7 +36,7 @@ double DifferentialDrive::getRPM(){
 }
 
 void DifferentialDrive::goToPose(const Pose& pose) {
-  PurePursuit controller = PurePursuit(this->yProfile, this->thetaProfile, 5, 2.5, 2.5);
+  PurePursuit controller = PurePursuit(*this->yProfile, *this->thetaProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};
 

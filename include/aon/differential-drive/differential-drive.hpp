@@ -15,12 +15,12 @@ class DifferentialDrive : public Drivetrain {
             Pose pose = Pose(),
             std::unique_ptr<Odometry> odometry = nullptr,
             SpeedFactors speedFactors = SpeedFactors(),
-            MotionProfile yProfile = MotionProfile(), 
-            MotionProfile thetaProfile = MotionProfile()
+            std::unique_ptr<MotionProfile> yProfile = nullptr,
+            std::unique_ptr<MotionProfile> thetaProfile = nullptr
           )
       : leftMotors(leftPorts, 0, MAX_ACCEL),
         rightMotors(rightPorts, 0, MAX_ACCEL),
-        Drivetrain(pose, std::move(odometry), speedFactors, MotionProfile(), yProfile, thetaProfile) {}
+        Drivetrain(pose, std::move(odometry), speedFactors, nullptr, std::move(yProfile), std::move(thetaProfile)) {}
 
   /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
   /// @param left The \b RPM to send to the left-side motors (positive is forward)

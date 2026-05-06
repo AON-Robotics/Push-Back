@@ -245,11 +245,6 @@ void alignment(){
   }
 }
 
-/// @brief Checks the output of an optical shaft encoder
-void ADIEncoder(){
-  pros::lcd::print(1, "Encoder value: %d", opticalEncoder.get_value());
-}
-
 /// @brief Outputs and logs the width of a ring, and the distance to it based on that width
 void visionSensorDistance(){
   MovingAverage readingMav(50);

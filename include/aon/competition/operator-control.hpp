@@ -49,7 +49,9 @@ inline double AnalogInputScaling(const double& x, const double& t) {
 //
 // ============================================================================
 
-#if USING_BIG_BOT
+#if USING_BIG_ROBOT
+bool sortActive = false;
+bool sortEnabled = true;
 #else
 size_t lastR1PressTime = 0;
 size_t lastR2PressTime = 0;
@@ -57,93 +59,13 @@ const int DOUBLE_TAP_TIME = 250;
 bool mergeCorridorAndElevator = true;
 #endif
 
-bool sortActive = false;
-bool sortEnabled = true;
 
 /// Default Operator Control configuration
-inline void DriveDefault() { 
-  //////////// DRIVE ////////////
-  
-  #if USING_BIG_ROBOT
-  //# From now on, all drivetrains used will need to use this format for driving
-  double leftX = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
-  double leftY = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
-  double rightX = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
-  double rightY = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
-  drivetrain.drive(leftX, leftY, rightX, rightY, Drivetrain::HOLONOMIC);
+inline void DriveDefault() { }
 
-  if(mainController.get_digital(DIGITAL_L1)){
-    intake.store();
-  }
-  else if(mainController.get_digital(DIGITAL_L2)){
-    intake.score(Intake::BOTTOM);
-  }
-  else if(!sortActive){
-    intake.stop();
-  }
-
-  // Evaluate new_press unconditionally so internal state resets on release
-  bool r1NewPress = mainController.get_digital_new_press(DIGITAL_R1);
-  bool r2NewPress = mainController.get_digital_new_press(DIGITAL_R2);
-
-  if (sortEnabled) {
-    // R1 held — sort normally (correct→TOP, wrong→MIDDLE)
-    if(mainController.get_digital(DIGITAL_R1)) {
-      if(r1NewPress) {
-        intake.setSortHeights(Intake::TOP);
-        intake.startReleasing();
-        sortActive = true;
-      }
-    }
-    // R2 held — sort inverted (correct→MIDDLE, wrong→TOP)
-    else if(mainController.get_digital(DIGITAL_R2)) {
-      if(r2NewPress) {
-        intake.setSortHeights(Intake::MIDDLE);
-        intake.startReleasing();
-        sortActive = true;
-      }
-    }
-    // neither held — stop sorting only if it was previously active
-    else if(sortActive) {
-      intake.stopReleasing();
-      sortActive = false;
-    }
-  } else {
-    // Sort off — reuse scoring behavior
-    if(mainController.get_digital(DIGITAL_R1)) {
-      intake.score(Intake::TOP);
-    } else if(mainController.get_digital(DIGITAL_R2)) {
-      intake.score(Intake::MIDDLE);
-    }
-  }
-
-  // Change Brooks Height
-  if(mainController.get_digital_new_press(DIGITAL_B)) {
-    brooks.toggle();
-  }
-
-  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
-    sem.toggle();
-  }
-  // Match loaders mechanism
-  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
-    intake.toggleCart();
-  }
-
-  else if(mainController.get_digital_new_press(DIGITAL_X)) {
-    drivetrain.toggleTurbo();
-  }
-  else if(mainController.get_digital_new_press(DIGITAL_Y)) {
-    sortEnabled = !sortEnabled;
-    if (!sortEnabled && sortActive) {
-      intake.stopReleasing();
-      sortActive = false;
-    }
-  }
-
-
-  #else
-
+/// Kevin's Operator Control configuration
+inline void DriveKevin() { 
+  #if !USING_BIG_ROBOT
   //# From now on, all drivetrains used will need to use this format for driving
   double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
   double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
@@ -236,11 +158,86 @@ inline void DriveDefault() {
   #endif
 }
 
-/// Kevin's Operator Control configuration
-inline void DriveKevin() { DriveDefault(); }
-
 /// Fabian's Operator Control configuration
-inline void DriveFabian() { DriveDefault(); }
+inline void DriveFabian() {
+  #if USING_BIG_ROBOT
+  //# From now on, all drivetrains used will need to use this format for driving
+  double leftX = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
+  double leftY = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
+  double rightX = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
+  double rightY = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
+  drivetrain.drive(leftX, leftY, rightX, rightY, Drivetrain::HOLONOMIC);
+
+  if(mainController.get_digital(DIGITAL_L1)){
+    intake.store();
+  }
+  else if(mainController.get_digital(DIGITAL_L2)){
+    intake.score(Intake::BOTTOM);
+  }
+  else if(!sortActive){
+    intake.stop();
+  }
+
+  // Evaluate new_press unconditionally so internal state resets on release
+  bool r1NewPress = mainController.get_digital_new_press(DIGITAL_R1);
+  bool r2NewPress = mainController.get_digital_new_press(DIGITAL_R2);
+
+  if (sortEnabled) {
+    // R1 held — sort normally (correct→TOP, wrong→MIDDLE)
+    if(mainController.get_digital(DIGITAL_R1)) {
+      if(r1NewPress) {
+        intake.setSortHeights(Intake::TOP);
+        intake.startReleasing();
+        sortActive = true;
+      }
+    }
+    // R2 held — sort inverted (correct→MIDDLE, wrong→TOP)
+    else if(mainController.get_digital(DIGITAL_R2)) {
+      if(r2NewPress) {
+        intake.setSortHeights(Intake::MIDDLE);
+        intake.startReleasing();
+        sortActive = true;
+      }
+    }
+    // neither held — stop sorting only if it was previously active
+    else if(sortActive) {
+      intake.stopReleasing();
+      sortActive = false;
+    }
+  } else {
+    // Sort off — reuse scoring behavior
+    if(mainController.get_digital(DIGITAL_R1)) {
+      intake.score(Intake::TOP);
+    } else if(mainController.get_digital(DIGITAL_R2)) {
+      intake.score(Intake::MIDDLE);
+    }
+  }
+
+  // Change Brooks Height
+  if(mainController.get_digital_new_press(DIGITAL_B)) {
+    brooks.toggle();
+  }
+
+  else if(mainController.get_digital_new_press(DIGITAL_LEFT)) {
+    sem.toggle();
+  }
+  // Match loaders mechanism
+  else if(mainController.get_digital_new_press(DIGITAL_UP)) {
+    intake.toggleCart();
+  }
+
+  else if(mainController.get_digital_new_press(DIGITAL_X)) {
+    drivetrain.toggleTurbo();
+  }
+  else if(mainController.get_digital_new_press(DIGITAL_Y)) {
+    sortEnabled = !sortEnabled;
+    if (!sortEnabled && sortActive) {
+      intake.stopReleasing();
+      sortActive = false;
+    }
+  }
+  #endif
+}
 
 // ============================================================================
 //    __  __      _        ___             _   _
@@ -253,8 +250,8 @@ inline void DriveFabian() { DriveDefault(); }
 /// @brief Main function for operator control.
 /// @details Control configurations for the different drivers are manipulated here.
 /// @param driver the name of the person driving the robot
-/// @see aon::operator_control::Drivers
-inline void Run(const Drivers driver) {
+/// @see aon::operator_control::Driver
+inline void Run(const Driver driver) {
   switch (driver) {
     case KEVIN:
       DriveKevin();
