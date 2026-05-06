@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../drivetrain.hpp"
+#include "./drivetrain.hpp"
 
 namespace aon {
 
-class MecanumDrive : public Drivetrain {
+class XDrive : public Drivetrain {
  private:
   SmartMotorGroup frontLeftMotors;
   SmartMotorGroup frontRightMotors;
@@ -12,7 +12,7 @@ class MecanumDrive : public Drivetrain {
   SmartMotorGroup backRightMotors;
 
  public:
-  MecanumDrive(const std::initializer_list<okapi::Motor> &FLPorts = {0},
+  XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {0},
          const std::initializer_list<okapi::Motor> &FRPorts = {0},
          const std::initializer_list<okapi::Motor> &BLPorts = {0},
          const std::initializer_list<okapi::Motor> &BRPorts = {0},
@@ -44,6 +44,13 @@ class MecanumDrive : public Drivetrain {
   /// @param sideways The \b RPM to send to all motors for lateral strafe movement (positive is rightward)
   /// @param turn The \b RPM to send to all motors for rotational movement (positive is clockwise)
   void holonomic(const double &forward, const double &sideways, const double &turn) override;
+
+  /// @brief Takes a `direction` vector and converts it into a command for the motors.
+  /// @param direction The direction with respect to the robot to move in
+  /// @return A `Vector` whose `x` component is the command for the diagonal that goes from bottom left to top right and whose `y` is the command for the other diagonal
+  /// @note See https://understandinglinearalgebra.org/sec-bases.html to understand the conversion between bases
+  /// @details The basis B is formed by the crossed wheels (in 45º and 135º angles with respect to the horizontal)
+  static Vector translateToMotorCommand(Vector direction);
 
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain

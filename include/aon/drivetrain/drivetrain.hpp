@@ -1,12 +1,12 @@
 #pragma once
 
-#include "./okapi/api.hpp"
-#include "./odometry/odometry.hpp"
-#include "./controls/smart_motor.hpp"
-#include "./controls/pid/pid.hpp"
-#include "./controls/s-curve-profile.hpp"
-#include "./math/timer.hpp"
-#include "./controls/pure-pursuit.hpp"
+#include "../../okapi/api.hpp"
+#include "../odometry/odometry.hpp"
+#include "../controls/smart_motor.hpp"
+#include "../controls/pid/pid.hpp"
+#include "../controls/s-curve-profile.hpp"
+#include "../math/timer.hpp"
+#include "../controls/pure-pursuit.hpp"
 #include <cfloat>
 
 

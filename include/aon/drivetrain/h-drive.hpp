@@ -1,33 +1,45 @@
 #pragma once
 
-#include "../drivetrain.hpp"
+#include "./drivetrain.hpp"
 
 namespace aon {
 
-class XDrive : public Drivetrain {
+class HDrive : public Drivetrain {
  private:
-  SmartMotorGroup frontLeftMotors;
-  SmartMotorGroup frontRightMotors;
-  SmartMotorGroup backLeftMotors;
-  SmartMotorGroup backRightMotors;
+  SmartMotorGroup leftMotors;
+  SmartMotorGroup rightMotors;
+  SmartMotorGroup midMotors;
 
  public:
-  XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {0},
-         const std::initializer_list<okapi::Motor> &FRPorts = {0},
-         const std::initializer_list<okapi::Motor> &BLPorts = {0},
-         const std::initializer_list<okapi::Motor> &BRPorts = {0},
+  HDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
+         const std::initializer_list<okapi::Motor> &rightPorts = {0},
+         const std::initializer_list<okapi::Motor> &midPorts = {0},
          Pose pose = Pose(),
          std::unique_ptr<Odometry> odometry = nullptr,
          SpeedFactors speedFactors = SpeedFactors(),
          std::unique_ptr<MotionProfile> xProfile = nullptr,
          std::unique_ptr<MotionProfile> yProfile = nullptr,
          std::unique_ptr<MotionProfile> thetaProfile = nullptr
-        )
-      : frontLeftMotors(FLPorts),
-        frontRightMotors(FRPorts),
-        backLeftMotors(BLPorts),
-        backRightMotors(BRPorts),
+      )
+      : leftMotors(leftPorts),
+        rightMotors(rightPorts),
+        midMotors(midPorts),
         Drivetrain(pose, std::move(odometry), speedFactors, std::move(xProfile), std::move(yProfile), std::move(thetaProfile)) {}
+
+  /// @brief Configures the general settings for the motors
+  /// @param brakeMode The braking paradigm we will use, usually `holding` for
+  /// auton and `brake` for drivers
+  /// @param gearset The gearbox the physical motors contain, they MUST be all
+  /// the same
+  void configure(okapi::AbstractMotor::brakeMode brakeMode, okapi::AbstractMotor::gearset gearset, double slew) {
+    Drivetrain::configure(brakeMode, gearset, slew);
+    midMotors.setBrakeMode(brakeMode);
+    midMotors.setGearing(okapi::AbstractMotor::gearset::red);
+    midMotors.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
+    midMotors.tarePosition();
+  }
+
+  void stop() override;
 
   /// @brief Moves all motors the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm (positive is right and negative is left)
@@ -38,19 +50,6 @@ class XDrive : public Drivetrain {
   /// @param left The \b RPM to send to the left-side motors (positive is forward)
   /// @param right The \b RPM to send to the right-side motors (positive is forward)
   void tank(const double &left, const double &right) override;
-
-  /// @brief Drives a holonomic (e.g. mecanum or X-drive) robot with independent forward, sideways, and rotational control
-  /// @param forward The \b RPM to send to all motors for linear forward/backward movement (positive is forward)
-  /// @param sideways The \b RPM to send to all motors for lateral strafe movement (positive is rightward)
-  /// @param turn The \b RPM to send to all motors for rotational movement (positive is clockwise)
-  void holonomic(const double &forward, const double &sideways, const double &turn) override;
-
-  /// @brief Takes a `direction` vector and converts it into a command for the motors.
-  /// @param direction The direction with respect to the robot to move in
-  /// @return A `Vector` whose `x` component is the command for the diagonal that goes from bottom left to top right and whose `y` is the command for the other diagonal
-  /// @note See https://understandinglinearalgebra.org/sec-bases.html to understand the conversion between bases
-  /// @details The basis B is formed by the crossed wheels (in 45º and 135º angles with respect to the horizontal)
-  static Vector translateToMotorCommand(Vector direction);
 
   /// @brief Sets the brake mode for all motors of the drivetrain
   /// @param brakeMode The new brake mode for the drivetrain

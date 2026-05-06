@@ -1,34 +1,31 @@
-#include "../include/aon/x-drive/x-drive.hpp"
+#include "../../../include/aon/drivetrain/mecanum.hpp"
 
 namespace aon {
 
-void XDrive::sideways(const double &rpm, const int& delay) {
+// TODO: verify implementation with a physical model
+
+void MecanumDrive::sideways(const double &rpm, const int& delay) {
   this->frontLeftMotors.moveVelocity(rpm);
   this->frontRightMotors.moveVelocity(-rpm);
-  this->backLeftMotors.moveVelocity(-rpm);
   this->backRightMotors.moveVelocity(rpm);
+  this->backLeftMotors.moveVelocity(-rpm);
   if (delay == 0) return;
   pros::delay(delay);
   this->stop();
 }
 
-void XDrive::tank(const double &left, const double &right){
+void MecanumDrive::tank(const double &left, const double &right){
   this->frontLeftMotors.moveVelocity(left);
   this->backLeftMotors.moveVelocity(left);
   this->frontRightMotors.moveVelocity(right);
   this->backRightMotors.moveVelocity(right);
 }
 
-void XDrive::holonomic(const double &forward, const double &sideways, const double &turn){
-  Vector direction = Vector().SetPosition(sideways, forward);
-  Vector command = translateToMotorCommand(direction);
-  double topRightDiag = command.GetX();
-  double topLeftDiag = command.GetY();
-
-  double frontLeft = topRightDiag + turn;
-  double frontRight = topLeftDiag - turn;
-  double backLeft = topLeftDiag + turn;
-  double backRight = topRightDiag - turn;
+void MecanumDrive::holonomic(const double &forward, const double &sideways, const double &turn){
+  double frontLeft = forward + sideways + turn;
+  double frontRight = forward - sideways - turn;
+  double backLeft = forward - sideways + turn;
+  double backRight = forward + sideways - turn;
 
   // Normalize if anything exceeds MAX_RPM
   double maxVal = std::max({std::abs(frontLeft), std::abs(frontRight), std::abs(backLeft), std::abs(backRight)});
@@ -45,28 +42,21 @@ void XDrive::holonomic(const double &forward, const double &sideways, const doub
   this->backRightMotors.moveVelocity(backRight);
 }
 
-Vector XDrive::translateToMotorCommand(Vector direction){
-  Vector result;
-  result.SetX(direction.GetX() * 0.70710678118 + direction.GetY() * 0.70710678118);
-  result.SetY(direction.GetX() * -0.70710678118 + direction.GetY() * 0.70710678118);
-  return result;
-}
-
-void XDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
+void MecanumDrive::setBrakeMode(okapi::AbstractMotor::brakeMode brakeMode){
   frontLeftMotors.setBrakeMode(brakeMode);
   frontRightMotors.setBrakeMode(brakeMode);
   backLeftMotors.setBrakeMode(brakeMode);
   backRightMotors.setBrakeMode(brakeMode);
 }
 
-void XDrive::setGearset(okapi::AbstractMotor::gearset gearset){
+void MecanumDrive::setGearset(okapi::AbstractMotor::gearset gearset){
   frontLeftMotors.setGearing(gearset);
   frontRightMotors.setGearing(gearset);
   backLeftMotors.setGearing(gearset);
   backRightMotors.setGearing(gearset);
 }
 
-void XDrive::setEncoderUnits(okapi::AbstractMotor::encoderUnits units){
+void MecanumDrive::setEncoderUnits(okapi::AbstractMotor::encoderUnits units){
   frontLeftMotors.setEncoderUnits(units);
   frontLeftMotors.tarePosition();
   frontRightMotors.setEncoderUnits(units);
@@ -77,14 +67,14 @@ void XDrive::setEncoderUnits(okapi::AbstractMotor::encoderUnits units){
   backRightMotors.tarePosition();
 }
 
-void XDrive::setSlewRate(double slew){
+void MecanumDrive::setSlewRate(double slew){
   frontLeftMotors.SetAcceleration(slew);
   frontRightMotors.SetAcceleration(slew);
   backLeftMotors.SetAcceleration(slew);
   backRightMotors.SetAcceleration(slew);
 }
 
-double XDrive::getRPM(){
+double MecanumDrive::getRPM(){
   double frontLeft = abs(frontLeftMotors.getActualVelocity());
   double frontRight = abs(frontRightMotors.getActualVelocity());
   double backLeft = abs(backLeftMotors.getActualVelocity());
@@ -93,7 +83,7 @@ double XDrive::getRPM(){
 }
 
 // Using PID
-// void XDrive::goToPose(const Pose& target){
+// void MecanumDrive::goToPose(const Pose& target){
 //   const double delay = 20; // ms
 //   const Pose initialPose = this->getPose();
 //   Pose currPose = this->getPose();
@@ -133,7 +123,7 @@ double XDrive::getRPM(){
 // }
 
 // Using Motion Profile
-void XDrive::goToPose(const Pose& target){
+void MecanumDrive::goToPose(const Pose& target){
   const double delay = 20; // ms
 
   double remainingX = abs(target.x - this->getX());
@@ -192,7 +182,7 @@ void XDrive::goToPose(const Pose& target){
   this->stop();
 }
 
-void XDrive::follow(const std::vector<Pose>& path) {
+void MecanumDrive::follow(const std::vector<Pose>& path) {
   PurePursuit controller = PurePursuit(*this->yProfile, *this->thetaProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};
