@@ -9,37 +9,9 @@
 ///          made it more complicated for beginners to understand. Also makes extensive
 ///          use of USING_BIG_ROBOT global constant and preprocessor directives to
 ///          make switching between robots not require separate branches, which could make
-///          fixes and updates to one branch not apply to the other. Finally, it includes
-///          tests for practically all of the fundamental functions except the driver
-///          profiles and the Run function.
+///          fixes and updates to one branch not apply to the other.
 namespace aon::operator_control {
 
-// ============================================================================
-//    _  _     _                 ___             _   _
-//   | || |___| |_ __  ___ _ _  | __|  _ _ _  __| |_(_)___ _ _  ___
-//   | __ / -_) | '_ \/ -_) '_| | _| || | ' \/ _|  _| / _ \ ' \(_-<
-//   |_||_\___|_| .__/\___|_|   |_| \_,_|_||_\__|\__|_\___/_||_/__/
-//              |_|
-// ============================================================================
-
-/// @brief Scales analog joystick input for easier control.
-/// @details Fine joystick control can be difficult, specially for tasks like
-///          rotating. After researching the forums I found that teams scale their
-///          joystick inputs using an exponential function of sorts. This makes small
-///          inputs produce a smaller output and bigger inputs increase speed, so fine
-///          movements can be done without as much of a hassle.
-/// @param x The controller's user input between -127 and 127
-/// @param t Sensitivity (higher is a steeper curve and vice-versa)
-/// @return double between -1 and 1
-///
-/// @see Demonstration of scaling function in Desmos. https://www.desmos.com/calculator/kq9hgbxbwp
-/// @warning Make sure that the input `x` is between -127 and 127!!!
-inline double AnalogInputScaling(const double& x, const double& t) { // TODO: make an abstract Scaler class which has an implementation with this method, then another with a cubic, and whatever else popular methods there are, the choice of which to use will be up to the driver
-  const double a = ::std::exp(-::std::fabs(t) / 10.0);
-  const double b = ::std::exp((::std::fabs(x) - 127.0) / 10.0);
-
-  return (a + b * (1 - a)) * x / 127.0;
-}
 
 // ============================================================================
 //    ___      _
@@ -67,10 +39,10 @@ inline void DriveDefault() { }
 inline void DriveKevin() { 
   #if !USING_BIG_ROBOT
   //# From now on, all drivetrains used will need to use this format for driving
-  double leftX = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
-  double leftY = AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
-  double rightX = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
-  double rightY = AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
+  double leftX = joystickScaler(mainController.get_analog(ANALOG_LEFT_X));
+  double leftY = joystickScaler(mainController.get_analog(ANALOG_LEFT_Y));
+  double rightX = joystickScaler(mainController.get_analog(ANALOG_RIGHT_X));
+  double rightY = joystickScaler(mainController.get_analog(ANALOG_RIGHT_Y));
   drivetrain.drive(leftX, leftY, rightX, rightY, Drivetrain::SPLIT_ARCADE);
 
   if(mainController.get_digital_new_press(DIGITAL_R2)) {
@@ -162,10 +134,10 @@ inline void DriveKevin() {
 inline void DriveFabian() {
   #if USING_BIG_ROBOT
   //# From now on, all drivetrains used will need to use this format for driving
-  double leftX = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_X), SENSITIVITY);
-  double leftY = -AnalogInputScaling(mainController.get_analog(ANALOG_LEFT_Y), SENSITIVITY);
-  double rightX = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_X), SENSITIVITY);
-  double rightY = -AnalogInputScaling(mainController.get_analog(ANALOG_RIGHT_Y), SENSITIVITY);
+  double leftX = -joystickScaler(mainController.get_analog(ANALOG_LEFT_X));
+  double leftY = -joystickScaler(mainController.get_analog(ANALOG_LEFT_Y));
+  double rightX = -joystickScaler(mainController.get_analog(ANALOG_RIGHT_X));
+  double rightY = -joystickScaler(mainController.get_analog(ANALOG_RIGHT_Y));
   drivetrain.drive(leftX, leftY, rightX, rightY, Drivetrain::HOLONOMIC);
 
   if(mainController.get_digital(DIGITAL_L1)){
@@ -266,19 +238,5 @@ inline void Run(const Driver driver) {
       break;
   }
 }
-
-// ============================================================================
-//    _____       _
-//   |_   _|__ __| |_ ___
-//     | |/ -_|_-<  _(_-<
-//     |_|\___/__/\__/__/
-//
-// ============================================================================
-
-/// @brief Tests for the operator_control namespace
-/// @details Tests helper methods and input scaling. These tests are pretty manual for now, but hopefully next year we'll have automated tests with a solid framework.
-namespace test {
-
-}  // namespace test
 
 }  // namespace aon::operator_control

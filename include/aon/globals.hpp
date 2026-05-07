@@ -15,6 +15,9 @@
 #include "./drivetrain/drivetrain.hpp"
 #include "./odometry/odometry.hpp"
 #include "./piston/piston.hpp"
+#include "./math/scaling/pilons-scaler.hpp"
+#include "./math/scaling/exponential-scaler.hpp"
+#include "./math/scaling/cubic-scaler.hpp"
 
 namespace aon::operator_control {
 
@@ -36,6 +39,12 @@ enum Driver {
 
 
 #if USING_BIG_ROBOT
+
+// The scaler choice and subsequently tuning should be done as per driver preference
+aon::PilonsScaler joystickScaler = aon::PilonsScaler(SENSITIVITY);
+// TODO: get driver feedback from the following
+// aon::ExponentialScaler joystickScaler = aon::ExponentialScaler(SENSITIVITY);
+// aon::CubicScaler joystickScaler = aon::CubicScaler(1);
 
 aon::operator_control::Driver driver = aon::operator_control::FABIAN;
 
@@ -65,7 +74,13 @@ aon::HDrive drivetrain = aon::HDrive(
                           aon::Piston brooks('D', aon::Piston::RETRACTED);
   
 #else
-  
+
+// The scaler choice and subsequently tuning should be done as per driver preference
+aon::PilonsScaler joystickScaler = aon::PilonsScaler(SENSITIVITY);
+// TODO: get driver feedback from the following
+// aon::ExponentialScaler joystickScaler = aon::ExponentialScaler(SENSITIVITY);
+// aon::CubicScaler joystickScaler = aon::CubicScaler(1);
+
 aon::operator_control::Driver driver = aon::operator_control::KEVIN;
 
 // aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
