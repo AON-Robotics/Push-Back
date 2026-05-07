@@ -41,10 +41,10 @@ enum Driver {
 #if USING_BIG_ROBOT
 
 // The scaler choice and subsequently tuning should be done as per driver preference
-aon::PilonsScaler joystickScaler = aon::PilonsScaler(SENSITIVITY);
+aon::PilonsScaler scaler = aon::PilonsScaler(SENSITIVITY);
 // TODO: get driver feedback from the following
-// aon::ExponentialScaler joystickScaler = aon::ExponentialScaler(SENSITIVITY);
-// aon::CubicScaler joystickScaler = aon::CubicScaler(1);
+// aon::ExponentialScaler scaler = aon::ExponentialScaler(SENSITIVITY);
+// aon::CubicScaler scaler = aon::CubicScaler(1);
 
 aon::operator_control::Driver driver = aon::operator_control::FABIAN;
 
@@ -76,10 +76,12 @@ aon::HDrive drivetrain = aon::HDrive(
 #else
 
 // The scaler choice and subsequently tuning should be done as per driver preference
-aon::PilonsScaler joystickScaler = aon::PilonsScaler(SENSITIVITY);
+
+// The joystick scaler object to smoothen driver input
+aon::PilonsScaler scaler = aon::PilonsScaler(SENSITIVITY);
 // TODO: get driver feedback from the following
-// aon::ExponentialScaler joystickScaler = aon::ExponentialScaler(SENSITIVITY);
-// aon::CubicScaler joystickScaler = aon::CubicScaler(1);
+// aon::ExponentialScaler scaler = aon::ExponentialScaler(SENSITIVITY);
+// aon::CubicScaler scaler = aon::CubicScaler(1);
 
 aon::operator_control::Driver driver = aon::operator_control::KEVIN;
 

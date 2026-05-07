@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./scaler.hpp"
+#include <algorithm>
 
 namespace aon {
 
@@ -22,7 +23,7 @@ namespace aon {
         /// @brief Applies the scaling strategy to a floating-point input.
         /// @param value The input value to scale in the range: [-127, 127].
         /// @return The scaled value in the range: [-1, 1].
-        double operator()(double value) override;
+        double transform(double value) override;
     };
 
 } // namespace aon
