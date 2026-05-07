@@ -89,7 +89,9 @@ namespace aon {
         Vector gpsPosition();
         Pose getPose();
 
-
+        // Variable to determine when we are turning on the same place (only included in turn function to minimize error)
+        bool turn = false;
+        
         //Debugging/Testing
         void debug();
 

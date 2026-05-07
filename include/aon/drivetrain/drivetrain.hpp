@@ -123,10 +123,12 @@ class Drivetrain {
   /// @param rpm The speed in which to move all motors in \b rpm
   /// @param delay The amount of milliseconds between activation and deactivation, a delay of 0 will never deactivate the motors
   void rotate(const double &rpm = MAX_RPM, const int& delay = 0) {
+    odometry->turn = true;
     this->tank(rpm, -rpm);
     if(delay == 0) return;
     pros::delay(delay);
     this->stop();
+    odometry->turn = false;
   }
 
   /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
@@ -357,22 +359,24 @@ class Drivetrain {
     #define time (pros::micros() / 1E6) - startTime
 
     while (time < 3 * timeLimit) {
-
+      odometry->turn = true;
+      
       double traveledAngle = abs(odometry->getDegrees() - startAngle);
       
       double output = pid.Output(angle, traveledAngle);
-
+      
       pros::lcd::print(0, "Time Limit %.2f", timeLimit);
       pros::lcd::print(1, "Time: %.2f", time);
       pros::lcd::print(2, "Gyroscope Displacement %.2f", traveledAngle);
       
       // Taking clockwise rotation as positive (to change this just flip the negative on the sign below)
       this->rotate(sign * std::clamp(output * MAX_RPM, -MAX_REVS, MAX_REVS));
-
+      
       pros::delay(10);
     }
-
+    
     this->stop();
+    odometry->turn = true;
 
     #undef time
   }
@@ -495,6 +499,7 @@ class Drivetrain {
     this->thetaProfile->setFinalVelocity(settle ? 0 : 50);
 
     while (traveledAngle < angle && !timer.isCompleted()) {
+      odometry->turn = true;
       currAngle = odometry->gyroscope.get_rotation();
       traveledAngle = abs(currAngle - startAngle);
       // traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
@@ -506,15 +511,16 @@ class Drivetrain {
       // Debugging output
       pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
       // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledAngle, angle);
-
+      
       currVelocity = this->thetaProfile->update(circumference * (remainingAngle / 360.0), dt);
       this->rotate(sign * currVelocity);
-
+      
       if (traveledAngle >= angle) { break; }  // Overshoot prevention
-
+      
       pros::delay(20);
     }
     if (settle) this->stop();
+    odometry->turn = false;
   }
 
   /// @brief Moves the robot a given distance
