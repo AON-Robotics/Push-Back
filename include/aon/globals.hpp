@@ -75,7 +75,7 @@ aon::HDrive drivetrain = aon::HDrive(
   
 #else
 
-// The scaler choice and subsequently tuning should be done as per driver preference
+// The scaler choice and the subsequent tuning should be done as per driver preference
 
 // The joystick scaler object to smoothen driver input
 aon::PilonsScaler scaler = aon::PilonsScaler(SENSITIVITY);
