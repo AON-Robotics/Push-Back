@@ -140,7 +140,7 @@ void Odometry::initialize() {
 
 /// @brief Fundamental function for Odometry.
 /// @details Uses changes in encoder (right and left) and gyro to calculate position
-void Odometry::update() { // TODO: implement odometer functions both for linear and rotational movement
+void Odometry::update() { 
   /// Read encoder values, divided by 100 to convert centidegrees to degrees
   encoderRight_data.currentValue = encoderRight.get_position() / 100.0;
   encoderLeft_data.currentValue  = encoderLeft.get_position()  / 100.0;
@@ -153,25 +153,20 @@ void Odometry::update() { // TODO: implement odometer functions both for linear 
   encoderRight_data.delta = encoderRight_data.currentValue - encoderRight_data.prevValue;
   encoderLeft_data.delta  = encoderLeft_data.currentValue  - encoderLeft_data.prevValue;
 
-  encoderRight_data.deltaDistance = encoderRight_data.currentDistance
-                                    - encoderRight_data.previousDistance;
-  encoderLeft_data.deltaDistance  = encoderLeft_data.currentDistance
-                                    - encoderLeft_data.previousDistance;
+  encoderRight_data.deltaDistance = encoderRight_data.currentDistance - encoderRight_data.previousDistance;
+  encoderLeft_data.deltaDistance  = encoderLeft_data.currentDistance - encoderLeft_data.previousDistance;
 
 #if BACK_ENCODER_ENABLED
   // ── Back encoder ─────────────────────────────────────────────────────────
   encoderBack_data.currentValue    = encoderBack.get_position() / 100.0;
   encoderBack_data.currentDistance = encoderBack_data.currentValue * conversionFactor;
-  encoderBack_data.delta           = encoderBack_data.currentValue
-                                     - encoderBack_data.prevValue;
-  encoderBack_data.deltaDistance   = encoderBack_data.currentDistance
-                                     - encoderBack_data.previousDistance;
+  encoderBack_data.delta           = encoderBack_data.currentValue - encoderBack_data.prevValue;
+  encoderBack_data.deltaDistance   = encoderBack_data.currentDistance - encoderBack_data.previousDistance;
 #endif
 
-  // ── Encoder-only deltaTheta (used directly when GYRO_ENABLED = 0) ────────
+  // ── Encoder-only deltaTheta (used directly when GYRO_ENABLED is false) ────────
   double deltaTheta = (encoderRight_data.deltaDistance - encoderLeft_data.deltaDistance)
-                      / (DISTANCE_RIGHT_TRACKING_WHEEL_CENTER
-                         + DISTANCE_LEFT_TRACKING_WHEEL_CENTER);
+                      / (DISTANCE_RIGHT_TRACKING_WHEEL_CENTER + DISTANCE_LEFT_TRACKING_WHEEL_CENTER);
 
 #if GYRO_ENABLED
   double rawHeading = gyroscope.get_heading();
@@ -192,7 +187,7 @@ void Odometry::update() { // TODO: implement odometer functions both for linear 
     gyro_data.deltaDegrees = gyro_data.currentDegrees - gyro_data.prevDegrees;
     if (gyro_data.deltaDegrees >  180.0) gyro_data.deltaDegrees -= 360.0;
     if (gyro_data.deltaDegrees < -180.0) gyro_data.deltaDegrees += 360.0;
-    // [FIX 3] Radians computed AFTER the unwrap (was before it in original)
+
     gyro_data.deltaRadians = gyro_data.deltaDegrees * (M_PI / 180.0);
 
     gyro_data.prevDegrees = gyro_data.currentDegrees;
@@ -228,10 +223,8 @@ void Odometry::update() { // TODO: implement odometer functions both for linear 
   if (std::abs(deltaTheta) > TURNING_THRESHOLD) {
     // ── Arc motion ───────────────────────────────────────────────────────────
     double sign       = (deltaTheta > 0.0) ? 1.0 : -1.0;
-    double radiusLeft = encoderLeft_data.deltaDistance  / deltaTheta
-                        + sign * DISTANCE_LEFT_TRACKING_WHEEL_CENTER;
-    double radiusRight= encoderRight_data.deltaDistance / deltaTheta
-                        - sign * DISTANCE_RIGHT_TRACKING_WHEEL_CENTER;
+    double radiusLeft = encoderLeft_data.deltaDistance  / deltaTheta + sign * DISTANCE_LEFT_TRACKING_WHEEL_CENTER;
+    double radiusRight= encoderRight_data.deltaDistance / deltaTheta - sign * DISTANCE_RIGHT_TRACKING_WHEEL_CENTER;
     double averageR   = (radiusLeft + radiusRight) / 2.0;
 
     deltaDlocal.SetPosition(averageR * std::sin(deltaTheta),
@@ -239,21 +232,17 @@ void Odometry::update() { // TODO: implement odometer functions both for linear 
 #if BACK_ENCODER_ENABLED
     // Back encoder gives direct lateral displacement
     deltaDlocal.SetPosition(averageR * std::sin(deltaTheta),
-        encoderBack_data.deltaDistance
-        - DISTANCE_BACK_TRACKING_WHEEL_CENTER * deltaTheta);
+        encoderBack_data.deltaDistance - DISTANCE_BACK_TRACKING_WHEEL_CENTER * deltaTheta);
 #endif
 
   } else {
     // ── Straight line (rotation below threshold) ─────────────────────────────
-    double dL_corr = encoderLeft_data.deltaDistance
-                   - DISTANCE_LEFT_TRACKING_WHEEL_CENTER  * deltaTheta;
-    double dR_corr = encoderRight_data.deltaDistance
-                   - DISTANCE_RIGHT_TRACKING_WHEEL_CENTER * deltaTheta;
+    double dL_corr = encoderLeft_data.deltaDistance - DISTANCE_LEFT_TRACKING_WHEEL_CENTER  * deltaTheta;
+    double dR_corr = encoderRight_data.deltaDistance - DISTANCE_RIGHT_TRACKING_WHEEL_CENTER * deltaTheta;
     double deltaD = (dL_corr + dR_corr) / 2.0;
     deltaDlocal.SetPosition(deltaD, 0.0);
 #if BACK_ENCODER_ENABLED
-    double deltaY = encoderBack_data.deltaDistance
-                    - DISTANCE_BACK_TRACKING_WHEEL_CENTER * deltaTheta;
+    double deltaY = encoderBack_data.deltaDistance - DISTANCE_BACK_TRACKING_WHEEL_CENTER * deltaTheta;
     deltaDlocal.SetPosition(deltaD, deltaY);
 #endif
   }
@@ -286,7 +275,6 @@ void Odometry::resetCurrent(double x, double y, double theta) {
   const double currentAngleLeft = encoderLeft.get_position() / 100.0;
   const double currentAngleBack = encoderBack.get_position() / 100.0;
   const double currentAngleGyro = gyroscope.get_heading();
-  std::cout << "currentAngleGyro: " << currentAngleGyro << "\n";
 
   // Reset encoder's struct variables
   encoderRight_data = {
