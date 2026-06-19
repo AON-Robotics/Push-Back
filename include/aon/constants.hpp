@@ -1,7 +1,33 @@
 #ifndef AON_CONSTANTS_HPP_
 #define AON_CONSTANTS_HPP_
 
+#include "pros/colors.h"
+
 #define PROS_USE_SIMPLE_NAMES
+
+// PROS 4 keeps screen color constants in pros::c instead of exporting the
+// legacy global names used by the existing GUI.
+inline constexpr auto COLOR_ANTIQUE_WHITE = pros::c::COLOR_ANTIQUE_WHITE;
+inline constexpr auto COLOR_BLACK = pros::c::COLOR_BLACK;
+inline constexpr auto COLOR_BLUE = pros::c::COLOR_BLUE;
+inline constexpr auto COLOR_CRIMSON = pros::c::COLOR_CRIMSON;
+inline constexpr auto COLOR_CYAN = pros::c::COLOR_CYAN;
+inline constexpr auto COLOR_DARK_BLUE = pros::c::COLOR_DARK_BLUE;
+inline constexpr auto COLOR_DARK_GRAY = pros::c::COLOR_DARK_GRAY;
+inline constexpr auto COLOR_DARK_GREEN = pros::c::COLOR_DARK_GREEN;
+inline constexpr auto COLOR_DARK_RED = pros::c::COLOR_DARK_RED;
+inline constexpr auto COLOR_GRAY = pros::c::COLOR_GRAY;
+inline constexpr auto COLOR_GREEN = pros::c::COLOR_GREEN;
+inline constexpr auto COLOR_LIGHT_GRAY = pros::c::COLOR_LIGHT_GRAY;
+inline constexpr auto COLOR_LIGHT_GREEN = pros::c::COLOR_LIGHT_GREEN;
+inline constexpr auto COLOR_LIGHT_PINK = pros::c::COLOR_LIGHT_PINK;
+inline constexpr auto COLOR_ORANGE = pros::c::COLOR_ORANGE;
+inline constexpr auto COLOR_RED = pros::c::COLOR_RED;
+inline constexpr auto COLOR_SKY_BLUE = pros::c::COLOR_SKY_BLUE;
+inline constexpr auto COLOR_STEEL_BLUE = pros::c::COLOR_STEEL_BLUE;
+inline constexpr auto COLOR_WHITE = pros::c::COLOR_WHITE;
+inline constexpr auto COLOR_YELLOW = pros::c::COLOR_YELLOW;
+inline constexpr auto COLOR_YELLOW_GREEN = pros::c::COLOR_YELLOW_GREEN;
 
 #define BRAIN_SCREEN_WIDTH 480
 #define BRAIN_SCREEN_HEIGHT 240
@@ -12,6 +38,10 @@
 // NOT using big robot = Using small robot
 #define USING_BIG_ROBOT false
 #define TESTING_AUTONOMOUS false
+#define LEMLIB_SENSOR_TEST true
+#define LEMLIB_TURN_TEST false
+#define LEMLIB_TRACKING_CALIBRATION_TEST true
+#define LEMLIB_TURN_TEST_ANGLE 90.0
 
 #if USING_BIG_ROBOT
 

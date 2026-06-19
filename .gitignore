@@ -9,15 +9,9 @@
 # PROS
 bin/
 .vscode/
+.cache/
 compile_commands.json
 temp.log
 temp.errors
 *.ini
 .d/
-
-# VSCode / Clangd index files
-*.idx
-
-# Python env
-env/
-.DS_Store

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../api.h"
-#include "../../okapi/api.hpp"
+#include "../compat/okapi.hpp"
 #include "../constants.hpp"
 #include "../controls/pid/pid.hpp"
 #include "../tools/vector.hpp"

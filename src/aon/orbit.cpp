@@ -5,9 +5,11 @@ namespace aon {
 // Constructor
 
 Orbit::Orbit(int rotationPort, bool reversedEncoder, int visionPort, int port)
-    : encoder(rotationPort, reversedEncoder),
+    : encoder(rotationPort),
       vision_sensor(visionPort),
-      motor(port) {}
+      motor(port) {
+  encoder.set_reversed(reversedEncoder);
+}
 
 // Functions :
 

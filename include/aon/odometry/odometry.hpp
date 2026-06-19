@@ -8,7 +8,7 @@
 #include "../constants.hpp"
 #include "../../api.h"
 #if GYRO_ENABLED
-#include "../../okapi/api.hpp"
+#include "../compat/okapi.hpp"
 #endif
 #include "../tools/vector.hpp"
 #include "../math/pose.hpp"

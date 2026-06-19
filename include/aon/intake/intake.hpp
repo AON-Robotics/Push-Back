@@ -2,7 +2,7 @@
 
 #include "../constants.hpp"
 #include "../../api.h"
-#include "../../okapi/api.hpp"
+#include "../compat/okapi.hpp"
 #include "../tools/general.hpp"
 #include "../piston/piston.hpp"
 #include "../proximity/proximity.hpp"

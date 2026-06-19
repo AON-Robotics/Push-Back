@@ -1,7 +1,7 @@
 #ifndef AON_CONTROLS_SMART_MOTOR_HPP__
 #define AON_CONTROLS_SMART_MOTOR_HPP__
 
-#include "../../okapi/api.hpp"
+#include "../compat/okapi.hpp"
 
 /**
  * SMART_MOTOR

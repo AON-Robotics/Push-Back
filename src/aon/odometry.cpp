@@ -4,9 +4,9 @@ namespace aon {
 
 Odometry::Odometry(short left, short right, short back, short gps, short gyro)
     : conversionFactor(M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION),
-      encoderLeft(abs(left), (left / abs(left) != 1)),
-      encoderRight(abs(right), (right / abs(right) != 1)),
-      encoderBack(abs(back), (back / abs(back) != 1)),
+      encoderLeft(abs(left)),
+      encoderRight(abs(right)),
+      encoderBack(abs(back)),
       gps(gps, GPS_INITIAL_X, GPS_INITIAL_Y, GPS_INITIAL_HEADING, GPS_X_OFFSET,
           GPS_Y_OFFSET)
 #if GYRO_ENABLED
@@ -14,6 +14,9 @@ Odometry::Odometry(short left, short right, short back, short gps, short gyro)
       gyroscope(gyro)
 #endif
 {
+  encoderLeft.set_reversed(left < 0);
+  encoderRight.set_reversed(right < 0);
+  encoderBack.set_reversed(back < 0);
 }
 
 Odometry::Odometry(const Odometry& other)
@@ -323,7 +326,7 @@ void Odometry::resetCurrent(double x, double y, double theta) {
 /// @returns The GPS coordinates as a `Vector`
 Vector Odometry::gpsPosition() {
   pros::delay(2000);
-  pros::c::gps_status_s_t status = gps.get_status();
+  pros::gps_position_s_t status = gps.get_position();
   Vector current = Vector().SetPosition(status.x, status.y);
 
   return current;

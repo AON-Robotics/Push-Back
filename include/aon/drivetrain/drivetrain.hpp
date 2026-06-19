@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../okapi/api.hpp"
+#include "../compat/okapi.hpp"
 #include "../odometry/odometry.hpp"
 #include "../controls/smart_motor.hpp"
 #include "../controls/pid/pid.hpp"

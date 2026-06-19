@@ -1,7 +1,7 @@
-#include "../../../include/aon/tools/gui/gui.hpp"
-#include "../../../include/aon/tools/gui/gui-debug.hpp"
-#include "../../../include/aon/constants.hpp"
-#include "../../../include/aon/tools/gui/ui/gui-layout.hpp"
+#include "aon/tools/gui/gui.hpp"
+#include "aon/tools/gui/gui-debug.hpp"
+#include "aon/constants.hpp"
+#include "aon/tools/gui/ui/gui-layout.hpp"
 
 namespace aon {
 
