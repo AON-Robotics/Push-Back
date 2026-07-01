@@ -60,6 +60,7 @@ enum GuiScreen {
 struct AutonOption {
   const char* name;
   int (*routine)();
+  const char* buttonLabel = nullptr;
 };
 
 // Constants
@@ -86,24 +87,24 @@ public:
   GuiScreen currentScreen = MainMenu;
   GuiScreen previousScreen = MainMenu;
 
-  // TODO: move this to be only parameter based
   // Auton routines for each alliance
+  //3rd option is for button label keep it to less than 4 characters
   AutonOption redAutonOptions[autonOptionsCount] = {
-    {"Black Beard", aon::routines::RedRoutine1},
-    {"Jack Sparrow", aon::routines::RedRoutine2},
-    {"Red AUT3", aon::routines::RedRoutine3},
+    {"Black Beard", aon::routines::RedRoutine1, "BB"},
+    {"Jack Sparrow", aon::routines::RedRoutine2, "JKS"},
+    {"Red AUT3", aon::routines::RedRoutine3, "R3"},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {
-    {"Black Beard", aon::routines::BlueRoutine1},
-    {"Jack Sparrow", aon::routines::BlueRoutine2},
-    {"Blue AUT3", aon::routines::BlueRoutine3},
+    {"Black Beard", aon::routines::BlueRoutine1, "BB"},
+    {"Jack Sparrow", aon::routines::BlueRoutine2, "JKS"},
+    {"Blue AUT3", aon::routines::BlueRoutine3, "B3"},
   };
   
   AutonOption skillsAutonOptions[autonOptionsCount] = {
-    {"Skills AUT1", aon::routines::SkillsRoutine1},
-    {"Skills AUT2", aon::routines::SkillsRoutine2},
-    {"Skills AUT3", aon::routines::SkillsRoutine3},
+    {"Skills AUT1", aon::routines::SkillsRoutine1, "S1"},
+    {"Skills AUT2", aon::routines::SkillsRoutine2, "S2"},
+    {"Skills AUT3", aon::routines::SkillsRoutine3, "S3"},
   };
 
 

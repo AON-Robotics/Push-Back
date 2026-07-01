@@ -71,9 +71,9 @@ void Gui::displayRedAutonMenu() {
   pros::screen::print(pros::E_TEXT_LARGE_CENTER, 4, "RED");
 
   // Draw auton selection buttons with red theme colors
-  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_LIGHT_PINK;
-  ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_CRIMSON;
-  ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_RED;
+  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_LIGHT_PINK; aut1.label = redAutonOptions[0].buttonLabel;
+  ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_CRIMSON; aut2.label = redAutonOptions[1].buttonLabel;
+  ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_RED; aut3.label = redAutonOptions[2].buttonLabel;
   aut1.draw(pros::E_TEXT_LARGE);
   aut2.draw(pros::E_TEXT_LARGE);
   aut3.draw(pros::E_TEXT_LARGE);
@@ -103,9 +103,9 @@ void Gui::displayBlueAutonMenu() {
   pros::screen::print(pros::E_TEXT_LARGE_CENTER, 4, "BLUE");
 
   // Draw auton selection buttons with blue theme colors
-  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_SKY_BLUE;
-  ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_STEEL_BLUE;
-  ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_BLUE;
+  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_SKY_BLUE; aut1.label = blueAutonOptions[0].buttonLabel;
+  ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_STEEL_BLUE; aut2.label = blueAutonOptions[1].buttonLabel;
+  ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_BLUE; aut3.label = blueAutonOptions[2].buttonLabel;
   aut1.draw(pros::E_TEXT_LARGE);
   aut2.draw(pros::E_TEXT_LARGE);
   aut3.draw(pros::E_TEXT_LARGE);
@@ -138,9 +138,9 @@ void Gui::displaySkillsMenu() {
   pros::screen::print(pros::E_TEXT_LARGE_CENTER, 4, "SKILLS");
 
   // Draw auton selection buttons with green theme colors
-  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_LIGHT_GREEN;
-  ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_YELLOW_GREEN;
-  ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_GREEN;
+  ui::Button aut1 = aut1Btn; aut1.bg = COLOR_LIGHT_GREEN; aut1.label = skillsAutonOptions[0].buttonLabel;
+  ui::Button aut2 = Aut2Btn; aut2.bg = COLOR_YELLOW_GREEN; aut2.label = skillsAutonOptions[1].buttonLabel;
+  ui::Button aut3 = Aut3Btn; aut3.bg = COLOR_GREEN; aut3.label = skillsAutonOptions[2].buttonLabel;
   aut1.draw(pros::E_TEXT_LARGE);
   aut2.draw(pros::E_TEXT_LARGE);
   aut3.draw(pros::E_TEXT_LARGE);
