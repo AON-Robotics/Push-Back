@@ -1,5 +1,6 @@
 #include "aon/lemlib/chassis.hpp"
 
+#include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
 #include "lemlib/api.hpp"
 #include "pros/imu.hpp"
@@ -11,6 +12,7 @@
 #include <cstdio>
 #include <cmath>
 #include <memory>
+#include <vector>
 
 namespace aon::lemlib_integration {
 namespace {
@@ -30,15 +32,17 @@ struct CalibrationResult {
 };
 
 double trackingInches(const pros::Rotation& sensor) {
+  const auto& config = aon::config::activeRobotConfig().lemlib;
   const double degrees = sensor.get_position() / 100.0;
-  return degrees / 360.0 * M_PI * TRACKING_WHEEL_DIAMETER;
+  return degrees / 360.0 * M_PI * config.trackingWheelDiameter;
 }
 
 TrackingSample trackingSample() {
-  static pros::Rotation left(19);
-  static pros::Rotation right(18);
-  static pros::Rotation back(5);
-  static pros::Imu imu(16);
+  const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
+  static pros::Rotation left(ports.left);
+  static pros::Rotation right(ports.right);
+  static pros::Rotation back(ports.back);
+  static pros::Imu imu(ports.imu);
   return {trackingInches(left), trackingInches(right), trackingInches(back),
           imu.get_rotation()};
 }
@@ -82,36 +86,40 @@ CalibrationResult reportCalibration(const char* label,
 }  // namespace
 
 lemlib::Chassis& chassis() {
-  static pros::MotorGroup leftMotors({11, -12, 13, -14});
-  static pros::MotorGroup rightMotors({1, -2, 3, -4});
+  const auto& config = aon::config::activeRobotConfig().lemlib;
+  static const std::vector<std::int8_t> leftPorts(config.motors.left.begin(),
+                                                  config.motors.left.end());
+  static const std::vector<std::int8_t> rightPorts(config.motors.right.begin(),
+                                                   config.motors.right.end());
+  static pros::MotorGroup leftMotors(leftPorts);
+  static pros::MotorGroup rightMotors(rightPorts);
 
-  static pros::Rotation leftEncoder(19);
-  static pros::Rotation rightEncoder(18);
-  static pros::Rotation backEncoder(5);
-  static const bool rightEncoderConfigured = [] {
-    rightEncoder.set_reversed(true);
+  static pros::Rotation leftEncoder(config.trackingPorts.left);
+  static pros::Rotation rightEncoder(config.trackingPorts.right);
+  static pros::Rotation backEncoder(config.trackingPorts.back);
+  static const bool encodersConfigured = [&config] {
+    leftEncoder.set_reversed(config.trackingPorts.leftReversed);
+    rightEncoder.set_reversed(config.trackingPorts.rightReversed);
+    backEncoder.set_reversed(config.trackingPorts.backReversed);
     return true;
   }();
-  (void)rightEncoderConfigured;
-  static pros::Imu imu(16);
+  (void)encodersConfigured;
+  static pros::Imu imu(config.trackingPorts.imu);
 
   static lemlib::TrackingWheel leftTrackingWheel(
-      &leftEncoder, TRACKING_WHEEL_DIAMETER,
-      -DISTANCE_LEFT_TRACKING_WHEEL_CENTER);
+      &leftEncoder, config.trackingWheelDiameter, config.leftTrackingOffset);
   static lemlib::TrackingWheel rightTrackingWheel(
-      &rightEncoder, TRACKING_WHEEL_DIAMETER,
-      DISTANCE_RIGHT_TRACKING_WHEEL_CENTER);
+      &rightEncoder, config.trackingWheelDiameter, config.rightTrackingOffset);
   static lemlib::TrackingWheel backTrackingWheel(
-      &backEncoder, TRACKING_WHEEL_DIAMETER,
-      -DISTANCE_BACK_TRACKING_WHEEL_CENTER);
+      &backEncoder, config.trackingWheelDiameter, config.backTrackingOffset);
 
   static lemlib::Drivetrain drivetrain{
       &leftMotors,
       &rightMotors,
-      DRIVE_WIDTH,
-      DRIVE_WHEEL_DIAMETER,
-      MAX_RPM * MOTOR_TO_DRIVE_RATIO,
-      8.0,
+      config.trackWidth,
+      config.driveWheelDiameter,
+      config.drivetrainRpm,
+      config.horizontalDrift,
   };
 
   // Untuned placeholders. They must be tuned before enabling LemLib movement.
