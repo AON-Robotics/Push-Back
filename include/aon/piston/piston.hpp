@@ -1,7 +1,6 @@
 #pragma once
 
-#include "../../api.h"
-#include "../compat/okapi.hpp"
+#include "pros/adi.hpp"
 
 namespace aon {
 
@@ -13,7 +12,7 @@ class Piston {
   };
 
  private:
-  pros::ADIDigitalOut solenoid;
+  pros::adi::DigitalOut solenoid;
   State state;
 
   /// @brief Sets the value of the internal `solenoid` and the state of the
