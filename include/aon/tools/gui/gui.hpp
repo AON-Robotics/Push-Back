@@ -13,7 +13,7 @@
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
 
-extern volatile Alliance ALLIANCE;
+extern volatile Alliance& ALLIANCE;
 
 namespace aon {
   class Gui;

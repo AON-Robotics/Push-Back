@@ -1,6 +1,7 @@
 #ifndef AON_CONTROLS_PID_PID_HPP__
 #define AON_CONTROLS_PID_PID_HPP__
 
+#include <algorithm>
 #include <cmath>
 
 namespace aon {

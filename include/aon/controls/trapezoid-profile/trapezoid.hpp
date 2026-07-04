@@ -15,6 +15,7 @@
 #include <exception>
 #include <string>
 #include "../../tools/logging.hpp"
+#include <stdexcept>
 
 namespace aon {
 

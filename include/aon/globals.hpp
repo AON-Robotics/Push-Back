@@ -4,6 +4,8 @@
 #define AON_GLOBALS_HPP_
 
 #include "./constants.hpp"
+#include "./control/driver.hpp"
+#include "./core/hardware.hpp"
 #include "../api.h"
 #include "./compat/okapi.hpp"
 #include "./controls/pid/pid.hpp"
@@ -19,16 +21,6 @@
 #include "./math/scaling/exponential-scaler.hpp"
 #include "./math/scaling/cubic-scaler.hpp"
 
-namespace aon::operator_control {
-
-/// Driver profiles for all robots
-enum Driver {
-  KEVIN,
-  FABIAN,
-  DEFAULT,
-};
-}  // namespace aon::operator_control
-
 // ============================================================================
 //   __  __  ___ _____ ___  ___  ___ 
 //  |  \/  |/ _ \_   _/ _ \| _ \/ __|
@@ -38,80 +30,25 @@ enum Driver {
 // ============================================================================
 
 
+inline auto& scaler = aon::core::hardware().scaler;
+inline auto& driver = aon::core::hardware().driver;
+inline auto& startingPose = aon::core::hardware().startingPose;
+inline auto& odometry = aon::core::hardware().odometry;
+inline auto& speedFactors = aon::core::hardware().speedFactors;
 #if USING_BIG_ROBOT
-
-// The scaler choice and subsequently tuning should be done as per driver preference
-aon::PilonsScaler scaler = aon::PilonsScaler(SENSITIVITY);
-// TODO: get driver feedback from the following
-// aon::ExponentialScaler scaler = aon::ExponentialScaler(SENSITIVITY);
-// aon::CubicScaler scaler = aon::CubicScaler(1);
-
-aon::operator_control::Driver driver = aon::operator_control::FABIAN;
-
-aon::Pose startingPose = aon::Pose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y, INITIAL_ODOMETRY_THETA);
-aon::Odometry odometry = aon::Odometry(5, -6, 7, 0, 14);
-
-aon::Drivetrain::SpeedFactors speedFactors = aon::Drivetrain::SpeedFactors(0.6, 1.0, 0.6, 1.0, 1.0, 1.0);
-
-aon::MotionProfile xProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-aon::MotionProfile yProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-aon::MotionProfile thetaProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3);
-
-aon::HDrive drivetrain = aon::HDrive(
-                          {12, -13, -18, 19},
-                          {-1, 2, 3, -4},
-                          {-15},
-                          startingPose,
-                          std::make_unique<aon::Odometry>(odometry),
-                          speedFactors,
-                          std::make_unique<aon::MotionProfile>(xProfile),
-                          std::make_unique<aon::MotionProfile>(yProfile),
-                          std::make_unique<aon::MotionProfile>(thetaProfile));
-                          
-                          aon::Intake intake = aon::Intake({20, -11, -10}, {17}, 'H', 9, 16, 'F', 'E');
-                          
-                          aon::Piston sem('G', aon::Piston::RETRACTED);
-                          aon::Piston brooks('D', aon::Piston::RETRACTED);
-  
-#else
-
-// The scaler choice and the subsequent tuning should be done as per driver preference
-
-// The joystick scaler object to smoothen driver input
-aon::PilonsScaler scaler = aon::PilonsScaler(SENSITIVITY);
-// TODO: get driver feedback from the following
-// aon::ExponentialScaler scaler = aon::ExponentialScaler(SENSITIVITY);
-// aon::CubicScaler scaler = aon::CubicScaler(1);
-
-aon::operator_control::Driver driver = aon::operator_control::KEVIN;
-
-// aon::XDrive drivetrain = aon::XDrive({-13}, {11}, {-12}, {14});
-aon::Pose startingPose = aon::Pose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y, INITIAL_ODOMETRY_THETA);
-aon::Odometry odometry = aon::Odometry(19, -18, 5, 0, 16);
-
-aon::Drivetrain::SpeedFactors speedFactors = aon::Drivetrain::SpeedFactors(0.6, 0.0, 0.6, 1.0, 0.0, 0.667);
-
-aon::MotionProfile yProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL);
-aon::MotionProfile thetaProfile = aon::MotionProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3);
-
-aon::DifferentialDrive drivetrain = aon::DifferentialDrive(
-                                    {11, -12, 13, -14},
-                                    {1, -2, 3, -4},
-                                    startingPose,
-                                    std::make_unique<aon::Odometry>(odometry),
-                                    speedFactors,
-                                    std::make_unique<aon::MotionProfile>(yProfile),
-                                    std::make_unique<aon::MotionProfile>(thetaProfile));
-
-aon::Intake intake = aon::Intake({-9}, {-6}, {7}, {-8}, 'H', 'B', 'A', 20, 17);
-
-aon::Piston arrow('C', aon::Piston::RETRACTED);
-aon::Piston brooks('G', aon::Piston::RETRACTED);
-
+inline auto& xProfile = aon::core::hardware().xProfile;
 #endif
-
-// Misc
-aon::Orbit orbit(0, true, 0, 0);
+inline auto& yProfile = aon::core::hardware().yProfile;
+inline auto& thetaProfile = aon::core::hardware().thetaProfile;
+inline auto& drivetrain = aon::core::hardware().drivetrain;
+inline auto& intake = aon::core::hardware().intake;
+#if USING_BIG_ROBOT
+inline auto& sem = aon::core::hardware().sem;
+#else
+inline auto& arrow = aon::core::hardware().arrow;
+#endif
+inline auto& brooks = aon::core::hardware().brooks;
+inline auto& orbit = aon::core::hardware().orbit;
 
 // ============================================================================
 //   ___ ___ _  _ ___  ___  ___  ___ 
@@ -123,19 +60,19 @@ aon::Orbit orbit(0, true, 0, 0);
 
 
 /// Set by the GUI; drives color-sort accept/reject logic at runtime.
-volatile Alliance ALLIANCE = Alliance::Red;
+inline volatile Alliance& ALLIANCE = aon::core::hardware().alliance;
 
 // Potentiometer
-pros::ADIPotentiometer potentiometer('Z');
+inline auto& potentiometer = aon::core::hardware().potentiometer;
 
 /// PIDs
-aon::PID drivePID = aon::PID(0.02, 0, 0);
-aon::PID turnPID = aon::PID(0.002, 0, 0);
-aon::PID fastPID = aon::PID(1, 0, 0);
+inline auto& drivePID = aon::core::hardware().drivePID;
+inline auto& turnPID = aon::core::hardware().turnPID;
+inline auto& fastPID = aon::core::hardware().fastPID;
 
 
 /// Controller
-pros::Controller mainController = pros::Controller(CONTROLLER_MASTER);
+inline auto& mainController = aon::core::hardware().mainController;
 
 
 // ============================================================================
@@ -169,7 +106,7 @@ inline void Configure(const bool opcontrol = true) {
 }
 
 /// @brief Stops movement from robot
-void STOP(){
+inline void STOP(){
   drivetrain.stop();
   intake.stop();
   orbit.stop();
@@ -178,7 +115,7 @@ void STOP(){
 /// @brief Used to make sure a condition is being met or a block of code is being run
 /// @param speed The speed with which to spin the intake to differentiate between multiple tests
 /// @note `speed` should vary if running multiple tests in one same run to be able to tell apart between them
-void testEndpoint(int speed = 100){
+inline void testEndpoint(int speed = 100){
   STOP(); 
   intake.move(speed);
   pros::delay(1000);
@@ -186,7 +123,7 @@ void testEndpoint(int speed = 100){
 }
 
 /// @brief Task to stop all motors during auton testing if something goes wrong
-void autonSafety(){
+inline void autonSafety(){
   while(true){
     while(mainController.get_digital(DIGITAL_X)){
       STOP();

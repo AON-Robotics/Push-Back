@@ -8,7 +8,7 @@
 #include "../proximity/proximity.hpp"
 #include "../math/timer.hpp"
 
-extern volatile Alliance ALLIANCE;
+extern volatile Alliance& ALLIANCE;
 
 namespace aon {
 
