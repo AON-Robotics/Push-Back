@@ -143,7 +143,7 @@ void Odometry::initialize() {
 
 /// @brief Fundamental function for Odometry.
 /// @details Uses changes in encoder (right and left) and gyro to calculate position
-void Odometry::update() { // TODO: implement odometer functions both for linear and rotational movement
+void Odometry::update() {
   /// Read encoder values, divided by 100 to convert centidegrees to degrees
   encoderRight_data.currentValue = encoderRight.get_position() / 100.0;
   encoderLeft_data.currentValue = encoderLeft.get_position() / 100.0;
@@ -341,7 +341,6 @@ void Odometry::debug() {
   while (true) {
     pros::lcd::print(0, "X: %.3f", getX());
     pros::lcd::print(1, "Y: %.3f", getY());
-    // pros::lcd::print(0, "X: %.3f, Y: %.3f", getX(), getY());
     pros::lcd::print(
         2, "Left : %.3f, %.3f, %.3f", encoderLeft_data.currentDistance,
         encoderLeft_data.previousDistance, encoderLeft_data.deltaDistance);

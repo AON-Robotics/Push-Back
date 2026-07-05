@@ -213,7 +213,7 @@ void Intake::activateScan() { scanning = true; }
 
 void Intake::stopScan() { scanning = false; }
 
-void Intake::setSortHeights(Height accept) { // TODO: rename
+void Intake::setSortHeights(Height accept) {
   acceptHeight = accept;
 }
 
@@ -407,7 +407,8 @@ void Intake::openTrapdoor() { trapdoor.activate(); }
 void Intake::closeTrapdoor() { trapdoor.deactivate(); }
 
 void Intake::scorer(const int& rpm) {
-  // TODO: modify logic for the lever
+  // Manual scorer commands override position control so drivers can recover
+  // the mechanism if the lever binds.
   scorerMG.move_velocity(rpm);
 }
 

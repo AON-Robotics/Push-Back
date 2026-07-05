@@ -67,7 +67,6 @@ void GuiDebug::DisplayRegisteredAutonsMenu() {
 void GuiDebug::DisplayAutonRunner() {
   pros::screen::set_eraser(COLOR_BLACK);
   pros::screen::erase();
-  // aon::drawSafeCourners();
 
   // Header
   pros::screen::set_pen(COLOR_WHITE);

@@ -2,10 +2,12 @@
 
 namespace aon::util {
 
-/// Lightweight scalar Kalman filter used for noisy distance estimates.
-///
-/// This preserves the algorithm and defaults previously supplied by the
-/// temporary Okapi compatibility layer.
+/**
+ * @brief Filters a scalar measurement with a one-state Kalman estimate.
+ *
+ * The defaults preserve the behavior used for vision-derived distance
+ * estimates before the Okapi compatibility layer was removed.
+ */
 class ScalarKalmanFilter {
  public:
   explicit ScalarKalmanFilter(double processNoise = 0.0001,

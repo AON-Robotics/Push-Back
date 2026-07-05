@@ -10,11 +10,6 @@
 #include "aon/tools/general.hpp"
 #include "aon/math/misc/misc.hpp"
 
-// TODO: for modularity we will have odometry, drivetrain, navigator, orbit, intake, and claw (the last two will most likely change with each game and modules may be added or removed as needed)
-// TODO: add support for a drive mode that is videogame-like (i think rocket league has it). Basically with reference to where the driver is standing on the field, the direction towards which you move the joystick is where the robot will turn to and drive to at the same time. This should greatly facilitate general directional movement if implemented correctly. Leave a toggle available for traditional driving in accordance to the chosen drivetrain for better fine grained control in tight spaces.
-// TODO: odometry should also have an traditional odometer functionality to track how much distance the robot has traveled and also use integration for all measurements as a fallback if sensors fail
-
-
 /**
  * For GPS coord system: https://pros.cs.purdue.edu/v5/tutorials/topical/gps.html
  */
@@ -69,7 +64,7 @@ double getDistanceToRing(const Colors &color = orbit.getColor()){
 
   double distance;
 
-  // Filter the distance for half a second using 100 measurements (1 every 5 milliseconds)
+  // A 500 ms sampling window suppresses single-frame vision width spikes.
   for(int i = 0; i < 100; i++){
     distance = ekf.filter(orbit.groundDistanceToDisk((orbit.getLargestObject()).width));
     pros::delay(5);
@@ -81,7 +76,8 @@ double getDistanceToRing(const Colors &color = orbit.getColor()){
 /// @brief Drives forward until a ring hits the distance sensor
 /// @param distance The distance from the robot to a ring
 void driveTillPickUp(const double &distance = getDistanceToRing()){
-  const double additional_distance = 0; //? This is to give the robot some distance to actually grip the donut, determine this experimentally
+  // Mechanism compression may require extra travel after first detection.
+  const double additional_distance = 0;
   intake.activateScan();
   drivetrain.move(distance + additional_distance);
   intake.stopScan();
@@ -106,7 +102,8 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
   intake.activateScan();
   pros::delay(500);
   okapi::EKFFilter ekf;
-  const double tolerance = 5; //? Probably adjust this
+  // Five pixels avoids hunting as vision readings alternate around center.
+  const double tolerance = 5;
   double difference;
 
   const double dt = 0.02;
@@ -127,7 +124,6 @@ void driveIntoRing(const Colors &color = orbit.getColor()){
     }
 
     difference = orbit.difference();
-    //? maybe motion profile this variable
     double TURN = turnPID.Output(0, -difference) * 500;
     
     const double distance = ekf.filter(orbit.groundDistanceToDisk((orbit.getLargestObject()).width));
@@ -176,14 +172,6 @@ void distanceSensorSpeed(double RPM = MAX_RPM){
   MovingAverage mav(50);
   while(true) {
     drivetrain.motors(RPM);
-    // double measured = math::metersToInches(distanceSensor.get_object_velocity());
-    // double calculated = getSpeed(RPM);
-    // double error = abs(math::getErrorPercentage(calculated, measured));
-    // double avg = mav.update(error);
-    // pros::lcd::print(1, "RPM: %.2f", RPM);
-    // pros::lcd::print(2, "Calculated Velocity: %.2f", calculated);
-    // pros::lcd::print(3, "Measured Velocity: %.2f", measured);
-    // pros::lcd::print(4, "Error %: %.2f%", avg);
     pros::delay(10);
   }
 }
@@ -500,7 +488,6 @@ void bigBotCurves(){
   // drivetrain.turn(-90); // Orient towards parking.
   // drivetrain.move(12); // Move towards parking.
   
-  // drivetrain.goToPose(Pose(0,0,-90)); // TODO: doing this depends on whether the new odom works
   drivetrain.strafe(12); // Align with parking.
   drivetrain.move(11); // Move to parking.
   drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
@@ -509,7 +496,7 @@ void bigBotCurves(){
 }
 
 void bigBotContinuity(){
-  // TODO: check color sorting integration
+  // Sorting remains disabled because rejection changes route timing.
   drivetrain.strafe(28.5); // Align with match loader.
   intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(5, false); // Move to match loader.
@@ -532,7 +519,7 @@ void bigBotContinuity(){
 }
 
 void bigBotStayThere(){
-  // TODO: check color sorting integration
+  // Sorting remains disabled because rejection changes route timing.
   drivetrain.strafe(28.5); // Align with match loader.
   intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(5, false); // Move to match loader.
@@ -540,7 +527,6 @@ void bigBotStayThere(){
   drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
 
   drivetrain.jiggle(16, 120, 200); // Use if cart kinda works
-  // pros::delay(8000); // Use if cart works
   
   drivetrain.move(-20, false); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
@@ -561,9 +547,9 @@ void bigBotStayThere(){
   drivetrain.strafe(9); // Push against it to block descoring
 }
 
-// TODO: tune distances
+// TODO(AUTON-BIG-LONG-GOAL): Validate distances with the loaded robot.
 void bigBotLongGoalThenPark(){
-  // TODO: check color sorting integration
+  // Sorting remains disabled because rejection changes route timing.
   drivetrain.strafe(28.5); // Align with match loader.
   intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(5, false); // Move to match loader.
@@ -617,9 +603,6 @@ void BigBotSkillsRoutine(){
   pros::delay(1000); 
   drivetrain.stop(); 
   brooks.activate();
-  //empy the match loader 
-  //empty match loader across 
-  //Park
 }
 
 // Wrappers for the GUI
@@ -755,7 +738,7 @@ void jackSparrow(){
   drivetrain.motors(600, 2000);
 }
 
-// TODO: test
+// TODO(AUTON-SMALL-WORLDS): Validate the full route before selection.
 void smallBotRoutineWorlds(){
   drivetrain.move(31); // Align with match loader
   drivetrain.turn(90);

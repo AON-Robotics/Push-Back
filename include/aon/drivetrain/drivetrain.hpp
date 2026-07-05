@@ -72,7 +72,8 @@ class Drivetrain {
     HOLONOMIC,
   };
 
-  // TODO: move all implementations to a dedicated cpp file
+  // TODO(ARCH-DRIVETRAIN): Move non-template implementations to source files
+  // after the native PROS drivetrain migration is physically validated.
 
   /// @brief Starts the underlying odometry thread
   void initialize() { this->odometry->initialize(); }
@@ -486,7 +487,9 @@ class Drivetrain {
     double currAngle;
     double traveledAngle = 0;
 
-    double startAngle = odometry->gyroscope.get_rotation(); // TODO: add a function for this in the future odom class
+    // Raw IMU rotation is required here because this profile tracks cumulative
+    // travel and may intentionally cross the 0/360 boundary.
+    double startAngle = odometry->gyroscope.get_rotation();
     // double startAngle = aon::odometry::GetDegrees();  //! this means we need an equivalent for the odometer but for gyro
 
     double now;
@@ -505,7 +508,6 @@ class Drivetrain {
       
       // Debugging output
       pros::lcd::print(1, "Traveled: %.2f / %.2f", traveledAngle, angle);
-      // pros::c::controller_print(pros::controller_id_e_t::E_CONTROLLER_MASTER, 0, 0, "Trav %.2f / %.2f", traveledAngle, angle);
 
       currVelocity = this->thetaProfile->update(circumference * (remainingAngle / 360.0), dt);
       this->rotate(sign * currVelocity);
@@ -521,7 +523,7 @@ class Drivetrain {
   /// @param dist The distance to move in \b inches
   /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
   /// @details A positive `dist` makes the robot go forward while a negative `dist` makes the robot go backwards
-  void move(const double &dist = TILE_WIDTH, bool settle = true) { // TODO: change this settle variable to a more direct `double finalVelocity = 0` or similar (ideally same concept just a better name)
+  void move(const double &dist = TILE_WIDTH, bool settle = true) {
     driveProfiled(dist, settle);
   }
 
@@ -529,7 +531,7 @@ class Drivetrain {
   /// @param dist The distance to move in \b inches
   /// @param settle If true, robot will stop after movement, if false, it will proceed at a constant speed
   /// @details A positive `dist` makes the robot go right while a negative `dist` makes the robot go left
-  void strafe(const double &dist = TILE_WIDTH, bool settle = true) { // TODO: add optional enum to pick which controller to use (for now just PID and MotionProfile available)
+  void strafe(const double &dist = TILE_WIDTH, bool settle = true) {
     strafeProfiled(dist, settle);
   }
 
@@ -659,11 +661,13 @@ class Drivetrain {
     // Get the current pose
     Vector position = odometry->getPosition();
     position.SetPosition(math::inchesToMeters(position.GetX()), math::inchesToMeters(position.GetY()));
-    double heading = odometry->getDegrees(); //? should this come in the same format as the GPS heading?
+    // Odometry uses robot-centric degrees; GPS geometry below expects a
+    // mathematical heading measured from +X.
+    double heading = odometry->getDegrees();
     Vector target = Vector().SetPosition(x, y);
 
     // Convert the heading to traditional math coordinates
-    heading = (90 - heading); //? only do the `(90 - heading)` part if the heading comes in gps coordinates
+    heading = (90 - heading);
     if (heading < 0) { heading += 360; }
     heading *=  M_PI / 180;
 

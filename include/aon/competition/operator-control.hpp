@@ -38,7 +38,6 @@ inline void DriveDefault() { }
 /// Kevin's Operator Control configuration
 inline void DriveKevin() { 
   #if !USING_BIG_ROBOT
-  //# From now on, all drivetrains used will need to use this format for driving
   double leftX = scaler.transform(mainController.get_analog(ANALOG_LEFT_X));
   double leftY = scaler.transform(mainController.get_analog(ANALOG_LEFT_Y));
   double rightX = scaler.transform(mainController.get_analog(ANALOG_RIGHT_X));
@@ -90,7 +89,6 @@ inline void DriveKevin() {
   // Optional single tap
   // Lever
   // const bool pressedR1 = mainController.get_digital_new_press(DIGITAL_R1);
-  // if(pressedR1 && intake.leverController->getTarget() == 0 && intake.leverController->getError() < 10){
   //   intake.leverController->setTarget(140);
   // } else if ((pressedR1 && intake.leverController->getTarget() == 140 && !intake.leverController->isSettled())
   //             || (intake.leverController->getTarget() == 140 && intake.leverController->getError() < 10)){
@@ -133,7 +131,6 @@ inline void DriveKevin() {
 /// Fabian's Operator Control configuration
 inline void DriveFabian() {
   #if USING_BIG_ROBOT
-  //# From now on, all drivetrains used will need to use this format for driving
   double leftX = scaler.transform(-mainController.get_analog(ANALOG_LEFT_X));
   double leftY = scaler.transform(-mainController.get_analog(ANALOG_LEFT_Y));
   double rightX = scaler.transform(-mainController.get_analog(ANALOG_RIGHT_X));

@@ -105,7 +105,8 @@ void HDrive::goToPose(const Pose& target){
   const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
   const double circumference = M_TWOPI * ROBOT_RADIUS;
 
-  // TODO: add timeouts for safety
+  // TODO(DRIVE-TIMEOUT): Add a hard timeout before enabling this blocking
+  // controller in competition autonomous.
   while(remainingX > 0.05 || remainingY > 0.05 || remainingTheta > 0.05){
 
     pros::lcd::print(0, "(x, y, theta): (%.2f, %.2f, %.2f)", this->getX(), this->getY(), this->getTheta());

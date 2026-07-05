@@ -86,7 +86,7 @@ public:
   GuiScreen currentScreen = MainMenu;
   GuiScreen previousScreen = MainMenu;
 
-  // TODO: move this to be only parameter based
+  // Fixed-size option arrays keep touch targets stable on the 480x240 display.
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
     {"Black Beard", aon::routines::RedRoutine1},

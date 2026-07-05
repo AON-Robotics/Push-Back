@@ -50,7 +50,7 @@ class DifferentialDrive : public Drivetrain {
   /// @brief Goes to the target point
   /// @param pose The target pose
   /// @note Uses coordinate system from GPS in \b meters
-  void goToPose(const Pose &pose) override; // TODO: add optional `settle` boolean
+  void goToPose(const Pose &pose) override;
 
 };
 

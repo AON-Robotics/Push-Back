@@ -11,12 +11,19 @@ class Proximity {
  public:
   Proximity(char port) : sensor(port) {}
 
-  /// @brief Checks whether the proximity sensor is currently detecting an object.
-  /// @return `true` if an object is present in front of the sensor, `false` otherwise.
+  /**
+   * @brief Reads the active-high proximity input.
+   * @return `true` while an object drives the sensor input high.
+   */
   bool isDetecting() const;
 
-  /// @brief Detects a new object entering the sensor's range (edge-triggered).
-  /// @return `true` only once when a new object is first detected, `false` otherwise.
+  /**
+   * @brief Detects the rising edge of the proximity input.
+   * @return `true` once when a new object enters the sensor range.
+   *
+   * Intake sorting uses this edge-triggered form to avoid queueing the same
+   * object repeatedly while it remains in front of the sensor.
+   */
   bool newObjectDetected() const;
 };
 

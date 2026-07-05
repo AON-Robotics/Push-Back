@@ -17,11 +17,13 @@
 
 namespace aon::core {
 
-/// Owns the legacy robot devices during the structural migration.
-///
-/// Member order intentionally matches the former globals.hpp construction
-/// order. Public members provide a temporary compatibility surface while
-/// control, autonomous, and GUI code are migrated to explicit dependencies.
+/**
+ * @brief Owns the robot devices used by legacy control code.
+ *
+ * Member order intentionally preserves the former global construction order.
+ * Public members are a temporary compatibility surface while control,
+ * autonomous, and GUI code move to explicit dependencies.
+ */
 class Hardware {
  public:
   Hardware();
@@ -57,6 +59,10 @@ class Hardware {
   pros::Controller mainController;
 };
 
+/**
+ * @brief Returns the single hardware owner.
+ * @return Process-lifetime hardware container.
+ */
 Hardware& hardware();
 
 }  // namespace aon::core

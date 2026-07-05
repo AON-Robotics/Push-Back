@@ -2,7 +2,8 @@
 
 namespace aon {
 
-// TODO: verify implementation with a physical model
+// TODO(DRIVE-MECANUM): Validate wheel signs and field-frame transforms on a
+// physical chassis before enabling this drivetrain.
 
 void MecanumDrive::sideways(const double &rpm, const int& delay) {
   this->frontLeftMotors.moveVelocity(rpm);
@@ -135,7 +136,8 @@ void MecanumDrive::goToPose(const Pose& target){
   const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
   const double circumference = M_TWOPI * ROBOT_RADIUS;
 
-  // TODO: add timeouts for safety
+  // TODO(DRIVE-TIMEOUT): Add a hard timeout before enabling this blocking
+  // controller in competition autonomous.
   while(remainingX > 0.05 || remainingY > 0.05 || remainingTheta > 0.05){
 
     pros::lcd::print(0, "(x, y, theta): (%.2f, %.2f, %.2f)", this->getX(), this->getY(), this->getTheta());
@@ -158,7 +160,8 @@ void MecanumDrive::goToPose(const Pose& target){
     Vector direction = Vector().SetPosition(x, y);
     direction.SetDegrees(direction.GetDegrees() + this->getTheta());// - initialPose.theta);
 
-    // TODO: test that this line correctly replaces the previous (commented out) behavior (it should)
+    // Validate this field-frame correction physically; mecanum slip makes
+    // encoder-only verification insufficient.
     this->holonomic(direction.GetY(), direction.GetX(), theta);
     // Vector command = translateToMotorCommand(direction);
     

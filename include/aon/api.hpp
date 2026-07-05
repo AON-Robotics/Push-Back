@@ -22,8 +22,4 @@
 #include "./controls/exponential-profile.hpp"
 #include "./odometry/odometry.hpp"
 
-#if !USING_BLACK_ROBOT
-#include "./controls/holonomic-motion.hpp"
-#endif
-
 #endif  // AON_API_HPP_

@@ -51,7 +51,8 @@ class MotionProfile {
   /// @return The stage of the motion profile
   Stage getStage() const { return this->stage; }
 
-  // TODO: Desmos this function below
+  // TODO(CONTROL-SCURVE): Characterize this profile against measured
+  // acceleration before using it for competition routes.
 
   /// @brief Calculates the target velocity to send to the motors for smooth and precise movements using an S-curve profile.
   /// @param remainingDist The remaining distance to the target in \b inches.

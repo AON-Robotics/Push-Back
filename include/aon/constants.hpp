@@ -105,13 +105,11 @@ inline constexpr auto COLOR_YELLOW_GREEN = pros::c::COLOR_YELLOW_GREEN;
 
 #define SENSITIVITY 10 // 3-10 works good, currently undergoing testing // Higher is more sensitivity
 #define DRIVE_WHEEL_DIAMETER 2.75
-// #define DRIVE_WHEEL_DIAMETER 3.25 // X-Drive
 #define TRACKING_WHEEL_DIAMETER 2
 #define DISTANCE_LEFT_TRACKING_WHEEL_CENTER 1.125
 #define DISTANCE_RIGHT_TRACKING_WHEEL_CENTER 1.125
 #define DISTANCE_BACK_TRACKING_WHEEL_CENTER 1.572
 #define MOTOR_TO_DRIVE_RATIO 0.75 // NumTeethMotorGear / NumTeethWheelGear
-// #define MOTOR_TO_DRIVE_RATIO 0.6 // NumTeethMotorGear / NumTeethWheelGear // X-Drive
 #define GYRO_ENABLED true
 #define GYRO_CONFIDENCE 1
 #define GYRO_FILTER_LENGTH 1
@@ -147,7 +145,6 @@ inline constexpr auto COLOR_YELLOW_GREEN = pros::c::COLOR_YELLOW_GREEN;
 ///
 /// @see https://www.desmos.com/calculator/9e23f1f7b6
 #define MAX_ACCEL 2500.0
-// #define MAX_ACCEL 5899.00220028
 
 /// @brief Maximum deceleration without tipping (limited to not confuse encoders right now)
 ///

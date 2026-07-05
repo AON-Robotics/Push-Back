@@ -8,17 +8,14 @@
 
 namespace aon {
 
-// TODO: add option for holonomic drives, if necessary
 class PurePursuit {
  private:
-  // Motion Profiles
   MotionProfile linearProfile;
   MotionProfile angularProfile;
 
-  int lookaheadOffset;  // Tune
-
-  double linearDeadband;  // Tune
-  double angularDeadband;  // Tune
+  int lookaheadOffset;
+  double linearDeadband;
+  double angularDeadband;
 
  public:
   PurePursuit(MotionProfile linearProfile, MotionProfile angularProfile,
@@ -36,22 +33,15 @@ class PurePursuit {
   /// @param current  The `Pose` the robot is currently at
   /// @return A pair of \b RPM commands for the left and right sides of the drivetrain
   std::pair<double, double> go(Pose target, Pose current, double dt = 0.02) {
-    // Basic Pure Pursuit-style controller (simplified for single target)
-
-    // Extract positions
     double dx = target.x - current.x;
     double dy = target.y - current.y;
 
-    // linearError to target
     double linearError = std::hypot(dx, dy);
 
-    // Desired heading
     double targetAngle = std::atan2(dy, dx) * 180 / M_PI;
-
-    // Current heading (convert to radians)
     double currentHeading = current.theta;
 
-    // Heading angularError (normalize to [-180, 180])
+    // Wrapping prevents the controller from choosing the long way around.
     double angularError = targetAngle - currentHeading;
     while (angularError > 180) angularError -= 360;
     while (angularError < -180) angularError += 360;
@@ -59,12 +49,6 @@ class PurePursuit {
     double linearSign = (linearError == 0) ? 0 : (linearError / std::abs(linearError));
     double angularSign = (angularError == 0) ? 0 : (angularError / std::abs(angularError));
     
-    // Linear and angular velocities
-
-    // TODO: check if using these three lines instead of the next one maintains accuracy while reducing angular oscillations
-    // double angleFactor = std::cos(angularError * M_PI / 180.0);
-    // angleFactor = std::clamp(angleFactor, 0.0, 1.0);
-    // double linearVel = linearProfile.update(abs(linearError), dt) * * linearSign * angleFactor;
     double linearVel = linearProfile.update(std::abs(linearError), dt) * linearSign;
     
     const double circumference = DRIVE_WIDTH * M_PI;
@@ -72,16 +56,12 @@ class PurePursuit {
     
     double angularVel = angularProfile.update(angularArc, dt) * angularSign;
 
-    // TODO: try using these to see if there is any improvement but I (Kevin G) dont expect it
-    // double curvature = (2 * sin(angularErrorRad)) / lookaheadDistance;
-    // double angularVel = curvature * linearVel;
-
-    // Convert to tank drive velocities
-    // left = v + w, right = v - w
+    // Differential-drive mixing turns translational and angular requests into
+    // independently commandable wheel velocities.
     double left = linearVel + angularVel;
     double right = linearVel - angularVel;
 
-    // Deadband to avoid infinite loop
+    // A zero command signals completion to blocking drivetrain callers.
     if (std::abs(linearError) <= linearDeadband)
       return {0, 0};
 
@@ -93,24 +73,18 @@ class PurePursuit {
   /// @param current  The `Pose` the robot is currently at
   /// @return A pair of \b RPM commands for the left and right sides of the drivetrain
   std::pair<double, double> turn(Pose target, Pose current, double dt = 0.02) {
-    // TODO: determine if this is necessary
-    // Current heading
     double currentHeading = current.theta;
-
-    // Desired final heading
     double targetHeading = target.theta;
 
-    // Compute angular error (normalize to [-pi, pi])
+    // Use the shortest angular displacement across the 0/360 boundary.
     double angularError = targetHeading - currentHeading;
     while (angularError > 180) angularError -= 360;
     while (angularError < -180) angularError += 360;
 
     double sign = (angularError == 0) ? 0 : (angularError / abs(angularError));
 
-    // Pure turning: no linear velocity
     double angularVel = angularProfile.update(std::abs(angularError), dt) * sign;
 
-    // Deadband (symmetric for turning)
     if (std::abs(angularError) <= angularDeadband) return {0, 0};
 
     return {angularVel, -angularVel};
@@ -124,7 +98,6 @@ class PurePursuit {
   std::pair<double, double> follow(std::vector<Pose> path, Pose current, double dt = 0.02) {
     if (path.empty()) return {0, 0};
 
-    // Find closest point on path
     int closestIndex = 0;
     double minDist = DBL_MAX;
 
@@ -137,19 +110,12 @@ class PurePursuit {
       }
     }
 
-    // Lookahead index (simple fixed offset)
+    // This fixed sample offset assumes paths use consistent point spacing.
     int lookaheadIndex =
         std::min((size_t)(closestIndex + lookaheadOffset), path.size() - 1);
 
     Pose target = path[lookaheadIndex];
 
-    double distToEnd = current.distanceTo(target);
-
-    // if (lookaheadIndex >= path.size() - 1 && distToEnd < linearDeadband) {
-    //   return turn(target, current, dt);
-    // }
-
-    // Reuse single-point controller
     return go(target, current, dt);
   }
 };

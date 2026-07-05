@@ -26,23 +26,31 @@ class Piston {
     this->set(state);
   }
 
-  /// @brief Returns the current state of the piston
-  /// @return The current state of the piston
+  /**
+   * @brief Returns the last state commanded through this wrapper.
+   * @return `EXTENDED` or `RETRACTED`.
+   *
+   * This is command state, not pneumatic feedback; no position sensor is
+   * attached to the cylinder.
+   */
   State getState() const;
 
-  /// @brief Extends the piston
+  /** @brief Commands the solenoid to extend the piston. */
   void activate();
 
-  /// @brief Retracts the piston
+  /** @brief Commands the solenoid to retract the piston. */
   void deactivate();
 
-  /// @brief Determines whether the piston is extended via its `state`
-  /// @return `true` if `state` is `EXTENDED`, `false` otherwise
+  /**
+   * @brief Reports whether extension was last commanded.
+   * @return `true` after `activate()` or an equivalent toggle.
+   */
   bool isActivated() const;
 
-  /// @brief Set the `state` of the `solenoid` to be the opposite of what it
-  /// currently is
-  /// @return The new `state`
+  /**
+   * @brief Commands the opposite of the current software state.
+   * @return The newly commanded state.
+   */
   State toggle();
 };
 
