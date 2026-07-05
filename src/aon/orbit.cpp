@@ -1,5 +1,10 @@
 #include "../../include/aon/orbit/orbit.hpp"
 #include "../../include/aon/tools/general.hpp"
+#include "aon/util/scalar-kalman-filter.hpp"
+
+#include "pros/rtos.hpp"
+
+#include <cmath>
 namespace aon {
 
 // Constructor
@@ -19,14 +24,14 @@ void Orbit::configure() {
   vision_sensor.set_signature(BLUE, &BLUE_SIG);
   vision_sensor.set_signature(STAKE, &STAKE_SIG);
 
-  motor.setBrakeMode(okapi::AbstractMotor::brakeMode::hold);
-  motor.setGearing(okapi::AbstractMotor::gearset::green);
-  motor.setEncoderUnits(okapi::AbstractMotor::encoderUnits::degrees);
-  motor.tarePosition();
+  motor.set_brake_mode(pros::MotorBrake::hold);
+  motor.set_gearing(pros::MotorGears::green);
+  motor.set_encoder_units(pros::MotorUnits::degrees);
+  motor.tare_position();
 }
 
 void Orbit::stop() {
-  motor.moveVelocity(0);
+  motor.move_velocity(0);
 }
 
 /// @brief Begins ORBIT following cycle
@@ -79,7 +84,7 @@ void Orbit::follow() {
           rotateAbsolute(nearest(
               position, std::make_pair(leftLimit + 10, rightLimit - 10)));
         } else {  // Turn Towards Object
-          motor.moveVelocity(SPEED);
+          motor.move_velocity(SPEED);
         }
       }
       // Dont move if nothing is there
@@ -102,7 +107,7 @@ void Orbit::rotateRelative(const double &givenAngle) {
   do {
     currentAngle = encoder.get_position() / 100.0;
     double output = PID.Output(targetAngle, currentAngle);
-    motor.moveVelocity(output);
+    motor.move_velocity(output);
     pros::delay(10);
   } while (abs(currentAngle - targetAngle) > TOLERANCE);
   this->stop();
@@ -135,7 +140,7 @@ void Orbit::scan() {
           rotateAbsolute(nearest(
               position, std::make_pair(leftLimit + 20, rightLimit - 20)));
         }
-        motor.moveVelocity(40 * (goingLeft ? -1 : 1));
+        motor.move_velocity(40 * (goingLeft ? -1 : 1));
       }
     } else if (isFollowing()) {
       deactivateScan();  // dont scan if the ORBIT following was activated
@@ -158,7 +163,7 @@ void Orbit::rotateAbsolute(double targetAngle) {
     currentAngle = encoder.get_angle() / 100.0;
     if (currentAngle > 180) currentAngle -= 360;
     double output = PID.Output(targetAngle, currentAngle);
-    motor.moveVelocity(output);
+    motor.move_velocity(output);
     pros::delay(10);
   } while (abs(currentAngle - targetAngle) > TOLERANCE);
   this->stop();
@@ -237,7 +242,7 @@ double Orbit::widthToDistance(const double &width) {
 double Orbit::getDistanceToRing(Colors color){
   color = this->getColor();
   this->setColor(this->getColor());
-  okapi::EKFFilter ekf;
+  util::ScalarKalmanFilter ekf;
 
   double distance;
 

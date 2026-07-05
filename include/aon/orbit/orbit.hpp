@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../../api.h"
-#include "../compat/okapi.hpp"
 #include "../constants.hpp"
 #include "../controls/pid/pid.hpp"
 #include "../tools/vector.hpp"
+#include "pros/motors.hpp"
+#include "pros/rotation.hpp"
+#include "pros/vision.hpp"
 
 namespace aon {
 enum Colors { RED = 1, BLUE, STAKE };
@@ -17,7 +18,7 @@ class Orbit {
   const bool limited = true;
   const int leftLimit = 210;
   const int rightLimit = 90;
-  okapi::Motor motor;
+  pros::Motor motor;
   aon::PID PID = aon::PID(0.25, 0, 0);
 
   Colors COLOR = RED;
