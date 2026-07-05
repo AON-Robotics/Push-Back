@@ -1,12 +1,16 @@
 #pragma once
 
 #include "../constants.hpp"
-#include "../../api.h"
-#include "../compat/okapi.hpp"
 #include "../tools/general.hpp"
 #include "../piston/piston.hpp"
 #include "../proximity/proximity.hpp"
 #include "../math/timer.hpp"
+#include "pros/distance.hpp"
+#include "pros/motor_group.hpp"
+#include "pros/optical.hpp"
+
+#include <cstdint>
+#include <initializer_list>
 
 extern volatile Alliance& ALLIANCE;
 
@@ -32,8 +36,8 @@ class Intake {
 
  private:
   SortState sortState = INIT;
-  okapi::MotorGroup elevatorMG;
-  okapi::MotorGroup judgeMG;
+  pros::MotorGroup elevatorMG;
+  pros::MotorGroup judgeMG;
   Piston cart;
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
@@ -47,8 +51,8 @@ class Intake {
   Height acceptHeight = TOP;
 
  public:
-  Intake(const std::initializer_list<okapi::Motor>& elevatorPorts,
-         const std::initializer_list<okapi::Motor>& judgePorts,
+  Intake(const std::initializer_list<std::int8_t>& elevatorPorts,
+         const std::initializer_list<std::int8_t>& judgePorts,
          char cartPistonsPort, int distanceSensorPort, int colorSensorPort,
          char acceptSensorPort, char rejectSensorPort);
 
@@ -91,10 +95,10 @@ class Intake {
   SortState getSortingState() const;
 #else
  private:
-  okapi::MotorGroup corridorMG;
-  okapi::MotorGroup elevatorMG;
-  okapi::MotorGroup judgeMG;
-  okapi::MotorGroup scorerMG;
+  pros::MotorGroup corridorMG;
+  pros::MotorGroup elevatorMG;
+  pros::MotorGroup judgeMG;
+  pros::MotorGroup scorerMG;
   Piston scorerPiston;
   Piston cart;
   Piston trapdoor;
@@ -105,11 +109,11 @@ class Intake {
   volatile bool scoreDown = false;
 
  public:
-  std::shared_ptr<okapi::AsyncPositionController<double, double>> leverController = nullptr;
-  Intake(const std::initializer_list<okapi::Motor>& corridorPorts,
-         const std::initializer_list<okapi::Motor>& elevatorPorts,
-         const std::initializer_list<okapi::Motor>& judgePorts,
-         const std::initializer_list<okapi::Motor>& scorerPorts,
+  double leverTarget = 0.0;
+  Intake(const std::initializer_list<std::int8_t>& corridorPorts,
+         const std::initializer_list<std::int8_t>& elevatorPorts,
+         const std::initializer_list<std::int8_t>& judgePorts,
+         const std::initializer_list<std::int8_t>& scorerPorts,
          char scorerPistonPort, char cartPistonPort, char trapdoorPistonPort,
          int distanceSensorPort, int colorSensorPort);
 
@@ -184,8 +188,7 @@ class Intake {
   /// @brief Configures the subsytems of the intake
   /// @param brakeModeThe braking paradigm we will use, usually `coast`
   /// @param gearset The gearbox the physical motors contain
-  void configure(okapi::AbstractMotor::brakeMode brakeMode,
-                 okapi::AbstractMotor::gearset gearset);
+  void configure(pros::MotorBrake brakeMode, pros::MotorGears gearset);
 
   /// @brief Moves the entire intake system at the same `rpm`
   /// @param rpm The rpm to set to the motors
