@@ -6,7 +6,7 @@ class Chassis;
 
 namespace aon::lemlib_integration {
 
-/// Returns the small robot's LemLib chassis.
+/// Returns the LemLib chassis configured for the selected robot.
 ///
 /// The chassis and its devices are constructed lazily. Merely linking this
 /// module does not initialize sensors or command the drivetrain.

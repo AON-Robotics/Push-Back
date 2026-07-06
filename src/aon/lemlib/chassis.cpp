@@ -1,5 +1,6 @@
 #include "aon/lemlib/chassis.hpp"
 
+#include "aon/auton/actions.hpp"
 #include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
 #include "lemlib/api.hpp"
@@ -181,9 +182,9 @@ void runTurnTest(double targetHeading) {
   pros::delay(250);
 
   pros::lcd::set_text(4, "Auton turn running...");
-  testChassis.turnToHeading(
-      targetHeading, 2500,
-      {.direction = lemlib::AngularDirection::AUTO, .maxSpeed = 50}, false);
+  auton::actions().turnToHeading(
+      "LemLib turn test", targetHeading, 2500,
+      {.direction = lemlib::AngularDirection::AUTO, .maxSpeed = 50});
 
   const lemlib::Pose finalPose = testChassis.getPose();
   const double error = std::remainder(targetHeading - finalPose.theta, 360.0);
