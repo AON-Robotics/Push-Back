@@ -3,7 +3,51 @@
 #include "aon/constants.hpp"
 #include "aon/tools/gui/ui/gui-layout.hpp"
 
+#include <cstdio>
+
 namespace aon {
+namespace {
+
+struct SavedAutonSelection {
+  Alliance alliance = Alliance::Red;
+  int index = 0;
+  bool hasSelection = false;
+};
+
+SavedAutonSelection savedAutonSelection;
+
+constexpr const char* kAutonSelectionPath = "/usd/aon-auton-selection.txt";
+
+void saveAutonSelection(Alliance alliance, int index) {
+  savedAutonSelection = {alliance, index, true};
+
+  FILE* file = std::fopen(kAutonSelectionPath, "w");
+  if (file == nullptr) return;
+  std::fprintf(file, "%d %d\n", static_cast<int>(alliance), index);
+  std::fclose(file);
+}
+
+void loadAutonSelection() {
+  if (savedAutonSelection.hasSelection) return;
+
+  FILE* file = std::fopen(kAutonSelectionPath, "r");
+  if (file == nullptr) return;
+
+  int alliance = 0;
+  int index = 0;
+  const int parsed = std::fscanf(file, "%d %d", &alliance, &index);
+  std::fclose(file);
+
+  if (parsed != 2 || index < 1 || index > autonOptionsCount) return;
+  if (alliance < static_cast<int>(Alliance::Red) ||
+      alliance > static_cast<int>(Alliance::Skills)) {
+    return;
+  }
+
+  savedAutonSelection = {static_cast<Alliance>(alliance), index, true};
+}
+
+}  // namespace
 
 // Owning GUI instance — type selected at compile time by TESTING_AUTONOMOUS.
 // A single std::unique_ptr<Gui> is used so no redundant reference alias is needed.
@@ -102,6 +146,13 @@ void Gui::applyPreselectedAuton() {
     return;  // Nothing to map; routine already chosen
   }
 
+  loadAutonSelection();
+  if (selectedRedAut == 0 && selectedBlueAut == 0 && selectedSkill == 0 &&
+      savedAutonSelection.hasSelection) {
+    selectAutonByList(savedAutonSelection.alliance, savedAutonSelection.index);
+    return;
+  }
+
   if (selectedRedAut > 0) {
     selectAutonByList(Alliance::Red, selectedRedAut);
     return;  // Red takes precedence
@@ -146,8 +197,10 @@ void Gui::selectAutonByList(Alliance alliance, int index1Based) {
   const AutonOption& choice = options[index1Based - 1];
   selectedAuton = choice;
   selectedAutonName = choice.name;
+  selectedAutonInvoker = nullptr;
+  autonCompleted = false;
 
-  // Register the selected autonomous routine to the autonomousReader
+  saveAutonSelection(alliance, index1Based);
   autonomousReader->AddFunction("autonomous", choice.routine);
 
   if (currentScreen == MainMenu) {
