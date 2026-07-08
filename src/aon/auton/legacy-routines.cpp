@@ -877,11 +877,13 @@ int lemlibJerryIoPathRoutine(const char* name) {
 // LemLib-backed wrappers for the GUI
 
 int RedRoutine1() {
-  return lemlibJerryIoPathRoutine("Red 1 JerryIO path");
+  blackBeard();
+  return 1;
 }
 
 int RedRoutine2(){
-  return lemlibTurnRoutine("Red 2 LemLib turn", -90);
+  jackSparrow();
+  return 1;
 }
 
 int RedRoutine3(){
@@ -889,11 +891,13 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  return lemlibJerryIoPathRoutine("Blue 1 JerryIO path");
+  blackBeard();
+  return 1;
 }
 
 int BlueRoutine2(){ 
-  return lemlibTurnRoutine("Blue 2 LemLib turn", 90);
+  jackSparrow();
+  return 1;
 }
 
 int BlueRoutine3(){
