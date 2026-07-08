@@ -610,6 +610,13 @@ void BigBotSkillsRoutine(){
 
 namespace {
 
+int runNativeRoutine(void (*routine)()) {
+  routine();
+  drivetrain.stop();
+  intake.stop();
+  return 1;
+}
+
 int lemlibTurnRoutine(const char* name, double heading) {
   auto& routine = aon::auton::actions();
   routine.setPose(0, 0, 0);
@@ -622,7 +629,7 @@ int lemlibTurnRoutine(const char* name, double heading) {
 
 int lemlibJerryIoPathRoutine(const char* name) {
   auto& routine = aon::auton::actions();
-  routine.setPose(0, 0, 0);
+  routine.setPose(0, 0, 20);
   routine.followPath(name, path_jerryio_txt, 10, 8000, true);
   routine.stop();
   return 1;
@@ -630,14 +637,14 @@ int lemlibJerryIoPathRoutine(const char* name) {
 
 }  // namespace
 
-// LemLib-backed wrappers for the GUI
+// GUI autonomous wrappers for the big robot.
 
 int RedRoutine1(){
-  return lemlibJerryIoPathRoutine("Red 1 JerryIO path");
+  return runNativeRoutine(bigBotStayThere);
 }
 
 int RedRoutine2(){
-  return lemlibTurnRoutine("Red 2 LemLib turn", -90);
+  return runNativeRoutine(bigBotPark);
 }
 
 int RedRoutine3(){
@@ -645,11 +652,11 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  return lemlibJerryIoPathRoutine("Blue 1 JerryIO path");
+  return runNativeRoutine(bigBotStayThere);
 }
 
 int BlueRoutine2(){ 
-  return lemlibTurnRoutine("Blue 2 LemLib turn", 90);
+  return runNativeRoutine(bigBotPark);
 }
 
 int BlueRoutine3(){
@@ -657,7 +664,10 @@ int BlueRoutine3(){
 }
 
 int SkillsRoutine1(){
-  return lemlibTurnRoutine("Skills 1 LemLib turn", 90);
+  BigBotSkillsRoutine();
+  drivetrain.stop();
+  intake.stop();
+  return 1;
 }
 
 int SkillsRoutine2(){ 
@@ -854,6 +864,13 @@ void smallbotjorgeg(){
 
 namespace {
 
+int runNativeRoutine(void (*routine)()) {
+  routine();
+  drivetrain.stop();
+  intake.stop();
+  return 1;
+}
+
 int lemlibTurnRoutine(const char* name, double heading) {
   auto& routine = aon::auton::actions();
   routine.setPose(0, 0, 0);
@@ -866,7 +883,7 @@ int lemlibTurnRoutine(const char* name, double heading) {
 
 int lemlibJerryIoPathRoutine(const char* name) {
   auto& routine = aon::auton::actions();
-  routine.setPose(0, 0, 0);
+  routine.setPose(0, 0, 20);
   routine.followPath(name, path_jerryio_txt, 10, 8000, true);
   routine.stop();
   return 1;
@@ -874,16 +891,14 @@ int lemlibJerryIoPathRoutine(const char* name) {
 
 }  // namespace
 
-// LemLib-backed wrappers for the GUI
+// GUI autonomous wrappers for the small robot.
 
 int RedRoutine1() {
-  blackBeard();
-  return 1;
+  return runNativeRoutine(smallBotRoutine);
 }
 
 int RedRoutine2(){
-  jackSparrow();
-  return 1;
+  return runNativeRoutine(smallBotPark);
 }
 
 int RedRoutine3(){
@@ -891,13 +906,11 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  blackBeard();
-  return 1;
+  return runNativeRoutine(smallBotRoutine);
 }
 
 int BlueRoutine2(){ 
-  jackSparrow();
-  return 1;
+  return runNativeRoutine(smallBotPark);
 }
 
 int BlueRoutine3(){
@@ -905,7 +918,11 @@ int BlueRoutine3(){
 }
 
 int SkillsRoutine1(){
-  return lemlibTurnRoutine("Skills 1 LemLib turn", 90);
+  smallBotRoutine();
+  smallBotPark();
+  drivetrain.stop();
+  intake.stop();
+  return 1;
 }
 
 int SkillsRoutine2(){ 

@@ -89,14 +89,14 @@ public:
   // Fixed-size option arrays keep touch targets stable on the 480x240 display.
   // Auton routines for each alliance
   AutonOption redAutonOptions[autonOptionsCount] = {
-    {"Black Beard", aon::routines::RedRoutine1},
-    {"Jack Sparrow", aon::routines::RedRoutine2},
+    {"Kevin Loader", aon::routines::RedRoutine1},
+    {"Kevin Park", aon::routines::RedRoutine2},
     {"Red AUT3", aon::routines::RedRoutine3},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {
-    {"Black Beard", aon::routines::BlueRoutine1},
-    {"Jack Sparrow", aon::routines::BlueRoutine2},
+    {"Kevin Loader", aon::routines::BlueRoutine1},
+    {"Kevin Park", aon::routines::BlueRoutine2},
     {"Blue AUT3", aon::routines::BlueRoutine3},
   };
   
