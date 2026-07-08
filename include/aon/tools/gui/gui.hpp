@@ -78,7 +78,7 @@ public:
   bool autonCompleted = false;
   
   // Preselected auton indices (1-3, 0 = none)
-  int selectedRedAut = 0;
+  int selectedRedAut = 1;
   int selectedBlueAut = 0;
   int selectedSkill = 0;
 
