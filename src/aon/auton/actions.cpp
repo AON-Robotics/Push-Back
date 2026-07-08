@@ -53,6 +53,14 @@ void Actions::turnToHeading(const char* name, double heading, int timeout,
   logFinish("turnToHeading", name, robotChassis.getPose());
 }
 
+void Actions::followPath(const char* name, const asset& path, float lookahead,
+                         int timeout, bool forwards) {
+  auto& robotChassis = lemlib_integration::chassis();
+  logStart("followPath", name);
+  robotChassis.follow(path, lookahead, timeout, forwards, false);
+  logFinish("followPath", name, robotChassis.getPose());
+}
+
 void Actions::cancelMotion() {
   lemlib_integration::chassis().cancelMotion();
 }
