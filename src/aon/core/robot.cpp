@@ -7,13 +7,18 @@
 namespace aon::core {
 
 void Robot::initialize() {
+  pros::screen::set_eraser(COLOR_BLACK);
+  pros::screen::erase();
+  pros::screen::set_pen(COLOR_WHITE);
+  pros::screen::print(pros::E_TEXT_MEDIUM, 8, 8, "AON boot: normal mode");
+
 #if LEMLIB_SENSOR_TEST
   aon::logging::Initialize();
   aon::lemlib_integration::startSensorTest();
 #else
-  pros::Task guiLoopTask([] { aon::gui->initialize(); });
   aon::logging::Initialize();
   aon::Configure(false);
+  pros::Task guiLoopTask([] { aon::gui->initialize(); });
   pros::Task odomTask([] { drivetrain.initialize(); });
   pros::delay(3000);
   pros::Task safetyTask(aon::autonSafety);
