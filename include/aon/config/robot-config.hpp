@@ -33,6 +33,8 @@ struct LemLibDriveConfig {
   float trackWidth;
   float drivetrainRpm;
   float horizontalDrift;
+  float lateralSlew;
+  float angularSlew;
   float leftTrackingOffset;
   float rightTrackingOffset;
   float backTrackingOffset;

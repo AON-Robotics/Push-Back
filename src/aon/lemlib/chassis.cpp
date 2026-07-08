@@ -123,12 +123,13 @@ lemlib::Chassis& chassis() {
       config.horizontalDrift,
   };
 
-  // Untuned placeholders. They must be tuned before enabling LemLib movement.
+  // LemLib commands the motor groups directly, so these slew limits protect
+  // autonomous paths from hard acceleration and braking spikes.
   static lemlib::ControllerSettings lateralController{
-      0.0, 0.0, 0.0, 0.0, 1.0, 100.0, 3.0, 500.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 1.0, 100.0, 3.0, 500.0, config.lateralSlew,
   };
   static lemlib::ControllerSettings angularController{
-      2.0, 0.0, 10.0, 0.0, 1.0, 100.0, 3.0, 500.0, 0.0,
+      2.0, 0.0, 10.0, 0.0, 1.0, 100.0, 3.0, 500.0, config.angularSlew,
   };
 
   static lemlib::OdomSensors sensors{
