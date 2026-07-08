@@ -19,8 +19,9 @@ void Robot::initialize() {
 #else
   aon::logging::Initialize();
   aon::Configure(false);
-  // Keep boot default on a turn test; GUI Red 1/Blue 1 selections run the path.
-  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine2);
+  // Preselect the current JerryIO path autonomous; GUI selections overwrite it.
+  aon::gui->selectedRedAut = 1;
+  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine1);
   pros::Task guiLoopTask([] { aon::gui->initialize(); });
   pros::Task odomTask([] { drivetrain.initialize(); });
   pros::delay(3000);
