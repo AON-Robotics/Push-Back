@@ -9,6 +9,7 @@
 #include "aon/tools/moving-average.hpp"
 #include "aon/tools/general.hpp"
 #include "aon/math/misc/misc.hpp"
+#include "aon/auton/actions.hpp"
 
 /**
  * For GPS coord system: https://pros.cs.purdue.edu/v5/tutorials/topical/gps.html
@@ -605,51 +606,56 @@ void BigBotSkillsRoutine(){
   brooks.activate();
 }
 
-// Wrappers for the GUI
+namespace {
+
+int lemlibTurnRoutine(const char* name, double heading) {
+  auto& routine = aon::auton::actions();
+  routine.setPose(0, 0, 0);
+  routine.turnToHeading(name, heading, 2500,
+                        {.direction = lemlib::AngularDirection::AUTO,
+                         .maxSpeed = 50});
+  routine.stop();
+  return 1;
+}
+
+}  // namespace
+
+// LemLib-backed wrappers for the GUI
 
 int RedRoutine1(){
-  bigBotStayThere();
-  return 1;
+  return lemlibTurnRoutine("Red 1 LemLib turn", 90);
 }
 
 int RedRoutine2(){
-  bigBotContinuity();
-  return 1;
+  return lemlibTurnRoutine("Red 2 LemLib turn", -90);
 }
 
 int RedRoutine3(){
-  bigBotLongGoalThenPark();
-  return 1;
+  return lemlibTurnRoutine("Red 3 LemLib turn", 180);
 }
 
 int BlueRoutine1(){
-  bigBotStayThere();
-  return 1;
+  return lemlibTurnRoutine("Blue 1 LemLib turn", -90);
 }
 
 int BlueRoutine2(){ 
-  bigBotPark();
-  return 1;
+  return lemlibTurnRoutine("Blue 2 LemLib turn", 90);
 }
 
 int BlueRoutine3(){
-  aon::tests::turns();
-  return 1;
+  return lemlibTurnRoutine("Blue 3 LemLib turn", 180);
 }
 
 int SkillsRoutine1(){
-  bigBotContinuity();
-  return 1;
+  return lemlibTurnRoutine("Skills 1 LemLib turn", 90);
 }
 
 int SkillsRoutine2(){ 
-  aon::tests::square();
-  return 1;
+  return lemlibTurnRoutine("Skills 2 LemLib turn", -90);
 }
 
 int SkillsRoutine3(){
-  aon::tests::turns();
-  return 1;
+  return lemlibTurnRoutine("Skills 3 LemLib turn", 180);
 }
 
 #else
@@ -836,51 +842,56 @@ void smallbotjorgeg(){
   drivetrain.move();  
 }
 
-// Wrappers for the GUI
+namespace {
+
+int lemlibTurnRoutine(const char* name, double heading) {
+  auto& routine = aon::auton::actions();
+  routine.setPose(0, 0, 0);
+  routine.turnToHeading(name, heading, 2500,
+                        {.direction = lemlib::AngularDirection::AUTO,
+                         .maxSpeed = 50});
+  routine.stop();
+  return 1;
+}
+
+}  // namespace
+
+// LemLib-backed wrappers for the GUI
 
 int RedRoutine1() {
-  blackBeard();
-  return 1;
+  return lemlibTurnRoutine("Red 1 LemLib turn", 90);
 }
 
 int RedRoutine2(){
-  jackSparrow();
-  return 1;
+  return lemlibTurnRoutine("Red 2 LemLib turn", -90);
 }
 
 int RedRoutine3(){
-  smallBotPark();
-  return 1;
+  return lemlibTurnRoutine("Red 3 LemLib turn", 180);
 }
 
 int BlueRoutine1(){
-  blackBeard();
-  return 1;
+  return lemlibTurnRoutine("Blue 1 LemLib turn", -90);
 }
 
 int BlueRoutine2(){ 
-  jackSparrow();
-  return 1;
+  return lemlibTurnRoutine("Blue 2 LemLib turn", 90);
 }
 
 int BlueRoutine3(){
-  aon::tests::turns();
-  return 1;
+  return lemlibTurnRoutine("Blue 3 LemLib turn", 180);
 }
 
 int SkillsRoutine1(){
-  blackBeard();
-  return 1;
+  return lemlibTurnRoutine("Skills 1 LemLib turn", 90);
 }
 
 int SkillsRoutine2(){ 
-  jackSparrow();
-  return 1;
+  return lemlibTurnRoutine("Skills 2 LemLib turn", -90);
 }
 
 int SkillsRoutine3(){
-  aon::tests::turns();
-  return 1;
+  return lemlibTurnRoutine("Skills 3 LemLib turn", 180);
 }
 
 #endif

@@ -2,6 +2,7 @@
 
 #include "main.hpp"
 
+#include "aon/competition/autonomous-routines.hpp"
 #include "aon/lemlib/chassis.hpp"
 
 namespace aon::core {
@@ -18,6 +19,8 @@ void Robot::initialize() {
 #else
   aon::logging::Initialize();
   aon::Configure(false);
+  // Default to a harmless LemLib turn test; GUI selections overwrite this.
+  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine1);
   pros::Task guiLoopTask([] { aon::gui->initialize(); });
   pros::Task odomTask([] { drivetrain.initialize(); });
   pros::delay(3000);
