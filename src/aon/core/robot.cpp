@@ -19,8 +19,8 @@ void Robot::initialize() {
 #else
   aon::logging::Initialize();
   aon::Configure(false);
-  // Default to a harmless LemLib turn test; GUI selections overwrite this.
-  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine1);
+  // Keep boot default on a turn test; GUI Red 1/Blue 1 selections run the path.
+  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine2);
   pros::Task guiLoopTask([] { aon::gui->initialize(); });
   pros::Task odomTask([] { drivetrain.initialize(); });
   pros::delay(3000);

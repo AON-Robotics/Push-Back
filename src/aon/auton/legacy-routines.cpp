@@ -11,6 +11,8 @@
 #include "aon/math/misc/misc.hpp"
 #include "aon/auton/actions.hpp"
 
+ASSET(path_jerryio_txt);
+
 /**
  * For GPS coord system: https://pros.cs.purdue.edu/v5/tutorials/topical/gps.html
  */
@@ -618,12 +620,20 @@ int lemlibTurnRoutine(const char* name, double heading) {
   return 1;
 }
 
+int lemlibJerryIoPathRoutine(const char* name) {
+  auto& routine = aon::auton::actions();
+  routine.setPose(0, 0, 0);
+  routine.followPath(name, path_jerryio_txt, 10, 8000, true);
+  routine.stop();
+  return 1;
+}
+
 }  // namespace
 
 // LemLib-backed wrappers for the GUI
 
 int RedRoutine1(){
-  return lemlibTurnRoutine("Red 1 LemLib turn", 90);
+  return lemlibJerryIoPathRoutine("Red 1 JerryIO path");
 }
 
 int RedRoutine2(){
@@ -635,7 +645,7 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  return lemlibTurnRoutine("Blue 1 LemLib turn", -90);
+  return lemlibJerryIoPathRoutine("Blue 1 JerryIO path");
 }
 
 int BlueRoutine2(){ 
@@ -854,12 +864,20 @@ int lemlibTurnRoutine(const char* name, double heading) {
   return 1;
 }
 
+int lemlibJerryIoPathRoutine(const char* name) {
+  auto& routine = aon::auton::actions();
+  routine.setPose(0, 0, 0);
+  routine.followPath(name, path_jerryio_txt, 10, 8000, true);
+  routine.stop();
+  return 1;
+}
+
 }  // namespace
 
 // LemLib-backed wrappers for the GUI
 
 int RedRoutine1() {
-  return lemlibTurnRoutine("Red 1 LemLib turn", 90);
+  return lemlibJerryIoPathRoutine("Red 1 JerryIO path");
 }
 
 int RedRoutine2(){
@@ -871,7 +889,7 @@ int RedRoutine3(){
 }
 
 int BlueRoutine1(){
-  return lemlibTurnRoutine("Blue 1 LemLib turn", -90);
+  return lemlibJerryIoPathRoutine("Blue 1 JerryIO path");
 }
 
 int BlueRoutine2(){ 
