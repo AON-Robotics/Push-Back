@@ -38,9 +38,9 @@ inline constexpr auto COLOR_YELLOW_GREEN = pros::c::COLOR_YELLOW_GREEN;
 // NOT using big robot = Using small robot
 #define USING_BIG_ROBOT false
 #define TESTING_AUTONOMOUS false
-#define LEMLIB_SENSOR_TEST true
+#define LEMLIB_SENSOR_TEST false
 #define LEMLIB_TURN_TEST false
-#define LEMLIB_TRACKING_CALIBRATION_TEST true
+#define LEMLIB_TRACKING_CALIBRATION_TEST false
 #define LEMLIB_TURN_TEST_ANGLE 90.0
 
 #if USING_BIG_ROBOT
