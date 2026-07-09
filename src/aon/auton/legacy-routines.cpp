@@ -9,9 +9,6 @@
 #include "aon/tools/moving-average.hpp"
 #include "aon/tools/general.hpp"
 #include "aon/math/misc/misc.hpp"
-#include "aon/auton/actions.hpp"
-
-ASSET(path_jerryio_txt);
 
 /**
  * For GPS coord system: https://pros.cs.purdue.edu/v5/tutorials/topical/gps.html
@@ -608,76 +605,6 @@ void BigBotSkillsRoutine(){
   brooks.activate();
 }
 
-namespace {
-
-int runNativeRoutine(void (*routine)()) {
-  routine();
-  drivetrain.stop();
-  intake.stop();
-  return 1;
-}
-
-int lemlibTurnRoutine(const char* name, double heading) {
-  auto& routine = aon::auton::actions();
-  routine.setPose(0, 0, 0);
-  routine.turnToHeading(name, heading, 2500,
-                        {.direction = lemlib::AngularDirection::AUTO,
-                         .maxSpeed = 50});
-  routine.stop();
-  return 1;
-}
-
-int lemlibJerryIoPathRoutine(const char* name) {
-  auto& routine = aon::auton::actions();
-  routine.setPose(0, 0, 20);
-  routine.followPath(name, path_jerryio_txt, 10, 8000, true);
-  routine.stop();
-  return 1;
-}
-
-}  // namespace
-
-// GUI autonomous wrappers for the big robot.
-
-int RedRoutine1(){
-  return runNativeRoutine(bigBotStayThere);
-}
-
-int RedRoutine2(){
-  return runNativeRoutine(bigBotPark);
-}
-
-int RedRoutine3(){
-  return lemlibTurnRoutine("Red 3 LemLib turn", 180);
-}
-
-int BlueRoutine1(){
-  return runNativeRoutine(bigBotStayThere);
-}
-
-int BlueRoutine2(){ 
-  return runNativeRoutine(bigBotPark);
-}
-
-int BlueRoutine3(){
-  return lemlibTurnRoutine("Blue 3 LemLib turn", 180);
-}
-
-int SkillsRoutine1(){
-  BigBotSkillsRoutine();
-  drivetrain.stop();
-  intake.stop();
-  return 1;
-}
-
-int SkillsRoutine2(){ 
-  return lemlibTurnRoutine("Skills 2 LemLib turn", -90);
-}
-
-int SkillsRoutine3(){
-  return lemlibTurnRoutine("Skills 3 LemLib turn", 180);
-}
-
 #else
 
 void smallBotRoutine(){
@@ -860,77 +787,6 @@ void smallbotjorgeg(){
   drivetrain.move(20);
   drivetrain.turn(-45);
   drivetrain.move();  
-}
-
-namespace {
-
-int runNativeRoutine(void (*routine)()) {
-  routine();
-  drivetrain.stop();
-  intake.stop();
-  return 1;
-}
-
-int lemlibTurnRoutine(const char* name, double heading) {
-  auto& routine = aon::auton::actions();
-  routine.setPose(0, 0, 0);
-  routine.turnToHeading(name, heading, 2500,
-                        {.direction = lemlib::AngularDirection::AUTO,
-                         .maxSpeed = 50});
-  routine.stop();
-  return 1;
-}
-
-int lemlibJerryIoPathRoutine(const char* name) {
-  auto& routine = aon::auton::actions();
-  routine.setPose(0, 0, 20);
-  routine.followPath(name, path_jerryio_txt, 10, 8000, true);
-  routine.stop();
-  return 1;
-}
-
-}  // namespace
-
-// GUI autonomous wrappers for the small robot.
-
-int RedRoutine1() {
-  return runNativeRoutine(smallBotRoutine);
-}
-
-int RedRoutine2(){
-  return runNativeRoutine(smallBotPark);
-}
-
-int RedRoutine3(){
-  return lemlibTurnRoutine("Red 3 LemLib turn", 180);
-}
-
-int BlueRoutine1(){
-  return runNativeRoutine(smallBotRoutine);
-}
-
-int BlueRoutine2(){ 
-  return runNativeRoutine(smallBotPark);
-}
-
-int BlueRoutine3(){
-  return lemlibTurnRoutine("Blue 3 LemLib turn", 180);
-}
-
-int SkillsRoutine1(){
-  smallBotRoutine();
-  smallBotPark();
-  drivetrain.stop();
-  intake.stop();
-  return 1;
-}
-
-int SkillsRoutine2(){ 
-  return lemlibTurnRoutine("Skills 2 LemLib turn", -90);
-}
-
-int SkillsRoutine3(){
-  return lemlibTurnRoutine("Skills 3 LemLib turn", 180);
 }
 
 #endif

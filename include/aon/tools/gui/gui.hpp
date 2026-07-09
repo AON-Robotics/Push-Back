@@ -91,13 +91,13 @@ public:
   AutonOption redAutonOptions[autonOptionsCount] = {
     {"Kevin Loader", aon::routines::RedRoutine1},
     {"Kevin Park", aon::routines::RedRoutine2},
-    {"Red AUT3", aon::routines::RedRoutine3},
+    {"LemLib Exp", aon::routines::RedRoutine3},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {
     {"Kevin Loader", aon::routines::BlueRoutine1},
     {"Kevin Park", aon::routines::BlueRoutine2},
-    {"Blue AUT3", aon::routines::BlueRoutine3},
+    {"LemLib Exp", aon::routines::BlueRoutine3},
   };
   
   AutonOption skillsAutonOptions[autonOptionsCount] = {
