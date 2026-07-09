@@ -14,8 +14,8 @@ void smallBotRoutine();
 void smallBotPark();
 #endif
 
-int LemLibTurnRoutine(const char* name, double heading);
-int LemLibKevinInspiredRoutine();
+int RunLemLibTurnCharacterization(const char* name, double heading);
+int RunLoaderScoreParkExperiment();
 
 namespace {
 
@@ -45,7 +45,7 @@ int RedRoutine2() {
 }
 
 int RedRoutine3() {
-  return LemLibKevinInspiredRoutine();
+  return RunLoaderScoreParkExperiment();
 }
 
 int BlueRoutine1() {
@@ -65,7 +65,7 @@ int BlueRoutine2() {
 }
 
 int BlueRoutine3() {
-  return LemLibKevinInspiredRoutine();
+  return RunLoaderScoreParkExperiment();
 }
 
 int SkillsRoutine1() {
@@ -81,11 +81,11 @@ int SkillsRoutine1() {
 }
 
 int SkillsRoutine2() {
-  return LemLibTurnRoutine("Skills 2 LemLib turn", -90);
+  return RunLemLibTurnCharacterization("Skills 2 turn characterization", -90);
 }
 
 int SkillsRoutine3() {
-  return LemLibTurnRoutine("Skills 3 LemLib turn", 180);
+  return RunLemLibTurnCharacterization("Skills 3 turn characterization", 180);
 }
 
 }  // namespace aon::routines
