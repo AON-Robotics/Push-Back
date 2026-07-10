@@ -1,5 +1,6 @@
 #include <cmath>
 #include <algorithm>
+#include "aon/auton/routines.hpp"
 #include "aon/constants.hpp"
 #include "aon/globals.hpp"
 #include "aon/odometry/odometry.hpp"
@@ -795,3 +796,4 @@ void smallbotjorgeg(){
 
 };  // namespace aon
 
+#include "aon/auton/routines.hpp"

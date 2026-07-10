@@ -8,6 +8,7 @@
 #include <vector>
 #include <functional>
 #include "../../../api.h"
+#include "aon/auton/routines.hpp"
 #include "aon/constants.hpp"
 #include "aon/math/pose.hpp"
 #include "../function-reader.hpp"
@@ -20,20 +21,6 @@ namespace aon {
   // Owning GUI instance. Created once in gui.cpp; type selected by the
   // TESTING_AUTONOMOUS flag. Access members via gui->method().
   extern std::unique_ptr<Gui> gui;
-  
-  namespace routines {
-    int RedRoutine1();
-    int RedRoutine2();
-    int RedRoutine3();
-    int BlueRoutine1();
-    int BlueRoutine2();
-    int BlueRoutine3();
-    int SkillsRoutine1();
-    int SkillsRoutine2();
-    int SkillsRoutine3();
-  }
-    
-  // Add other auton routine declarations as needed
 
 
 // Forward declaration of FunctionReader for autonomous routines

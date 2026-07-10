@@ -1,3 +1,4 @@
+#include "aon/auton/routines.hpp"
 #include "aon/globals.hpp"
 #include "aon/auton/actions.hpp"
 #include "aon/constants.hpp"

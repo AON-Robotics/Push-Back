@@ -1,21 +1,9 @@
-#include "aon/competition/autonomous-routines.hpp"
+#include "aon/auton/routines.hpp"
 
 #include "aon/constants.hpp"
 #include "aon/globals.hpp"
 
 namespace aon::routines {
-
-#if USING_BIG_ROBOT
-void bigBotStayThere();
-void bigBotPark();
-void BigBotSkillsRoutine();
-#else
-void smallBotRoutine();
-void smallBotPark();
-#endif
-
-int RunLemLibTurnCharacterization(const char* name, double heading);
-int RunLoaderScoreParkExperiment();
 
 namespace {
 
