@@ -20,7 +20,7 @@ void Robot::initialize() {
   aon::logging::Initialize();
   aon::Configure(false);
   // Keep the boot function aligned with the GUI default in gui.hpp.
-  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine1);
+  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine3);
   pros::Task guiLoopTask([] { aon::gui->initialize(); });
   pros::Task odomTask([] { drivetrain.initialize(); });
   pros::delay(3000);
