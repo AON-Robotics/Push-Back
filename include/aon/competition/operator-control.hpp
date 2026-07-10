@@ -1,8 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include "../constants.hpp"
 #include "../globals.hpp"
+#include "aon/lemlib/chassis.hpp"
+#include "lemlib/api.hpp"
 
 /// @brief Encapsulates functions and state for operator control.
 /// @details Practically uses Singleton design pattern, but classes would have
@@ -31,6 +34,22 @@ const int DOUBLE_TAP_TIME = 250;
 bool mergeCorridorAndElevator = true;
 #endif
 
+inline int scaleLemLibDriveInput(const int rawInput, const double scale) {
+  return static_cast<int>(
+      std::clamp(rawInput * scale, -127.0, 127.0));
+}
+
+inline void DriveKevinLemLibCurvature() {
+  const double throttleScale = drivetrain.isTurbo() ? 1.0 : 0.6;
+  const double turnScale = drivetrain.isTurbo() ? 0.667 : 0.6;
+  const int throttle = scaleLemLibDriveInput(
+      mainController.get_analog(ANALOG_LEFT_Y), throttleScale);
+  const int turn = scaleLemLibDriveInput(
+      mainController.get_analog(ANALOG_RIGHT_X), turnScale);
+
+  aon::lemlib_integration::chassis().curvature(throttle, turn);
+}
+
 
 /// Default Operator Control configuration
 inline void DriveDefault() { }
@@ -38,11 +57,15 @@ inline void DriveDefault() { }
 /// Kevin's Operator Control configuration
 inline void DriveKevin() { 
   #if !USING_BIG_ROBOT
+#if USE_LEMLIB_CURVATURE_DRIVER
+  DriveKevinLemLibCurvature();
+#else
   double leftX = scaler.transform(mainController.get_analog(ANALOG_LEFT_X));
   double leftY = scaler.transform(mainController.get_analog(ANALOG_LEFT_Y));
   double rightX = scaler.transform(mainController.get_analog(ANALOG_RIGHT_X));
   double rightY = scaler.transform(mainController.get_analog(ANALOG_RIGHT_Y));
   drivetrain.drive(leftX, leftY, rightX, rightY, Drivetrain::SPLIT_ARCADE);
+#endif
 
   if(mainController.get_digital_new_press(DIGITAL_R2)) {
     size_t currentTime = pros::millis();
