@@ -36,4 +36,8 @@ int RunLemLibTurnCharacterization(const char* name, double heading);
 int RunJerryIoPathTest(const char* name);
 int RunLoaderScoreParkExperiment();
 
+// Low-speed native drivetrain checks. These never command mechanisms.
+int RunNativeForwardReverseTest();
+int RunNativeTurnTest();
+
 }  // namespace aon::routines

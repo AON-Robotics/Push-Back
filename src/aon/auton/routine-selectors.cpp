@@ -26,6 +26,14 @@ int runRoutine(const char* name, int (*routine)()) {
   return result;
 }
 
+int runDrivetrainTest(const char* name, int (*routine)()) {
+  aon::auton::startRoutine(name);
+  const int result = routine();
+  drivetrain.stop();
+  aon::auton::finishRoutine(result != 0);
+  return result;
+}
+
 }  // namespace
 
 int RedRoutine1() {
@@ -83,17 +91,11 @@ int SkillsRoutine1() {
 }
 
 int SkillsRoutine2() {
-  return runRoutine("Skills 2 turn characterization", []() {
-    return RunLemLibTurnCharacterization(
-        "Skills 2 turn characterization", -90);
-  });
+  return runDrivetrainTest("TEST Drive 6in", RunNativeForwardReverseTest);
 }
 
 int SkillsRoutine3() {
-  return runRoutine("Skills 3 turn characterization", []() {
-    return RunLemLibTurnCharacterization(
-        "Skills 3 turn characterization", 180);
-  });
+  return runDrivetrainTest("TEST Turn 45deg", RunNativeTurnTest);
 }
 
 }  // namespace aon::routines

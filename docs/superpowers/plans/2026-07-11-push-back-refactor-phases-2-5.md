@@ -195,17 +195,17 @@ git commit -m "Add step logging to native Kevin autonomous routes"
 - Produces: native low-speed forward/reverse test and native low-speed turn test.
 - Constraint: tests must not command intake, cart, scorer, Brooks, Arrow, or SEM.
 
-- [ ] **Step 1: Add named drivetrain test routines**
+- [x] **Step 1: Add named drivetrain test routines**
 
 The forward/reverse test moves 6 inches forward, pauses 500 ms, and moves 6 inches backward using the current native drivetrain. The turn test turns 45 degrees clockwise, pauses 500 ms, and returns 45 degrees counterclockwise. Both stop the drivetrain on completion.
 
-- [ ] **Step 2: Expose tests only through skills/debug slots**
+- [x] **Step 2: Expose tests only through skills/debug slots**
 
 Do not replace red or blue competition slots. Give each test a precise brain-screen label containing `TEST`.
 
-- [ ] **Step 3: Build both robot configurations**
+- [x] **Step 3: Build both robot configurations**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add include/aon/auton/routines.hpp src/aon/auton/drivetrain-tests.cpp src/aon/auton/routine-selectors.cpp include/aon/tools/gui/gui.hpp
