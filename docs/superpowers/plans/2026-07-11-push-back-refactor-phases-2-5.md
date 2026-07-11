@@ -252,7 +252,7 @@ git commit -m "Restore Kevin Loader as the default autonomous"
 **Interfaces:**
 - Produces: a small stateless facade over the existing global hardware compatibility references.
 
-- [ ] **Step 1: Add only operations already repeated by active routes**
+- [x] **Step 1: Add only operations already repeated by active routes**
 
 ```cpp
 namespace aon::auton::mechanisms {
@@ -269,13 +269,13 @@ void stopAll();
 }  // namespace aon::auton::mechanisms
 ```
 
-- [ ] **Step 2: Implement exact delegation**
+- [x] **Step 2: Implement exact delegation**
 
 Each function must contain only the current intake or piston calls. Do not add delays, drivetrain motion, retries, sensor decisions, or new safety policy.
 
-- [ ] **Step 3: Build both robot configurations**
+- [x] **Step 3: Build both robot configurations**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add include/aon/auton/mechanism-actions.hpp src/aon/auton/mechanism-actions.cpp
