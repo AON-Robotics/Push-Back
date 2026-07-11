@@ -53,7 +53,9 @@ int RedRoutine2() {
 }
 
 int RedRoutine3() {
-  return runRoutine("Staged Loader", RunStagedLoaderScoreExperiment);
+  return runRoutine("Jerry Path", []() {
+    return RunJerryIoPathTest("Jerry Path");
+  });
 }
 
 int BlueRoutine1() {
@@ -73,7 +75,9 @@ int BlueRoutine2() {
 }
 
 int BlueRoutine3() {
-  return runRoutine("Staged Loader", RunStagedLoaderScoreExperiment);
+  return runRoutine("Jerry Path", []() {
+    return RunJerryIoPathTest("Jerry Path");
+  });
 }
 
 int SkillsRoutine1() {

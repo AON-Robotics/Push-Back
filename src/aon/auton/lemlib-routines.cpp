@@ -22,8 +22,10 @@ int RunLemLibTurnCharacterization(const char* name, double heading) {
 
 int RunJerryIoPathTest(const char* name) {
   auto& routine = aon::auton::actions();
-  routine.setPose(0, 0, 20);
-  routine.followPath(name, path_jerryio_txt, 10, 8000, true);
+  // The asset is rotated so heading zero and the initial path tangent both
+  // point along +Y. The third asset column is speed, not robot heading.
+  routine.setPose(0, 0, 0);
+  routine.followPath(name, path_jerryio_txt, 10, 14000, true);
   routine.stop();
   return 1;
 }
