@@ -584,7 +584,7 @@ void bigBotPark(){
   aon::auton::logStep("Kevin Park", "parking push");
   drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
   aon::auton::logStep("Kevin Park", "deploy park mechanism");
-  brooks.activate(); // Park.
+  aon::auton::mechanisms::deployParkMechanism();
   aon::auton::logStep("Kevin Park", "finish");
 }
 
@@ -775,7 +775,7 @@ void smallBotPark(){
   aon::auton::logStep("Kevin Park", "parking push");
   drivetrain.motors(MAX_RPM, 500); // Push into parking to put a row of wheels over for a bit of time, then stop.
   aon::auton::logStep("Kevin Park", "deploy park mechanism");
-  brooks.activate(); // Park.
+  aon::auton::mechanisms::deployParkMechanism();
   aon::auton::logStep("Kevin Park", "finish");
 }
 

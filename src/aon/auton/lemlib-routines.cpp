@@ -1,6 +1,7 @@
 #include "aon/auton/routines.hpp"
 #include "aon/globals.hpp"
 #include "aon/auton/actions.hpp"
+#include "aon/auton/mechanism-actions.hpp"
 #include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
 
@@ -41,7 +42,7 @@ int RunStagedLoaderScoreExperiment() {
 
   aon::auton::logStep("Staged Loader", "start");
   routine.setPose(0, 0, 0);
-  intake.stopScan();
+  aon::auton::mechanisms::finishLoaderCollection();
 
   // Heading zero points along +Y. Chain most of the loader approach, then
   // slow down for the heading-sensitive final alignment.
@@ -58,14 +59,14 @@ int RunStagedLoaderScoreExperiment() {
                          .maxSpeed = 45});
 
   aon::auton::logStep("Staged Loader", "collect blocks");
-  intake.dropCart();
+  aon::auton::mechanisms::prepareLoaderCart();
   pros::delay(200);
-  intake.activateScan();
+  aon::auton::mechanisms::beginLoaderCollection();
   routine.moveToPoint("staged loader: slow contact", 4.0, 31.0, 1000,
                       {.forwards = true, .maxSpeed = 30});
   routine.arcadeFor("staged loader: hold against loader", 25, 0, 250);
   pros::delay(4000);
-  intake.stopScan();
+  aon::auton::mechanisms::finishLoaderCollection();
 
   aon::auton::logStep("Staged Loader", "back out");
   routine.moveToPoint("staged loader: fast retreat", -5.0, 31.0, 1300,
@@ -77,25 +78,25 @@ int RunStagedLoaderScoreExperiment() {
                       {.forwards = false, .maxSpeed = 35});
 
   aon::auton::logStep("Staged Loader", "face long goal");
-  intake.raiseCart();
+  aon::auton::mechanisms::resetLoaderCart();
   routine.turnToHeading("staged loader: face long goal", 171.0, 1600,
                         {.direction = lemlib::AngularDirection::AUTO,
                          .maxSpeed = 45});
 
   aon::auton::logStep("Staged Loader", "precise score approach");
 #if !USING_BIG_ROBOT
-  intake.raiseScorer();
+  aon::auton::mechanisms::prepareTopScorer();
 #endif
   routine.moveToPose("staged loader: long goal", -8.0, 25.0, 171.0, 2200,
                      {.forwards = true,
                       .horizontalDrift = 8,
                       .lead = 0.1,
                       .maxSpeed = 35});
-  intake.score(Intake::TOP, 3000);
+  aon::auton::mechanisms::scoreTopBlocks(3000);
 
   aon::auton::logStep("Staged Loader", "finish");
   routine.stop();
-  intake.stop();
+  aon::auton::mechanisms::stopAll();
   return 1;
 }
 

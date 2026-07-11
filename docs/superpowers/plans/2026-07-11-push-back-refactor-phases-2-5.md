@@ -316,13 +316,13 @@ git commit -m "Route Kevin Loader mechanisms through named actions"
 - Modify: `src/aon/auton/native-routines.cpp`
 - Modify: `src/aon/auton/lemlib-routines.cpp`
 
-- [ ] **Step 1: Replace equivalent park and intake operations**
+- [x] **Step 1: Replace equivalent park and intake operations**
 
 Preserve each route's timing and order. The LemLib route remains experimental and must not become the default.
 
-- [ ] **Step 2: Build both robot configurations**
+- [x] **Step 2: Build both robot configurations**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add src/aon/auton/native-routines.cpp src/aon/auton/lemlib-routines.cpp
