@@ -61,7 +61,7 @@ For the big-robot build, temporarily change only `#define USING_BIG_ROBOT false`
 - Produces: `selectRoutine(const char*)`, `startRoutine(const char*)`, `finishRoutine(bool)`, `routineStatus()`.
 - Consumes: PROS screen and standard output only; it must not own or command hardware.
 
-- [ ] **Step 1: Add the status interface**
+- [x] **Step 1: Add the status interface**
 
 ```cpp
 namespace aon::auton {
@@ -83,23 +83,23 @@ RoutineStatus routineStatus();
 }  // namespace aon::auton
 ```
 
-- [ ] **Step 2: Implement status updates and serial logging**
+- [x] **Step 2: Implement status updates and serial logging**
 
 Protect the shared status with a PROS mutex because GUI and competition callbacks run in different tasks. Each transition prints one structured line using the keys `AUTON_STATE`, `name`, `state`, and `time`.
 
-- [ ] **Step 3: Route all competition slot invocations through one named wrapper**
+- [x] **Step 3: Route all competition slot invocations through one named wrapper**
 
 Replace the anonymous native-only wrapper with a wrapper accepting the displayed name and callable. The wrapper must call `startRoutine`, invoke the route, stop drivetrain and intake, call `finishRoutine(true)`, and return the route result. Do not catch failures that C++/PROS cannot safely recover from.
 
-- [ ] **Step 4: Remove the direct experimental fallback from robot initialization**
+- [x] **Step 4: Remove the direct experimental fallback from robot initialization**
 
 Keep GUI selection authoritative. The boot fallback must register `RedRoutine1`, matching the required native default, until GUI initialization applies a persisted selection.
 
-- [ ] **Step 5: Build both robot configurations**
+- [x] **Step 5: Build both robot configurations**
 
 Expected: both builds complete successfully; the existing vendored `json.hpp` deprecation warning is acceptable.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add include/aon/auton/status.hpp src/aon/auton/status.cpp src/aon/auton/routine-selectors.cpp src/aon/core/robot.cpp

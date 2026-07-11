@@ -19,8 +19,8 @@ void Robot::initialize() {
 #else
   aon::logging::Initialize();
   aon::Configure(false);
-  // Keep the boot function aligned with the GUI default in gui.hpp.
-  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine3);
+  // Native slot 1 remains the safe fallback until the GUI applies selection.
+  aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine1);
   pros::Task guiLoopTask([] { aon::gui->initialize(); });
   pros::Task odomTask([] { drivetrain.initialize(); });
   pros::delay(3000);
