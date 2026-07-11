@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "lemlib/api.hpp"
 
 namespace aon::auton {
@@ -18,6 +20,8 @@ class Actions {
                   int timeout, lemlib::MoveToPoseParams params = {});
   void turnToHeading(const char* name, double heading, int timeout,
                      lemlib::TurnToHeadingParams params = {});
+  void arcadeFor(const char* name, int throttle, int turn,
+                 std::uint32_t durationMs);
   void followPath(const char* name, const asset& path, float lookahead,
                   int timeout, bool forwards = true);
 

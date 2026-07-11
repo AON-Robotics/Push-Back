@@ -53,7 +53,7 @@ int RedRoutine2() {
 }
 
 int RedRoutine3() {
-  return runRoutine("LoaderScore", RunLoaderScoreParkExperiment);
+  return runRoutine("Staged Loader", RunStagedLoaderScoreExperiment);
 }
 
 int BlueRoutine1() {
@@ -73,7 +73,7 @@ int BlueRoutine2() {
 }
 
 int BlueRoutine3() {
-  return runRoutine("LoaderScore", RunLoaderScoreParkExperiment);
+  return runRoutine("Staged Loader", RunStagedLoaderScoreExperiment);
 }
 
 int SkillsRoutine1() {

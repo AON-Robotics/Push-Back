@@ -53,6 +53,16 @@ void Actions::turnToHeading(const char* name, double heading, int timeout,
   logFinish("turnToHeading", name, robotChassis.getPose());
 }
 
+void Actions::arcadeFor(const char* name, int throttle, int turn,
+                        std::uint32_t durationMs) {
+  auto& robotChassis = lemlib_integration::chassis();
+  logStart("arcadeFor", name);
+  robotChassis.arcade(throttle, turn, true);
+  pros::delay(durationMs);
+  robotChassis.arcade(0, 0, true);
+  logFinish("arcadeFor", name, robotChassis.getPose());
+}
+
 void Actions::followPath(const char* name, const asset& path, float lookahead,
                          int timeout, bool forwards) {
   auto& robotChassis = lemlib_integration::chassis();

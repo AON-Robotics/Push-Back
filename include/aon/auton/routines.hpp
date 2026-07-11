@@ -34,7 +34,7 @@ void smallbotjorgeg();
 // LemLib-backed tests and experimental routes.
 int RunLemLibTurnCharacterization(const char* name, double heading);
 int RunJerryIoPathTest(const char* name);
-int RunLoaderScoreParkExperiment();
+int RunStagedLoaderScoreExperiment();
 
 // Low-speed native drivetrain checks. These never command mechanisms.
 int RunNativeForwardReverseTest();
