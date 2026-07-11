@@ -287,11 +287,11 @@ git commit -m "Add named autonomous mechanism actions"
 **Files:**
 - Modify: `src/aon/auton/native-routines.cpp`
 
-- [ ] **Step 1: Replace only matching mechanism call sequences in `smallBotRoutine` and `bigBotStayThere`**
+- [x] **Step 1: Replace only matching mechanism call sequences in `smallBotRoutine` and `bigBotStayThere`**
 
 Keep every drivetrain command and delay at its original position. Use action names only where their implementation is exactly equivalent to the replaced calls.
 
-- [ ] **Step 2: Compare the diff command by command**
+- [x] **Step 2: Compare the diff command by command**
 
 Run:
 
@@ -301,9 +301,9 @@ git diff --word-diff=plain -- src/aon/auton/native-routines.cpp
 
 Expected: drivetrain calls, numeric parameters, and delays are unchanged.
 
-- [ ] **Step 3: Build both robot configurations**
+- [x] **Step 3: Build both robot configurations**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add src/aon/auton/native-routines.cpp

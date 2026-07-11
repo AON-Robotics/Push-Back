@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include "aon/auton/routines.hpp"
+#include "aon/auton/mechanism-actions.hpp"
 #include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
 #include "aon/globals.hpp"
@@ -525,9 +526,9 @@ void bigBotStayThere(){
   // Sorting remains disabled because rejection changes route timing.
   aon::auton::logStep("Kevin Loader", "align loader");
   drivetrain.strafe(28.5); // Align with match loader.
-  intake.dropCart(); // Prepare loader mechanism.
+  aon::auton::mechanisms::prepareLoaderCart();
   drivetrain.move(5, false); // Move to match loader.
-  intake.activateScan();
+  aon::auton::mechanisms::beginLoaderCollection();
   drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
 
   aon::auton::logStep("Kevin Loader", "collect blocks");
@@ -536,13 +537,13 @@ void bigBotStayThere(){
   aon::auton::logStep("Kevin Loader", "approach long goal");
   drivetrain.move(-20, false); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
-  intake.raiseCart(); // Reset loader mechanism.
+  aon::auton::mechanisms::resetLoaderCart();
 
   aon::auton::logStep("Kevin Loader", "score long goal");
   intake.setSortHeights(Intake::Height::TOP);
   intake.startReleasing();
   pros::delay(8000);
-  intake.stopScan();
+  aon::auton::mechanisms::finishLoaderCollection();
   intake.stopReleasing();
   // intake.score(Intake::TOP, 900); // Score 3 blocks.
   // intake.score(Intake::BOTTOM, 300); // Kick back intake to unjam blocks
@@ -625,10 +626,10 @@ void smallBotRoutine(){
   aon::auton::logStep("Kevin Loader", "align loader");
   drivetrain.move(31); // Align with match loader
   drivetrain.turn(86);
-  intake.dropCart(); // Prepare loader mechanism
+  aon::auton::mechanisms::prepareLoaderCart();
   pros::delay(200);  
   drivetrain.move(4); // Go to match loader
-  intake.activateScan(); 
+  aon::auton::mechanisms::beginLoaderCollection();
   aon::auton::logStep("Kevin Loader", "collect blocks");
   drivetrain.motors(-MAX_RPM / 2); // Jerk back
   pros::delay(100); // for an instance,
@@ -636,16 +637,16 @@ void smallBotRoutine(){
   pros::delay(400); // for a bit of time,
   drivetrain.stop(); // and stop.
   pros::delay(5000); // Take up some blocks (6);
-  intake.stopScan();
+  aon::auton::mechanisms::finishLoaderCollection();
   aon::auton::logStep("Kevin Loader", "approach long goal");
   drivetrain.move(-13); // Move to Long goal
-  intake.raiseCart(); // Reset loader mechanism
+  aon::auton::mechanisms::resetLoaderCart();
   drivetrain.turn(85);
   drivetrain.turn(85);
-  intake.raiseScorer();
+  aon::auton::mechanisms::prepareTopScorer();
   drivetrain.move(6.5);
   aon::auton::logStep("Kevin Loader", "score long goal");
-  intake.score(Intake::TOP, 3000); // Score all blocks
+  aon::auton::mechanisms::scoreTopBlocks(3000);
   aon::auton::logStep("Kevin Loader", "park setup");
   drivetrain.move(-23); // Go back a little
   drivetrain.turn(-93); // Orient towards parking
