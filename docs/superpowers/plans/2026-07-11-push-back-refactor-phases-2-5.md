@@ -218,13 +218,13 @@ git commit -m "Add isolated native drivetrain test routines"
 - Modify: `include/aon/tools/gui/gui.hpp`
 - Modify: `src/aon/core/robot.cpp`
 
-- [ ] **Step 1: Set red slot 1 as the preselection**
+- [x] **Step 1: Set red slot 1 as the preselection**
 
-Set `selectedRedAut = 1`, `selectedBlueAut = 0`, and `selectedSkill = 0`. Register `RedRoutine1` as the initialization fallback.
+Set `selectedRedAut = 1`, `selectedBlueAut = 0`, and `selectedSkill = 0`. Register `RedRoutine1` as the initialization fallback. A valid saved SD-card selection takes precedence over this first-run fallback.
 
-- [ ] **Step 2: Build both robot configurations**
+- [x] **Step 2: Build both robot configurations**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add include/aon/tools/gui/gui.hpp src/aon/core/robot.cpp

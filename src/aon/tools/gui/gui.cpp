@@ -146,6 +146,12 @@ void Gui::applyPreselectedAuton() {
     return;  // Nothing to map; routine already chosen
   }
 
+  loadAutonSelection();
+  if (savedAutonSelection.hasSelection) {
+    selectAutonByList(savedAutonSelection.alliance, savedAutonSelection.index);
+    return;
+  }
+
   if (selectedRedAut > 0) {
     selectAutonByList(Alliance::Red, selectedRedAut);
     return;  // Red takes precedence
@@ -158,12 +164,6 @@ void Gui::applyPreselectedAuton() {
 
   if (selectedSkill > 0) {
     selectAutonByList(Alliance::Skills, selectedSkill);
-    return;
-  }
-
-  loadAutonSelection();
-  if (savedAutonSelection.hasSelection) {
-    selectAutonByList(savedAutonSelection.alliance, savedAutonSelection.index);
   }
 }
 
