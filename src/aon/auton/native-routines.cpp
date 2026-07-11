@@ -1,6 +1,7 @@
 #include <cmath>
 #include <algorithm>
 #include "aon/auton/routines.hpp"
+#include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
 #include "aon/globals.hpp"
 #include "aon/odometry/odometry.hpp"
@@ -520,19 +521,24 @@ void bigBotContinuity(){
 }
 
 void bigBotStayThere(){
+  aon::auton::logStep("Kevin Loader", "start");
   // Sorting remains disabled because rejection changes route timing.
+  aon::auton::logStep("Kevin Loader", "align loader");
   drivetrain.strafe(28.5); // Align with match loader.
   intake.dropCart(); // Prepare loader mechanism.
   drivetrain.move(5, false); // Move to match loader.
   intake.activateScan();
   drivetrain.motors(MAX_RPM / 2, 200); // Push into loader for a bit of time, then stop.
 
+  aon::auton::logStep("Kevin Loader", "collect blocks");
   drivetrain.jiggle(16, 120, 200); // Use if cart kinda works
-  
+
+  aon::auton::logStep("Kevin Loader", "approach long goal");
   drivetrain.move(-20, false); // Move to long goal.
   drivetrain.motors(-MAX_RPM / 2, 200); // Push into goal for a bit of time, then stop.
   intake.raiseCart(); // Reset loader mechanism.
 
+  aon::auton::logStep("Kevin Loader", "score long goal");
   intake.setSortHeights(Intake::Height::TOP);
   intake.startReleasing();
   pros::delay(8000);
@@ -543,9 +549,11 @@ void bigBotStayThere(){
   // intake.score(Intake::MIDDLE, 2000); // Reject 3 blocks.
   // intake.score(Intake::TOP, 5000); // Score 6 blocks.
 
+  aon::auton::logStep("Kevin Loader", "block descoring");
   drivetrain.move(6); // Move back a bit
   drivetrain.turn(-90); // Align wall with long goal
   drivetrain.strafe(9); // Push against it to block descoring
+  aon::auton::logStep("Kevin Loader", "finish");
 }
 
 // TODO(AUTON-BIG-LONG-GOAL): Validate distances with the loaded robot.
@@ -571,8 +579,12 @@ void bigBotLongGoalThenPark(){
 }
 
 void bigBotPark(){
+  aon::auton::logStep("Kevin Park", "start");
+  aon::auton::logStep("Kevin Park", "parking push");
   drivetrain.motors(MAX_RPM, 1000); // Push into parking to put a row of wheels over for a bit of time, then stop.
+  aon::auton::logStep("Kevin Park", "deploy park mechanism");
   brooks.activate(); // Park.
+  aon::auton::logStep("Kevin Park", "finish");
 }
 
 void BigBotSkillsRoutine(){
@@ -609,12 +621,15 @@ void BigBotSkillsRoutine(){
 #else
 
 void smallBotRoutine(){
+  aon::auton::logStep("Kevin Loader", "start");
+  aon::auton::logStep("Kevin Loader", "align loader");
   drivetrain.move(31); // Align with match loader
   drivetrain.turn(86);
   intake.dropCart(); // Prepare loader mechanism
   pros::delay(200);  
   drivetrain.move(4); // Go to match loader
   intake.activateScan(); 
+  aon::auton::logStep("Kevin Loader", "collect blocks");
   drivetrain.motors(-MAX_RPM / 2); // Jerk back
   pros::delay(100); // for an instance,
   drivetrain.motors(MAX_RPM / 2); // then push into loader
@@ -622,19 +637,23 @@ void smallBotRoutine(){
   drivetrain.stop(); // and stop.
   pros::delay(5000); // Take up some blocks (6);
   intake.stopScan();
+  aon::auton::logStep("Kevin Loader", "approach long goal");
   drivetrain.move(-13); // Move to Long goal
   intake.raiseCart(); // Reset loader mechanism
   drivetrain.turn(85);
   drivetrain.turn(85);
   intake.raiseScorer();
   drivetrain.move(6.5);
+  aon::auton::logStep("Kevin Loader", "score long goal");
   intake.score(Intake::TOP, 3000); // Score all blocks
+  aon::auton::logStep("Kevin Loader", "park setup");
   drivetrain.move(-23); // Go back a little
   drivetrain.turn(-93); // Orient towards parking
   drivetrain.move(20); // Go to parking
   drivetrain.motors(MAX_RPM);
   pros::delay(1200);
   drivetrain.stop(); 
+  aon::auton::logStep("Kevin Loader", "finish");
   //* Works till here
 }
 
@@ -750,9 +769,13 @@ void smallBotCurves(){
 }
 
 void smallBotPark(){
+  aon::auton::logStep("Kevin Park", "start");
   drivetrain.move(-5, false);
+  aon::auton::logStep("Kevin Park", "parking push");
   drivetrain.motors(MAX_RPM, 500); // Push into parking to put a row of wheels over for a bit of time, then stop.
+  aon::auton::logStep("Kevin Park", "deploy park mechanism");
   brooks.activate(); // Park.
+  aon::auton::logStep("Kevin Park", "finish");
 }
 
 void smallbotjorgeg(){

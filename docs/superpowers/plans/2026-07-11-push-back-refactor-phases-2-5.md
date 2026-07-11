@@ -150,7 +150,7 @@ git commit -m "Show autonomous selection and execution status"
 - Produces: `logStep(const char* routine, const char* step)`.
 - Consumes: time and console output only.
 
-- [ ] **Step 1: Add the logger**
+- [x] **Step 1: Add the logger**
 
 ```cpp
 namespace aon::auton {
@@ -166,17 +166,17 @@ Output format:
 AUTON_STEP routine=Kevin Loader step=align loader time=1234
 ```
 
-- [ ] **Step 2: Instrument `smallBotRoutine` and `bigBotStayThere`**
+- [x] **Step 2: Instrument `smallBotRoutine` and `bigBotStayThere`**
 
 Place logs only at behavioral boundaries: start, align loader, collect blocks, approach long goal, score, park setup, finish. Do not insert delays or reorder commands.
 
-- [ ] **Step 3: Instrument `smallBotPark` and `bigBotPark`**
+- [x] **Step 3: Instrument `smallBotPark` and `bigBotPark`**
 
 Log start, parking push, piston activation, and finish. Do not change velocities or durations.
 
-- [ ] **Step 4: Build both robot configurations**
+- [x] **Step 4: Build both robot configurations**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add include/aon/auton/step-logger.hpp src/aon/auton/step-logger.cpp src/aon/auton/native-routines.cpp
