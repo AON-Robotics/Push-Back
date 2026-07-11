@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 namespace aon::auton {
 
@@ -19,7 +20,7 @@ enum class RoutineState {
  * @brief Snapshot of the currently selected or executing autonomous routine.
  */
 struct RoutineStatus {
-  const char* name;
+  std::string name;
   RoutineState state;
   std::uint32_t startedAt;
   std::uint32_t finishedAt;
@@ -27,13 +28,13 @@ struct RoutineStatus {
 
 /**
  * @brief Records the routine selected by the GUI.
- * @param name Stable display name owned by the autonomous option table.
+ * @param name Display name copied into the shared status snapshot.
  */
 void selectRoutine(const char* name);
 
 /**
  * @brief Marks an autonomous routine as running.
- * @param name Stable display name for the executing routine.
+ * @param name Display name copied into the shared status snapshot.
  */
 void startRoutine(const char* name);
 

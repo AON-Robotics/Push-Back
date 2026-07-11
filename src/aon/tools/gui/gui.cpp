@@ -197,7 +197,7 @@ void Gui::selectAutonByList(Alliance alliance, int index1Based) {
   selectedAuton = choice;
   selectedAutonName = choice.name;
   selectedAutonInvoker = nullptr;
-  autonCompleted = false;
+  aon::auton::selectRoutine(choice.name);
 
   saveAutonSelection(alliance, index1Based);
   autonomousReader->AddFunction("autonomous", choice.routine);
@@ -334,6 +334,7 @@ void Gui::handleSkillsMenuTouch() {
 // ============================================================================
 
 void Gui::mainLoop() {
+  auto lastStatus = aon::auton::routineStatus();
   while (true) {
     pros::screen_touch_status_s_t TouchStatus = pros::screen::touch_status();
     if (TouchStatus.touch_status > 0) {
@@ -357,6 +358,13 @@ void Gui::mainLoop() {
           break;
       }
     }
+
+    const auto status = aon::auton::routineStatus();
+    if (currentScreen == MainMenu &&
+        (status.state != lastStatus.state || status.name != lastStatus.name)) {
+      displayMainMenu();
+    }
+    lastStatus = status;
 
     pros::delay(100);
   }

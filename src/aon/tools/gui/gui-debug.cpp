@@ -50,7 +50,12 @@ void GuiDebug::setDataRegister(const std::function<void()>& Register) {
 }
 
 int GuiDebug::invokeSelectedAuton() {
-  if (selectedAutonInvoker) return selectedAutonInvoker();
+  if (selectedAutonInvoker) {
+    aon::auton::startRoutine(selectedAutonName.c_str());
+    const int result = selectedAutonInvoker();
+    aon::auton::finishRoutine(result != 0);
+    return result;
+  }
   if (selectedAuton.routine) return selectedAuton.routine();
   return 0;
 }
@@ -264,7 +269,7 @@ void GuiDebug::HandleDebugMenuTouch() {
 // ============================================================================
 
 void GuiDebug::mainLoop() {
-  bool lastAutonState = false;
+  auto lastAutonStatus = aon::auton::routineStatus();
   auto lastScreen = currentScreen;
   
   while (true) {
@@ -316,7 +321,10 @@ void GuiDebug::mainLoop() {
 
     // Redraw only when necessary
     bool screenChanged = (currentScreen != lastScreen);
-    bool autonStateChanged = (autonRunning != lastAutonState);
+    const auto autonStatus = aon::auton::routineStatus();
+    const bool autonStateChanged =
+        autonStatus.state != lastAutonStatus.state ||
+        autonStatus.name != lastAutonStatus.name;
     
     if (screenChanged) {
       lastScreen = currentScreen;
@@ -324,10 +332,11 @@ void GuiDebug::mainLoop() {
     }
     
     if (autonStateChanged) {
-      lastAutonState = autonRunning;
-      // Redraw AutonRunner when auton state changes
+      lastAutonStatus = autonStatus;
       if (currentScreen == AutonRunner) {
         DisplayAutonRunner();
+      } else if (currentScreen == MainMenu) {
+        displayMainMenu();
       }
     }
     
@@ -364,14 +373,7 @@ void GuiDebug::displayMainMenu() {
 
   aon::DrawAONLogo((BRAIN_SCREEN_WIDTH - 225) / 2, (BRAIN_SCREEN_HEIGHT - 225) / 4);
 
-  // Display the current selected autonomous routine at the top center
-  pros::screen::set_pen(COLOR_WHITE); // Default color for "NO AUTON"
-  if (selectedAutonName == "None") {
-    pros::screen::print(pros::E_TEXT_LARGE_CENTER, 1, "NO AUTON");
-  } else {
-    pros::screen::set_pen(COLOR_GREEN);
-    pros::screen::print(pros::E_TEXT_LARGE_CENTER, 1, selectedAutonName.c_str());
-  }
+  displayAutonStatusLine();
 
   if (TESTING_AUTONOMOUS) {
     // Debug mode: split button bar in half

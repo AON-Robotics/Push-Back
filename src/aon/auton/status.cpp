@@ -27,7 +27,7 @@ const char* stateName(RoutineState state) {
 }
 
 void logStatus(const RoutineStatus& snapshot) {
-  std::printf("AUTON_STATE name=%s state=%s time=%lu\n", snapshot.name,
+  std::printf("AUTON_STATE name=%s state=%s time=%lu\n", snapshot.name.c_str(),
               stateName(snapshot.state),
               static_cast<unsigned long>(pros::millis()));
 }
@@ -45,6 +45,10 @@ void selectRoutine(const char* name) {
 void startRoutine(const char* name) {
   const std::uint32_t now = pros::millis();
   statusMutex.take();
+  if (status.state == RoutineState::Running && status.name == name) {
+    statusMutex.give();
+    return;
+  }
   status = {name, RoutineState::Running, now, 0};
   const RoutineStatus snapshot = status;
   statusMutex.give();

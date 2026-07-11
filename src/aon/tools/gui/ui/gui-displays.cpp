@@ -5,6 +5,40 @@
 
 namespace aon {
 
+void Gui::displayAutonStatusLine() {
+  const auto status = aon::auton::routineStatus();
+  const char* label = "Selected";
+  pros::screen::set_pen(COLOR_GREEN);
+
+  switch (status.state) {
+    case aon::auton::RoutineState::Idle:
+      label = "No auton";
+      pros::screen::set_pen(COLOR_WHITE);
+      break;
+    case aon::auton::RoutineState::Selected:
+      break;
+    case aon::auton::RoutineState::Running:
+      label = "Running";
+      pros::screen::set_pen(COLOR_ORANGE);
+      break;
+    case aon::auton::RoutineState::Completed:
+      label = "Completed";
+      pros::screen::set_pen(COLOR_CYAN);
+      break;
+    case aon::auton::RoutineState::Failed:
+      label = "Failed";
+      pros::screen::set_pen(COLOR_RED);
+      break;
+  }
+
+  if (status.state == aon::auton::RoutineState::Idle) {
+    pros::screen::print(pros::E_TEXT_MEDIUM_CENTER, 1, "%s", label);
+    return;
+  }
+  pros::screen::print(pros::E_TEXT_MEDIUM_CENTER, 1, "%s: %s", label,
+                      status.name.c_str());
+}
+
 void Gui::displayMainMenu() {
   // Ensure the screen is cleared at the start of each display function
   pros::screen::set_eraser(COLOR_BLACK);
@@ -12,14 +46,7 @@ void Gui::displayMainMenu() {
 
   aon::DrawAONLogo((BRAIN_SCREEN_WIDTH - 225) / 2, (BRAIN_SCREEN_HEIGHT - 225) / 4);
 
-  // Display the current selected autonomous routine at the top center
-  pros::screen::set_pen(COLOR_WHITE); // Default color for "NO AUTON"
-  if (selectedAutonName == "None") {
-    pros::screen::print(pros::E_TEXT_LARGE_CENTER, 1, "NO AUTON");
-  } else {
-    pros::screen::set_pen(COLOR_GREEN);
-    pros::screen::print(pros::E_TEXT_LARGE_CENTER, 1, selectedAutonName.c_str());
-  }
+  displayAutonStatusLine();
 
   // Draw the "AUTONS" button using UI helper
   AutonsBtn.draw(pros::E_TEXT_LARGE);

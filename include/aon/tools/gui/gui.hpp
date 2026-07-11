@@ -9,6 +9,7 @@
 #include <functional>
 #include "../../../api.h"
 #include "aon/auton/routines.hpp"
+#include "aon/auton/status.hpp"
 #include "aon/constants.hpp"
 #include "aon/math/pose.hpp"
 #include "../function-reader.hpp"
@@ -60,10 +61,6 @@ public:
   std::string selectedAutonName = "None";
   // Optional invoker for debug-registered autons (used by GuiDebug)
   std::function<int()> selectedAutonInvoker = nullptr;
-  // Runtime auton state (present here so callers referencing aon::gui compile)
-  bool autonRunning = false;
-  bool autonCompleted = false;
-  
   // Preselected auton indices (1-3, 0 = none)
   int selectedRedAut = 3;
   int selectedBlueAut = 0;
@@ -147,6 +144,7 @@ protected:
   // Helper methods
   void applyPreselectedAuton();
   int displayInitializationMessage();
+  void displayAutonStatusLine();
   
   // Virtual method for GUI loop - can be extended by derived classes
   virtual void mainLoop();

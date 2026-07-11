@@ -118,21 +118,21 @@ git commit -m "Add shared autonomous runtime status"
 - Consumes: `aon::auton::routineStatus()`.
 - Produces: one consistent selected/running/completed label for normal and debug GUI modes.
 
-- [ ] **Step 1: Make `Gui` selection update shared status**
+- [x] **Step 1: Make `Gui` selection update shared status**
 
 After `selectedAutonName` is assigned in `selectAutonByList`, call `aon::auton::selectRoutine(selectedAutonName.c_str())`.
 
-- [ ] **Step 2: Render status without clearing the active GUI**
+- [x] **Step 2: Render status without clearing the active GUI**
 
 Add a small status region to the existing main-menu drawing function. Render `Selected: <name>`, `Running: <name>`, `Completed: <name>`, or `Failed: <name>` from the shared status snapshot. Keep drawing inside the existing GUI task to avoid concurrent full-screen erases.
 
-- [ ] **Step 3: Make debug auton runner consume the same status**
+- [x] **Step 3: Make debug auton runner consume the same status**
 
 Remove duplicate state transitions where `autonRunning` and `autonCompleted` can disagree with competition execution. Preserve the fields temporarily if other code still reads them, but derive their display from `routineStatus()`.
 
-- [ ] **Step 4: Build both robot configurations**
+- [x] **Step 4: Build both robot configurations**
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add include/aon/tools/gui/gui.hpp src/aon/tools/gui/gui.cpp src/aon/tools/gui/ui/gui-displays.cpp src/aon/tools/gui/debug-tools/autonrunner.cpp

@@ -96,6 +96,11 @@ void GuiDebug::DisplayAutonRunner() {
   const bool hasDebugAuton = static_cast<bool>(selectedAutonInvoker);
   const bool hasNormalAuton = (selectedAuton.routine != nullptr);
   const bool hasAuton = hasDebugAuton || hasNormalAuton;
+  const auto status = aon::auton::routineStatus();
+  const bool autonRunning =
+      status.state == aon::auton::RoutineState::Running;
+  const bool autonCompleted =
+      status.state == aon::auton::RoutineState::Completed;
   const int cardX1 = 16, cardY1 = 50, cardX2 = BRAIN_SCREEN_WIDTH - 160,
             cardY2 = 145;
 
@@ -112,7 +117,7 @@ void GuiDebug::DisplayAutonRunner() {
   pros::screen::print(pros::E_TEXT_MEDIUM, cardX1 + 10, cardY1 + 8,
                       "Selected:");
 
-  // Show different states: running, completed, or selected/none
+  // Runtime state comes from the same source used by competition autonomous.
   if (autonRunning) {
     pros::screen::set_pen(COLOR_ORANGE);
     pros::screen::print(pros::E_TEXT_LARGE, cardX1 + 14, cardY1 + 48,
@@ -214,7 +219,7 @@ void GuiDebug::HandleRegisteredAutonsMenuTouch() {
       const auto& [name, fn] = testFunctions[i];
       selectedAutonName = name;
       selectedAutonInvoker = fn;
-      autonCompleted = false;  // Reset completed flag on new selection
+      aon::auton::selectRoutine(selectedAutonName.c_str());
       
       autonomousReader->AddFunction("autonomous", [this]{ return invokeSelectedAuton(); });
 
@@ -312,14 +317,15 @@ void GuiDebug::HandleAutonRunnerTouch() {
   if (!hasAuton) return;
 
   autonomousReader->AddFunction("autonomous", [this]{ return invokeSelectedAuton(); });
-  autonRunning = true;
-  autonCompleted = false;
+  aon::auton::startRoutine(selectedAutonName.c_str());
   DisplayAutonRunner();  // show orange running state
 
-  autonomousReader->ExecuteFunction("autonomous");
+  const int result = autonomousReader->ExecuteFunction("autonomous");
 
-  autonRunning = false;
-  autonCompleted = true;
+  const auto status = aon::auton::routineStatus();
+  if (status.state == aon::auton::RoutineState::Running) {
+    aon::auton::finishRoutine(result != 0);
+  }
   DisplayAutonRunner();  // show cyan completed state
 
   pros::delay(300);
