@@ -125,8 +125,11 @@ lemlib::Chassis& chassis() {
 
   // LemLib commands the motor groups directly, so these slew limits protect
   // autonomous paths from hard acceleration and braking spikes.
+  // LemLib's documented baseline enables controlled lateral movement. These
+  // gains are only a starting point; final values require drivetrain testing.
   static lemlib::ControllerSettings lateralController{
-      0.0, 0.0, 0.0, 0.0, 1.0, 100.0, 3.0, 500.0, config.lateralSlew,
+      10.0, 0.0, 3.0, 3.0, 1.0, 100.0, 3.0, 500.0,
+      config.lateralSlew,
   };
   static lemlib::ControllerSettings angularController{
       2.0, 0.0, 10.0, 0.0, 1.0, 100.0, 3.0, 500.0, config.angularSlew,
@@ -145,10 +148,15 @@ lemlib::Chassis& chassis() {
   return configuredChassis;
 }
 
+void initializeChassis() {
+  lemlib::Chassis& configuredChassis = chassis();
+  configuredChassis.calibrate();
+  configuredChassis.setPose(0.0, 0.0, 0.0);
+}
+
 void startSensorTest() {
+  initializeChassis();
   lemlib::Chassis& sensorChassis = chassis();
-  sensorChassis.calibrate();
-  sensorChassis.setPose(0.0, 0.0, 0.0);
 
   pros::lcd::initialize();
   pros::lcd::set_text(0, "LemLib sensor test");

@@ -53,7 +53,7 @@ int RedRoutine2() {
 }
 
 int RedRoutine3() {
-  return runRoutine("Experimental Loader", RunStagedLoaderScoreExperiment);
+  return runRoutine("TEST LemLib 12in", RunLemLibForwardValidation);
 }
 
 int BlueRoutine1() {
@@ -73,7 +73,7 @@ int BlueRoutine2() {
 }
 
 int BlueRoutine3() {
-  return runRoutine("Experimental Loader", RunStagedLoaderScoreExperiment);
+  return runRoutine("TEST LemLib 12in", RunLemLibForwardValidation);
 }
 
 int SkillsRoutine1() {

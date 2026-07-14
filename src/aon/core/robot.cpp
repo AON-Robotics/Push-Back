@@ -19,6 +19,7 @@ void Robot::initialize() {
 #else
   aon::logging::Initialize();
   aon::Configure(false);
+  aon::lemlib_integration::initializeChassis();
   // Native slot 1 remains the safe fallback until the GUI applies selection.
   aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine1);
   pros::Task guiLoopTask([] { aon::gui->initialize(); });

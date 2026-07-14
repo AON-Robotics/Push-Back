@@ -12,6 +12,9 @@ namespace aon::lemlib_integration {
 /// module does not initialize sensors or command the drivetrain.
 lemlib::Chassis& chassis();
 
+/// Calibrates LemLib sensors and starts its odometry task for normal operation.
+void initializeChassis();
+
 /// Calibrates LemLib odometry and continuously displays its pose.
 /// This function never commands a motor.
 void startSensorTest();

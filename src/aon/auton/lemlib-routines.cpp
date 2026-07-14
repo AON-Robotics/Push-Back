@@ -21,6 +21,24 @@ int RunLemLibTurnCharacterization(const char* name, double heading) {
   return 1;
 }
 
+int RunLemLibForwardValidation() {
+  auto& routine = aon::auton::actions();
+
+#if USING_BIG_ROBOT
+  aon::auton::logStep("LemLib Forward 12in", "unsupported big robot");
+  routine.stop();
+  return 0;
+#else
+  aon::auton::logStep("LemLib Forward 12in", "start");
+  routine.setPose(0.0, 0.0, 0.0);
+  routine.moveToPoint("LemLib Forward 12in", 0.0, 12.0, 3000,
+                      {.forwards = true, .maxSpeed = 35});
+  routine.stop();
+  aon::auton::logStep("LemLib Forward 12in", "finish");
+  return 1;
+#endif
+}
+
 int RunJerryIoPathTest(const char* name) {
   auto& routine = aon::auton::actions();
   // The asset is rotated so heading zero and the initial path tangent both
