@@ -26,7 +26,7 @@ class Actions {
                   int timeout, bool forwards = true);
 
   void cancelMotion();
-  void stop();
+  void stop(pros::motor_brake_mode_e brakeMode = pros::E_MOTOR_BRAKE_HOLD);
 };
 
 Actions& actions();

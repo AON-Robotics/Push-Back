@@ -75,10 +75,10 @@ void Actions::cancelMotion() {
   lemlib_integration::chassis().cancelMotion();
 }
 
-void Actions::stop() {
+void Actions::stop(pros::motor_brake_mode_e brakeMode) {
   auto& robotChassis = lemlib_integration::chassis();
   robotChassis.cancelAllMotions();
-  robotChassis.setBrakeMode(pros::E_MOTOR_BRAKE_HOLD);
+  robotChassis.setBrakeMode(brakeMode);
 }
 
 Actions& actions() {

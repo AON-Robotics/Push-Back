@@ -128,7 +128,7 @@ lemlib::Chassis& chassis() {
   // LemLib's documented baseline enables controlled lateral movement. These
   // gains are only a starting point; final values require drivetrain testing.
   static lemlib::ControllerSettings lateralController{
-      10.0, 0.0, 3.0, 3.0, 1.0, 100.0, 3.0, 500.0,
+      10.0, 0.0, 3.0, 3.0, 0.5, 100.0, 1.0, 500.0,
       config.lateralSlew,
   };
   static lemlib::ControllerSettings angularController{

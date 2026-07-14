@@ -33,7 +33,7 @@ int RunLemLibForwardValidation() {
   routine.setPose(0.0, 0.0, 0.0);
   routine.moveToPoint("LemLib Forward 12in", 0.0, 12.0, 3000,
                       {.forwards = true, .maxSpeed = 35});
-  routine.stop();
+  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
   aon::auton::logStep("LemLib Forward 12in", "finish");
   return 1;
 #endif
