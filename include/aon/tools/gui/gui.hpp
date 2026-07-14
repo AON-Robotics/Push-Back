@@ -62,7 +62,7 @@ public:
   // Optional invoker for debug-registered autons (used by GuiDebug)
   std::function<int()> selectedAutonInvoker = nullptr;
   // Preselected auton indices (1-3, 0 = none)
-  int selectedRedAut = 1;
+  int selectedRedAut = 3;
   int selectedBlueAut = 0;
   int selectedSkill = 0;
 
