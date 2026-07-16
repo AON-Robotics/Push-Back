@@ -23,7 +23,6 @@ void Robot::initialize() {
   // Native slot 1 remains the safe fallback until the GUI applies selection.
   aon::autonomousReader->AddFunction("autonomous", aon::routines::RedRoutine1);
   pros::Task guiLoopTask([] { aon::gui->initialize(); });
-  pros::Task odomTask([] { drivetrain.initialize(); });
   pros::delay(3000);
   pros::Task safetyTask(aon::autonSafety);
   pros::Task intakeScanning([] { intake.scan(); });

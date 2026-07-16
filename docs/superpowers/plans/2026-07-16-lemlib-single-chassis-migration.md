@@ -32,12 +32,12 @@
 - Produces: `aon::legacy_motion::prepare()`.
 - Consumes: the existing global native drivetrain only inside the compatibility implementation.
 
-- [ ] Add an idempotent `prepare()` that owns one process-lifetime PROS task running `drivetrain.initialize()` and waits briefly for its first update.
-- [ ] Remove unconditional native odometry task construction from `Robot::initialize()`.
-- [ ] Call `prepare()` before every native routine and native drivetrain test, including native Skills.
-- [ ] Verify LemLib routes do not call `prepare()`.
-- [ ] Clean-build both hardware configurations.
-- [ ] Commit as `Start legacy odometry only for native motion`.
+- [x] Add an idempotent `prepare()` that owns one process-lifetime PROS task running `drivetrain.initialize()` and waits briefly for its first update.
+- [x] Remove unconditional native odometry task construction from `Robot::initialize()`.
+- [x] Call `prepare()` before every native routine and native drivetrain test, including native Skills.
+- [x] Verify LemLib routes do not call `prepare()`.
+- [x] Clean-build both hardware configurations.
+- [x] Commit as `Start legacy odometry only for native motion`.
 - [ ] Physically run AUT3 after reboot, then one native fallback after a separate reboot.
 
 ### Task 2: LemLib Primitive Validation Suite

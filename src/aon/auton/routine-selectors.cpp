@@ -2,6 +2,7 @@
 #include "aon/auton/status.hpp"
 
 #include "aon/constants.hpp"
+#include "aon/drivetrain/legacy-motion.hpp"
 #include "aon/globals.hpp"
 
 namespace aon::routines {
@@ -10,6 +11,7 @@ namespace {
 
 int runNativeRoutine(const char* name, void (*routine)()) {
   aon::auton::startRoutine(name);
+  aon::legacy_motion::prepare();
   routine();
   drivetrain.stop();
   intake.stop();
@@ -28,6 +30,7 @@ int runRoutine(const char* name, int (*routine)()) {
 
 int runDrivetrainTest(const char* name, int (*routine)()) {
   aon::auton::startRoutine(name);
+  aon::legacy_motion::prepare();
   const int result = routine();
   drivetrain.stop();
   aon::auton::finishRoutine(result != 0);
@@ -78,6 +81,7 @@ int BlueRoutine3() {
 
 int SkillsRoutine1() {
   aon::auton::startRoutine("Skills AUT1");
+  aon::legacy_motion::prepare();
 #if USING_BIG_ROBOT
   BigBotSkillsRoutine();
 #else
