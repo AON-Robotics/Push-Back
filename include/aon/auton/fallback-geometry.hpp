@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 namespace aon::auton {
 
 struct TrustedPose {
@@ -22,5 +24,9 @@ double headingFallback(double currentHeading, double targetHeading);
 double motorDegreesForDistance(
     double distanceInches, double driveWheelDiameter,
     double wheelRevolutionsPerMotorRevolution);
+int cappedFallbackOutput(int requested, int configuredPercent);
+std::uint32_t fallbackBudget(std::uint32_t startedAt, std::uint32_t now,
+                             std::uint32_t originalTimeout,
+                             std::uint32_t transitionAllowance);
 
 }  // namespace aon::auton

@@ -20,6 +20,8 @@ using aon::auton::MotionHealthMonitor;
 using aon::auton::MotionIntent;
 using aon::auton::MotionSample;
 using aon::auton::TrustedPose;
+using aon::auton::cappedFallbackOutput;
+using aon::auton::fallbackBudget;
 using aon::auton::headingFallback;
 using aon::auton::motorDegreesForDistance;
 using aon::auton::pointFallback;
@@ -68,6 +70,17 @@ void testMotorDegreesIncludeExternalGearRatio() {
   constexpr double kPi = 3.14159265358979323846;
   const double degrees = motorDegreesForDistance(12.0, 2.75, 0.75);
   checkNear(degrees, 12.0 / (kPi * 2.75 * 0.75) * 360.0);
+}
+
+void testFallbackOutputIsReducedFromRequestedMaximum() {
+  CHECK(cappedFallbackOutput(100, 60) == 60);
+  CHECK(cappedFallbackOutput(-100, 60) == -60);
+  CHECK(cappedFallbackOutput(35, 60) == 21);
+}
+
+void testFallbackBudgetIsBoundedByRemainingTimeAndAllowance() {
+  CHECK(fallbackBudget(1000, 1700, 1000, 250) == 550);
+  CHECK(fallbackBudget(1000, 2500, 1000, 250) == 250);
 }
 
 void testInvalidSamplesRequireConfirmation() {
@@ -147,6 +160,8 @@ int main() {
   testFallbackGeometryUsesPositiveYAsHeadingZero();
   testFallbackHeadingTakesShortestTurn();
   testMotorDegreesIncludeExternalGearRatio();
+  testFallbackOutputIsReducedFromRequestedMaximum();
+  testFallbackBudgetIsBoundedByRemainingTimeAndAllowance();
   testInvalidSamplesRequireConfirmation();
   testFrozenTrackingRequiresMotorMovementAndDwell();
   testBlockedDriveDoesNotLookLikeFrozenTracking();
