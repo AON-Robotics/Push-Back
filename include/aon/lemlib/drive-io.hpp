@@ -1,0 +1,27 @@
+#pragma once
+
+#include "pros/motors.h"
+
+namespace aon::lemlib_integration {
+
+struct DriveSensorSample {
+  double leftMotorDegrees = 0.0;
+  double rightMotorDegrees = 0.0;
+  double leftTrackingInches = 0.0;
+  double rightTrackingInches = 0.0;
+  double backTrackingInches = 0.0;
+  double imuDegrees = 0.0;
+  bool leftMotorValid = false;
+  bool rightMotorValid = false;
+  bool leftTrackingValid = false;
+  bool rightTrackingValid = false;
+  bool backTrackingValid = false;
+  bool imuValid = false;
+};
+
+DriveSensorSample sampleDriveSensors();
+void commandTank(int left, int right);
+void stopDrive();
+void setDriveBrakeMode(pros::motor_brake_mode_e brakeMode);
+
+}  // namespace aon::lemlib_integration

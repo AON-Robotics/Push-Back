@@ -3,6 +3,7 @@
 #include "aon/auton/actions.hpp"
 #include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
+#include "aon/lemlib/drive-io.hpp"
 #include "lemlib/api.hpp"
 #include "pros/imu.hpp"
 #include "pros/llemu.hpp"
@@ -11,7 +12,9 @@
 #include "pros/rtos.hpp"
 
 #include <cstdio>
+#include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -32,6 +35,62 @@ struct CalibrationResult {
   double backOffset;
 };
 
+pros::MotorGroup& leftMotors() {
+  const auto& ports = aon::config::activeRobotConfig().lemlib.motors.left;
+  static const std::vector<std::int8_t> configuredPorts(ports.begin(),
+                                                        ports.end());
+  static pros::MotorGroup motors(configuredPorts);
+  return motors;
+}
+
+pros::MotorGroup& rightMotors() {
+  const auto& ports = aon::config::activeRobotConfig().lemlib.motors.right;
+  static const std::vector<std::int8_t> configuredPorts(ports.begin(),
+                                                        ports.end());
+  static pros::MotorGroup motors(configuredPorts);
+  return motors;
+}
+
+pros::Rotation& leftEncoder() {
+  const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
+  static pros::Rotation sensor(ports.left);
+  static const bool configured = [&ports] {
+    sensor.set_reversed(ports.leftReversed);
+    return true;
+  }();
+  (void)configured;
+  return sensor;
+}
+
+pros::Rotation& rightEncoder() {
+  const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
+  static pros::Rotation sensor(ports.right);
+  static const bool configured = [&ports] {
+    sensor.set_reversed(ports.rightReversed);
+    return true;
+  }();
+  (void)configured;
+  return sensor;
+}
+
+pros::Rotation& backEncoder() {
+  const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
+  static pros::Rotation sensor(ports.back);
+  static const bool configured = [&ports] {
+    sensor.set_reversed(ports.backReversed);
+    return true;
+  }();
+  (void)configured;
+  return sensor;
+}
+
+pros::Imu& imu() {
+  const auto port =
+      aon::config::activeRobotConfig().lemlib.trackingPorts.imu;
+  static pros::Imu sensor(port);
+  return sensor;
+}
+
 double trackingInches(const pros::Rotation& sensor) {
   const auto& config = aon::config::activeRobotConfig().lemlib;
   const double degrees = sensor.get_position() / 100.0;
@@ -39,13 +98,8 @@ double trackingInches(const pros::Rotation& sensor) {
 }
 
 TrackingSample trackingSample() {
-  const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
-  static pros::Rotation left(ports.left);
-  static pros::Rotation right(ports.right);
-  static pros::Rotation back(ports.back);
-  static pros::Imu imu(ports.imu);
-  return {trackingInches(left), trackingInches(right), trackingInches(back),
-          imu.get_rotation()};
+  return {trackingInches(leftEncoder()), trackingInches(rightEncoder()),
+          trackingInches(backEncoder()), imu().get_rotation()};
 }
 
 void runFullTurn(lemlib::Chassis& testChassis,
@@ -88,35 +142,17 @@ CalibrationResult reportCalibration(const char* label,
 
 lemlib::Chassis& chassis() {
   const auto& config = aon::config::activeRobotConfig().lemlib;
-  static const std::vector<std::int8_t> leftPorts(config.motors.left.begin(),
-                                                  config.motors.left.end());
-  static const std::vector<std::int8_t> rightPorts(config.motors.right.begin(),
-                                                   config.motors.right.end());
-  static pros::MotorGroup leftMotors(leftPorts);
-  static pros::MotorGroup rightMotors(rightPorts);
-
-  static pros::Rotation leftEncoder(config.trackingPorts.left);
-  static pros::Rotation rightEncoder(config.trackingPorts.right);
-  static pros::Rotation backEncoder(config.trackingPorts.back);
-  static const bool encodersConfigured = [&config] {
-    leftEncoder.set_reversed(config.trackingPorts.leftReversed);
-    rightEncoder.set_reversed(config.trackingPorts.rightReversed);
-    backEncoder.set_reversed(config.trackingPorts.backReversed);
-    return true;
-  }();
-  (void)encodersConfigured;
-  static pros::Imu imu(config.trackingPorts.imu);
-
   static lemlib::TrackingWheel leftTrackingWheel(
-      &leftEncoder, config.trackingWheelDiameter, config.leftTrackingOffset);
+      &leftEncoder(), config.trackingWheelDiameter, config.leftTrackingOffset);
   static lemlib::TrackingWheel rightTrackingWheel(
-      &rightEncoder, config.trackingWheelDiameter, config.rightTrackingOffset);
+      &rightEncoder(), config.trackingWheelDiameter,
+      config.rightTrackingOffset);
   static lemlib::TrackingWheel backTrackingWheel(
-      &backEncoder, config.trackingWheelDiameter, config.backTrackingOffset);
+      &backEncoder(), config.trackingWheelDiameter, config.backTrackingOffset);
 
   static lemlib::Drivetrain drivetrain{
-      &leftMotors,
-      &rightMotors,
+      &leftMotors(),
+      &rightMotors(),
       config.trackWidth,
       config.driveWheelDiameter,
       config.drivetrainRpm,
@@ -140,12 +176,67 @@ lemlib::Chassis& chassis() {
       &rightTrackingWheel,
       &backTrackingWheel,
       nullptr,
-      &imu,
+      &imu(),
   };
 
   static lemlib::Chassis configuredChassis(
       drivetrain, lateralController, angularController, sensors);
   return configuredChassis;
+}
+
+DriveSensorSample sampleDriveSensors() {
+  DriveSensorSample sample;
+
+  const auto averageMotorPositions = [](const pros::MotorGroup& motors,
+                                        double& average) {
+    const std::vector<double> positions = motors.get_position_all();
+    if (positions.empty()) return false;
+    double total = 0.0;
+    for (const double position : positions) {
+      if (!std::isfinite(position)) return false;
+      total += position;
+    }
+    average = total / static_cast<double>(positions.size());
+    return true;
+  };
+
+  sample.leftMotorValid =
+      averageMotorPositions(leftMotors(), sample.leftMotorDegrees);
+  sample.rightMotorValid =
+      averageMotorPositions(rightMotors(), sample.rightMotorDegrees);
+
+  const auto sampleRotation = [](const pros::Rotation& sensor, double& inches) {
+    const std::int32_t position = sensor.get_position();
+    if (position == PROS_ERR) return false;
+    const auto& config = aon::config::activeRobotConfig().lemlib;
+    const double degrees = position / 100.0;
+    inches = degrees / 360.0 * M_PI * config.trackingWheelDiameter;
+    return std::isfinite(inches);
+  };
+
+  sample.leftTrackingValid =
+      sampleRotation(leftEncoder(), sample.leftTrackingInches);
+  sample.rightTrackingValid =
+      sampleRotation(rightEncoder(), sample.rightTrackingInches);
+  sample.backTrackingValid =
+      sampleRotation(backEncoder(), sample.backTrackingInches);
+
+  sample.imuDegrees = imu().get_rotation();
+  sample.imuValid = std::isfinite(sample.imuDegrees) &&
+                    imu().get_status() != pros::ImuStatus::error;
+  return sample;
+}
+
+void commandTank(int left, int right) {
+  leftMotors().move(std::clamp(left, -127, 127));
+  rightMotors().move(std::clamp(right, -127, 127));
+}
+
+void stopDrive() { commandTank(0, 0); }
+
+void setDriveBrakeMode(pros::motor_brake_mode_e brakeMode) {
+  leftMotors().set_brake_mode_all(brakeMode);
+  rightMotors().set_brake_mode_all(brakeMode);
 }
 
 void initializeChassis() {
