@@ -1,5 +1,7 @@
 #include "aon/auton/motion-health.hpp"
+#include "aon/auton/fallback-geometry.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -17,6 +19,11 @@ using aon::auton::MotionFailureReason;
 using aon::auton::MotionHealthMonitor;
 using aon::auton::MotionIntent;
 using aon::auton::MotionSample;
+using aon::auton::TrustedPose;
+using aon::auton::headingFallback;
+using aon::auton::motorDegreesForDistance;
+using aon::auton::pointFallback;
+using aon::auton::poseFallback;
 
 namespace {
 
@@ -31,6 +38,36 @@ MotionSample healthy(std::uint32_t timeMs) {
   sample.backTrackingValid = true;
   sample.imuValid = true;
   return sample;
+}
+
+void checkNear(double actual, double expected, double tolerance = 1e-6) {
+  CHECK(std::abs(actual - expected) <= tolerance);
+}
+
+void testFallbackGeometryUsesPositiveYAsHeadingZero() {
+  const auto forward = pointFallback({0.0, 0.0, 0.0}, 0.0, 12.0);
+  checkNear(forward.turnDegrees, 0.0);
+  checkNear(forward.distanceInches, 12.0);
+
+  const auto right = pointFallback({0.0, 0.0, 0.0}, 12.0, 0.0);
+  checkNear(right.turnDegrees, 90.0);
+
+  const auto behind = pointFallback({0.0, 0.0, 180.0}, 0.0, 12.0);
+  checkNear(behind.turnDegrees, -180.0);
+}
+
+void testFallbackHeadingTakesShortestTurn() {
+  checkNear(headingFallback(350.0, 10.0), 20.0);
+  checkNear(headingFallback(10.0, 350.0), -20.0);
+
+  const auto pose = poseFallback({0.0, 0.0, 0.0}, 0.0, 12.0, 90.0);
+  checkNear(pose.finalTurnDegrees, 90.0);
+}
+
+void testMotorDegreesIncludeExternalGearRatio() {
+  constexpr double kPi = 3.14159265358979323846;
+  const double degrees = motorDegreesForDistance(12.0, 2.75, 0.75);
+  checkNear(degrees, 12.0 / (kPi * 2.75 * 0.75) * 360.0);
 }
 
 void testInvalidSamplesRequireConfirmation() {
@@ -107,6 +144,9 @@ void testImpossiblePoseJumpRequiresConfirmation() {
 }  // namespace
 
 int main() {
+  testFallbackGeometryUsesPositiveYAsHeadingZero();
+  testFallbackHeadingTakesShortestTurn();
+  testMotorDegreesIncludeExternalGearRatio();
   testInvalidSamplesRequireConfirmation();
   testFrozenTrackingRequiresMotorMovementAndDwell();
   testBlockedDriveDoesNotLookLikeFrozenTracking();

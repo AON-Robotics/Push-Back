@@ -3,6 +3,8 @@
 #include <array>
 #include <cstdint>
 
+#include "aon/auton/motion-health.hpp"
+
 namespace aon::config {
 
 enum class RobotIdentity {
@@ -25,6 +27,17 @@ struct TrackingPorts {
   bool backReversed;
 };
 
+struct FallbackConfig {
+  double wheelRevolutionsPerMotorRevolution;
+  double distanceKp;
+  double turnKp;
+  int minimumOutput;
+  int maximumOutputPercent;
+  std::uint32_t settleMs;
+  std::uint32_t transitionAllowanceMs;
+  aon::auton::HealthThresholds health;
+};
+
 struct LemLibDriveConfig {
   DrivePorts motors;
   TrackingPorts trackingPorts;
@@ -38,6 +51,7 @@ struct LemLibDriveConfig {
   float leftTrackingOffset;
   float rightTrackingOffset;
   float backTrackingOffset;
+  FallbackConfig fallback;
 };
 
 struct RobotConfig {

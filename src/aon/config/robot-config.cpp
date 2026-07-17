@@ -21,6 +21,16 @@ const RobotConfig& activeRobotConfig() {
           -DISTANCE_LEFT_TRACKING_WHEEL_CENTER,
           DISTANCE_RIGHT_TRACKING_WHEEL_CENTER,
           -DISTANCE_BACK_TRACKING_WHEEL_CENTER,
+          {
+              MOTOR_TO_DRIVE_RATIO,
+              4.0,
+              1.2,
+              18,
+              60,
+              100,
+              250,
+              {3, 2, 300, 15.0, 0.02, 8.0, 45.0},
+          },
       },
   };
 #else
@@ -39,6 +49,16 @@ const RobotConfig& activeRobotConfig() {
           -DISTANCE_LEFT_TRACKING_WHEEL_CENTER,
           DISTANCE_RIGHT_TRACKING_WHEEL_CENTER,
           -DISTANCE_BACK_TRACKING_WHEEL_CENTER,
+          {
+              MOTOR_TO_DRIVE_RATIO,
+              4.0,
+              1.2,
+              18,
+              60,
+              100,
+              250,
+              {3, 2, 300, 15.0, 0.02, 8.0, 45.0},
+          },
       },
   };
 #endif
