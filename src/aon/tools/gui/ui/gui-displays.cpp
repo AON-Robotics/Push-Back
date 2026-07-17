@@ -1,6 +1,7 @@
 #include "aon/tools/gui/gui.hpp"
 #include "aon/tools/gui/gui-debug.hpp"
 #include "aon/auton/fallback-status.hpp"
+#include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
 #include "aon/tools/gui/ui/gui-layout.hpp"
 
@@ -105,6 +106,12 @@ void Gui::displayAutonMenu() {
       fallback.mode == aon::auton::MotionMode::ForcedEncoder
           ? COLOR_ORANGE
           : COLOR_DARK_GREEN;
+  if (fallback.mode == aon::auton::MotionMode::Tracking &&
+      !aon::config::activeRobotConfig()
+           .lemlib.fallback.automaticFallbackAuthorized) {
+    modeButton.label = "AUTO LOCKED";
+    modeButton.bg = COLOR_DARK_GRAY;
+  }
   if (fallback.mode == aon::auton::MotionMode::FaultedEncoder) {
     modeButton.label = "FAULT ENCODER";
     modeButton.bg = COLOR_RED;

@@ -69,5 +69,7 @@ class MotionHealthMonitor {
 };
 
 const char* motionFailureName(MotionFailureReason reason);
+bool shouldMonitorAutomatically(bool trackingMode,
+                                bool automaticFallbackAuthorized);
 
 }  // namespace aon::auton

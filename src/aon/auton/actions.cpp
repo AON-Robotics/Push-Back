@@ -170,6 +170,10 @@ MotionResult runMonitored(const char* operation, const char* name,
   MotionHealthMonitor monitor(
       config::activeRobotConfig().lemlib.fallback.health);
   monitor.reset(initial);
+  const bool automaticMonitoring = shouldMonitorAutomatically(
+      status.mode == MotionMode::Tracking,
+      config::activeRobotConfig()
+          .lemlib.fallback.automaticFallbackAuthorized);
   const std::uint32_t startedAt = pros::millis();
   startMotion();
 
@@ -193,7 +197,9 @@ MotionResult runMonitored(const char* operation, const char* name,
     }
 
     const MotionSample sample = motionSample();
-    const MotionFailureReason reason = monitor.observe(sample, intent);
+    const MotionFailureReason reason =
+        automaticMonitoring ? monitor.observe(sample, intent)
+                            : MotionFailureReason::None;
     if (reason != MotionFailureReason::None) {
       const MotionSample trusted = monitor.lastTrustedSample();
       logFallback(name, reason, trusted, sample, target);

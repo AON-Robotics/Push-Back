@@ -36,6 +36,7 @@ struct FallbackConfig {
   std::uint32_t settleMs;
   std::uint32_t transitionAllowanceMs;
   aon::auton::HealthThresholds health;
+  bool automaticFallbackAuthorized;
 };
 
 struct LemLibDriveConfig {

@@ -138,4 +138,9 @@ const char* motionFailureName(MotionFailureReason reason) {
   return "unknown";
 }
 
+bool shouldMonitorAutomatically(bool trackingMode,
+                                bool automaticFallbackAuthorized) {
+  return trackingMode && automaticFallbackAuthorized;
+}
+
 }  // namespace aon::auton

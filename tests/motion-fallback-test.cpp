@@ -26,6 +26,7 @@ using aon::auton::headingFallback;
 using aon::auton::motorDegreesForDistance;
 using aon::auton::pointFallback;
 using aon::auton::poseFallback;
+using aon::auton::shouldMonitorAutomatically;
 using aon::auton::withTravelDirection;
 
 namespace {
@@ -90,6 +91,12 @@ void testFallbackOutputIsReducedFromRequestedMaximum() {
 void testFallbackBudgetIsBoundedByRemainingTimeAndAllowance() {
   CHECK(fallbackBudget(1000, 1700, 1000, 250) == 550);
   CHECK(fallbackBudget(1000, 2500, 1000, 250) == 250);
+}
+
+void testAutomaticMonitoringRequiresTrackingModeAndAuthorization() {
+  CHECK(!shouldMonitorAutomatically(true, false));
+  CHECK(!shouldMonitorAutomatically(false, true));
+  CHECK(shouldMonitorAutomatically(true, true));
 }
 
 void testInvalidSamplesRequireConfirmation() {
@@ -172,6 +179,7 @@ int main() {
   testMotorDegreesIncludeExternalGearRatio();
   testFallbackOutputIsReducedFromRequestedMaximum();
   testFallbackBudgetIsBoundedByRemainingTimeAndAllowance();
+  testAutomaticMonitoringRequiresTrackingModeAndAuthorization();
   testInvalidSamplesRequireConfirmation();
   testFrozenTrackingRequiresMotorMovementAndDwell();
   testBlockedDriveDoesNotLookLikeFrozenTracking();
