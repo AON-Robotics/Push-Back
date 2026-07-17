@@ -2,9 +2,17 @@
 
 #include <cstdint>
 
+#include "aon/auton/fallback-status.hpp"
 #include "lemlib/api.hpp"
 
 namespace aon::auton {
+
+struct MotionResult {
+  bool succeeded;
+  MotionMode mode;
+  bool fallbackUsed;
+  MotionFailureReason reason;
+};
 
 /// Named autonomous operations backed by the project's existing LemLib chassis.
 ///
@@ -14,16 +22,16 @@ class Actions {
  public:
   void setPose(double x, double y, double heading);
 
-  void moveToPoint(const char* name, double x, double y, int timeout,
-                   lemlib::MoveToPointParams params = {});
-  void moveToPose(const char* name, double x, double y, double heading,
-                  int timeout, lemlib::MoveToPoseParams params = {});
-  void turnToHeading(const char* name, double heading, int timeout,
-                     lemlib::TurnToHeadingParams params = {});
-  void arcadeFor(const char* name, int throttle, int turn,
-                 std::uint32_t durationMs);
-  void followPath(const char* name, const asset& path, float lookahead,
-                  int timeout, bool forwards = true);
+  MotionResult moveToPoint(const char* name, double x, double y, int timeout,
+                           lemlib::MoveToPointParams params = {});
+  MotionResult moveToPose(const char* name, double x, double y, double heading,
+                          int timeout, lemlib::MoveToPoseParams params = {});
+  MotionResult turnToHeading(const char* name, double heading, int timeout,
+                             lemlib::TurnToHeadingParams params = {});
+  MotionResult arcadeFor(const char* name, int throttle, int turn,
+                         std::uint32_t durationMs);
+  MotionResult followPath(const char* name, const asset& path, float lookahead,
+                          int timeout, bool forwards = true);
 
   void cancelMotion();
   void stop(pros::motor_brake_mode_e brakeMode = pros::E_MOTOR_BRAKE_HOLD);

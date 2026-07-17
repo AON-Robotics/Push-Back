@@ -282,7 +282,7 @@ void runTurnTest(double targetHeading) {
   pros::delay(250);
 
   pros::lcd::set_text(4, "Auton turn running...");
-  auton::actions().turnToHeading(
+  const auto result = auton::actions().turnToHeading(
       "LemLib turn test", targetHeading, 2500,
       {.direction = lemlib::AngularDirection::AUTO, .maxSpeed = 50});
 
@@ -293,6 +293,10 @@ void runTurnTest(double targetHeading) {
   pros::lcd::print(6, "Error:  %+7.2f deg", error);
   std::printf("LEMLIB_TURN target=%.3f final=%.3f error=%.3f\n",
               targetHeading, finalPose.theta, error);
+  if (!result.succeeded) {
+    pros::lcd::print(7, "Motion failed: %s",
+                     auton::motionFailureName(result.reason));
+  }
 }
 
 void runTrackingCalibrationTest() {

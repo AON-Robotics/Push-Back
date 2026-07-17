@@ -20,6 +20,8 @@ FallbackGeometry pointFallback(TrustedPose start, double targetX,
                                double targetY);
 FallbackGeometry poseFallback(TrustedPose start, double targetX,
                               double targetY, double targetHeading);
+FallbackGeometry withTravelDirection(FallbackGeometry geometry,
+                                     bool forwards);
 double headingFallback(double currentHeading, double targetHeading);
 double motorDegreesForDistance(
     double distanceInches, double driveWheelDiameter,

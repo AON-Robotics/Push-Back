@@ -42,6 +42,16 @@ FallbackGeometry poseFallback(TrustedPose start, double targetX,
   };
 }
 
+FallbackGeometry withTravelDirection(FallbackGeometry geometry,
+                                     bool forwards) {
+  if (forwards) return geometry;
+  geometry.turnDegrees = std::remainder(geometry.turnDegrees + 180.0, 360.0);
+  geometry.distanceInches = -geometry.distanceInches;
+  geometry.finalTurnDegrees =
+      std::remainder(geometry.finalTurnDegrees - 180.0, 360.0);
+  return geometry;
+}
+
 double motorDegreesForDistance(
     double distanceInches, double driveWheelDiameter,
     double wheelRevolutionsPerMotorRevolution) {

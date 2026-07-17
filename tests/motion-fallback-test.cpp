@@ -26,6 +26,7 @@ using aon::auton::headingFallback;
 using aon::auton::motorDegreesForDistance;
 using aon::auton::pointFallback;
 using aon::auton::poseFallback;
+using aon::auton::withTravelDirection;
 
 namespace {
 
@@ -64,6 +65,14 @@ void testFallbackHeadingTakesShortestTurn() {
 
   const auto pose = poseFallback({0.0, 0.0, 0.0}, 0.0, 12.0, 90.0);
   checkNear(pose.finalTurnDegrees, 90.0);
+}
+
+void testBackwardFallbackFacesAwayAndUsesNegativeDistance() {
+  const auto forward = poseFallback({0.0, 0.0, 0.0}, 0.0, 12.0, 90.0);
+  const auto backward = withTravelDirection(forward, false);
+  checkNear(backward.turnDegrees, 180.0);
+  checkNear(backward.distanceInches, -12.0);
+  checkNear(backward.finalTurnDegrees, -90.0);
 }
 
 void testMotorDegreesIncludeExternalGearRatio() {
@@ -159,6 +168,7 @@ void testImpossiblePoseJumpRequiresConfirmation() {
 int main() {
   testFallbackGeometryUsesPositiveYAsHeadingZero();
   testFallbackHeadingTakesShortestTurn();
+  testBackwardFallbackFacesAwayAndUsesNegativeDistance();
   testMotorDegreesIncludeExternalGearRatio();
   testFallbackOutputIsReducedFromRequestedMaximum();
   testFallbackBudgetIsBoundedByRemainingTimeAndAllowance();
