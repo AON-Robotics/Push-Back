@@ -7,7 +7,7 @@ Use Git history as the source of truth when this file and a chat disagree.
 
 - Integration branch: `Testing`
 - Remote: `origin` at `AON-Robotics/Push-Back`
-- Latest completed implementation checkpoint: `0ad32f6`
+- Latest completed implementation checkpoint: `f316e98`
 - Hardware flag committed for uploads: `USING_BIG_ROBOT false`
 - Default autonomous test: red/blue AUT3, `TEST LemLib 12in`
 
@@ -30,10 +30,21 @@ The approved architecture and implementation sequence are recorded in:
 
 - `docs/superpowers/specs/2026-07-16-lemlib-single-chassis-migration-design.md`
 - `docs/superpowers/plans/2026-07-16-lemlib-single-chassis-migration.md`
+- `docs/superpowers/specs/2026-07-17-motor-encoder-odometry-fallback-design.md`
+- `docs/superpowers/plans/2026-07-17-motor-encoder-odometry-fallback.md`
 
 Task 1 is implemented. On a fresh boot, LemLib validation no longer starts the
 legacy odometry task. Native Kevin and Skills routines start legacy odometry
 lazily through `aon::legacy_motion::prepare()`.
+
+Motor-encoder fallback Tasks 1 through 6 are implemented. The code now has a
+host-tested health monitor, relative encoder controller, single-owner drive
+sampling, structured motion results, failure propagation, and a brain mode
+control. Automatic switching is deliberately gated off in both robot
+configurations with `automaticFallbackAuthorized = false` until physical
+validation reaches that step. The brain displays `AUTO LOCKED` in tracking mode.
+`FORCE ENCODERS` exists for later controlled bench validation but must not be
+used before the baseline gate below is recorded.
 
 ## Pending Physical Gate
 
@@ -49,10 +60,17 @@ following tests are recorded:
 Once a native route starts, its legacy odometry task remains active until the
 program restarts. Always restart the brain before returning to LemLib testing.
 
+After this existing gate passes, resume Task 7 of the motor-encoder fallback
+plan. Add and expose only the 6-inch forced-encoder forward validation first;
+do not authorize automatic fallback or expose later primitives yet.
+
 ## Verified State
 
-At checkpoint `0ad32f6`:
+At checkpoint `f316e98`:
 
+- All host-side motion health, geometry, output-cap, timeout-budget, travel
+  direction, and authorization-policy tests passed with warnings treated as
+  errors.
 - Clean small-robot build passed.
 - Clean big-robot build passed.
 - The small-robot configuration was restored and rebuilt.

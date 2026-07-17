@@ -22,6 +22,15 @@
 - Complete the existing migration Task 1 physical gate before enabling automatic fallback in a competition route.
 - Clean-build both robot configurations at each robot-code checkpoint and restore `USING_BIG_ROBOT false` before committing.
 
+## Execution Status
+
+- Tasks 1 through 6 are implemented through checkpoint `f316e98`.
+- Automatic fallback remains unauthorized in both robot configurations; the
+  brain shows `AUTO LOCKED` for the normal tracking mode.
+- Task 7 is blocked at its first physical gate. Record the existing AUT3 LemLib
+  12-inch test and a separately rebooted native Kevin fallback before adding or
+  exposing forced-encoder validation routines.
+
 ---
 
 ## File Structure
