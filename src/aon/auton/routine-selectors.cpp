@@ -1,5 +1,6 @@
 #include "aon/auton/routines.hpp"
 #include "aon/auton/status.hpp"
+#include "aon/auton/fallback-status.hpp"
 
 #include "aon/constants.hpp"
 #include "aon/drivetrain/legacy-motion.hpp"
@@ -21,6 +22,7 @@ int runNativeRoutine(const char* name, void (*routine)()) {
 
 int runRoutine(const char* name, int (*routine)()) {
   aon::auton::startRoutine(name);
+  aon::auton::lockFallbackSelection();
   const int result = routine();
   drivetrain.stop();
   intake.stop();

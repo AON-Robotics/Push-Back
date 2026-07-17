@@ -145,6 +145,7 @@ protected:
   void applyPreselectedAuton();
   int displayInitializationMessage();
   void displayAutonStatusLine();
+  void displayFallbackStatusLine();
   
   // Virtual method for GUI loop - can be extended by derived classes
   virtual void mainLoop();

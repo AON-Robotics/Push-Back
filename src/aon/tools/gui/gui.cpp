@@ -1,5 +1,6 @@
 #include "aon/tools/gui/gui.hpp"
 #include "aon/tools/gui/gui-debug.hpp"
+#include "aon/auton/fallback-status.hpp"
 #include "aon/constants.hpp"
 #include "aon/tools/gui/ui/gui-layout.hpp"
 
@@ -242,6 +243,10 @@ void Gui::handleAutonMenuTouch() {
   } else if (skillsBtn.isHit(x, y)) {
     displaySkillsMenu();
     currentScreen = SkillAutons;
+  } else if (fallbackModeBtn.isHit(x, y)) {
+    const auto status = aon::auton::fallbackStatus();
+    const bool force = status.mode != aon::auton::MotionMode::ForcedEncoder;
+    if (aon::auton::selectForcedEncoder(force)) displayAutonMenu();
   }
 }
 
@@ -335,6 +340,7 @@ void Gui::handleSkillsMenuTouch() {
 
 void Gui::mainLoop() {
   auto lastStatus = aon::auton::routineStatus();
+  auto lastFallback = aon::auton::fallbackStatus();
   while (true) {
     pros::screen_touch_status_s_t TouchStatus = pros::screen::touch_status();
     if (TouchStatus.touch_status > 0) {
@@ -360,11 +366,14 @@ void Gui::mainLoop() {
     }
 
     const auto status = aon::auton::routineStatus();
+    const auto fallback = aon::auton::fallbackStatus();
     if (currentScreen == MainMenu &&
-        (status.state != lastStatus.state || status.name != lastStatus.name)) {
+        (status.state != lastStatus.state || status.name != lastStatus.name ||
+         fallback.changedAt != lastFallback.changedAt)) {
       displayMainMenu();
     }
     lastStatus = status;
+    lastFallback = fallback;
 
     pros::delay(100);
   }

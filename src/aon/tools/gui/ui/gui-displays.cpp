@@ -1,9 +1,30 @@
 #include "aon/tools/gui/gui.hpp"
 #include "aon/tools/gui/gui-debug.hpp"
+#include "aon/auton/fallback-status.hpp"
 #include "aon/constants.hpp"
 #include "aon/tools/gui/ui/gui-layout.hpp"
 
 namespace aon {
+
+void Gui::displayFallbackStatusLine() {
+  const auto fallback = aon::auton::fallbackStatus();
+  const char* mode = "TRACKING";
+  pros::screen::set_pen(COLOR_GREEN);
+  if (fallback.mode == aon::auton::MotionMode::ForcedEncoder) {
+    mode = "FORCED ENCODER";
+    pros::screen::set_pen(COLOR_ORANGE);
+  } else if (fallback.mode == aon::auton::MotionMode::FaultedEncoder) {
+    mode = "FAULT ENCODER";
+    pros::screen::set_pen(COLOR_RED);
+  }
+
+  if (fallback.reason == aon::auton::MotionFailureReason::None) {
+    pros::screen::print(pros::E_TEXT_SMALL, 5, 35, "ODOM: %s", mode);
+  } else {
+    pros::screen::print(pros::E_TEXT_SMALL, 5, 35, "ODOM: %s - %s", mode,
+                        aon::auton::motionFailureName(fallback.reason));
+  }
+}
 
 void Gui::displayAutonStatusLine() {
   const auto status = aon::auton::routineStatus();
@@ -47,6 +68,7 @@ void Gui::displayMainMenu() {
   aon::DrawAONLogo((BRAIN_SCREEN_WIDTH - 225) / 2, (BRAIN_SCREEN_HEIGHT - 225) / 4);
 
   displayAutonStatusLine();
+  displayFallbackStatusLine();
 
   // Draw the "AUTONS" button using UI helper
   AutonsBtn.draw(pros::E_TEXT_LARGE);
@@ -72,6 +94,22 @@ void Gui::displayAutonMenu() {
   blueBtn.draw(pros::E_TEXT_LARGE);
   redBtn.draw(pros::E_TEXT_LARGE);
   skillsBtn.draw(pros::E_TEXT_LARGE);
+
+  const auto fallback = aon::auton::fallbackStatus();
+  ui::Button modeButton = fallbackModeBtn;
+  modeButton.label =
+      fallback.mode == aon::auton::MotionMode::ForcedEncoder
+          ? "FORCE ENCODERS"
+          : "AUTO FALLBACK";
+  modeButton.bg =
+      fallback.mode == aon::auton::MotionMode::ForcedEncoder
+          ? COLOR_ORANGE
+          : COLOR_DARK_GREEN;
+  if (fallback.mode == aon::auton::MotionMode::FaultedEncoder) {
+    modeButton.label = "FAULT ENCODER";
+    modeButton.bg = COLOR_RED;
+  }
+  modeButton.draw(pros::E_TEXT_SMALL);
 }
 
 void Gui::displayRedAutonMenu() {

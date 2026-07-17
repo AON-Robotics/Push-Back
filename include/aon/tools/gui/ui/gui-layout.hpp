@@ -59,6 +59,7 @@ inline const ui::Button AutonsBtn = {0, BRAIN_SCREEN_HEIGHT - 50, BRAIN_SCREEN_W
 inline const ui::Button redBtn    = {45, BRAIN_SCREEN_HEIGHT / 2 - 30, 145, BRAIN_SCREEN_HEIGHT / 2 + 30, "RED", COLOR_RED, COLOR_WHITE};
 inline const ui::Button blueBtn   = {BRAIN_SCREEN_WIDTH - 130, BRAIN_SCREEN_HEIGHT / 2 - 30, BRAIN_SCREEN_WIDTH - 30, BRAIN_SCREEN_HEIGHT / 2 + 30, "BLUE", COLOR_BLUE, COLOR_WHITE};
 inline const ui::Button skillsBtn = {BRAIN_SCREEN_WIDTH / 2 - 60, BRAIN_SCREEN_HEIGHT - 100, BRAIN_SCREEN_WIDTH / 2 + 80, BRAIN_SCREEN_HEIGHT - 50, "SKILLS", COLOR_GREEN, COLOR_WHITE};
+inline const ui::Button fallbackModeBtn = {170, 50, 310, 82, "AUTO FALLBACK", COLOR_DARK_GREEN, COLOR_WHITE};
 
 // Auton selection buttons
 inline const ui::Button aut1Btn = {50, BRAIN_SCREEN_HEIGHT - 100, 150, BRAIN_SCREEN_HEIGHT - 50, "AUT1", 0, COLOR_BLACK};
