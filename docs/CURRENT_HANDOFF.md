@@ -7,7 +7,7 @@ Use Git history as the source of truth when this file and a chat disagree.
 
 - Integration branch: `Testing`
 - Remote: `origin` at `AON-Robotics/Push-Back`
-- Latest completed implementation checkpoint: `f316e98`
+- Latest completed implementation checkpoint: `db084c4`
 - Hardware flag committed for uploads: `USING_BIG_ROBOT false`
 - Default autonomous test: red/blue AUT3, `TEST LemLib 12in`
 
@@ -42,9 +42,18 @@ host-tested health monitor, relative encoder controller, single-owner drive
 sampling, structured motion results, failure propagation, and a brain mode
 control. Automatic switching is deliberately gated off in both robot
 configurations with `automaticFallbackAuthorized = false` until physical
-validation reaches that step. The brain displays `AUTO LOCKED` in tracking mode.
-`FORCE ENCODERS` exists for later controlled bench validation but must not be
-used before the baseline gate below is recorded.
+validation reaches that step. Forced mode now has a separate
+`forcedEncoderTestingAuthorized = false` gate, so the brain's `AUTO LOCKED`
+control cannot start unvalidated encoder motion. Both flags remain false until
+the baseline gate below is recorded.
+
+Checkpoint `db084c4` hardens the fallback layer before physical testing:
+
+- controller-X cancellation reaches LemLib and encoder motion;
+- cancellation remains latched until a later autonomous dispatch safely rearms;
+- concurrent autonomous actions cannot share drivetrain ownership;
+- timed arcade motion stops on invalid drive feedback;
+- pose-jump fault samples must be consecutive.
 
 ## Pending Physical Gate
 
@@ -66,7 +75,7 @@ do not authorize automatic fallback or expose later primitives yet.
 
 ## Verified State
 
-At checkpoint `f316e98`:
+At checkpoint `db084c4`:
 
 - All host-side motion health, geometry, output-cap, timeout-budget, travel
   direction, and authorization-policy tests passed with warnings treated as
@@ -74,6 +83,7 @@ At checkpoint `f316e98`:
 - Clean small-robot build passed.
 - Clean big-robot build passed.
 - The small-robot configuration was restored and rebuilt.
+- Independent safety review found no remaining Critical or Important issues.
 - The only observed compiler warning was the existing vendored `json.hpp`
   `std::is_pod` deprecation.
 

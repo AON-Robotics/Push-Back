@@ -25,8 +25,12 @@
 ## Execution Status
 
 - Tasks 1 through 6 are implemented through checkpoint `f316e98`.
+- Checkpoint `db084c4` hardens action ownership, emergency cancellation,
+  feedback validation, and fault confirmation before physical tests.
 - Automatic fallback remains unauthorized in both robot configurations; the
   brain shows `AUTO LOCKED` for the normal tracking mode.
+- Forced encoder testing is separately unauthorized, so `AUTO LOCKED` cannot
+  enter encoder mode before the baseline measurements are recorded.
 - Task 7 is blocked at its first physical gate. Record the existing AUT3 LemLib
   12-inch test and a separately rebooted native Kevin fallback before adding or
   exposing forced-encoder validation routines.
