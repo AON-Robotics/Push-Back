@@ -73,6 +73,11 @@ After this existing gate passes, resume Task 7 of the motor-encoder fallback
 plan. Add and expose only the 6-inch forced-encoder forward validation first;
 do not authorize automatic fallback or expose later primitives yet.
 
+The current encoder controller is suitable only for the isolated one-action
+validation sequence. It does not yet maintain a dead-reckoned field pose across
+multiple encoder actions. Implement and host-test that pose continuity before
+enabling automatic fallback or any route with dependent encoder motions.
+
 ## Verified State
 
 At checkpoint `db084c4`:

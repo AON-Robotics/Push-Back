@@ -34,6 +34,9 @@
 - Task 7 is blocked at its first physical gate. Record the existing AUT3 LemLib
   12-inch test and a separately rebooted native Kevin fallback before adding or
   exposing forced-encoder validation routines.
+- Multi-action encoder pose continuity remains unimplemented. Keep automatic
+  fallback and dependent encoder route segments locked until a dead-reckoned
+  diagnostic pose is implemented and host-tested.
 
 ---
 
