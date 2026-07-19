@@ -636,7 +636,7 @@
     },
     "upload_options": {
       "description": " ",
-      "icon": "pizza",
+      "icon": "X",
       "slot": 1
     },
     "use_early_access": false
