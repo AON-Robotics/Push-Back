@@ -14,6 +14,7 @@ enum class MotionFailureReason {
   FrozenTracking,
   Timeout,
   Cancelled,
+  Busy,
   Unsupported,
   RetryFailed,
 };
@@ -69,7 +70,31 @@ class MotionHealthMonitor {
 };
 
 const char* motionFailureName(MotionFailureReason reason);
+
+/**
+ * @brief Decides whether automatic sensor-fault monitoring may run.
+ * @param trackingMode true only while LemLib tracking owns the motion.
+ * @param automaticFallbackAuthorized physical-test authorization flag.
+ * @return true only when both prerequisites are satisfied.
+ */
 bool shouldMonitorAutomatically(bool trackingMode,
                                 bool automaticFallbackAuthorized);
+
+/**
+ * @brief Prevents forced encoder mode before its physical validation gate.
+ * @param forced true when the operator requests forced encoder mode.
+ * @param forcedEncoderTestingAuthorized separate bench-test authorization.
+ * @return true when the requested selection is allowed.
+ */
+bool forcedEncoderSelectionAllowed(bool forced,
+                                   bool forcedEncoderTestingAuthorized);
+
+/**
+ * @brief Validates the independent feedback required by timed drive commands.
+ * @param leftMotorValid validity of the left drive encoder sample.
+ * @param rightMotorValid validity of the right drive encoder sample.
+ * @return true only when both drivetrain sides reported valid feedback.
+ */
+bool driveFeedbackValid(bool leftMotorValid, bool rightMotorValid);
 
 }  // namespace aon::auton

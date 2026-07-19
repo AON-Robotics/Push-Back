@@ -45,7 +45,7 @@ EncoderMotionResult failure(MotionFailureReason reason, double distanceError,
 
 EncoderMotionResult EncoderMotionController::driveDistance(
     double distanceInches, int maximumOutput, std::uint32_t startedAt,
-    std::uint32_t timeoutMs) {
+    std::uint32_t timeoutMs, MotionControl& control) {
   using namespace aon::lemlib_integration;
   const auto& fallback = aon::config::activeRobotConfig().lemlib.fallback;
   const DriveSensorSample start = sampleDriveSensors();
@@ -56,7 +56,9 @@ EncoderMotionResult EncoderMotionController::driveDistance(
   std::uint32_t settledAt = 0;
   double error = distanceInches;
   while (true) {
-    if (cancelled_) return failure(MotionFailureReason::Cancelled, error, 0.0);
+    if (control.isCancelled()) {
+      return failure(MotionFailureReason::Cancelled, error, 0.0);
+    }
     if (timedOut(startedAt, timeoutMs)) {
       return failure(MotionFailureReason::Timeout, error, 0.0);
     }
@@ -81,7 +83,9 @@ EncoderMotionResult EncoderMotionController::driveDistance(
       settledAt = 0;
       const int output = controlledOutput(
           error, fallback.distanceKp, fallback.minimumOutput, maximumOutput);
-      commandTank(output, output);
+      if (!control.runIfActive([&] { commandTank(output, output); })) {
+        return failure(MotionFailureReason::Cancelled, error, 0.0);
+      }
     }
     pros::delay(kLoopDelayMs);
   }
@@ -89,7 +93,8 @@ EncoderMotionResult EncoderMotionController::driveDistance(
 
 EncoderMotionResult EncoderMotionController::turn(
     double degrees, int maximumOutput, bool imuAllowed,
-    std::uint32_t startedAt, std::uint32_t timeoutMs) {
+    std::uint32_t startedAt, std::uint32_t timeoutMs,
+    MotionControl& control) {
   using namespace aon::lemlib_integration;
   const auto& config = aon::config::activeRobotConfig().lemlib;
   const auto& fallback = config.fallback;
@@ -107,7 +112,9 @@ EncoderMotionResult EncoderMotionController::turn(
   double error = degrees;
 
   while (true) {
-    if (cancelled_) return failure(MotionFailureReason::Cancelled, 0.0, error);
+    if (control.isCancelled()) {
+      return failure(MotionFailureReason::Cancelled, 0.0, error);
+    }
     if (timedOut(startedAt, timeoutMs)) {
       return failure(MotionFailureReason::Timeout, 0.0, error);
     }
@@ -148,15 +155,16 @@ EncoderMotionResult EncoderMotionController::turn(
       settledAt = 0;
       const int output = controlledOutput(
           error, fallback.turnKp, fallback.minimumOutput, maximumOutput);
-      commandTank(-output, output);
+      if (!control.runIfActive([&] { commandTank(-output, output); })) {
+        return failure(MotionFailureReason::Cancelled, 0.0, error);
+      }
     }
     pros::delay(kLoopDelayMs);
   }
 }
 
 EncoderMotionResult EncoderMotionController::execute(
-    const EncoderMotionRequest& request) {
-  cancelled_ = false;
+    const EncoderMotionRequest& request, MotionControl& control) {
   const auto& fallback =
       aon::config::activeRobotConfig().lemlib.fallback;
   const int maximumOutput = std::abs(cappedFallbackOutput(
@@ -165,27 +173,24 @@ EncoderMotionResult EncoderMotionController::execute(
 
   if (std::abs(request.geometry.turnDegrees) > kHeadingFinishBand) {
     const auto result = turn(request.geometry.turnDegrees, maximumOutput,
-                             request.imuAllowed, startedAt, request.timeoutMs);
+                             request.imuAllowed, startedAt, request.timeoutMs,
+                             control);
     if (!result.succeeded) return result;
   }
   if (std::abs(request.geometry.distanceInches) > kDistanceFinishBand) {
     const auto result = driveDistance(request.geometry.distanceInches,
                                       maximumOutput, startedAt,
-                                      request.timeoutMs);
+                                      request.timeoutMs, control);
     if (!result.succeeded) return result;
   }
   if (std::abs(request.geometry.finalTurnDegrees) > kHeadingFinishBand) {
     const auto result = turn(request.geometry.finalTurnDegrees, maximumOutput,
-                             request.imuAllowed, startedAt, request.timeoutMs);
+                             request.imuAllowed, startedAt, request.timeoutMs,
+                             control);
     if (!result.succeeded) return result;
   }
   aon::lemlib_integration::stopDrive();
   return {true, MotionFailureReason::None, 0.0, 0.0};
-}
-
-void EncoderMotionController::cancel() {
-  cancelled_ = true;
-  aon::lemlib_integration::stopDrive();
 }
 
 }  // namespace aon::auton

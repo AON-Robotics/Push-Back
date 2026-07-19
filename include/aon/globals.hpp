@@ -7,6 +7,7 @@
 #include "./control/driver.hpp"
 #include "./core/hardware.hpp"
 #include "../api.h"
+#include "./auton/actions.hpp"
 #include "./compat/okapi.hpp"
 #include "./controls/pid/pid.hpp"
 #include "./tools/vector.hpp"
@@ -107,6 +108,7 @@ inline void Configure(const bool opcontrol = true) {
 
 /// @brief Stops movement from robot
 inline void STOP(){
+  aon::auton::actions().cancelMotion();
   drivetrain.stop();
   intake.stop();
   orbit.stop();

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "aon/auton/fallback-geometry.hpp"
+#include "aon/auton/motion-control.hpp"
 #include "aon/auton/motion-health.hpp"
 
-#include <atomic>
 #include <cstdint>
 
 namespace aon::auton {
@@ -25,18 +25,23 @@ struct EncoderMotionResult {
 
 class EncoderMotionController {
  public:
-  EncoderMotionResult execute(const EncoderMotionRequest& request);
-  void cancel();
+  /**
+   * @brief Executes one relative encoder motion under shared drive ownership.
+   * @param request Relative motion, output cap, and timeout to execute.
+   * @param control Ownership and cancellation state for the active action.
+   * @return Final controller status and remaining error.
+   */
+  EncoderMotionResult execute(const EncoderMotionRequest& request,
+                              MotionControl& control);
 
  private:
   EncoderMotionResult driveDistance(double distanceInches, int maximumOutput,
                                     std::uint32_t startedAt,
-                                    std::uint32_t timeoutMs);
+                                    std::uint32_t timeoutMs,
+                                    MotionControl& control);
   EncoderMotionResult turn(double degrees, int maximumOutput,
                            bool imuAllowed, std::uint32_t startedAt,
-                           std::uint32_t timeoutMs);
-
-  std::atomic_bool cancelled_{false};
+                           std::uint32_t timeoutMs, MotionControl& control);
 };
 
 }  // namespace aon::auton

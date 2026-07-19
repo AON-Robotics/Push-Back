@@ -31,6 +31,7 @@ const RobotConfig& activeRobotConfig() {
               250,
               {3, 2, 300, 15.0, 0.02, 8.0, 45.0},
               false,
+              false,
           },
       },
   };
@@ -59,6 +60,7 @@ const RobotConfig& activeRobotConfig() {
               100,
               250,
               {3, 2, 300, 15.0, 0.02, 8.0, 45.0},
+              false,
               false,
           },
       },

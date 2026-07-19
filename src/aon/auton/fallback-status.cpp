@@ -1,5 +1,7 @@
 #include "aon/auton/fallback-status.hpp"
 
+#include "aon/config/robot-config.hpp"
+
 #include "pros/rtos.hpp"
 
 #include <cstdio>
@@ -18,6 +20,12 @@ void copyActionName(const char* name) {
 }  // namespace
 
 bool selectForcedEncoder(bool forced) {
+  if (!forcedEncoderSelectionAllowed(
+          forced, config::activeRobotConfig()
+                      .lemlib.fallback.forcedEncoderTestingAuthorized)) {
+    return false;
+  }
+
   statusMutex.take();
   if (status.selectionLocked || status.mode == MotionMode::FaultedEncoder) {
     statusMutex.give();

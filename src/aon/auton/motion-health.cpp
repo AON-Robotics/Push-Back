@@ -32,6 +32,7 @@ MotionFailureReason MotionHealthMonitor::observe(const MotionSample& sample,
 
   if (!finitePose || !devicesValid) {
     ++invalidCount_;
+    impossibleJumpCount_ = 0;
     previous_ = sample;
     if (invalidCount_ >= thresholds_.invalidConfirmationSamples) {
       return finitePose ? MotionFailureReason::DeviceInvalid
@@ -130,6 +131,8 @@ const char* motionFailureName(MotionFailureReason reason) {
       return "timeout";
     case MotionFailureReason::Cancelled:
       return "cancelled";
+    case MotionFailureReason::Busy:
+      return "busy";
     case MotionFailureReason::Unsupported:
       return "unsupported";
     case MotionFailureReason::RetryFailed:
@@ -141,6 +144,15 @@ const char* motionFailureName(MotionFailureReason reason) {
 bool shouldMonitorAutomatically(bool trackingMode,
                                 bool automaticFallbackAuthorized) {
   return trackingMode && automaticFallbackAuthorized;
+}
+
+bool forcedEncoderSelectionAllowed(bool forced,
+                                   bool forcedEncoderTestingAuthorized) {
+  return !forced || forcedEncoderTestingAuthorized;
+}
+
+bool driveFeedbackValid(bool leftMotorValid, bool rightMotorValid) {
+  return leftMotorValid && rightMotorValid;
 }
 
 }  // namespace aon::auton

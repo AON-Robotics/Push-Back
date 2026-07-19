@@ -2,6 +2,7 @@
 
 #include "aon/auton/encoder-motion.hpp"
 #include "aon/auton/fallback-geometry.hpp"
+#include "aon/auton/motion-control.hpp"
 #include "aon/auton/motion-health.hpp"
 #include "aon/config/robot-config.hpp"
 #include "aon/lemlib/chassis.hpp"
@@ -9,7 +10,6 @@
 #include "pros/rtos.hpp"
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <functional>
@@ -27,8 +27,23 @@ struct ActionTarget {
   bool forwards;
 };
 
-std::atomic_bool cancelRequested{false};
+MotionControl motionControl;
 EncoderMotionController encoderController;
+
+class MotionLease {
+ public:
+  explicit MotionLease(MotionControl& control)
+      : control_(control), acquired_(control_.tryBegin()) {}
+  ~MotionLease() {
+    if (acquired_) control_.finish();
+  }
+
+  bool acquired() const { return acquired_; }
+
+ private:
+  MotionControl& control_;
+  bool acquired_;
+};
 
 MotionSample motionSample() {
   const auto pose = lemlib_integration::chassis().getPose();
@@ -145,7 +160,8 @@ MotionResult runEncoder(const char* name, const ActionTarget& target,
   }
   const EncoderMotionResult encoderResult = encoderController.execute(
       {name, fallbackGeometry(trusted, target), requestedMaxOutput, timeoutMs,
-       trusted.imuValid});
+       trusted.imuValid},
+      motionControl);
   return {encoderResult.succeeded, mode, true,
           encoderResult.succeeded ? transitionReason : encoderResult.reason};
 }
@@ -154,10 +170,16 @@ MotionResult runMonitored(const char* operation, const char* name,
                           const ActionTarget& target, MotionIntent intent,
                           int requestedMaxOutput, std::uint32_t timeoutMs,
                           const std::function<void()>& startMotion) {
-  cancelRequested = false;
   const FallbackStatusSnapshot status = fallbackStatus();
-  MotionSample initial = motionSample();
   logStart(operation, name);
+  MotionLease lease(motionControl);
+  if (!lease.acquired()) {
+    MotionResult result{false, status.mode, false, MotionFailureReason::Busy};
+    logFinish(operation, name, result);
+    return result;
+  }
+
+  MotionSample initial = motionSample();
 
   if (status.mode != MotionMode::Tracking) {
     MotionResult result =
@@ -175,11 +197,16 @@ MotionResult runMonitored(const char* operation, const char* name,
       config::activeRobotConfig()
           .lemlib.fallback.automaticFallbackAuthorized);
   const std::uint32_t startedAt = pros::millis();
-  startMotion();
+  if (!motionControl.runIfActive([&] { startMotion(); })) {
+    MotionResult result{false, status.mode, false,
+                        MotionFailureReason::Cancelled};
+    logFinish(operation, name, result);
+    return result;
+  }
 
   auto& robotChassis = lemlib_integration::chassis();
   while (robotChassis.isInMotion()) {
-    if (cancelRequested) {
+    if (motionControl.isCancelled()) {
       robotChassis.cancelAllMotions();
       lemlib_integration::stopDrive();
       MotionResult result{false, MotionMode::Tracking, false,
@@ -210,7 +237,7 @@ MotionResult runMonitored(const char* operation, const char* name,
         logFinish(operation, name, result);
         return result;
       }
-      if (cancelRequested) {
+      if (motionControl.isCancelled()) {
         MotionResult result{false, MotionMode::Tracking, false,
                             MotionFailureReason::Cancelled};
         logFinish(operation, name, result);
@@ -229,6 +256,14 @@ MotionResult runMonitored(const char* operation, const char* name,
       return result;
     }
     pros::delay(20);
+  }
+
+  if (motionControl.isCancelled()) {
+    lemlib_integration::stopDrive();
+    MotionResult result{false, MotionMode::Tracking, false,
+                        MotionFailureReason::Cancelled};
+    logFinish(operation, name, result);
+    return result;
   }
 
   if (pros::millis() - startedAt >= timeoutMs) {
@@ -284,19 +319,42 @@ MotionResult Actions::turnToHeading(const char* name, double heading,
 
 MotionResult Actions::arcadeFor(const char* name, int throttle, int turn,
                                 std::uint32_t durationMs) {
-  cancelRequested = false;
-  auto& robotChassis = lemlib_integration::chassis();
   logStart("arcadeFor", name);
-  robotChassis.arcade(throttle, turn, true);
+  const auto mode = fallbackStatus().mode;
+  MotionLease lease(motionControl);
+  if (!lease.acquired()) {
+    MotionResult result{false, mode, false, MotionFailureReason::Busy};
+    logFinish("arcadeFor", name, result);
+    return result;
+  }
+
+  auto& robotChassis = lemlib_integration::chassis();
+  if (!motionControl.runIfActive(
+          [&] { robotChassis.arcade(throttle, turn, true); })) {
+    MotionResult result{false, mode, mode != MotionMode::Tracking,
+                        MotionFailureReason::Cancelled};
+    logFinish("arcadeFor", name, result);
+    return result;
+  }
+
   const std::uint32_t startedAt = pros::millis();
-  while (pros::millis() - startedAt < durationMs && !cancelRequested) {
+  MotionFailureReason reason = MotionFailureReason::None;
+  while (pros::millis() - startedAt < durationMs) {
+    if (motionControl.isCancelled()) {
+      reason = MotionFailureReason::Cancelled;
+      break;
+    }
+    const auto drive = lemlib_integration::sampleDriveSensors();
+    if (!driveFeedbackValid(drive.leftMotorValid, drive.rightMotorValid)) {
+      reason = MotionFailureReason::DeviceInvalid;
+      break;
+    }
     pros::delay(20);
   }
-  robotChassis.arcade(0, 0, true);
-  const auto mode = fallbackStatus().mode;
-  MotionResult result{!cancelRequested, mode, mode != MotionMode::Tracking,
-                      cancelRequested ? MotionFailureReason::Cancelled
-                                      : MotionFailureReason::None};
+  motionControl.runIfActive([&] { robotChassis.arcade(0, 0, true); });
+  lemlib_integration::stopDrive();
+  MotionResult result{reason == MotionFailureReason::None, mode,
+                      mode != MotionMode::Tracking, reason};
   logFinish("arcadeFor", name, result);
   return result;
 }
@@ -312,11 +370,13 @@ MotionResult Actions::followPath(const char* name, const asset& path,
 }
 
 void Actions::cancelMotion() {
-  cancelRequested = true;
-  lemlib_integration::chassis().cancelAllMotions();
-  encoderController.cancel();
-  lemlib_integration::stopDrive();
+  motionControl.cancelAndRun([] {
+    lemlib_integration::chassis().cancelAllMotions();
+    lemlib_integration::stopDrive();
+  });
 }
+
+void Actions::resetCancellation() { motionControl.resetCancellation(); }
 
 void Actions::stop(pros::motor_brake_mode_e brakeMode) {
   cancelMotion();

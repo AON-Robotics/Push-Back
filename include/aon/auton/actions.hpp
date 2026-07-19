@@ -34,6 +34,8 @@ class Actions {
                           int timeout, bool forwards = true);
 
   void cancelMotion();
+  /** @brief Rearms drivetrain actions at the start of a new autonomous run. */
+  void resetCancellation();
   void stop(pros::motor_brake_mode_e brakeMode = pros::E_MOTOR_BRAKE_HOLD);
 };
 

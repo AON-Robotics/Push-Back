@@ -1,5 +1,6 @@
 #include "aon/auton/motion-health.hpp"
 #include "aon/auton/fallback-geometry.hpp"
+#include "aon/auton/motion-state.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -16,12 +17,15 @@
   } while (false)
 
 using aon::auton::MotionFailureReason;
+using aon::auton::MotionState;
 using aon::auton::MotionHealthMonitor;
 using aon::auton::MotionIntent;
 using aon::auton::MotionSample;
 using aon::auton::TrustedPose;
 using aon::auton::cappedFallbackOutput;
+using aon::auton::driveFeedbackValid;
 using aon::auton::fallbackBudget;
+using aon::auton::forcedEncoderSelectionAllowed;
 using aon::auton::headingFallback;
 using aon::auton::motorDegreesForDistance;
 using aon::auton::pointFallback;
@@ -99,6 +103,41 @@ void testAutomaticMonitoringRequiresTrackingModeAndAuthorization() {
   CHECK(shouldMonitorAutomatically(true, true));
 }
 
+void testForcedEncoderSelectionRequiresSeparateAuthorization() {
+  CHECK(!forcedEncoderSelectionAllowed(true, false));
+  CHECK(forcedEncoderSelectionAllowed(false, false));
+  CHECK(forcedEncoderSelectionAllowed(true, true));
+}
+
+void testTimedDriveRequiresFeedbackFromBothMotorGroups() {
+  CHECK(driveFeedbackValid(true, true));
+  CHECK(!driveFeedbackValid(false, true));
+  CHECK(!driveFeedbackValid(true, false));
+  CHECK(!driveFeedbackValid(false, false));
+}
+
+void testMotionStateRejectsASecondOwnerAndLatchesCancellation() {
+  MotionState state;
+  CHECK(state.tryBegin());
+  CHECK(!state.tryBegin());
+  CHECK(state.isActive());
+
+  state.cancel();
+  CHECK(state.isCancelled());
+  state.resetCancellation();
+  CHECK(state.isCancelled());
+  CHECK(!state.tryBegin());
+
+  state.finish();
+  CHECK(state.isCancelled());
+  CHECK(!state.tryBegin());
+
+  state.resetCancellation();
+  CHECK(state.tryBegin());
+  state.finish();
+  CHECK(!state.isActive());
+}
+
 void testInvalidSamplesRequireConfirmation() {
   MotionHealthMonitor monitor({});
   auto sample = healthy(0);
@@ -170,6 +209,31 @@ void testImpossiblePoseJumpRequiresConfirmation() {
         MotionFailureReason::ImpossiblePoseJump);
 }
 
+void testInvalidSampleResetsImpossiblePoseJumpConfirmation() {
+  MotionHealthMonitor monitor({});
+  monitor.reset(healthy(0));
+
+  auto sample = healthy(20);
+  sample.poseX = 9.0;
+  CHECK(monitor.observe(sample, MotionIntent::Linear) ==
+        MotionFailureReason::None);
+
+  sample = healthy(40);
+  sample.poseValid = false;
+  CHECK(monitor.observe(sample, MotionIntent::Linear) ==
+        MotionFailureReason::None);
+
+  sample = healthy(60);
+  sample.poseX = 9.0;
+  CHECK(monitor.observe(sample, MotionIntent::Linear) ==
+        MotionFailureReason::None);
+
+  sample = healthy(80);
+  sample.poseX = 18.0;
+  CHECK(monitor.observe(sample, MotionIntent::Linear) ==
+        MotionFailureReason::ImpossiblePoseJump);
+}
+
 }  // namespace
 
 int main() {
@@ -180,10 +244,14 @@ int main() {
   testFallbackOutputIsReducedFromRequestedMaximum();
   testFallbackBudgetIsBoundedByRemainingTimeAndAllowance();
   testAutomaticMonitoringRequiresTrackingModeAndAuthorization();
+  testForcedEncoderSelectionRequiresSeparateAuthorization();
+  testTimedDriveRequiresFeedbackFromBothMotorGroups();
+  testMotionStateRejectsASecondOwnerAndLatchesCancellation();
   testInvalidSamplesRequireConfirmation();
   testFrozenTrackingRequiresMotorMovementAndDwell();
   testBlockedDriveDoesNotLookLikeFrozenTracking();
   testImpossiblePoseJumpRequiresConfirmation();
+  testInvalidSampleResetsImpossiblePoseJumpConfirmation();
   std::cout << "motion fallback tests passed\n";
   return 0;
 }

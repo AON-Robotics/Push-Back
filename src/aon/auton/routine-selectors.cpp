@@ -5,6 +5,7 @@
 #include "aon/constants.hpp"
 #include "aon/drivetrain/legacy-motion.hpp"
 #include "aon/globals.hpp"
+#include "aon/auton/actions.hpp"
 
 namespace aon::routines {
 
@@ -21,6 +22,7 @@ int runNativeRoutine(const char* name, void (*routine)()) {
 }
 
 int runRoutine(const char* name, int (*routine)()) {
+  aon::auton::actions().resetCancellation();
   aon::auton::startRoutine(name);
   aon::auton::lockFallbackSelection();
   const int result = routine();

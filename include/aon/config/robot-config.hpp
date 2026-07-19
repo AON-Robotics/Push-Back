@@ -37,6 +37,7 @@ struct FallbackConfig {
   std::uint32_t transitionAllowanceMs;
   aon::auton::HealthThresholds health;
   bool automaticFallbackAuthorized;
+  bool forcedEncoderTestingAuthorized;
 };
 
 struct LemLibDriveConfig {
