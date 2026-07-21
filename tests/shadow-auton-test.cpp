@@ -40,7 +40,39 @@ void recorderTests() {
   CHECK(jumping.sample(frame(40, 40)) == ResultCode::PoseJump);
 }
 
+void capacityTests() {
+  Recorder samples;
+  CHECK(samples.start(RobotIdentity::Small) == ResultCode::Ok);
+  for (std::size_t i = 0; i < kMaximumSamples; ++i) {
+    CHECK(samples.sample(frame(static_cast<std::uint32_t>(i) * kSamplePeriodMs,
+                               0)) == ResultCode::Ok);
+  }
+  CHECK(samples.sample(frame(kMaximumDurationMs, 0)) ==
+        ResultCode::CapacityReached);
+  CHECK(samples.capture().sampleCount == kMaximumSamples);
+  CHECK(samples.capture().samples[kMaximumSamples - 1].timeMs ==
+        kMaximumDurationMs - kSamplePeriodMs);
+  CHECK(!samples.isRecording());
+
+  Recorder events;
+  CHECK(events.start(RobotIdentity::Small) == ResultCode::Ok);
+  for (std::size_t i = 0; i < kMaximumEvents; ++i) {
+    const auto kind = i % 2 == 0 ? MechanismKind::Cart
+                                : MechanismKind::Trapdoor;
+    CHECK(events.event({static_cast<std::uint32_t>(i), kind, 1}) ==
+          ResultCode::Ok);
+  }
+  CHECK(events.event({static_cast<std::uint32_t>(kMaximumEvents),
+                      MechanismKind::Cart, 1}) ==
+        ResultCode::CapacityReached);
+  CHECK(events.capture().eventCount == kMaximumEvents);
+  CHECK(events.capture().events[kMaximumEvents - 1].timeMs ==
+        kMaximumEvents - 1);
+  CHECK(!events.isRecording());
+}
+
 int main() {
   recorderTests();
+  capacityTests();
   std::cout << "shadow auton tests passed\n";
 }
