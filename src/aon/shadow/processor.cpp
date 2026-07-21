@@ -189,13 +189,13 @@ bool appendMotionPoints(
 
 }  // namespace
 
-ProcessedRoute process(const Capture& capture) {
-  ProcessedRoute route{};
-  if (capture.sampleCount == 0) return route;
+ResultCode process(const Capture& capture, ProcessedRoute& route) {
+  route = {};
+  if (capture.sampleCount == 0) return route.result;
   if (capture.sampleCount > kMaximumSamples ||
       capture.eventCount > kMaximumEvents) {
     route.result = ResultCode::CapacityReached;
-    return route;
+    return route.result;
   }
   route.start = capture.samples[0];
 
@@ -252,7 +252,7 @@ ProcessedRoute process(const Capture& capture) {
     }
     if (sourceCount == kMaximumSegments) {
       route.result = ResultCode::CapacityReached;
-      return route;
+      return route.result;
     }
     sources[sourceCount++] = {kind, runDirection, first, last};
     first = last + 1;
@@ -301,10 +301,11 @@ ProcessedRoute process(const Capture& capture) {
       segment.durationMs = capture.samples[source.last].timeMs -
                            capture.samples[source.first].timeMs;
     } else if (!appendMotionPoints(capture, source, eventAnchor, route)) {
-      ProcessedRoute failed{};
-      failed.result = ResultCode::CapacityReached;
-      failed.start = route.start;
-      return failed;
+      route.result = ResultCode::CapacityReached;
+      route.segmentCount = 0;
+      route.pointCount = 0;
+      route.eventCount = 0;
+      return route.result;
     }
     ++route.segmentCount;
   }
@@ -327,6 +328,12 @@ ProcessedRoute process(const Capture& capture) {
   }
 
   route.result = ResultCode::Ok;
+  return route.result;
+}
+
+ProcessedRoute process(const Capture& capture) {
+  ProcessedRoute route{};
+  process(capture, route);
   return route;
 }
 

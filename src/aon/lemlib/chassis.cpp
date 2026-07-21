@@ -232,6 +232,16 @@ void commandTank(int left, int right) {
   rightMotors().move(std::clamp(right, -127, 127));
 }
 
+DriveCommand effectiveDriveCommand() {
+  const auto commandFor = [](const pros::MotorGroup& motors) {
+    const std::int32_t voltage = motors.get_voltage();
+    if (voltage == PROS_ERR) return static_cast<std::int8_t>(0);
+    return static_cast<std::int8_t>(
+        std::clamp<std::int32_t>(voltage * 127 / 12000, -127, 127));
+  };
+  return {commandFor(leftMotors()), commandFor(rightMotors())};
+}
+
 void stopDrive() { commandTank(0, 0); }
 
 void setDriveBrakeMode(pros::motor_brake_mode_e brakeMode) {

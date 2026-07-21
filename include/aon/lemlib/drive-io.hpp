@@ -4,6 +4,11 @@
 
 namespace aon::lemlib_integration {
 
+struct DriveCommand {
+  std::int8_t left = 0;
+  std::int8_t right = 0;
+};
+
 struct DriveSensorSample {
   double leftMotorDegrees = 0.0;
   double rightMotorDegrees = 0.0;
@@ -21,6 +26,7 @@ struct DriveSensorSample {
 
 DriveSensorSample sampleDriveSensors();
 void commandTank(int left, int right);
+DriveCommand effectiveDriveCommand();
 void stopDrive();
 void setDriveBrakeMode(pros::motor_brake_mode_e brakeMode);
 

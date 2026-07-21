@@ -41,5 +41,6 @@ struct ProcessedRoute {
 };
 
 ProcessedRoute process(const Capture& capture);
+ResultCode process(const Capture& capture, ProcessedRoute& out);
 
 }  // namespace aon::shadow

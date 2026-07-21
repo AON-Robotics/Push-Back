@@ -1,16 +1,53 @@
 #include "aon/shadow/codec.hpp"
 #include "aon/shadow/recorder.hpp"
 #include "aon/shadow/processor.hpp"
+#include "aon/shadow/service-state.hpp"
+#include "aon/shadow/storage.hpp"
 
 #include <array>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <string>
+#include <unordered_map>
 
 #define CHECK(x) do { if (!(x)) { std::cerr << #x << '\n'; std::exit(1); } } while (false)
 
 using namespace aon::shadow;
+
+class MemoryFileStore final : public FileStore {
+ public:
+  ResultCode read(const char* path, EncodedRecording& out) const override {
+    const auto found = files.find(path);
+    if (found == files.end()) return ResultCode::EmptyRecording;
+    out = found->second;
+    return ResultCode::Ok;
+  }
+
+  ResultCode write(const char* path, const std::uint8_t* data,
+                   std::size_t size) override {
+    if (failNextWrite) {
+      failNextWrite = false;
+      return ResultCode::WriteFailed;
+    }
+    if (data == nullptr || size > kMaximumEncodedBytes) {
+      return ResultCode::WriteFailed;
+    }
+    auto& output = files[path];
+    std::memcpy(output.data.data(), data, size);
+    output.size = size;
+    return ResultCode::Ok;
+  }
+
+  ResultCode erase(const char* path) override {
+    files.erase(path);
+    return ResultCode::Ok;
+  }
+
+  bool failNextWrite = false;
+  std::unordered_map<std::string, EncodedRecording> files;
+};
 
 RawSample frame(std::uint32_t ms, float x) {
   RawSample value{};
@@ -122,6 +159,14 @@ const PathPoint& segmentPoint(const ProcessedRoute& route,
 }
 
 void processorTests() {
+  static ProcessedRoute outputRoute{};
+  const Capture outputCapture = captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(20, 0, 6, 0, Direction::Forward),
+  });
+  CHECK(process(outputCapture, outputRoute) == ResultCode::Ok);
+  CHECK(outputRoute.segmentCount == 1);
+
   const ProcessedRoute straight = process(captureAt({
       routeFrame(0, 0, 0, 0, Direction::Forward),
       routeFrame(20, 0, 6, 0, Direction::Forward),
@@ -403,10 +448,82 @@ void codecTests() {
   CHECK(chooseGeneration({true, 9}, {true, 9}) == Generation::A);
 }
 
+void storageTests() {
+  static MemoryFileStore files;
+  static Storage storage(files);
+  const Capture firstCapture = captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(20, 0, 6, 0, Direction::Forward),
+  });
+  const ProcessedRoute firstRoute = process(firstCapture);
+  CHECK(storage.save(0, RobotIdentity::Small, firstCapture, firstRoute) ==
+        ResultCode::InvalidSlot);
+  CHECK(storage.save(1, RobotIdentity::Small, firstCapture, firstRoute) ==
+        ResultCode::Ok);
+
+  Capture secondCapture = firstCapture;
+  secondCapture.samples[1].y = 12;
+  const ProcessedRoute secondRoute = process(secondCapture);
+  files.failNextWrite = true;
+  CHECK(storage.save(1, RobotIdentity::Small, secondCapture, secondRoute) ==
+        ResultCode::WriteFailed);
+
+  static DecodedRecording loaded{};
+  CHECK(storage.load(1, RobotIdentity::Small, loaded) == ResultCode::Ok);
+  CHECK(loaded.generation == 1);
+  CHECK(loaded.capture.samples[1].y == 6);
+
+  const SlotSummary summary = storage.inspect(1, RobotIdentity::Small);
+  CHECK(summary.result == ResultCode::Ok);
+  CHECK(summary.valid);
+  CHECK(summary.generation == 1);
+  CHECK(summary.durationMs == firstCapture.durationMs);
+  CHECK(summary.startX == firstRoute.start.x);
+  CHECK(storage.erase(1) == ResultCode::Ok);
+  CHECK(storage.load(1, RobotIdentity::Small, loaded) ==
+        ResultCode::EmptyRecording);
+  CHECK(storage.erase(4) == ResultCode::InvalidSlot);
+}
+
+void serviceStateTests() {
+  ServiceStateMachine state;
+  CHECK(state.beginRecord(0, true) == ResultCode::InvalidSlot);
+  CHECK(state.beginRecord(1, false) == ResultCode::Ok);
+  CHECK(state.status().mode == ServiceMode::Recording);
+  CHECK(state.authorizePlay(false, true, true) == ResultCode::PlayLocked);
+  CHECK(state.beginProcessing() == ResultCode::Ok);
+  CHECK(state.status().mode == ServiceMode::Processing);
+  CHECK(state.finishSave(ResultCode::WriteFailed) == ResultCode::WriteFailed);
+  CHECK(state.status().mode == ServiceMode::Invalid);
+  CHECK(state.status().slot == 1);
+  CHECK(state.status().result == ResultCode::WriteFailed);
+
+  state.cancel();
+  CHECK(state.status().mode == ServiceMode::Cancelled);
+  CHECK(state.beginRecord(1, false) == ResultCode::Ok);
+  CHECK(state.beginProcessing() == ResultCode::Ok);
+  CHECK(state.finishSave(ResultCode::Ok) == ResultCode::Ok);
+  CHECK(state.status().mode == ServiceMode::Saved);
+  CHECK(state.beginRecord(1, false) == ResultCode::UnsafeState);
+  CHECK(state.beginRecord(1, true) == ResultCode::Ok);
+  CHECK(state.beginProcessing() == ResultCode::Ok);
+  CHECK(state.finishSave(ResultCode::Ok) == ResultCode::Ok);
+
+  CHECK(state.authorizePlay(true, false, true) == ResultCode::PlayLocked);
+  CHECK(state.authorizePlay(true, true, false) == ResultCode::EmptyRecording);
+  CHECK(state.authorizePlay(true, true, true) == ResultCode::Ok);
+  CHECK(state.armPlay(1) == ResultCode::Ok);
+  CHECK(state.consumeArm(1));
+  CHECK(!state.consumeArm(1));
+  CHECK(state.armPlay(0) == ResultCode::InvalidSlot);
+}
+
 int main() {
   recorderTests();
   capacityTests();
   processorTests();
   codecTests();
+  storageTests();
+  serviceStateTests();
   std::cout << "shadow auton tests passed\n";
 }

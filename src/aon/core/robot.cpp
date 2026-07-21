@@ -4,6 +4,7 @@
 
 #include "aon/competition/autonomous-routines.hpp"
 #include "aon/lemlib/chassis.hpp"
+#include "aon/shadow/service.hpp"
 
 namespace aon::core {
 
@@ -27,6 +28,12 @@ void Robot::initialize() {
   pros::Task safetyTask(aon::autonSafety);
   pros::Task intakeScanning([] { intake.scan(); });
   pros::Task intakeSorting([] { intake.sort(); });
+  static pros::Task shadowRecorderTask([] {
+    while (true) {
+      aon::shadow::service().pollRecorder();
+      pros::delay(aon::shadow::kSamplePeriodMs);
+    }
+  });
 #endif
 }
 
