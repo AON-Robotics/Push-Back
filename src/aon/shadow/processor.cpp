@@ -10,6 +10,7 @@ namespace aon::shadow {
 namespace {
 
 constexpr std::size_t kDwellSampleCount = 5;
+constexpr std::uint32_t kMinimumDwellDurationMs = 100;
 constexpr float kMaximumPerpendicularError = 0.5F;
 constexpr float kHeadingRetentionDegrees = 5.0F;
 
@@ -209,7 +210,10 @@ ProcessedRoute process(const Capture& capture) {
            capture.samples[last + 1].direction == Direction::Stopped) {
       ++last;
     }
-    if (last - first + 1 >= kDwellSampleCount) {
+    const auto firstTime = capture.samples[first].timeMs;
+    const auto lastTime = capture.samples[last].timeMs;
+    if (last - first + 1 >= kDwellSampleCount && lastTime >= firstTime &&
+        lastTime - firstTime >= kMinimumDwellDurationMs) {
       for (std::size_t i = first; i <= last; ++i) dwell[i] = true;
     }
     first = last + 1;

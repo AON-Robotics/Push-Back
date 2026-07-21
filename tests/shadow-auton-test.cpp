@@ -181,6 +181,30 @@ void processorTests() {
   CHECK(segmentPoint(paused, 2, 0).y == 6.0F);
   CHECK(segmentPoint(paused, 2, 1).y == 12.0F);
 
+  const ProcessedRoute stoppedFor99Ms = process(captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(100, 0, 6, 0, Direction::Stopped),
+      routeFrame(120, 0, 6, 0, Direction::Stopped),
+      routeFrame(140, 0, 6, 0, Direction::Stopped),
+      routeFrame(160, 0, 6, 0, Direction::Stopped),
+      routeFrame(199, 0, 6, 0, Direction::Stopped),
+      routeFrame(220, 0, 12, 0, Direction::Forward),
+  }));
+  CHECK(stoppedFor99Ms.segmentCount == 1);
+
+  const ProcessedRoute stoppedFor100Ms = process(captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(100, 0, 6, 0, Direction::Stopped),
+      routeFrame(120, 0, 6, 0, Direction::Stopped),
+      routeFrame(140, 0, 6, 0, Direction::Stopped),
+      routeFrame(160, 0, 6, 0, Direction::Stopped),
+      routeFrame(200, 0, 6, 0, Direction::Stopped),
+      routeFrame(220, 0, 12, 0, Direction::Forward),
+  }));
+  CHECK(stoppedFor100Ms.segmentCount == 3);
+  CHECK(stoppedFor100Ms.segments[1].kind == SegmentKind::Dwell);
+  CHECK(stoppedFor100Ms.segments[1].durationMs == 100);
+
   Capture anchoredCorner = captureAt({
       routeFrame(0, 0, 0, 0, Direction::Forward),
       routeFrame(20, 0, 6, 0, Direction::Forward),
