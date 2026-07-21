@@ -529,6 +529,9 @@ void serviceStateTests() {
         ResultCode::Ok);
   CHECK(pendingStart.revalidatePendingStart(pendingRevision, false) ==
         ResultCode::UnsafeState);
+  CHECK(pendingStart.revalidateImmediateStart(true) == ResultCode::Ok);
+  CHECK(pendingStart.revalidateImmediateStart(false) ==
+        ResultCode::UnsafeState);
   pendingStart.cancel();
   CHECK(pendingStart.revalidatePendingStart(pendingRevision, true) ==
         ResultCode::Cancelled);

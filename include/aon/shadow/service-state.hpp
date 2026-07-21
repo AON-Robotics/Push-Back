@@ -39,6 +39,7 @@ class ServiceStateMachine {
   std::uint32_t revision() const;
   ResultCode revalidatePendingStart(std::uint32_t revision,
                                     bool driverControl) const;
+  ResultCode revalidateImmediateStart(bool driverControl) const;
   void cancel(std::uint32_t now = 0);
   Status status() const;
 

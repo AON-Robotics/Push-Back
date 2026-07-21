@@ -97,6 +97,11 @@ std::uint32_t ServiceStateMachine::revision() const { return session_; }
 ResultCode ServiceStateMachine::revalidatePendingStart(
     std::uint32_t revisionValue, bool driverControl) const {
   if (revisionValue != session_) return ResultCode::Cancelled;
+  return revalidateImmediateStart(driverControl);
+}
+
+ResultCode ServiceStateMachine::revalidateImmediateStart(
+    bool driverControl) const {
   if (!driverControl) return ResultCode::UnsafeState;
   if (status_.mode == ServiceMode::Recording ||
       status_.mode == ServiceMode::Processing) {

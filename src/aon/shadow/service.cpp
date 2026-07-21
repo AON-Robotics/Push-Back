@@ -134,6 +134,11 @@ ResultCode Service::beginRecording(std::uint8_t slotValue,
 
   Lock lock(serviceData.mutex);
   if (serviceData.ioBusy) return ResultCode::UnsafeState;
+  const bool driverControl = !pros::competition::is_disabled() &&
+                             !pros::competition::is_autonomous();
+  const ResultCode revalidated =
+      serviceData.state.revalidateImmediateStart(driverControl);
+  if (revalidated != ResultCode::Ok) return revalidated;
   return startRecordingLocked(serviceData, slotValue, true);
 }
 
