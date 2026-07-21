@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <limits>
 
 namespace aon::shadow {
 namespace {
@@ -16,6 +17,33 @@ constexpr std::uint32_t kEventBytes = 7;
 constexpr std::uint32_t kSegmentBytes = 10;
 constexpr std::uint32_t kPointBytes = 12;
 constexpr std::uint32_t kAnchoredEventBytes = 17;
+
+static_assert(sizeof(float) == sizeof(std::uint32_t),
+              "32-bit floats required");
+static_assert(std::numeric_limits<float>::is_iec559,
+              "IEEE-754 floating point required");
+static_assert(std::numeric_limits<float>::digits == 24,
+              "IEEE-754 binary32 precision required");
+static_assert(std::numeric_limits<float>::max_exponent == 128,
+              "IEEE-754 binary32 exponent range required");
+
+std::int8_t decodeI8(std::uint8_t value) {
+  if (value <= static_cast<std::uint8_t>(
+                   std::numeric_limits<std::int8_t>::max())) {
+    return static_cast<std::int8_t>(value);
+  }
+  return static_cast<std::int8_t>(
+      -1 - static_cast<std::int16_t>(0xFFU - value));
+}
+
+std::int16_t decodeI16(std::uint16_t value) {
+  if (value <= static_cast<std::uint16_t>(
+                   std::numeric_limits<std::int16_t>::max())) {
+    return static_cast<std::int16_t>(value);
+  }
+  return static_cast<std::int16_t>(
+      -1 - static_cast<std::int32_t>(0xFFFFU - value));
+}
 
 class Writer {
  public:
@@ -43,7 +71,6 @@ class Writer {
 
   bool f32(float value) {
     std::uint32_t bits = 0;
-    static_assert(sizeof(bits) == sizeof(value), "32-bit floats required");
     std::memcpy(&bits, &value, sizeof(bits));
     return u32(bits);
   }
@@ -191,7 +218,7 @@ bool readEvent(Reader& reader, MechanismEvent& event) {
     return false;
   }
   event.kind = static_cast<MechanismKind>(kind);
-  event.value = static_cast<std::int16_t>(value);
+  event.value = decodeI16(value);
   return true;
 }
 
@@ -362,13 +389,13 @@ ResultCode decode(const std::uint8_t* data, std::size_t size,
         !payload.byte(direction) || !payload.byte(poseValid) || poseValid > 1U) {
       return ResultCode::CorruptFile;
     }
-    sample.leftX = static_cast<std::int8_t>(leftX);
-    sample.leftY = static_cast<std::int8_t>(leftY);
-    sample.rightX = static_cast<std::int8_t>(rightX);
-    sample.rightY = static_cast<std::int8_t>(rightY);
-    sample.leftCommand = static_cast<std::int8_t>(leftCommand);
-    sample.rightCommand = static_cast<std::int8_t>(rightCommand);
-    sample.direction = static_cast<Direction>(static_cast<std::int8_t>(direction));
+    sample.leftX = decodeI8(leftX);
+    sample.leftY = decodeI8(leftY);
+    sample.rightX = decodeI8(rightX);
+    sample.rightY = decodeI8(rightY);
+    sample.leftCommand = decodeI8(leftCommand);
+    sample.rightCommand = decodeI8(rightCommand);
+    sample.direction = static_cast<Direction>(decodeI8(direction));
     sample.poseValid = poseValid != 0;
   }
   for (std::size_t index = 0; index < out.capture.eventCount; ++index) {
@@ -381,7 +408,7 @@ ResultCode decode(const std::uint8_t* data, std::size_t size,
         !payload.u16(segment.firstPoint) || !payload.u16(segment.pointCount) ||
         !payload.u32(segment.durationMs)) return ResultCode::CorruptFile;
     segment.kind = static_cast<SegmentKind>(kind);
-    segment.direction = static_cast<Direction>(static_cast<std::int8_t>(direction));
+    segment.direction = static_cast<Direction>(decodeI8(direction));
   }
   for (std::size_t index = 0; index < out.route.pointCount; ++index) {
     auto& point = out.route.points[index];

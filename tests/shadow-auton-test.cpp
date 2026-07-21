@@ -260,12 +260,16 @@ void setEncodedU32(EncodedRecording& bytes, std::size_t offset,
 void codecTests() {
   Capture capture = captureWithPauseAndCartEvent();
   capture.robot = RobotIdentity::Small;
-  capture.samples[1].leftX = -12;
-  capture.samples[1].leftY = 34;
-  capture.samples[1].rightX = -56;
-  capture.samples[1].rightY = 78;
-  capture.samples[1].leftCommand = -90;
-  capture.samples[1].rightCommand = 91;
+  for (std::size_t index = 0; index < capture.sampleCount; ++index) {
+    auto& sample = capture.samples[index];
+    const auto sampleIndex = static_cast<int>(index);
+    sample.leftX = static_cast<std::int8_t>(-10 - sampleIndex);
+    sample.leftY = static_cast<std::int8_t>(20 + sampleIndex);
+    sample.rightX = static_cast<std::int8_t>(-30 - sampleIndex);
+    sample.rightY = static_cast<std::int8_t>(40 + sampleIndex);
+    sample.leftCommand = static_cast<std::int8_t>(-50 - sampleIndex);
+    sample.rightCommand = static_cast<std::int8_t>(60 + sampleIndex);
+  }
   const ProcessedRoute route = process(capture);
 
   static EncodedRecording bytes{};
@@ -284,28 +288,62 @@ void codecTests() {
   CHECK(decoded.capture.sampleCount == capture.sampleCount);
   CHECK(decoded.capture.eventCount == capture.eventCount);
   CHECK(decoded.capture.durationMs == capture.durationMs);
-  CHECK(decoded.capture.samples[1].y == capture.samples[1].y);
-  CHECK(decoded.capture.samples[1].leftX == capture.samples[1].leftX);
-  CHECK(decoded.capture.samples[1].rightY == capture.samples[1].rightY);
-  CHECK(decoded.capture.samples[1].leftCommand ==
-        capture.samples[1].leftCommand);
-  CHECK(decoded.capture.samples[1].direction ==
-        capture.samples[1].direction);
-  CHECK(decoded.capture.samples[1].poseValid ==
-        capture.samples[1].poseValid);
-  CHECK(decoded.capture.events[0].kind == capture.events[0].kind);
-  CHECK(decoded.capture.events[0].timeMs == capture.events[0].timeMs);
-  CHECK(decoded.capture.events[0].value == capture.events[0].value);
+  for (std::size_t index = 0; index < capture.sampleCount; ++index) {
+    const auto& expected = capture.samples[index];
+    const auto& actual = decoded.capture.samples[index];
+    CHECK(actual.timeMs == expected.timeMs);
+    CHECK(actual.x == expected.x);
+    CHECK(actual.y == expected.y);
+    CHECK(actual.heading == expected.heading);
+    CHECK(actual.leftX == expected.leftX);
+    CHECK(actual.leftY == expected.leftY);
+    CHECK(actual.rightX == expected.rightX);
+    CHECK(actual.rightY == expected.rightY);
+    CHECK(actual.leftCommand == expected.leftCommand);
+    CHECK(actual.rightCommand == expected.rightCommand);
+    CHECK(actual.direction == expected.direction);
+    CHECK(actual.poseValid == expected.poseValid);
+  }
+  for (std::size_t index = 0; index < capture.eventCount; ++index) {
+    const auto& expected = capture.events[index];
+    const auto& actual = decoded.capture.events[index];
+    CHECK(actual.timeMs == expected.timeMs);
+    CHECK(actual.kind == expected.kind);
+    CHECK(actual.value == expected.value);
+  }
   CHECK(decoded.route.result == ResultCode::Ok);
   CHECK(decoded.route.segmentCount == route.segmentCount);
   CHECK(decoded.route.pointCount == route.pointCount);
   CHECK(decoded.route.eventCount == route.eventCount);
   CHECK(decoded.route.start.x == route.start.x);
-  CHECK(decoded.route.points[1].y == route.points[1].y);
-  CHECK(decoded.route.segments[1].durationMs == route.segments[1].durationMs);
-  CHECK(decoded.route.points[1].speed == route.points[1].speed);
-  CHECK(decoded.route.events[0].progress == route.events[0].progress);
-  CHECK(decoded.route.events[0].offsetMs == route.events[0].offsetMs);
+  CHECK(decoded.route.start.y == route.start.y);
+  CHECK(decoded.route.start.heading == route.start.heading);
+  for (std::size_t index = 0; index < route.segmentCount; ++index) {
+    const auto& expected = route.segments[index];
+    const auto& actual = decoded.route.segments[index];
+    CHECK(actual.kind == expected.kind);
+    CHECK(actual.direction == expected.direction);
+    CHECK(actual.firstPoint == expected.firstPoint);
+    CHECK(actual.pointCount == expected.pointCount);
+    CHECK(actual.durationMs == expected.durationMs);
+  }
+  for (std::size_t index = 0; index < route.pointCount; ++index) {
+    const auto& expected = route.points[index];
+    const auto& actual = decoded.route.points[index];
+    CHECK(actual.x == expected.x);
+    CHECK(actual.y == expected.y);
+    CHECK(actual.speed == expected.speed);
+  }
+  for (std::size_t index = 0; index < route.eventCount; ++index) {
+    const auto& expected = route.events[index];
+    const auto& actual = decoded.route.events[index];
+    CHECK(actual.event.timeMs == expected.event.timeMs);
+    CHECK(actual.event.kind == expected.event.kind);
+    CHECK(actual.event.value == expected.event.value);
+    CHECK(actual.segmentIndex == expected.segmentIndex);
+    CHECK(actual.progress == expected.progress);
+    CHECK(actual.offsetMs == expected.offsetMs);
+  }
 
   static EncodedRecording corrupted{};
   corrupted = bytes;
