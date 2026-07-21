@@ -4,6 +4,15 @@ namespace aon {
 
 #if USING_BIG_ROBOT
 
+namespace {
+constexpr std::uint32_t kSortLoopPeriodMs = 10;
+constexpr std::uint32_t kSortAcknowledgeTimeoutMs = 250;
+
+bool deadlineReached(std::uint32_t now, std::uint32_t deadline) {
+  return static_cast<std::int32_t>(now - deadline) >= 0;
+}
+}
+
 Intake::Intake(const std::initializer_list<std::int8_t>& elevatorPorts,
                const std::initializer_list<std::int8_t>& judgePorts,
                char cartPistonsPort, int distanceSensorPort,
@@ -38,6 +47,38 @@ void Intake::elevator(const int& rpm) { elevatorMG.move_velocity(rpm); }
 
 void Intake::judge(const int& rpm) { judgeMG.move_velocity(rpm); }
 
+bool Intake::commandSortMotors(std::uint32_t request, int elevatorRpm,
+                               int judgeRpm) {
+  sortMotorMutex.take();
+  const bool ownsMotors = !sortFaulted.load(std::memory_order_acquire) &&
+      releaseRequest.load(std::memory_order_acquire) == request;
+  if (ownsMotors) {
+    elevatorMG.move_velocity(elevatorRpm);
+    judgeMG.move_velocity(judgeRpm);
+    if (sortFaulted.load(std::memory_order_acquire) ||
+        releaseRequest.load(std::memory_order_acquire) != request) {
+      elevatorMG.move_velocity(0);
+      judgeMG.move_velocity(0);
+      sortMotorMutex.give();
+      return false;
+    }
+  }
+  sortMotorMutex.give();
+  return ownsMotors;
+}
+
+void Intake::faultAndStopSortMotors() {
+  sortFaulted.store(true, std::memory_order_release);
+  if (!sortMotorMutex.take(kSortLoopPeriodMs)) {
+    elevatorMG.move_velocity(0);
+    judgeMG.move_velocity(0);
+    return;
+  }
+  elevatorMG.move_velocity(0);
+  judgeMG.move_velocity(0);
+  sortMotorMutex.give();
+}
+
 void Intake::scan() {
   size_t stopTime = UINT32_MAX;
   const short DELAY_PER_BALL = 2200;  // ms
@@ -49,9 +90,12 @@ void Intake::scan() {
         pros::delay(500);  // this is to avoid counting the same block multiple times
       }
       // Only stop the elevator if sort isn't actively controlling it
-      if (!releasing && pros::millis() >= stopTime) {
+      const bool releasing = intake_sync::releaseRequestActive(
+          releaseRequest.load(std::memory_order_acquire));
+      if (!releasing && stopTime != UINT32_MAX &&
+          deadlineReached(pros::millis(), stopTime)) {
         this->elevator(0);
-        stopTime = INT_MAX;
+        stopTime = UINT32_MAX;
       }
     }
     pros::delay(50);
@@ -66,14 +110,20 @@ void Intake::sort() {
   uint32_t timerEnd = 0;
 
   while (true) {
+    const std::uint32_t requestedRequest =
+        releaseRequest.load(std::memory_order_acquire);
+    const bool requestedReleasing =
+        intake_sync::releaseRequestActive(requestedRequest);
+    const Height requestedAcceptHeight =
+        acceptHeight.load(std::memory_order_acquire);
     const double hue = this->hue();
     const bool red = isRed(hue), blue = isBlue(hue);
 
-    if (releasing) {
+    if (requestedReleasing) {
         if (!lastReleasing) {
           // Rising edge — start init reverse non-blocking
-          this->score(Intake::BOTTOM);
-          this->judge(-INTAKE_VELOCITY);
+          commandSortMotors(requestedRequest, -INTAKE_VELOCITY,
+                            -INTAKE_VELOCITY);
           timerEnd = pros::millis() + 350;
           sortState = INIT;
           armed = true;
@@ -83,28 +133,30 @@ void Intake::sort() {
         switch (sortState) {
         case INIT:
           // Wait for init reverse to finish, then go to IDLE
-          if (pros::millis() >= timerEnd) {
-            this->elevator(0);
-            this->judge(0);
+          if (deadlineReached(pros::millis(), timerEnd)) {
+            commandSortMotors(requestedRequest, 0, 0);
             sortState = IDLE;
           }
           break;
 
         case IDLE:
-          this->elevator(INTAKE_VELOCITY * 2 / 3);
+          commandSortMotors(requestedRequest, INTAKE_VELOCITY * 2 / 3, 0);
           if (armed && (red || blue)) {
             armed = false;
             pendingCorrect = (ALLIANCE == Alliance::Skills) ||
                              (red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue);
-            const Height height = pendingCorrect ? acceptHeight : (acceptHeight == TOP ? MIDDLE : TOP);
+            const Height height = pendingCorrect
+                                      ? requestedAcceptHeight
+                                      : (requestedAcceptHeight == TOP ? MIDDLE
+                                                                      : TOP);
             if (height != TOP) {
               // Kickback — reverse briefly before routing
-              this->elevator(-INTAKE_VELOCITY);
+              commandSortMotors(requestedRequest, -INTAKE_VELOCITY, 0);
               timerEnd = pros::millis() + 265;
               sortState = KICKBACK;
             } else {
-              this->elevator(INTAKE_VELOCITY * 2 / 3);
-              this->judge(INTAKE_VELOCITY);
+              commandSortMotors(requestedRequest,
+                                INTAKE_VELOCITY * 2 / 3, INTAKE_VELOCITY);
               sortState = WAIT_ACCEPT;
             }
           }
@@ -112,24 +164,31 @@ void Intake::sort() {
 
         case KICKBACK:
           // Wait for kickback to finish, then spin judge
-          if (pros::millis() >= timerEnd) {
-            const Height height = pendingCorrect ? acceptHeight : (acceptHeight == TOP ? MIDDLE : TOP);
-            this->elevator(INTAKE_VELOCITY * 2 / 3);
-            this->judge(height == TOP ? INTAKE_VELOCITY : -INTAKE_VELOCITY);
+          if (deadlineReached(pros::millis(), timerEnd)) {
+            const Height height = pendingCorrect
+                                      ? requestedAcceptHeight
+                                      : (requestedAcceptHeight == TOP ? MIDDLE
+                                                                      : TOP);
+            commandSortMotors(requestedRequest, INTAKE_VELOCITY * 2 / 3,
+                              height == TOP ? INTAKE_VELOCITY
+                                            : -INTAKE_VELOCITY);
             sortState = pendingCorrect ? WAIT_ACCEPT : WAIT_REJECT;
           }
           break;
 
         case WAIT_ACCEPT: {
-          auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
+          auto& sensor =
+              (requestedAcceptHeight == TOP) ? acceptSensor : rejectSensor;
           if (sensor.isDetecting()) sortState = CONFIRM_ACCEPT;
           break;
         }
 
         case CONFIRM_ACCEPT: {
-          auto& sensor = (acceptHeight == TOP) ? acceptSensor : rejectSensor;
+          auto& sensor =
+              (requestedAcceptHeight == TOP) ? acceptSensor : rejectSensor;
           if (!sensor.isDetecting()) {
-            this->judge(0);
+            commandSortMotors(requestedRequest,
+                              INTAKE_VELOCITY * 2 / 3, 0);
             timerEnd = pros::millis() + 105;
             sortState = SETTLE;
           }
@@ -137,15 +196,18 @@ void Intake::sort() {
         }
 
         case WAIT_REJECT: {
-          auto& sensor = (acceptHeight != TOP) ? acceptSensor : rejectSensor;
+          auto& sensor =
+              (requestedAcceptHeight != TOP) ? acceptSensor : rejectSensor;
           if (sensor.isDetecting()) sortState = CONFIRM_REJECT;
           break;
         }
 
         case CONFIRM_REJECT: {
-          auto& sensor = (acceptHeight != TOP) ? acceptSensor : rejectSensor;
+          auto& sensor =
+              (requestedAcceptHeight != TOP) ? acceptSensor : rejectSensor;
           if (!sensor.isDetecting()) {
-            this->judge(0);
+            commandSortMotors(requestedRequest,
+                              INTAKE_VELOCITY * 2 / 3, 0);
             timerEnd = pros::millis() + 105;
             sortState = SETTLE;
           }
@@ -154,7 +216,7 @@ void Intake::sort() {
 
         case SETTLE:
           // Brief pause after block clears before re-arming
-          if (pros::millis() >= timerEnd) {
+          if (deadlineReached(pros::millis(), timerEnd)) {
             sortState = IDLE;
             armed = true;
           }
@@ -163,14 +225,15 @@ void Intake::sort() {
       } else {
         if (lastReleasing) {
           // Falling edge — stop motors and reset for next press
-          this->elevator(0);
-          this->judge(0);
+          commandSortMotors(requestedRequest, 0, 0);
           sortState = INIT;
           timerEnd = UINT32_MAX; // prevent stale timer from skipping init on next press
         }
         lastReleasing = false;
       }
-    pros::delay(10);
+    // Publish completion only after the falling edge has stopped both motors.
+    processedReleaseRequest.store(requestedRequest, std::memory_order_release);
+    pros::delay(kSortLoopPeriodMs);
   }
 }
 
@@ -215,17 +278,43 @@ void Intake::activateScan() { scanning = true; }
 
 void Intake::stopScan() { scanning = false; }
 
-void Intake::setSortHeights(Height accept) {
-  acceptHeight = accept;
+std::uint32_t Intake::requestReleasing(bool active) {
+  std::uint32_t current = releaseRequest.load(std::memory_order_relaxed);
+  std::uint32_t next = 0;
+  do {
+    next = intake_sync::nextReleaseRequest(current, active);
+  } while (!releaseRequest.compare_exchange_weak(
+      current, next, std::memory_order_release, std::memory_order_relaxed));
+  return next;
 }
 
-void Intake::startReleasing() {
-  releasing = false;  // force falling edge so sort task fully resets
-  pros::delay(10);    // give sort task one cycle to see the false
-  releasing = true;
+bool Intake::startReleasing(Height accept) {
+  if (!stopReleasingAndWait()) return false;
+  acceptHeight.store(accept, std::memory_order_release);
+  sortMotorMutex.take();
+  sortFaulted.store(false, std::memory_order_release);
+  requestReleasing(true);
+  sortMotorMutex.give();
+  return true;
 }
 
-void Intake::stopReleasing() { releasing = false; }
+void Intake::stopReleasing() {
+  requestReleasing(false);
+}
+
+bool Intake::stopReleasingAndWait() {
+  const std::uint32_t targetRequest = requestReleasing(false);
+  const std::uint32_t startedAt = pros::millis();
+  while (processedReleaseRequest.load(std::memory_order_acquire) !=
+         targetRequest) {
+    if (pros::millis() - startedAt >= kSortAcknowledgeTimeoutMs) {
+      faultAndStopSortMotors();
+      return false;
+    }
+    pros::delay(kSortLoopPeriodMs);
+  }
+  return true;
+}
 
 Intake::SortState Intake::getSortingState() const { return sortState; }
   

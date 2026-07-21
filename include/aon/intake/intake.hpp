@@ -5,10 +5,12 @@
 #include "../piston/piston.hpp"
 #include "../proximity/proximity.hpp"
 #include "../math/timer.hpp"
+#include "release-request.hpp"
 #include "pros/distance.hpp"
 #include "pros/motor_group.hpp"
 #include "pros/optical.hpp"
 
+#include <atomic>
 #include <cstdint>
 #include <initializer_list>
 
@@ -46,9 +48,17 @@ class Intake {
 
   volatile bool scanning = false;
   volatile bool scoreDown = false;
-  volatile bool releasing = false;
+  std::atomic<std::uint32_t> releaseRequest{0};
+  std::atomic<std::uint32_t> processedReleaseRequest{0};
+  std::atomic<bool> sortFaulted{false};
+  pros::Mutex sortMotorMutex;
   volatile bool lastColorSeen = false;
-  Height acceptHeight = TOP;
+  std::atomic<Height> acceptHeight{TOP};
+
+  std::uint32_t requestReleasing(bool active);
+  bool commandSortMotors(std::uint32_t request, int elevatorRpm,
+                         int judgeRpm);
+  void faultAndStopSortMotors();
 
  public:
   Intake(const std::initializer_list<std::int8_t>& elevatorPorts,
@@ -83,15 +93,13 @@ class Intake {
   /// @note A delay of 0 will never stop moving the intake.
   void score(const Height& to = TOP, const int& delay = 0);
 
-  /// @brief Sets the exit heights for the sort routine mid-run.
-  /// @param accept Where correct-color blocks exit
-  /// @param reject Where wrong-color blocks exit
-  void setSortHeights(Height accept);
-
   /// @brief Allows the sort queue to start processing.
   /// @details Detection and queuing always run; call this to start sorting.
-  void startReleasing();
+  /// @return False if the sorter did not acknowledge the preceding stop.
+  bool startReleasing(Height accept);
   void stopReleasing();
+  /// @return False if the sorter did not acknowledge the stop in time.
+  bool stopReleasingAndWait();
 
   /// @brief Returns the current state of the sort state machine.
   SortState getSortingState() const;

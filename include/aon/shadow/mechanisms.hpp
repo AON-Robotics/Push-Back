@@ -3,6 +3,7 @@
 #include "aon/shadow/types.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 
@@ -19,6 +20,118 @@ enum class IntakeIntent : std::int16_t {
   SortNormal,
   SortInverted,
 };
+
+constexpr IntakeIntent smallIntakeDecision(bool storeHeld, bool rejectHeld,
+                                           bool scoreBottomHeld,
+                                           bool storeIncludesElevator) {
+  if (storeHeld) {
+    return storeIncludesElevator ? IntakeIntent::Store
+                                 : IntakeIntent::Corridor;
+  }
+  if (rejectHeld) return IntakeIntent::Reject;
+  if (scoreBottomHeld) return IntakeIntent::ScoreBottom;
+  return IntakeIntent::Idle;
+}
+
+constexpr IntakeIntent bigIntakeDecision(bool storeHeld,
+                                         bool scoreBottomHeld,
+                                         bool rightOneHeld,
+                                         bool rightTwoHeld,
+                                         bool sortEnabled) {
+  if (rightOneHeld) {
+    return sortEnabled ? IntakeIntent::SortNormal : IntakeIntent::ScoreTop;
+  }
+  if (rightTwoHeld) {
+    return sortEnabled ? IntakeIntent::SortInverted
+                       : IntakeIntent::ScoreMiddle;
+  }
+  if (storeHeld) return IntakeIntent::Store;
+  if (scoreBottomHeld) return IntakeIntent::ScoreBottom;
+  return IntakeIntent::Idle;
+}
+
+enum class IntakeAdapterAction : std::uint8_t {
+  StopSortAndWait,
+  Stop,
+  Store,
+  Corridor,
+  Reject,
+  ScoreBottom,
+  ScoreMiddle,
+  ScoreTop,
+  SortNormal,
+  SortInverted,
+};
+
+struct IntakeAdapterPlan {
+  std::array<IntakeAdapterAction, 2> actions{};
+  std::uint8_t count = 0;
+};
+
+constexpr IntakeAdapterPlan intakeAdapterPlan(RobotIdentity robot,
+                                               IntakeIntent intent) {
+  IntakeAdapterPlan plan{};
+  if (robot == RobotIdentity::Big && intent != IntakeIntent::SortNormal &&
+      intent != IntakeIntent::SortInverted &&
+      intent != IntakeIntent::Corridor && intent != IntakeIntent::Reject) {
+    plan.actions[plan.count++] = IntakeAdapterAction::StopSortAndWait;
+  }
+
+  switch (intent) {
+    case IntakeIntent::Idle:
+      plan.actions[plan.count++] = IntakeAdapterAction::Stop;
+      break;
+    case IntakeIntent::Store:
+      plan.actions[plan.count++] = IntakeAdapterAction::Store;
+      break;
+    case IntakeIntent::Corridor:
+      if (robot == RobotIdentity::Small) {
+        plan.actions[plan.count++] = IntakeAdapterAction::Corridor;
+      }
+      break;
+    case IntakeIntent::Reject:
+      if (robot == RobotIdentity::Small) {
+        plan.actions[plan.count++] = IntakeAdapterAction::Reject;
+      }
+      break;
+    case IntakeIntent::ScoreBottom:
+      plan.actions[plan.count++] = IntakeAdapterAction::ScoreBottom;
+      break;
+    case IntakeIntent::ScoreMiddle:
+      if (robot == RobotIdentity::Big) {
+        plan.actions[plan.count++] = IntakeAdapterAction::ScoreMiddle;
+      }
+      break;
+    case IntakeIntent::ScoreTop:
+      if (robot == RobotIdentity::Big) {
+        plan.actions[plan.count++] = IntakeAdapterAction::ScoreTop;
+      }
+      break;
+    case IntakeIntent::SortNormal:
+      if (robot == RobotIdentity::Big) {
+        plan.actions[plan.count++] = IntakeAdapterAction::SortNormal;
+      }
+      break;
+    case IntakeIntent::SortInverted:
+      if (robot == RobotIdentity::Big) {
+        plan.actions[plan.count++] = IntakeAdapterAction::SortInverted;
+      }
+      break;
+  }
+  return plan;
+}
+
+struct MechanismCapturePlan {
+  bool record = false;
+  MechanismEvent event{};
+};
+
+constexpr MechanismCapturePlan planMechanismCapture(
+    bool recording, std::uint32_t now, std::uint32_t startedAt,
+    MechanismKind kind, std::int16_t value) {
+  if (!recording) return {};
+  return {true, {now - startedAt, kind, value}};
+}
 
 struct DriveIntent {
   int left;
@@ -87,9 +200,62 @@ constexpr ResultCode validateMechanism(RobotIdentity robot,
   return ResultCode::CorruptFile;
 }
 
+enum class MechanismAdapterTarget : std::uint8_t {
+  None,
+  Intake,
+  ScorerHeight,
+  Cart,
+  Trapdoor,
+  Lever,
+  Brooks,
+  Sem,
+  Arrow,
+};
+
+struct MechanismAdapterPlan {
+  ResultCode result = ResultCode::CorruptFile;
+  MechanismAdapterTarget target = MechanismAdapterTarget::None;
+  std::int16_t value = 0;
+};
+
+constexpr MechanismAdapterPlan planMechanismAdapter(
+    RobotIdentity robot, const MechanismEvent& event) {
+  const ResultCode result = validateMechanism(robot, event);
+  if (result != ResultCode::Ok) return {result, MechanismAdapterTarget::None, 0};
+
+  MechanismAdapterTarget target = MechanismAdapterTarget::None;
+  switch (event.kind) {
+    case MechanismKind::IntakeMode:
+      target = MechanismAdapterTarget::Intake;
+      break;
+    case MechanismKind::ScorerHeight:
+      target = MechanismAdapterTarget::ScorerHeight;
+      break;
+    case MechanismKind::Cart:
+      target = MechanismAdapterTarget::Cart;
+      break;
+    case MechanismKind::Trapdoor:
+      target = MechanismAdapterTarget::Trapdoor;
+      break;
+    case MechanismKind::Lever:
+      target = MechanismAdapterTarget::Lever;
+      break;
+    case MechanismKind::Brooks:
+      target = MechanismAdapterTarget::Brooks;
+      break;
+    case MechanismKind::Sem:
+      target = MechanismAdapterTarget::Sem;
+      break;
+    case MechanismKind::Arrow:
+      target = MechanismAdapterTarget::Arrow;
+      break;
+  }
+  return {ResultCode::Ok, target, event.value};
+}
+
 void captureDrive(int left, int right);
 void captureMechanism(MechanismKind kind, std::int16_t value);
-void applyDriverIntakeIntent(IntakeIntent intent);
+ResultCode applyDriverIntakeIntent(IntakeIntent intent);
 ResultCode applyMechanism(const MechanismEvent& event);
 
 }  // namespace aon::shadow

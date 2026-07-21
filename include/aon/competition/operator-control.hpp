@@ -79,6 +79,9 @@ inline void DriveKevin() {
   aon::shadow::captureDrive(driveIntent.left, driveIntent.right);
 #endif
 
+  const bool storeHeld = mainController.get_digital(DIGITAL_R2);
+  const bool rejectHeld = mainController.get_digital(DIGITAL_L2);
+  const bool scoreBottomHeld = mainController.get_digital(DIGITAL_L1);
   if(mainController.get_digital_new_press(DIGITAL_R2)) {
     size_t currentTime = pros::millis();
 
@@ -89,21 +92,28 @@ inline void DriveKevin() {
     lastR2PressTime = currentTime;
   }
 
-  // Storing
-  if(mainController.get_digital(DIGITAL_R2)) {
-    if (mergeCorridorAndElevator){
+  const auto intakeIntent = aon::shadow::smallIntakeDecision(
+      storeHeld, rejectHeld, scoreBottomHeld, mergeCorridorAndElevator);
+  switch (intakeIntent) {
+    case aon::shadow::IntakeIntent::Store:
       intake.store();
-    } else {
+      break;
+    case aon::shadow::IntakeIntent::Corridor:
       intake.corridor();
-    }
-  }
-  // Reject
-  else if(mainController.get_digital(DIGITAL_L2)) {
-    intake.reject();
-  }
-  // Score Low
-  else if(mainController.get_digital(DIGITAL_L1)) {
-    intake.score(Intake::BOTTOM);
+      break;
+    case aon::shadow::IntakeIntent::Reject:
+      intake.reject();
+      break;
+    case aon::shadow::IntakeIntent::ScoreBottom:
+      intake.score(Intake::BOTTOM);
+      break;
+    case aon::shadow::IntakeIntent::Idle:
+      break;
+    case aon::shadow::IntakeIntent::ScoreMiddle:
+    case aon::shadow::IntakeIntent::ScoreTop:
+    case aon::shadow::IntakeIntent::SortNormal:
+    case aon::shadow::IntakeIntent::SortInverted:
+      break;
   }
 
   // Lever
@@ -130,19 +140,11 @@ inline void DriveKevin() {
   //   intake.leverController->setTarget(0);
   // } 
 
-  if(!(mainController.get_digital(DIGITAL_R2) || mainController.get_digital(DIGITAL_L2) || mainController.get_digital(DIGITAL_L1))){
+  if (intakeIntent == aon::shadow::IntakeIntent::Idle) {
     intake.corridor(0);
     intake.elevator(0);
     intake.judge(0);
   }
-  const auto intakeIntent = mainController.get_digital(DIGITAL_R2)
-      ? (mergeCorridorAndElevator ? aon::shadow::IntakeIntent::Store
-                                  : aon::shadow::IntakeIntent::Corridor)
-      : mainController.get_digital(DIGITAL_L2)
-          ? aon::shadow::IntakeIntent::Reject
-          : mainController.get_digital(DIGITAL_L1)
-              ? aon::shadow::IntakeIntent::ScoreBottom
-              : aon::shadow::IntakeIntent::Idle;
   aon::shadow::captureMechanism(
       aon::shadow::MechanismKind::IntakeMode,
       static_cast<std::int16_t>(intakeIntent));
@@ -205,15 +207,20 @@ inline void DriveFabian() {
       leftY * forwardFactor, rightX * turnFactor);
   aon::shadow::captureDrive(driveIntent.left, driveIntent.right);
 
-  auto intakeIntent = aon::shadow::IntakeIntent::Idle;
+  const bool storeHeld = mainController.get_digital(DIGITAL_L1);
+  const bool scoreBottomHeld = mainController.get_digital(DIGITAL_L2);
+  const bool rightOneHeld = mainController.get_digital(DIGITAL_R1);
+  const bool rightTwoHeld = mainController.get_digital(DIGITAL_R2);
+  const bool sortEnabledForDecision = sortEnabled;
+  auto intakeIntent = aon::shadow::bigIntakeDecision(
+      storeHeld, scoreBottomHeld, rightOneHeld, rightTwoHeld,
+      sortEnabledForDecision);
 
-  if(mainController.get_digital(DIGITAL_L1)){
+  if(storeHeld){
     intake.store();
-    intakeIntent = aon::shadow::IntakeIntent::Store;
   }
-  else if(mainController.get_digital(DIGITAL_L2)){
+  else if(scoreBottomHeld){
     intake.score(Intake::BOTTOM);
-    intakeIntent = aon::shadow::IntakeIntent::ScoreBottom;
   }
   else if(!sortActive){
     intake.stop();
@@ -223,23 +230,19 @@ inline void DriveFabian() {
   bool r1NewPress = mainController.get_digital_new_press(DIGITAL_R1);
   bool r2NewPress = mainController.get_digital_new_press(DIGITAL_R2);
 
-  if (sortEnabled) {
+  if (sortEnabledForDecision) {
     // R1 held — sort normally (correct→TOP, wrong→MIDDLE)
-    if(mainController.get_digital(DIGITAL_R1)) {
-      intakeIntent = aon::shadow::IntakeIntent::SortNormal;
+    if(rightOneHeld) {
       if(r1NewPress) {
-        intake.setSortHeights(Intake::TOP);
-        intake.startReleasing();
-        sortActive = true;
+        sortActive = intake.startReleasing(Intake::TOP);
+        if (!sortActive) intake.stop();
       }
     }
     // R2 held — sort inverted (correct→MIDDLE, wrong→TOP)
-    else if(mainController.get_digital(DIGITAL_R2)) {
-      intakeIntent = aon::shadow::IntakeIntent::SortInverted;
+    else if(rightTwoHeld) {
       if(r2NewPress) {
-        intake.setSortHeights(Intake::MIDDLE);
-        intake.startReleasing();
-        sortActive = true;
+        sortActive = intake.startReleasing(Intake::MIDDLE);
+        if (!sortActive) intake.stop();
       }
     }
     // neither held — stop sorting only if it was previously active
@@ -249,13 +252,16 @@ inline void DriveFabian() {
     }
   } else {
     // Sort off — reuse scoring behavior
-    if(mainController.get_digital(DIGITAL_R1)) {
+    if(rightOneHeld) {
       intake.score(Intake::TOP);
-      intakeIntent = aon::shadow::IntakeIntent::ScoreTop;
-    } else if(mainController.get_digital(DIGITAL_R2)) {
+    } else if(rightTwoHeld) {
       intake.score(Intake::MIDDLE);
-      intakeIntent = aon::shadow::IntakeIntent::ScoreMiddle;
     }
+  }
+  if ((intakeIntent == aon::shadow::IntakeIntent::SortNormal ||
+       intakeIntent == aon::shadow::IntakeIntent::SortInverted) &&
+      !sortActive) {
+    intakeIntent = aon::shadow::IntakeIntent::Idle;
   }
   aon::shadow::captureMechanism(
       aon::shadow::MechanismKind::IntakeMode,

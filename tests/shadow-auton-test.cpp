@@ -1,4 +1,5 @@
 #include "aon/shadow/codec.hpp"
+#include "aon/intake/release-request.hpp"
 #include "aon/lemlib/drive-command.hpp"
 #include "aon/shadow/mechanisms.hpp"
 #include "aon/shadow/recorder.hpp"
@@ -19,6 +20,23 @@
 using namespace aon::shadow;
 using aon::lemlib_integration::packDriveCommand;
 using aon::lemlib_integration::unpackDriveCommand;
+
+void releaseRequestTests() {
+  using aon::intake_sync::nextReleaseRequest;
+  using aon::intake_sync::releaseRequestActive;
+
+  const std::uint32_t releaseOn = nextReleaseRequest(0, true);
+  CHECK(releaseOn != 0);
+  CHECK(releaseRequestActive(releaseOn));
+
+  const std::uint32_t releaseOff = nextReleaseRequest(releaseOn, false);
+  CHECK(releaseOff != releaseOn);
+  CHECK(!releaseRequestActive(releaseOff));
+
+  const std::uint32_t wrapped = nextReleaseRequest(0xfffffffeU, true);
+  CHECK(wrapped != 0xfffffffeU);
+  CHECK(releaseRequestActive(wrapped));
+}
 
 class MemoryFileStore final : public FileStore {
  public:
@@ -721,9 +739,130 @@ void mechanismTests() {
             RobotIdentity::Small,
             {0, static_cast<MechanismKind>(255), 0}) ==
         ResultCode::CorruptFile);
+
+  CHECK(smallIntakeDecision(true, false, false, true) ==
+        IntakeIntent::Store);
+  CHECK(smallIntakeDecision(true, false, false, false) ==
+        IntakeIntent::Corridor);
+  CHECK(smallIntakeDecision(false, true, true, true) ==
+        IntakeIntent::Reject);
+  CHECK(smallIntakeDecision(false, false, true, true) ==
+        IntakeIntent::ScoreBottom);
+  CHECK(smallIntakeDecision(false, false, false, true) ==
+        IntakeIntent::Idle);
+
+  CHECK(bigIntakeDecision(true, false, false, false, true) ==
+        IntakeIntent::Store);
+  CHECK(bigIntakeDecision(false, true, false, false, true) ==
+        IntakeIntent::ScoreBottom);
+  CHECK(bigIntakeDecision(true, false, true, false, true) ==
+        IntakeIntent::SortNormal);
+  CHECK(bigIntakeDecision(false, true, false, true, true) ==
+        IntakeIntent::SortInverted);
+  CHECK(bigIntakeDecision(true, false, true, false, false) ==
+        IntakeIntent::ScoreTop);
+  CHECK(bigIntakeDecision(false, true, false, true, false) ==
+        IntakeIntent::ScoreMiddle);
+  CHECK(bigIntakeDecision(false, false, false, false, true) ==
+        IntakeIntent::Idle);
+
+  const auto smallIdle = intakeAdapterPlan(RobotIdentity::Small,
+                                            IntakeIntent::Idle);
+  CHECK(smallIdle.count == 1);
+  CHECK(smallIdle.actions[0] == IntakeAdapterAction::Stop);
+  const auto smallStore = intakeAdapterPlan(RobotIdentity::Small,
+                                             IntakeIntent::Store);
+  CHECK(smallStore.count == 1);
+  CHECK(smallStore.actions[0] == IntakeAdapterAction::Store);
+  const auto smallCorridor = intakeAdapterPlan(RobotIdentity::Small,
+                                                IntakeIntent::Corridor);
+  CHECK(smallCorridor.count == 1);
+  CHECK(smallCorridor.actions[0] == IntakeAdapterAction::Corridor);
+  const auto smallReject = intakeAdapterPlan(RobotIdentity::Small,
+                                              IntakeIntent::Reject);
+  CHECK(smallReject.count == 1);
+  CHECK(smallReject.actions[0] == IntakeAdapterAction::Reject);
+  const auto smallBottom = intakeAdapterPlan(RobotIdentity::Small,
+                                              IntakeIntent::ScoreBottom);
+  CHECK(smallBottom.count == 1);
+  CHECK(smallBottom.actions[0] == IntakeAdapterAction::ScoreBottom);
+
+  constexpr std::array<IntakeIntent, 5> directBigIntents = {
+      IntakeIntent::Idle, IntakeIntent::Store, IntakeIntent::ScoreBottom,
+      IntakeIntent::ScoreMiddle, IntakeIntent::ScoreTop,
+  };
+  constexpr std::array<IntakeAdapterAction, 5> directBigActions = {
+      IntakeAdapterAction::Stop, IntakeAdapterAction::Store,
+      IntakeAdapterAction::ScoreBottom, IntakeAdapterAction::ScoreMiddle,
+      IntakeAdapterAction::ScoreTop,
+  };
+  for (std::size_t index = 0; index < directBigIntents.size(); ++index) {
+    const auto plan = intakeAdapterPlan(RobotIdentity::Big,
+                                        directBigIntents[index]);
+    CHECK(plan.count == 2);
+    CHECK(plan.actions[0] == IntakeAdapterAction::StopSortAndWait);
+    CHECK(plan.actions[1] == directBigActions[index]);
+  }
+  const auto normalSort = intakeAdapterPlan(RobotIdentity::Big,
+                                             IntakeIntent::SortNormal);
+  CHECK(normalSort.count == 1);
+  CHECK(normalSort.actions[0] == IntakeAdapterAction::SortNormal);
+  const auto invertedSort = intakeAdapterPlan(RobotIdentity::Big,
+                                               IntakeIntent::SortInverted);
+  CHECK(invertedSort.count == 1);
+  CHECK(invertedSort.actions[0] == IntakeAdapterAction::SortInverted);
+
+  const MechanismCapturePlan inactiveCapture = planMechanismCapture(
+      false, 1200, 1000, MechanismKind::Cart, 1);
+  CHECK(!inactiveCapture.record);
+  const MechanismCapturePlan activeCapture = planMechanismCapture(
+      true, 1200, 1000, MechanismKind::Cart, 1);
+  CHECK(activeCapture.record);
+  CHECK(activeCapture.event.timeMs == 200);
+  CHECK(activeCapture.event.kind == MechanismKind::Cart);
+  CHECK(activeCapture.event.value == 1);
+
+  const MechanismAdapterPlan intakePlan = planMechanismAdapter(
+      RobotIdentity::Small, intakeEvent(0, IntakeIntent::Store));
+  CHECK(intakePlan.result == ResultCode::Ok);
+  CHECK(intakePlan.target == MechanismAdapterTarget::Intake);
+  CHECK(intakePlan.value ==
+        static_cast<std::int16_t>(IntakeIntent::Store));
+  constexpr std::array<MechanismAdapterTarget, 6> smallTargets = {
+      MechanismAdapterTarget::Lever, MechanismAdapterTarget::ScorerHeight,
+      MechanismAdapterTarget::Cart, MechanismAdapterTarget::Trapdoor,
+      MechanismAdapterTarget::Brooks, MechanismAdapterTarget::Arrow,
+  };
+  for (std::size_t index = 0; index < smallTargets.size(); ++index) {
+    const MechanismAdapterPlan plan = planMechanismAdapter(
+        RobotIdentity::Small, smallMechanisms[index]);
+    CHECK(plan.result == ResultCode::Ok);
+    CHECK(plan.target == smallTargets[index]);
+    CHECK(plan.value == 1);
+  }
+  constexpr std::array<MechanismAdapterTarget, 3> bigTargets = {
+      MechanismAdapterTarget::Cart, MechanismAdapterTarget::Brooks,
+      MechanismAdapterTarget::Sem,
+  };
+  for (std::size_t index = 0; index < bigTargets.size(); ++index) {
+    const MechanismAdapterPlan plan = planMechanismAdapter(
+        RobotIdentity::Big, bigMechanisms[index]);
+    CHECK(plan.result == ResultCode::Ok);
+    CHECK(plan.target == bigTargets[index]);
+    CHECK(plan.value == bigMechanisms[index].value);
+  }
+  const MechanismAdapterPlan invalidPlan = planMechanismAdapter(
+      RobotIdentity::Small, {0, MechanismKind::Cart, 2});
+  CHECK(invalidPlan.result == ResultCode::CorruptFile);
+  CHECK(invalidPlan.target == MechanismAdapterTarget::None);
+  const MechanismAdapterPlan wrongRobotPlan = planMechanismAdapter(
+      RobotIdentity::Small, {0, MechanismKind::Sem, 1});
+  CHECK(wrongRobotPlan.result == ResultCode::WrongRobot);
+  CHECK(wrongRobotPlan.target == MechanismAdapterTarget::None);
 }
 
 int main() {
+  releaseRequestTests();
   recorderTests();
   capacityTests();
   processorTests();

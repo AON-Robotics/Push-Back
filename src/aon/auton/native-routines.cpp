@@ -540,9 +540,14 @@ void bigBotStayThere(){
   aon::auton::mechanisms::resetLoaderCart();
 
   aon::auton::logStep("Kevin Loader", "score long goal");
-  intake.setSortHeights(Intake::Height::TOP);
-  intake.startReleasing();
-  pros::delay(8000);
+  if (intake.startReleasing(Intake::Height::TOP)) {
+    pros::delay(8000);
+  } else {
+    intake.stop();
+    aon::auton::mechanisms::finishLoaderCollection();
+    aon::auton::logStep("Kevin Loader", "sorter unavailable; abort");
+    return;
+  }
   aon::auton::mechanisms::finishLoaderCollection();
   intake.stopReleasing();
   // intake.score(Intake::TOP, 900); // Score 3 blocks.

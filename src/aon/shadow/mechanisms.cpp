@@ -22,116 +22,126 @@ void setPiston(Piston& piston, bool activated) {
   }
 }
 
+ResultCode applyIntakeAction(IntakeAdapterAction action) {
+#if USING_BIG_ROBOT
+  switch (action) {
+    case IntakeAdapterAction::StopSortAndWait:
+      return intake.stopReleasingAndWait() ? ResultCode::Ok
+                                           : ResultCode::MotionFailure;
+    case IntakeAdapterAction::Stop:
+      intake.stop();
+      break;
+    case IntakeAdapterAction::Store:
+      intake.store();
+      break;
+    case IntakeAdapterAction::ScoreBottom:
+      intake.score(Intake::BOTTOM);
+      break;
+    case IntakeAdapterAction::ScoreMiddle:
+      intake.score(Intake::MIDDLE);
+      break;
+    case IntakeAdapterAction::ScoreTop:
+      intake.score(Intake::TOP);
+      break;
+    case IntakeAdapterAction::SortNormal:
+      return intake.startReleasing(Intake::TOP) ? ResultCode::Ok
+                                                 : ResultCode::MotionFailure;
+    case IntakeAdapterAction::SortInverted:
+      return intake.startReleasing(Intake::MIDDLE)
+                 ? ResultCode::Ok
+                 : ResultCode::MotionFailure;
+    case IntakeAdapterAction::Corridor:
+    case IntakeAdapterAction::Reject:
+      break;
+  }
+#else
+  switch (action) {
+    case IntakeAdapterAction::Stop:
+      intake.stop();
+      break;
+    case IntakeAdapterAction::Store:
+      intake.store();
+      break;
+    case IntakeAdapterAction::Corridor:
+      intake.corridor();
+      break;
+    case IntakeAdapterAction::Reject:
+      intake.reject();
+      break;
+    case IntakeAdapterAction::ScoreBottom:
+      intake.score(Intake::BOTTOM);
+      break;
+    case IntakeAdapterAction::StopSortAndWait:
+    case IntakeAdapterAction::ScoreMiddle:
+    case IntakeAdapterAction::ScoreTop:
+    case IntakeAdapterAction::SortNormal:
+    case IntakeAdapterAction::SortInverted:
+      break;
+  }
+#endif
+  return ResultCode::Ok;
+}
+
 }  // namespace
 
 void captureDrive(int left, int right) {
   aon::lemlib_integration::setEffectiveDriveCommand(left, right);
 }
 
-void applyDriverIntakeIntent(IntakeIntent intent) {
-#if USING_BIG_ROBOT
-  if (intent != IntakeIntent::SortNormal &&
-      intent != IntakeIntent::SortInverted) {
-    intake.stopReleasing();
+ResultCode applyDriverIntakeIntent(IntakeIntent intent) {
+  const IntakeAdapterPlan plan = intakeAdapterPlan(kRobotIdentity, intent);
+  for (std::uint8_t index = 0; index < plan.count; ++index) {
+    const ResultCode result = applyIntakeAction(plan.actions[index]);
+    if (result != ResultCode::Ok) return result;
   }
-  switch (intent) {
-    case IntakeIntent::Idle:
-      intake.stop();
-      break;
-    case IntakeIntent::Store:
-      intake.store();
-      break;
-    case IntakeIntent::ScoreBottom:
-      intake.score(Intake::BOTTOM);
-      break;
-    case IntakeIntent::ScoreMiddle:
-      intake.score(Intake::MIDDLE);
-      break;
-    case IntakeIntent::ScoreTop:
-      intake.score(Intake::TOP);
-      break;
-    case IntakeIntent::SortNormal:
-      intake.setSortHeights(Intake::TOP);
-      intake.startReleasing();
-      break;
-    case IntakeIntent::SortInverted:
-      intake.setSortHeights(Intake::MIDDLE);
-      intake.startReleasing();
-      break;
-    case IntakeIntent::Corridor:
-    case IntakeIntent::Reject:
-      break;
-  }
-#else
-  switch (intent) {
-    case IntakeIntent::Idle:
-      intake.stop();
-      break;
-    case IntakeIntent::Store:
-      intake.store();
-      break;
-    case IntakeIntent::Corridor:
-      intake.corridor();
-      break;
-    case IntakeIntent::Reject:
-      intake.reject();
-      break;
-    case IntakeIntent::ScoreBottom:
-      intake.score(Intake::BOTTOM);
-      break;
-    case IntakeIntent::ScoreMiddle:
-    case IntakeIntent::ScoreTop:
-    case IntakeIntent::SortNormal:
-    case IntakeIntent::SortInverted:
-      break;
-  }
-#endif
+  return ResultCode::Ok;
 }
 
 ResultCode applyMechanism(const MechanismEvent& event) {
-  const ResultCode validation = validateMechanism(kRobotIdentity, event);
-  if (validation != ResultCode::Ok) return validation;
+  const MechanismAdapterPlan plan = planMechanismAdapter(kRobotIdentity, event);
+  if (plan.result != ResultCode::Ok) return plan.result;
 
-  const bool active = event.value == 1;
-  switch (event.kind) {
-    case MechanismKind::IntakeMode:
-      applyDriverIntakeIntent(static_cast<IntakeIntent>(event.value));
-      break;
-    case MechanismKind::Cart:
+  const bool active = plan.value == 1;
+  switch (plan.target) {
+    case MechanismAdapterTarget::Intake:
+      return applyDriverIntakeIntent(static_cast<IntakeIntent>(plan.value));
+    case MechanismAdapterTarget::Cart:
       if (active) intake.dropCart();
       else intake.raiseCart();
       break;
-    case MechanismKind::Brooks:
+    case MechanismAdapterTarget::Brooks:
       setPiston(brooks, active);
       break;
 #if USING_BIG_ROBOT
-    case MechanismKind::Sem:
+    case MechanismAdapterTarget::Sem:
       setPiston(sem, active);
       break;
-    case MechanismKind::ScorerHeight:
-    case MechanismKind::Trapdoor:
-    case MechanismKind::Lever:
-    case MechanismKind::Arrow:
+    case MechanismAdapterTarget::ScorerHeight:
+    case MechanismAdapterTarget::Trapdoor:
+    case MechanismAdapterTarget::Lever:
+    case MechanismAdapterTarget::Arrow:
       return ResultCode::WrongRobot;
 #else
-    case MechanismKind::ScorerHeight:
+    case MechanismAdapterTarget::ScorerHeight:
       if (active) intake.raiseScorer();
       else intake.lowerScorer();
       break;
-    case MechanismKind::Trapdoor:
+    case MechanismAdapterTarget::Trapdoor:
       if (active) intake.openTrapdoor();
       else intake.closeTrapdoor();
       break;
-    case MechanismKind::Lever:
+    case MechanismAdapterTarget::Lever:
       if (active) intake.extendLever();
       else intake.resetLever();
       break;
-    case MechanismKind::Arrow:
+    case MechanismAdapterTarget::Arrow:
       setPiston(arrow, active);
       break;
-    case MechanismKind::Sem:
+    case MechanismAdapterTarget::Sem:
       return ResultCode::WrongRobot;
 #endif
+    case MechanismAdapterTarget::None:
+      return ResultCode::CorruptFile;
   }
   return ResultCode::Ok;
 }

@@ -253,10 +253,12 @@ void captureMechanism(MechanismKind kind, std::int16_t value) {
   auto& serviceData = data();
   if (!serviceData.recordingActive.load()) return;
   Lock lock(serviceData.mutex);
-  if (serviceData.state.status().mode != ServiceMode::Recording) return;
+  const MechanismCapturePlan plan = planMechanismCapture(
+      serviceData.state.status().mode == ServiceMode::Recording,
+      pros::millis(), serviceData.startedAt, kind, value);
+  if (!plan.record) return;
 
-  const ResultCode result = serviceData.recorder.event(
-      {pros::millis() - serviceData.startedAt, kind, value});
+  const ResultCode result = serviceData.recorder.event(plan.event);
   if (result != ResultCode::Ok && result != ResultCode::DuplicateEvent) {
     serviceData.recordingActive.store(false);
     serviceData.state.beginProcessing(pros::millis());
