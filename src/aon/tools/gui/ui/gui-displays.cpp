@@ -5,7 +5,65 @@
 #include "aon/constants.hpp"
 #include "aon/tools/gui/ui/gui-layout.hpp"
 
+#include <array>
+#include <cstdio>
+
 namespace aon {
+namespace {
+
+const char* shadowResultName(shadow::ResultCode result) {
+  switch (result) {
+    case shadow::ResultCode::Ok: return "OK";
+    case shadow::ResultCode::NotRecording: return "NOT RECORDING";
+    case shadow::ResultCode::AlreadyRecording: return "ALREADY RECORDING";
+    case shadow::ResultCode::SampleTooSoon: return "SAMPLE TOO SOON";
+    case shadow::ResultCode::DuplicateEvent: return "DUPLICATE EVENT";
+    case shadow::ResultCode::CapacityReached: return "CAPACITY REACHED";
+    case shadow::ResultCode::InvalidPose: return "INVALID POSE";
+    case shadow::ResultCode::PoseJump: return "POSE JUMP";
+    case shadow::ResultCode::EmptyRecording: return "EMPTY";
+    case shadow::ResultCode::NoSd: return "NO SD";
+    case shadow::ResultCode::ReadOnly: return "SD READ ONLY";
+    case shadow::ResultCode::OpenFailed: return "OPEN FAILED";
+    case shadow::ResultCode::ReadFailed: return "READ FAILED";
+    case shadow::ResultCode::WriteFailed: return "WRITE FAILED";
+    case shadow::ResultCode::FlushFailed: return "FLUSH FAILED";
+    case shadow::ResultCode::CloseFailed: return "CLOSE FAILED";
+    case shadow::ResultCode::DeleteFailed: return "DELETE FAILED";
+    case shadow::ResultCode::CorruptFile: return "CORRUPT";
+    case shadow::ResultCode::UnsupportedVersion: return "BAD VERSION";
+    case shadow::ResultCode::WrongRobot: return "WRONG ROBOT";
+    case shadow::ResultCode::InvalidSlot: return "INVALID SLOT";
+    case shadow::ResultCode::PlayLocked: return "PLAY LOCKED";
+    case shadow::ResultCode::UnsafeState: return "UNSAFE STATE";
+    case shadow::ResultCode::Cancelled: return "CANCELLED";
+    case shadow::ResultCode::OdometryFailure: return "ODOM FAILURE";
+    case shadow::ResultCode::MotionFailure: return "MOTION FAILURE";
+    case shadow::ResultCode::UnsupportedRobot: return "UNSUPPORTED ROBOT";
+  }
+  return "UNKNOWN";
+}
+
+const char* shadowSlotState(const shadow::SlotSummary& slot) {
+  if (slot.valid) return "READY";
+  if (slot.result == shadow::ResultCode::EmptyRecording) return "EMPTY";
+  return "INVALID";
+}
+
+const char* shadowModeName(shadow::ServiceMode mode) {
+  switch (mode) {
+    case shadow::ServiceMode::Idle: return "IDLE";
+    case shadow::ServiceMode::Recording: return "RECORDING";
+    case shadow::ServiceMode::Processing: return "PROCESSING";
+    case shadow::ServiceMode::Saved: return "SAVED";
+    case shadow::ServiceMode::Invalid: return "INVALID";
+    case shadow::ServiceMode::Playing: return "PLAYING";
+    case shadow::ServiceMode::Cancelled: return "CANCELLED";
+  }
+  return "UNKNOWN";
+}
+
+}  // namespace
 
 void Gui::displayFallbackStatusLine() {
   const auto fallback = aon::auton::fallbackStatus();
@@ -73,6 +131,7 @@ void Gui::displayMainMenu() {
 
   // Draw the "AUTONS" button using UI helper
   AutonsBtn.draw(pros::E_TEXT_LARGE);
+  ShadowBtn.draw(pros::E_TEXT_LARGE);
 }
 
 void Gui::displayAutonMenu() {
@@ -216,6 +275,116 @@ void Gui::displaySkillsMenu() {
   aut1.draw(pros::E_TEXT_LARGE);
   aut2.draw(pros::E_TEXT_LARGE);
   aut3.draw(pros::E_TEXT_LARGE);
+}
+
+void Gui::displayShadowMenu() {
+  pros::screen::set_eraser(COLOR_BLACK);
+  pros::screen::erase();
+
+  std::array<ui::Button, shadow::kSlotCount> slots = {
+      shadowSlot1Btn, shadowSlot2Btn, shadowSlot3Btn};
+  for (std::size_t index = 0; index < slots.size(); ++index) {
+    const auto& summary = shadowSlots[index];
+    char label[24];
+    std::snprintf(label, sizeof(label), "SLOT %u %s",
+                  static_cast<unsigned>(index + 1),
+                  shadowSlotState(summary));
+    slots[index].label = label;
+    slots[index].bg = summary.valid
+                          ? COLOR_DARK_GREEN
+                          : summary.result == shadow::ResultCode::EmptyRecording
+                                ? COLOR_DARK_GRAY
+                                : COLOR_DARK_RED;
+    if (selectedShadowSlot == index + 1) slots[index].bg = COLOR_BLUE;
+    slots[index].draw(pros::E_TEXT_SMALL);
+  }
+
+  const auto& selected = shadowSlots[selectedShadowSlot - 1];
+  pros::screen::set_pen(selected.valid ? COLOR_GREEN : COLOR_WHITE);
+  pros::screen::print(pros::E_TEXT_MEDIUM, 10, 68, "SLOT %u: %s",
+                      static_cast<unsigned>(selectedShadowSlot),
+                      shadowSlotState(selected));
+  if (selected.valid) {
+    pros::screen::set_pen(COLOR_WHITE);
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 96,
+                        "DURATION %.1fs  GENERATION %lu",
+                        selected.durationMs / 1000.0,
+                        static_cast<unsigned long>(selected.generation));
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 116,
+                        "START X %.1f  Y %.1f  H %.1f", selected.startX,
+                        selected.startY, selected.startHeading);
+  } else {
+    pros::screen::set_pen(selected.result == shadow::ResultCode::EmptyRecording
+                              ? COLOR_GRAY
+                              : COLOR_RED);
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 100, "%s",
+                        shadowResultName(selected.result));
+  }
+
+  const auto status = shadow::service().status();
+  pros::screen::set_pen(shadowSaving ||
+                                status.mode == shadow::ServiceMode::Processing
+                            ? COLOR_ORANGE
+                            : status.mode == shadow::ServiceMode::Invalid
+                                  ? COLOR_RED
+                                  : COLOR_CYAN);
+  pros::screen::print(pros::E_TEXT_SMALL, 10, 142, "STATUS: %s",
+                      shadowSaving
+                          ? "PROCESSING"
+                          : shadowDeleteSucceeded ? "DELETED"
+                                                  : shadowModeName(status.mode));
+
+  pros::screen::set_pen(COLOR_ORANGE);
+  if (shadowConfirmation == ShadowConfirmation::Overwrite) {
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
+                        "TAP OVERWRITE? AGAIN WITHIN 5s");
+  } else if (shadowConfirmation == ShadowConfirmation::Delete) {
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
+                        "TAP DELETE? AGAIN WITHIN 5s");
+  } else if (shadowHasActionResult) {
+    pros::screen::set_pen(shadowActionResult == shadow::ResultCode::PlayLocked
+                              ? COLOR_ORANGE
+                              : COLOR_RED);
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164, "%s",
+                        shadowResultName(shadowActionResult));
+  } else if (shadowDeleteSucceeded) {
+    pros::screen::set_pen(COLOR_GREEN);
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164, "SLOT DELETED");
+  } else if (status.result != shadow::ResultCode::Ok) {
+    pros::screen::set_pen(COLOR_RED);
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164, "%s",
+                        shadowResultName(status.result));
+  } else {
+    pros::screen::set_pen(COLOR_ORANGE);
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
+                        "PLAYBACK DISABLED UNTIL PHYSICAL GATE");
+  }
+
+  shadowBackBtn.draw(pros::E_TEXT_SMALL);
+
+  ui::Button record = shadowRecordBtn;
+  if (shadowSaving || status.mode == shadow::ServiceMode::Processing) {
+    record.label = "PROCESSING";
+    record.bg = COLOR_DARK_GRAY;
+  } else if (status.mode == shadow::ServiceMode::Recording) {
+    record.label = "STOP SAVE";
+    record.bg = COLOR_ORANGE;
+  } else if (shadowConfirmation == ShadowConfirmation::Overwrite) {
+    record.label = "OVERWRITE?";
+    record.bg = COLOR_ORANGE;
+  }
+  record.draw(pros::E_TEXT_SMALL);
+
+  ui::Button remove = shadowDeleteBtn;
+  if (shadowSaving || status.mode == shadow::ServiceMode::Processing ||
+      status.mode == shadow::ServiceMode::Recording) {
+    remove.bg = COLOR_DARK_GRAY;
+  } else if (shadowConfirmation == ShadowConfirmation::Delete) {
+    remove.label = "DELETE?";
+    remove.bg = COLOR_ORANGE;
+  }
+  remove.draw(pros::E_TEXT_SMALL);
+  shadowPlayBtn.draw(pros::E_TEXT_SMALL);
 }
 
 }  // namespace aon

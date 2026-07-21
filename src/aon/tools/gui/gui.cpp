@@ -19,6 +19,19 @@ SavedAutonSelection savedAutonSelection;
 
 constexpr const char* kAutonSelectionPath = "/usd/aon-auton-selection.txt";
 
+bool sameSlotSummary(const shadow::SlotSummary& left,
+                     const shadow::SlotSummary& right) {
+  return left.result == right.result && left.valid == right.valid &&
+         left.generation == right.generation &&
+         left.durationMs == right.durationMs && left.startX == right.startX &&
+         left.startY == right.startY &&
+         left.startHeading == right.startHeading;
+}
+
+bool timeReached(std::uint32_t now, std::uint32_t deadline) {
+  return static_cast<std::int32_t>(now - deadline) >= 0;
+}
+
 void saveAutonSelection(Alliance alliance, int index) {
   savedAutonSelection = {alliance, index, true};
 
@@ -220,6 +233,14 @@ void Gui::handleMainMenuTouch(
       displayAutonMenu();
       currentScreen = AutonMenu;
     }
+  } else if (ShadowBtn.isHit(touchStatus.x, touchStatus.y)) {
+    shadowConfirmation = ShadowConfirmation::None;
+    shadowHasActionResult = false;
+    shadowDeleteSucceeded = false;
+    refreshShadowSlots();
+    shadowLastStatusChange = shadow::service().status().changedAt;
+    displayShadowMenu();
+    currentScreen = ShadowMenu;
   }
 }
 
@@ -334,6 +355,161 @@ void Gui::handleSkillsMenuTouch() {
   }
 }
 
+bool Gui::refreshShadowSlots() {
+  bool changed = false;
+  for (std::size_t index = 0; index < shadowSlots.size(); ++index) {
+    const auto latest =
+        shadow::service().slot(static_cast<std::uint8_t>(index + 1));
+    if (!sameSlotSummary(latest, shadowSlots[index])) {
+      shadowSlots[index] = latest;
+      changed = true;
+    }
+  }
+  shadowLastSlotPollAt = pros::millis();
+  return changed;
+}
+
+void Gui::handleShadowMenuTouch() {
+  if (currentScreen != ShadowMenu || shadowSaving) return;
+
+  const auto touch = pros::screen::touch_status();
+  if (touch.touch_status <= 0) return;
+  const int x = touch.x;
+  const int y = touch.y;
+  const auto status = shadow::service().status();
+  const bool busy = status.mode == shadow::ServiceMode::Processing;
+  const std::uint32_t now = pros::millis();
+
+  // Processing may also be initiated by the recorder service task. Keep every
+  // control inert until its SD operation finishes.
+  if (busy) return;
+
+  if (shadowBackBtn.isHit(x, y)) {
+    shadowConfirmation = ShadowConfirmation::None;
+    displayMainMenu();
+    currentScreen = MainMenu;
+    return;
+  }
+
+  if (status.mode != shadow::ServiceMode::Recording) {
+    std::uint8_t slot = 0;
+    if (shadowSlot1Btn.isHit(x, y)) slot = 1;
+    else if (shadowSlot2Btn.isHit(x, y)) slot = 2;
+    else if (shadowSlot3Btn.isHit(x, y)) slot = 3;
+    if (slot != 0) {
+      selectedShadowSlot = slot;
+      shadowConfirmation = ShadowConfirmation::None;
+      shadowHasActionResult = false;
+      shadowDeleteSucceeded = false;
+      displayShadowMenu();
+      return;
+    }
+  }
+
+  if (shadowRecordBtn.isHit(x, y)) {
+    if (status.mode == shadow::ServiceMode::Recording) {
+      shadowSaving = true;
+      shadowConfirmation = ShadowConfirmation::None;
+      displayShadowMenu();
+      const auto result = shadow::service().stopAndSave();
+      shadowSaving = false;
+      shadowActionResult = result;
+      shadowHasActionResult = result != shadow::ResultCode::Ok;
+      shadowDeleteSucceeded = false;
+      refreshShadowSlots();
+      shadowLastStatusChange = shadow::service().status().changedAt;
+      displayShadowMenu();
+      return;
+    }
+    const bool occupied = shadowSlots[selectedShadowSlot - 1].valid;
+    const bool confirmed =
+        shadowConfirmation == ShadowConfirmation::Overwrite &&
+        !timeReached(now, shadowConfirmationExpiresAt);
+    if (occupied && !confirmed) {
+      shadowConfirmation = ShadowConfirmation::Overwrite;
+      shadowConfirmationExpiresAt = now + 5000;
+      shadowHasActionResult = false;
+      shadowDeleteSucceeded = false;
+      displayShadowMenu();
+      return;
+    }
+
+    const auto result =
+        shadow::service().beginRecording(selectedShadowSlot, confirmed);
+    shadowConfirmation = ShadowConfirmation::None;
+    shadowActionResult = result;
+    shadowHasActionResult = result != shadow::ResultCode::Ok;
+    shadowDeleteSucceeded = false;
+    shadowLastStatusChange = shadow::service().status().changedAt;
+    displayShadowMenu();
+    return;
+  }
+
+  if (shadowDeleteBtn.isHit(x, y) &&
+      status.mode != shadow::ServiceMode::Recording) {
+    if (shadowSlots[selectedShadowSlot - 1].result ==
+        shadow::ResultCode::EmptyRecording) {
+      shadowActionResult = shadow::ResultCode::EmptyRecording;
+      shadowHasActionResult = true;
+      shadowDeleteSucceeded = false;
+      displayShadowMenu();
+      return;
+    }
+    const bool confirmed =
+        shadowConfirmation == ShadowConfirmation::Delete &&
+        !timeReached(now, shadowConfirmationExpiresAt);
+    if (!confirmed) {
+      shadowConfirmation = ShadowConfirmation::Delete;
+      shadowConfirmationExpiresAt = now + 5000;
+      shadowHasActionResult = false;
+      shadowDeleteSucceeded = false;
+      displayShadowMenu();
+      return;
+    }
+
+    shadowSaving = true;
+    shadowConfirmation = ShadowConfirmation::None;
+    displayShadowMenu();
+    const auto result = shadow::service().erase(selectedShadowSlot, true);
+    shadowSaving = false;
+    shadowActionResult = result;
+    shadowHasActionResult = result != shadow::ResultCode::Ok;
+    shadowDeleteSucceeded = result == shadow::ResultCode::Ok;
+    refreshShadowSlots();
+    displayShadowMenu();
+    return;
+  }
+
+  if (shadowPlayBtn.isHit(x, y)) {
+    shadowActionResult = shadow::ResultCode::PlayLocked;
+    shadowHasActionResult = true;
+    shadowDeleteSucceeded = false;
+    displayShadowMenu();
+  }
+}
+
+void Gui::updateShadowMenu() {
+  if (currentScreen != ShadowMenu) return;
+
+  const std::uint32_t now = pros::millis();
+  const auto shadowStatus = shadow::service().status();
+  bool redraw = shadowStatus.changedAt != shadowLastStatusChange;
+  if (redraw) {
+    shadowLastStatusChange = shadowStatus.changedAt;
+  }
+  if (!shadowSaving && shadowStatus.mode != shadow::ServiceMode::Recording &&
+      shadowStatus.mode != shadow::ServiceMode::Processing &&
+      now - shadowLastSlotPollAt >= 1000) {
+    redraw = refreshShadowSlots() || redraw;
+  }
+  if (shadowConfirmation != ShadowConfirmation::None &&
+      timeReached(now, shadowConfirmationExpiresAt)) {
+    shadowConfirmation = ShadowConfirmation::None;
+    redraw = true;
+  }
+  if (redraw) displayShadowMenu();
+}
+
 // ============================================================================
 // GUI Loop
 // ============================================================================
@@ -343,7 +519,9 @@ void Gui::mainLoop() {
   auto lastFallback = aon::auton::fallbackStatus();
   while (true) {
     pros::screen_touch_status_s_t TouchStatus = pros::screen::touch_status();
-    if (TouchStatus.touch_status > 0) {
+    if (TouchStatus.touch_status <= 0) touchLatched = false;
+    if (TouchStatus.touch_status > 0 && !touchLatched) {
+      touchLatched = true;
       switch (currentScreen) {
         case MainMenu:
           handleMainMenuTouch(TouchStatus);
@@ -360,6 +538,9 @@ void Gui::mainLoop() {
         case SkillAutons:
           handleSkillsMenuTouch();
           break;
+        case ShadowMenu:
+          handleShadowMenuTouch();
+          break;
         default:
           break;
       }
@@ -374,6 +555,8 @@ void Gui::mainLoop() {
     }
     lastStatus = status;
     lastFallback = fallback;
+
+    updateShadowMenu();
 
     pros::delay(100);
   }

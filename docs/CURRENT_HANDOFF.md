@@ -7,7 +7,7 @@ Use Git history as the source of truth when this file and a chat disagree.
 
 - Integration branch: `Testing`
 - Remote: `origin` at `AON-Robotics/Push-Back`
-- Latest completed implementation checkpoint: `6e3e522`
+- Latest completed Shadow mechanism checkpoint: `d531935`
 - Hardware flag committed for uploads: `USING_BIG_ROBOT false`
 - Default autonomous test: red/blue AUT3, `TEST LemLib 12in`
 
@@ -57,19 +57,26 @@ Checkpoint `db084c4` hardens the fallback layer before physical testing:
 - timed arcade motion stops on invalid drive feedback;
 - pose-jump fault samples must be consecutive.
 
-Shadow Auton Tasks 1 through 4 are implemented through checkpoint `6e3e522`:
+Shadow Auton Tasks 1 through 5 are implemented through checkpoint `d531935`:
 
 - fixed-capacity, 20 ms driver sample capture;
 - route processing with pose-quality checks and stopped-segment detection;
 - versioned, checksummed recording files;
 - resilient dual-generation SD storage and recording-session safety;
+- normalized, atomic effective-drive capture and semantic mechanism events;
+- explicit small- and big-robot mechanism playback adapters;
+- bounded, acknowledged big-robot sorter transitions with fail-safe motor ownership;
 - host coverage for recorder, processor, codec, storage, and service state;
 - clean small- and big-robot builds, with `USING_BIG_ROBOT false` restored.
 
-Shadow Auton is not ready for Brain-screen or driving tests yet. Resume at Task 5
-(semantic drive and mechanism capture), then complete Task 6 (three-slot Brain UI).
-Playback remains intentionally locked until the recording-only physical gate
-passes. An interrupted Task 5 attempt produced no retained implementation.
+Shadow Auton Task 6 now adds the normal-GUI `SHADOW` screen, three recording
+slots, overwrite/delete confirmation, save status, slot metadata, and an
+inert `PLAY LOCKED` control. Playback remains intentionally locked and no
+Shadow autonomous routine is registered or armed.
+
+Shadow recording implementation is complete with playback authorization false.
+Do not implement or expose playback until the existing LemLib/native baseline
+gate passes and all three SD slots survive a full-reboot save/load test.
 
 ## Pending Physical Gate
 
@@ -112,7 +119,7 @@ Compilation does not satisfy the pending physical gate.
 
 ### Shadow Auton recording gate
 
-After Tasks 5 and 6 are implemented and verified, test recording only:
+Tasks 5 and 6 are implemented and compile-verified. Test recording only:
 
 1. Insert a FAT-formatted SD card and restart the Brain.
 2. Record a short route into each slot, including drive and mechanism actions.
@@ -134,6 +141,7 @@ Do not unlock or run Shadow Auton playback before this recording gate passes.
 - Stop at physical gates and record measured results before continuing.
 - Do not force-push, hard-reset, or delete fallbacks to resolve divergence.
 
-For the next session, read the Shadow Auton plan and resume at Task 5. Use the
-existing host test executable and clean-build both robot configurations before
-advancing to the Brain UI checkpoint.
+For the next session, stop at Shadow Physical Gate A. Upload the small-robot
+configuration, perform the LemLib/native baseline checks and all recording-only
+SD tests above, and record measured results here. Do not begin Task 7 playback
+policy until every Gate A item passes.

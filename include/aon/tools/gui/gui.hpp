@@ -2,6 +2,8 @@
 #ifndef AON_TOOLS_GUI_HPP_
 #define AON_TOOLS_GUI_HPP_
 
+#include <array>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -12,6 +14,7 @@
 #include "aon/auton/status.hpp"
 #include "aon/constants.hpp"
 #include "aon/math/pose.hpp"
+#include "aon/shadow/service.hpp"
 #include "../function-reader.hpp"
 #include "../gui-image-generator/gui-images.hpp"
 
@@ -34,6 +37,7 @@ enum GuiScreen {
   RedAutons,
   BlueAutons,
   SkillAutons,
+  ShadowMenu,
   DebugMenu,
   RegisteredFunctions,
   AutonRunner,
@@ -56,6 +60,12 @@ static constexpr int autonOptionsCount = 3;
 // Base Gui class - handles core GUI functionality without debug features
 class Gui {
 public:
+  enum class ShadowConfirmation : std::uint8_t {
+    None,
+    Overwrite,
+    Delete,
+  };
+
   // Core auton selection: store the selected auton as an instance
   AutonOption selectedAuton = {"None", nullptr};
   std::string selectedAutonName = "None";
@@ -65,6 +75,7 @@ public:
   int selectedRedAut = 3;
   int selectedBlueAut = 0;
   int selectedSkill = 0;
+  std::uint8_t selectedShadowSlot = 1;
 
   // Screen management
   GuiScreen currentScreen = MainMenu;
@@ -100,6 +111,7 @@ public:
   virtual void displayRedAutonMenu();
   virtual void displayBlueAutonMenu();
   virtual void displaySkillsMenu();
+  virtual void displayShadowMenu();
 
   // Touch handler methods
   virtual void handleMainMenuTouch(const pros::screen_touch_status_s_t& touchStatus);
@@ -107,6 +119,7 @@ public:
   virtual void handleRedAutonMenuTouch();
   virtual void handleBlueAutonMenuTouch();
   virtual void handleSkillsMenuTouch();
+  virtual void handleShadowMenuTouch();
   virtual void setVariableRegister(const std::function<void()>&) {}
   virtual void variableChangerImpl(const std::string&,std::function<double()>,std::function<void(double)>) {}
   template <
@@ -146,6 +159,19 @@ protected:
   int displayInitializationMessage();
   void displayAutonStatusLine();
   void displayFallbackStatusLine();
+  bool refreshShadowSlots();
+
+  std::array<shadow::SlotSummary, shadow::kSlotCount> shadowSlots{};
+  ShadowConfirmation shadowConfirmation = ShadowConfirmation::None;
+  std::uint32_t shadowConfirmationExpiresAt = 0;
+  std::uint32_t shadowLastSlotPollAt = 0;
+  std::uint32_t shadowLastStatusChange = 0;
+  shadow::ResultCode shadowActionResult = shadow::ResultCode::Ok;
+  bool shadowHasActionResult = false;
+  bool shadowDeleteSucceeded = false;
+  bool shadowSaving = false;
+  bool touchLatched = false;
+  void updateShadowMenu();
   
   // Virtual method for GUI loop - can be extended by derived classes
   virtual void mainLoop();
