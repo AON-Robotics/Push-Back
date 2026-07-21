@@ -6,12 +6,14 @@
 #include "aon/lemlib/drive-io.hpp"
 #include "aon/shadow/processor.hpp"
 #include "aon/shadow/recorder.hpp"
+#include "aon/shadow/mechanisms.hpp"
 #include "lemlib/api.hpp"
 #include "pros/misc.hpp"
 #include "pros/rtos.hpp"
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 
@@ -49,6 +51,7 @@ struct ServiceStorage {
   bool ioBusy = false;
   std::uint32_t nextPendingStart = 0;
   std::uint32_t pendingStartOperation = 0;
+  std::atomic<bool> recordingActive{false};
 };
 
 ServiceStorage& data() {
@@ -80,6 +83,7 @@ ResultCode startRecordingLocked(ServiceStorage& serviceData,
     return recorderResult;
   }
   serviceData.startedAt = pros::millis();
+  serviceData.recordingActive.store(true);
   return ResultCode::Ok;
 }
 
@@ -153,6 +157,7 @@ ResultCode Service::stopAndSave() {
     }
     if (serviceData.ioBusy) return ResultCode::UnsafeState;
     serviceData.ioBusy = true;
+    serviceData.recordingActive.store(false);
     operation = serviceData.state.recordingSession();
     const ResultCode stopResult = serviceData.recorder.stop();
     targetSlot = serviceData.state.status().slot;
@@ -244,6 +249,21 @@ Status Service::status() const {
   return serviceData.state.status();
 }
 
+void captureMechanism(MechanismKind kind, std::int16_t value) {
+  auto& serviceData = data();
+  if (!serviceData.recordingActive.load()) return;
+  Lock lock(serviceData.mutex);
+  if (serviceData.state.status().mode != ServiceMode::Recording) return;
+
+  const ResultCode result = serviceData.recorder.event(
+      {pros::millis() - serviceData.startedAt, kind, value});
+  if (result != ResultCode::Ok && result != ResultCode::DuplicateEvent) {
+    serviceData.recordingActive.store(false);
+    serviceData.state.beginProcessing(pros::millis());
+    serviceData.state.finishSave(result, pros::millis());
+  }
+}
+
 void Service::pollRecorder() {
   auto& serviceData = data();
   std::uint32_t elapsed = 0;
@@ -281,6 +301,7 @@ void Service::pollRecorder() {
   if (!serviceData.state.acceptsSample(session)) return;
   const ResultCode result = serviceData.recorder.sample(sample);
   if (result != ResultCode::Ok && result != ResultCode::SampleTooSoon) {
+    serviceData.recordingActive.store(false);
     serviceData.state.beginProcessing(pros::millis());
     serviceData.state.finishSave(result, pros::millis());
   }
@@ -288,6 +309,7 @@ void Service::pollRecorder() {
 
 void Service::cancel() {
   auto& serviceData = data();
+  serviceData.recordingActive.store(false);
   Lock lock(serviceData.mutex);
   if (serviceData.recorder.isRecording()) serviceData.recorder.stop();
   serviceData.state.cancel(pros::millis());

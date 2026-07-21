@@ -73,6 +73,8 @@ class Intake {
   /// @brief Raises the cart by deactivating its pistons
   void raiseCart();
 
+  bool isCartDropped() const;
+
   /// @brief This small subroutine moves the intake such that a block is scored
   /// on a goal.
   /// @param to The location out of which we will score the balls (HIGHER,
@@ -165,6 +167,8 @@ class Intake {
   /// @brief Lowers the scorer to allow for scoring in the middle goal
   void lowerScorer();
 
+  bool isScorerRaised() const;
+
   /// @brief Sets the cart state to the opposite of what it currently is
   void toggleCart();
 
@@ -174,6 +178,8 @@ class Intake {
   /// @brief Raises the cart by deactivating its pistons
   void raiseCart();
 
+  bool isCartDropped() const;
+
   /// @brief Sets the trapdoor state to the opposite of what it currently is
   void toggleTrapdoor();
 
@@ -182,6 +188,8 @@ class Intake {
 
   /// @brief Closes the trapdoor by deactivating its pistons
   void closeTrapdoor();
+
+  bool isTrapdoorOpen() const;
 
 #endif
 

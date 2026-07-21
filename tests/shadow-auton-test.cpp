@@ -1,4 +1,6 @@
 #include "aon/shadow/codec.hpp"
+#include "aon/lemlib/drive-command.hpp"
+#include "aon/shadow/mechanisms.hpp"
 #include "aon/shadow/recorder.hpp"
 #include "aon/shadow/processor.hpp"
 #include "aon/shadow/service-state.hpp"
@@ -15,6 +17,8 @@
 #define CHECK(x) do { if (!(x)) { std::cerr << #x << '\n'; std::exit(1); } } while (false)
 
 using namespace aon::shadow;
+using aon::lemlib_integration::packDriveCommand;
+using aon::lemlib_integration::unpackDriveCommand;
 
 class MemoryFileStore final : public FileStore {
  public:
@@ -147,11 +151,12 @@ void capacityTests() {
   for (std::size_t i = 0; i < kMaximumEvents; ++i) {
     const auto kind = i % 2 == 0 ? MechanismKind::Cart
                                 : MechanismKind::Trapdoor;
-    CHECK(events.event({static_cast<std::uint32_t>(i), kind, 1}) ==
+    const auto value = static_cast<std::int16_t>((i / 2) % 2);
+    CHECK(events.event({static_cast<std::uint32_t>(i), kind, value}) ==
           ResultCode::Ok);
   }
   CHECK(events.event({static_cast<std::uint32_t>(kMaximumEvents),
-                      MechanismKind::Cart, 1}) ==
+                      MechanismKind::Cart, 0}) ==
         ResultCode::CapacityReached);
   CHECK(events.capture().eventCount == kMaximumEvents);
   CHECK(events.capture().events[kMaximumEvents - 1].timeMs ==
@@ -581,6 +586,143 @@ void serviceStateTests() {
   CHECK(state.armPlay(0) == ResultCode::InvalidSlot);
 }
 
+MechanismEvent intakeEvent(std::uint32_t timeMs, IntakeIntent intent) {
+  return {timeMs, MechanismKind::IntakeMode,
+          static_cast<std::int16_t>(intent)};
+}
+
+void mechanismTests() {
+  constexpr std::array<IntakeIntent, 9> intakeIntents = {
+      IntakeIntent::Idle,         IntakeIntent::Store,
+      IntakeIntent::Corridor,     IntakeIntent::Reject,
+      IntakeIntent::ScoreBottom,  IntakeIntent::ScoreMiddle,
+      IntakeIntent::ScoreTop,     IntakeIntent::SortNormal,
+      IntakeIntent::SortInverted,
+  };
+
+  const DriveIntent unsaturated = normalizedArcadeDrive(0.6, 0.3);
+  CHECK(unsaturated.left == 114);
+  CHECK(unsaturated.right == 38);
+  const DriveIntent saturated = normalizedArcadeDrive(0.8, 0.4);
+  CHECK(saturated.left == 127);
+  CHECK(saturated.right == 42);
+  const DriveIntent reverse = normalizedArcadeDrive(-0.8, -0.4);
+  CHECK(reverse.left == -127);
+  CHECK(reverse.right == -42);
+
+  const auto packedDrive = packDriveCommand(-127, 93);
+  const auto unpackedDrive = unpackDriveCommand(packedDrive);
+  CHECK(unpackedDrive.left == -127);
+  CHECK(unpackedDrive.right == 93);
+  const auto clampedDrive = unpackDriveCommand(packDriveCommand(-200, 200));
+  CHECK(clampedDrive.left == -127);
+  CHECK(clampedDrive.right == 127);
+
+  Recorder held;
+  CHECK(held.start(RobotIdentity::Small) == ResultCode::Ok);
+  CHECK(held.event(intakeEvent(0, IntakeIntent::Store)) == ResultCode::Ok);
+  CHECK(held.event({10, MechanismKind::Brooks, 1}) == ResultCode::Ok);
+  CHECK(held.event(intakeEvent(20, IntakeIntent::Store)) ==
+        ResultCode::DuplicateEvent);
+  CHECK(held.event({30, MechanismKind::Brooks, 1}) ==
+        ResultCode::DuplicateEvent);
+  CHECK(held.event(intakeEvent(40, IntakeIntent::Store)) ==
+        ResultCode::DuplicateEvent);
+  CHECK(held.event(intakeEvent(60, IntakeIntent::Idle)) == ResultCode::Ok);
+  CHECK(held.capture().eventCount == 3);
+  CHECK(held.capture().events[2].value ==
+        static_cast<std::int16_t>(IntakeIntent::Idle));
+
+  Capture vocabulary = captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(100, 0, 6, 0, Direction::Forward),
+  });
+  for (std::size_t index = 0; index < intakeIntents.size(); ++index) {
+    vocabulary.events[vocabulary.eventCount++] = intakeEvent(
+        static_cast<std::uint32_t>(index), intakeIntents[index]);
+  }
+  const MechanismEvent smallMechanisms[] = {
+      {20, MechanismKind::Lever, 1},
+      {21, MechanismKind::ScorerHeight, 1},
+      {22, MechanismKind::Cart, 1},
+      {23, MechanismKind::Trapdoor, 1},
+      {24, MechanismKind::Brooks, 1},
+      {25, MechanismKind::Arrow, 1},
+  };
+  const MechanismEvent bigMechanisms[] = {
+      {30, MechanismKind::Cart, 0},
+      {31, MechanismKind::Brooks, 0},
+      {32, MechanismKind::Sem, 1},
+  };
+  for (const auto& event : smallMechanisms) {
+    vocabulary.events[vocabulary.eventCount++] = event;
+  }
+  for (const auto& event : bigMechanisms) {
+    vocabulary.events[vocabulary.eventCount++] = event;
+  }
+
+  const ProcessedRoute route = process(vocabulary);
+  static EncodedRecording bytes{};
+  CHECK(encode(vocabulary, route, 11, bytes) == ResultCode::Ok);
+  static DecodedRecording decoded{};
+  CHECK(decode(bytes.data.data(), bytes.size, RobotIdentity::Small, decoded) ==
+        ResultCode::Ok);
+  CHECK(decoded.capture.eventCount == vocabulary.eventCount);
+  for (std::size_t index = 0; index < vocabulary.eventCount; ++index) {
+    CHECK(decoded.capture.events[index].kind == vocabulary.events[index].kind);
+    CHECK(decoded.capture.events[index].value ==
+          vocabulary.events[index].value);
+  }
+
+  const IntakeIntent smallIntents[] = {
+      IntakeIntent::Idle, IntakeIntent::Store, IntakeIntent::Corridor,
+      IntakeIntent::Reject, IntakeIntent::ScoreBottom,
+  };
+  for (const auto intent : smallIntents) {
+    CHECK(validateMechanism(RobotIdentity::Small, intakeEvent(0, intent)) ==
+          ResultCode::Ok);
+  }
+  const IntakeIntent bigIntents[] = {
+      IntakeIntent::Idle,        IntakeIntent::Store,
+      IntakeIntent::ScoreBottom, IntakeIntent::ScoreMiddle,
+      IntakeIntent::ScoreTop,    IntakeIntent::SortNormal,
+      IntakeIntent::SortInverted,
+  };
+  for (const auto intent : bigIntents) {
+    CHECK(validateMechanism(RobotIdentity::Big, intakeEvent(0, intent)) ==
+          ResultCode::Ok);
+  }
+  for (const auto& event : smallMechanisms) {
+    CHECK(validateMechanism(RobotIdentity::Small, event) == ResultCode::Ok);
+  }
+  for (const auto& event : bigMechanisms) {
+    CHECK(validateMechanism(RobotIdentity::Big, event) == ResultCode::Ok);
+  }
+  CHECK(validateMechanism(RobotIdentity::Small,
+                          {0, MechanismKind::Sem, 1}) ==
+        ResultCode::WrongRobot);
+  const MechanismKind smallOnlyKinds[] = {
+      MechanismKind::Arrow, MechanismKind::ScorerHeight,
+      MechanismKind::Trapdoor, MechanismKind::Lever,
+  };
+  for (const auto kind : smallOnlyKinds) {
+    CHECK(validateMechanism(RobotIdentity::Big, {0, kind, 1}) ==
+          ResultCode::WrongRobot);
+  }
+  CHECK(validateMechanism(RobotIdentity::Small,
+                          {0, MechanismKind::Cart, 2}) ==
+        ResultCode::CorruptFile);
+  CHECK(validateMechanism(
+            RobotIdentity::Small,
+            {0, MechanismKind::IntakeMode,
+             static_cast<std::int16_t>(IntakeIntent::SortInverted) + 1}) ==
+        ResultCode::CorruptFile);
+  CHECK(validateMechanism(
+            RobotIdentity::Small,
+            {0, static_cast<MechanismKind>(255), 0}) ==
+        ResultCode::CorruptFile);
+}
+
 int main() {
   recorderTests();
   capacityTests();
@@ -588,5 +730,6 @@ int main() {
   codecTests();
   storageTests();
   serviceStateTests();
+  mechanismTests();
   std::cout << "shadow auton tests passed\n";
 }

@@ -13,6 +13,7 @@
 
 #include <cstdio>
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -20,6 +21,8 @@
 
 namespace aon::lemlib_integration {
 namespace {
+
+std::atomic<std::uint16_t> effectiveDrive{packDriveCommand(0, 0)};
 
 struct TrackingSample {
   double left;
@@ -232,14 +235,12 @@ void commandTank(int left, int right) {
   rightMotors().move(std::clamp(right, -127, 127));
 }
 
+void setEffectiveDriveCommand(int left, int right) {
+  effectiveDrive.store(packDriveCommand(left, right));
+}
+
 DriveCommand effectiveDriveCommand() {
-  const auto commandFor = [](const pros::MotorGroup& motors) {
-    const std::int32_t voltage = motors.get_voltage();
-    if (voltage == PROS_ERR) return static_cast<std::int8_t>(0);
-    return static_cast<std::int8_t>(
-        std::clamp<std::int32_t>(voltage * 127 / 12000, -127, 127));
-  };
-  return {commandFor(leftMotors()), commandFor(rightMotors())};
+  return unpackDriveCommand(effectiveDrive.load());
 }
 
 void stopDrive() { commandTank(0, 0); }

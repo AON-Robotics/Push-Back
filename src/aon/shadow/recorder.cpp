@@ -95,10 +95,13 @@ ResultCode Recorder::sample(const RawSample& sampleValue) {
 ResultCode Recorder::event(const MechanismEvent& eventValue) {
   if (!recording_) return ResultCode::NotRecording;
 
-  if (capture_.eventCount > 0) {
-    const auto& previous = capture_.events[capture_.eventCount - 1];
-    if (eventValue.kind == previous.kind && eventValue.value == previous.value) {
-      return ResultCode::DuplicateEvent;
+  for (std::size_t index = capture_.eventCount; index > 0; --index) {
+    const auto& previous = capture_.events[index - 1];
+    if (eventValue.kind == previous.kind) {
+      if (eventValue.value == previous.value) {
+        return ResultCode::DuplicateEvent;
+      }
+      break;
     }
   }
 

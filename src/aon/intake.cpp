@@ -209,6 +209,8 @@ void Intake::dropCart() { cart.activate(); }
 
 void Intake::raiseCart() { cart.deactivate(); }
 
+bool Intake::isCartDropped() const { return cart.isActivated(); }
+
 void Intake::activateScan() { scanning = true; }
 
 void Intake::stopScan() { scanning = false; }
@@ -394,17 +396,23 @@ void Intake::raiseScorer() { scorerPiston.activate(); }
 
 void Intake::lowerScorer() { scorerPiston.deactivate(); }
 
+bool Intake::isScorerRaised() const { return scorerPiston.isActivated(); }
+
 void Intake::toggleCart() { cart.toggle(); }
 
 void Intake::dropCart() { cart.activate(); }
 
 void Intake::raiseCart() { cart.deactivate(); }
 
+bool Intake::isCartDropped() const { return cart.isActivated(); }
+
 void Intake::toggleTrapdoor() { trapdoor.toggle(); }
 
 void Intake::openTrapdoor() { trapdoor.activate(); }
 
 void Intake::closeTrapdoor() { trapdoor.deactivate(); }
+
+bool Intake::isTrapdoorOpen() const { return trapdoor.isActivated(); }
 
 void Intake::scorer(const int& rpm) {
   // Manual scorer commands override position control so drivers can recover
