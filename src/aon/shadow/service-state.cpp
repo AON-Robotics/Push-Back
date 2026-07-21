@@ -92,6 +92,19 @@ bool ServiceStateMachine::acceptsSample(std::uint32_t session) const {
          status_.mode == ServiceMode::Recording;
 }
 
+std::uint32_t ServiceStateMachine::revision() const { return session_; }
+
+ResultCode ServiceStateMachine::revalidatePendingStart(
+    std::uint32_t revisionValue, bool driverControl) const {
+  if (revisionValue != session_) return ResultCode::Cancelled;
+  if (!driverControl) return ResultCode::UnsafeState;
+  if (status_.mode == ServiceMode::Recording ||
+      status_.mode == ServiceMode::Processing) {
+    return ResultCode::AlreadyRecording;
+  }
+  return ResultCode::Ok;
+}
+
 void ServiceStateMachine::cancel(std::uint32_t now) {
   armedSlot_ = 0;
   session_ = nextSession(session_);

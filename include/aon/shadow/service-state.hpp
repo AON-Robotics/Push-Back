@@ -36,6 +36,9 @@ class ServiceStateMachine {
   bool consumeArm(std::uint8_t slot);
   std::uint32_t recordingSession() const;
   bool acceptsSample(std::uint32_t session) const;
+  std::uint32_t revision() const;
+  ResultCode revalidatePendingStart(std::uint32_t revision,
+                                    bool driverControl) const;
   void cancel(std::uint32_t now = 0);
   Status status() const;
 

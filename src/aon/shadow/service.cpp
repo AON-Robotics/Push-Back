@@ -47,6 +47,8 @@ struct ServiceStorage {
   std::array<SlotSummary, kSlotCount> cachedSlots{};
   std::uint32_t startedAt = 0;
   bool ioBusy = false;
+  std::uint32_t nextPendingStart = 0;
+  std::uint32_t pendingStartOperation = 0;
 };
 
 ServiceStorage& data() {
@@ -93,6 +95,8 @@ ResultCode Service::beginRecording(std::uint8_t slotValue,
   if (slotValue < 1 || slotValue > kSlotCount) return ResultCode::InvalidSlot;
 
   if (!overwriteConfirmed) {
+    std::uint32_t pendingOperation = 0;
+    std::uint32_t stateRevision = 0;
     {
       Lock lock(serviceData.mutex);
       if (serviceData.ioBusy) return ResultCode::UnsafeState;
@@ -101,13 +105,27 @@ ResultCode Service::beginRecording(std::uint8_t slotValue,
         return ResultCode::AlreadyRecording;
       }
       serviceData.ioBusy = true;
+      ++serviceData.nextPendingStart;
+      if (serviceData.nextPendingStart == 0) ++serviceData.nextPendingStart;
+      pendingOperation = serviceData.nextPendingStart;
+      serviceData.pendingStartOperation = pendingOperation;
+      stateRevision = serviceData.state.revision();
     }
     const SlotSummary current = serviceData.storage.inspect(slotValue,
                                                             kRobotIdentity);
     {
       Lock lock(serviceData.mutex);
+      if (serviceData.pendingStartOperation != pendingOperation) {
+        return ResultCode::Cancelled;
+      }
+      serviceData.pendingStartOperation = 0;
       serviceData.ioBusy = false;
       serviceData.cachedSlots[slotValue - 1] = current;
+      const bool driverControl = !pros::competition::is_disabled() &&
+                                 !pros::competition::is_autonomous();
+      const ResultCode revalidated = serviceData.state.revalidatePendingStart(
+          stateRevision, driverControl);
+      if (revalidated != ResultCode::Ok) return revalidated;
       if (current.valid) return ResultCode::UnsafeState;
       if (current.result != ResultCode::EmptyRecording) return current.result;
       return startRecordingLocked(serviceData, slotValue, false);

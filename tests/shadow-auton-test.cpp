@@ -523,6 +523,16 @@ void storageTests() {
 }
 
 void serviceStateTests() {
+  ServiceStateMachine pendingStart;
+  const std::uint32_t pendingRevision = pendingStart.revision();
+  CHECK(pendingStart.revalidatePendingStart(pendingRevision, true) ==
+        ResultCode::Ok);
+  CHECK(pendingStart.revalidatePendingStart(pendingRevision, false) ==
+        ResultCode::UnsafeState);
+  pendingStart.cancel();
+  CHECK(pendingStart.revalidatePendingStart(pendingRevision, true) ==
+        ResultCode::Cancelled);
+
   ServiceStateMachine state;
   CHECK(state.beginRecord(0, true) == ResultCode::InvalidSlot);
   CHECK(state.beginRecord(1, false) == ResultCode::Ok);
