@@ -46,6 +46,14 @@ ResultCode failureFor(const Candidate& a, const Candidate& b) {
   return b.result;
 }
 
+bool operationalFailure(const Candidate& candidate) {
+  return candidate.result != ResultCode::Ok &&
+         candidate.result != ResultCode::EmptyRecording &&
+         candidate.result != ResultCode::CorruptFile &&
+         candidate.result != ResultCode::UnsupportedVersion &&
+         candidate.result != ResultCode::WrongRobot;
+}
+
 }  // namespace
 
 Storage::Storage(FileStore& files) : files_(files) {}
@@ -101,6 +109,8 @@ ResultCode Storage::save(std::uint8_t slot, RobotIdentity robot,
       readCandidate(files_, pathA, robot, encodedA_, decodedA_);
   const Candidate b =
       readCandidate(files_, pathB, robot, encodedB_, decodedB_);
+  if (operationalFailure(a)) return a.result;
+  if (operationalFailure(b)) return b.result;
 
   std::uint32_t newest = 0;
   if (a.valid) newest = a.generation;

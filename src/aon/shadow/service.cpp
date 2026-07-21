@@ -11,6 +11,7 @@
 #include "pros/rtos.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 
@@ -43,6 +44,7 @@ struct ServiceStorage {
   Recorder recorder;
   Capture captureSnapshot{};
   ProcessedRoute routeSnapshot{};
+  std::array<SlotSummary, kSlotCount> cachedSlots{};
   std::uint32_t startedAt = 0;
   bool ioBusy = false;
 };
@@ -64,6 +66,21 @@ Direction directionFor(std::int8_t left, std::int8_t right) {
   return Direction::Stopped;
 }
 
+ResultCode startRecordingLocked(ServiceStorage& serviceData,
+                                std::uint8_t slotValue,
+                                bool overwriteConfirmed) {
+  const ResultCode stateResult = serviceData.state.beginRecord(
+      slotValue, overwriteConfirmed, pros::millis());
+  if (stateResult != ResultCode::Ok) return stateResult;
+  const ResultCode recorderResult = serviceData.recorder.start(kRobotIdentity);
+  if (recorderResult != ResultCode::Ok) {
+    serviceData.state.cancel(pros::millis());
+    return recorderResult;
+  }
+  serviceData.startedAt = pros::millis();
+  return ResultCode::Ok;
+}
+
 }  // namespace
 
 ResultCode Service::beginRecording(std::uint8_t slotValue,
@@ -79,6 +96,10 @@ ResultCode Service::beginRecording(std::uint8_t slotValue,
     {
       Lock lock(serviceData.mutex);
       if (serviceData.ioBusy) return ResultCode::UnsafeState;
+      const auto mode = serviceData.state.status().mode;
+      if (mode == ServiceMode::Recording || mode == ServiceMode::Processing) {
+        return ResultCode::AlreadyRecording;
+      }
       serviceData.ioBusy = true;
     }
     const SlotSummary current = serviceData.storage.inspect(slotValue,
@@ -86,45 +107,39 @@ ResultCode Service::beginRecording(std::uint8_t slotValue,
     {
       Lock lock(serviceData.mutex);
       serviceData.ioBusy = false;
+      serviceData.cachedSlots[slotValue - 1] = current;
+      if (current.valid) return ResultCode::UnsafeState;
+      if (current.result != ResultCode::EmptyRecording) return current.result;
+      return startRecordingLocked(serviceData, slotValue, false);
     }
-    if (current.valid) return ResultCode::UnsafeState;
-    if (current.result != ResultCode::EmptyRecording) return current.result;
   }
 
   Lock lock(serviceData.mutex);
-  const ResultCode stateResult = serviceData.state.beginRecord(
-      slotValue, overwriteConfirmed, pros::millis());
-  if (stateResult != ResultCode::Ok) return stateResult;
-  const ResultCode recorderResult = serviceData.recorder.start(kRobotIdentity);
-  if (recorderResult != ResultCode::Ok) {
-    serviceData.state.cancel(pros::millis());
-    return recorderResult;
-  }
-  serviceData.startedAt = pros::millis();
-  return ResultCode::Ok;
+  if (serviceData.ioBusy) return ResultCode::UnsafeState;
+  return startRecordingLocked(serviceData, slotValue, true);
 }
 
 ResultCode Service::stopAndSave() {
   auto& serviceData = data();
   std::uint8_t targetSlot = 0;
+  std::uint32_t operation = 0;
   {
     Lock lock(serviceData.mutex);
     if (serviceData.state.status().mode != ServiceMode::Recording) {
       return ResultCode::NotRecording;
     }
+    if (serviceData.ioBusy) return ResultCode::UnsafeState;
+    serviceData.ioBusy = true;
+    operation = serviceData.state.recordingSession();
     const ResultCode stopResult = serviceData.recorder.stop();
     targetSlot = serviceData.state.status().slot;
     serviceData.state.beginProcessing(pros::millis());
     if (stopResult != ResultCode::Ok) {
-      serviceData.state.finishSave(stopResult, pros::millis());
+      serviceData.ioBusy = false;
+      serviceData.state.finishSave(stopResult, pros::millis(), operation);
       return stopResult;
     }
     serviceData.captureSnapshot = serviceData.recorder.capture();
-    if (serviceData.ioBusy) {
-      serviceData.state.finishSave(ResultCode::UnsafeState, pros::millis());
-      return ResultCode::UnsafeState;
-    }
-    serviceData.ioBusy = true;
   }
 
   ResultCode saveResult =
@@ -134,10 +149,19 @@ ResultCode Service::stopAndSave() {
                                           serviceData.captureSnapshot,
                                           serviceData.routeSnapshot);
   }
+  SlotSummary savedSummary{};
+  if (saveResult == ResultCode::Ok) {
+    savedSummary = serviceData.storage.inspect(targetSlot, kRobotIdentity);
+  }
   {
     Lock lock(serviceData.mutex);
     serviceData.ioBusy = false;
-    serviceData.state.finishSave(saveResult, pros::millis());
+    const ResultCode completion = serviceData.state.finishSave(
+        saveResult, pros::millis(), operation);
+    if (completion == ResultCode::Cancelled) return completion;
+    if (saveResult == ResultCode::Ok) {
+      serviceData.cachedSlots[targetSlot - 1] = savedSummary;
+    }
   }
   return saveResult;
 }
@@ -159,6 +183,9 @@ ResultCode Service::erase(std::uint8_t slotValue, bool confirmed) {
   {
     Lock lock(serviceData.mutex);
     serviceData.ioBusy = false;
+    if (result == ResultCode::Ok) {
+      serviceData.cachedSlots[slotValue - 1] = {};
+    }
   }
   return result;
 }
@@ -172,9 +199,10 @@ SlotSummary Service::slot(std::uint8_t slotValue) const {
   auto& serviceData = data();
   {
     Lock lock(serviceData.mutex);
-    if (serviceData.ioBusy) {
-      summary.result = ResultCode::UnsafeState;
-      return summary;
+    const auto mode = serviceData.state.status().mode;
+    if (serviceData.ioBusy || mode == ServiceMode::Recording ||
+        mode == ServiceMode::Processing) {
+      return serviceData.cachedSlots[slotValue - 1];
     }
     serviceData.ioBusy = true;
   }
@@ -182,6 +210,7 @@ SlotSummary Service::slot(std::uint8_t slotValue) const {
   {
     Lock lock(serviceData.mutex);
     serviceData.ioBusy = false;
+    serviceData.cachedSlots[slotValue - 1] = summary;
   }
   return summary;
 }
@@ -195,10 +224,12 @@ Status Service::status() const {
 void Service::pollRecorder() {
   auto& serviceData = data();
   std::uint32_t elapsed = 0;
+  std::uint32_t session = 0;
   {
     Lock lock(serviceData.mutex);
     if (serviceData.state.status().mode != ServiceMode::Recording) return;
     elapsed = pros::millis() - serviceData.startedAt;
+    session = serviceData.state.recordingSession();
   }
   if (pros::competition::is_disabled() ||
       pros::competition::is_autonomous() || elapsed >= kMaximumDurationMs) {
@@ -224,7 +255,7 @@ void Service::pollRecorder() {
                      std::isfinite(pose.theta);
 
   Lock lock(serviceData.mutex);
-  if (serviceData.state.status().mode != ServiceMode::Recording) return;
+  if (!serviceData.state.acceptsSample(session)) return;
   const ResultCode result = serviceData.recorder.sample(sample);
   if (result != ResultCode::Ok && result != ResultCode::SampleTooSoon) {
     serviceData.state.beginProcessing(pros::millis());

@@ -8,10 +8,14 @@
 namespace aon::shadow {
 namespace {
 
-ResultCode openFailure() {
+ResultCode readOpenFailure() {
   if (errno == EROFS) return ResultCode::ReadOnly;
   return errno == ENOENT ? ResultCode::EmptyRecording
                          : ResultCode::OpenFailed;
+}
+
+ResultCode writeOpenFailure() {
+  return errno == EROFS ? ResultCode::ReadOnly : ResultCode::OpenFailed;
 }
 
 }  // namespace
@@ -20,7 +24,7 @@ ResultCode SdFileStore::read(const char* path, EncodedRecording& out) const {
   out.size = 0;
   if (!pros::usd::is_installed()) return ResultCode::NoSd;
   std::FILE* file = std::fopen(path, "rb");
-  if (file == nullptr) return openFailure();
+  if (file == nullptr) return readOpenFailure();
 
   ResultCode result = ResultCode::Ok;
   if (std::fseek(file, 0, SEEK_END) != 0) {
@@ -53,7 +57,7 @@ ResultCode SdFileStore::write(const char* path, const std::uint8_t* data,
     return ResultCode::WriteFailed;
   }
   std::FILE* file = std::fopen(path, "wb");
-  if (file == nullptr) return openFailure();
+  if (file == nullptr) return writeOpenFailure();
 
   const bool wrote = std::fwrite(data, 1, size, file) == size;
   const bool flushed = std::fflush(file) == 0;

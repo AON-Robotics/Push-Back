@@ -19,6 +19,10 @@ using namespace aon::shadow;
 class MemoryFileStore final : public FileStore {
  public:
   ResultCode read(const char* path, EncodedRecording& out) const override {
+    if (!failReadPath.empty() && failReadPath == path) {
+      failReadPath.clear();
+      return failReadResult;
+    }
     const auto found = files.find(path);
     if (found == files.end()) return ResultCode::EmptyRecording;
     out = found->second;
@@ -27,9 +31,11 @@ class MemoryFileStore final : public FileStore {
 
   ResultCode write(const char* path, const std::uint8_t* data,
                    std::size_t size) override {
-    if (failNextWrite) {
-      failNextWrite = false;
-      return ResultCode::WriteFailed;
+    ++writeCount;
+    if (failNextWrite != ResultCode::Ok) {
+      const ResultCode result = failNextWrite;
+      failNextWrite = ResultCode::Ok;
+      return result;
     }
     if (data == nullptr || size > kMaximumEncodedBytes) {
       return ResultCode::WriteFailed;
@@ -45,7 +51,10 @@ class MemoryFileStore final : public FileStore {
     return ResultCode::Ok;
   }
 
-  bool failNextWrite = false;
+  mutable std::string failReadPath;
+  ResultCode failReadResult = ResultCode::ReadFailed;
+  ResultCode failNextWrite = ResultCode::Ok;
+  std::size_t writeCount = 0;
   std::unordered_map<std::string, EncodedRecording> files;
 };
 
@@ -464,7 +473,7 @@ void storageTests() {
   Capture secondCapture = firstCapture;
   secondCapture.samples[1].y = 12;
   const ProcessedRoute secondRoute = process(secondCapture);
-  files.failNextWrite = true;
+  files.failNextWrite = ResultCode::WriteFailed;
   CHECK(storage.save(1, RobotIdentity::Small, secondCapture, secondRoute) ==
         ResultCode::WriteFailed);
 
@@ -483,12 +492,42 @@ void storageTests() {
   CHECK(storage.load(1, RobotIdentity::Small, loaded) ==
         ResultCode::EmptyRecording);
   CHECK(storage.erase(4) == ResultCode::InvalidSlot);
+
+  const ResultCode writeFailures[] = {
+      ResultCode::WriteFailed, ResultCode::FlushFailed,
+      ResultCode::CloseFailed};
+  for (const ResultCode failure : writeFailures) {
+    files.files.clear();
+    CHECK(storage.save(1, RobotIdentity::Small, firstCapture, firstRoute) ==
+          ResultCode::Ok);
+    files.failNextWrite = failure;
+    CHECK(storage.save(1, RobotIdentity::Small, secondCapture, secondRoute) ==
+          failure);
+    CHECK(storage.load(1, RobotIdentity::Small, loaded) == ResultCode::Ok);
+    CHECK(loaded.generation == 1);
+    CHECK(loaded.capture.samples[1].y == 6);
+  }
+
+  files.files.clear();
+  CHECK(storage.save(1, RobotIdentity::Small, firstCapture, firstRoute) ==
+        ResultCode::Ok);
+  const std::size_t writesBeforeReadFailure = files.writeCount;
+  files.failReadPath = "/usd/aon-shadow-slot-1-a.bin";
+  files.failReadResult = ResultCode::ReadFailed;
+  CHECK(storage.save(1, RobotIdentity::Small, secondCapture, secondRoute) ==
+        ResultCode::ReadFailed);
+  CHECK(files.writeCount == writesBeforeReadFailure);
+  CHECK(storage.load(1, RobotIdentity::Small, loaded) == ResultCode::Ok);
+  CHECK(loaded.generation == 1);
+  CHECK(loaded.capture.samples[1].y == 6);
 }
 
 void serviceStateTests() {
   ServiceStateMachine state;
   CHECK(state.beginRecord(0, true) == ResultCode::InvalidSlot);
   CHECK(state.beginRecord(1, false) == ResultCode::Ok);
+  const std::uint32_t firstSession = state.recordingSession();
+  CHECK(state.acceptsSample(firstSession));
   CHECK(state.status().mode == ServiceMode::Recording);
   CHECK(state.authorizePlay(false, true, true) == ResultCode::PlayLocked);
   CHECK(state.beginProcessing() == ResultCode::Ok);
@@ -501,13 +540,24 @@ void serviceStateTests() {
   state.cancel();
   CHECK(state.status().mode == ServiceMode::Cancelled);
   CHECK(state.beginRecord(1, false) == ResultCode::Ok);
+  const std::uint32_t secondSession = state.recordingSession();
+  CHECK(secondSession != firstSession);
+  CHECK(!state.acceptsSample(firstSession));
+  CHECK(state.acceptsSample(secondSession));
   CHECK(state.beginProcessing() == ResultCode::Ok);
-  CHECK(state.finishSave(ResultCode::Ok) == ResultCode::Ok);
+  CHECK(state.finishSave(ResultCode::Ok, 0, firstSession) ==
+        ResultCode::Cancelled);
+  CHECK(state.status().mode == ServiceMode::Processing);
+  CHECK(state.finishSave(ResultCode::Ok, 0, secondSession) == ResultCode::Ok);
   CHECK(state.status().mode == ServiceMode::Saved);
   CHECK(state.beginRecord(1, false) == ResultCode::UnsafeState);
   CHECK(state.beginRecord(1, true) == ResultCode::Ok);
+  const std::uint32_t saveOperation = state.recordingSession();
   CHECK(state.beginProcessing() == ResultCode::Ok);
-  CHECK(state.finishSave(ResultCode::Ok) == ResultCode::Ok);
+  state.cancel();
+  CHECK(state.finishSave(ResultCode::Ok, 0, saveOperation) ==
+        ResultCode::Cancelled);
+  CHECK(state.status().mode == ServiceMode::Cancelled);
 
   CHECK(state.authorizePlay(true, false, true) == ResultCode::PlayLocked);
   CHECK(state.authorizePlay(true, true, false) == ResultCode::EmptyRecording);

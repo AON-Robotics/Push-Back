@@ -28,17 +28,21 @@ class ServiceStateMachine {
   ResultCode beginRecord(std::uint8_t slot, bool overwriteConfirmed,
                          std::uint32_t now = 0);
   ResultCode beginProcessing(std::uint32_t now = 0);
-  ResultCode finishSave(ResultCode result, std::uint32_t now = 0);
+  ResultCode finishSave(ResultCode result, std::uint32_t now = 0,
+                        std::uint32_t operation = 0);
   ResultCode authorizePlay(bool startConfirmed, bool robotDisabled,
                            bool slotValid) const;
   ResultCode armPlay(std::uint8_t slot, std::uint32_t now = 0);
   bool consumeArm(std::uint8_t slot);
+  std::uint32_t recordingSession() const;
+  bool acceptsSample(std::uint32_t session) const;
   void cancel(std::uint32_t now = 0);
   Status status() const;
 
  private:
   Status status_{};
   std::uint8_t armedSlot_ = 0;
+  std::uint32_t session_ = 0;
 };
 
 }  // namespace aon::shadow

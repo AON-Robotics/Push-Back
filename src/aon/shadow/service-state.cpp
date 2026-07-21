@@ -5,6 +5,11 @@ namespace {
 
 bool validSlot(std::uint8_t slot) { return slot >= 1 && slot <= kSlotCount; }
 
+std::uint32_t nextSession(std::uint32_t current) {
+  ++current;
+  return current == 0 ? 1 : current;
+}
+
 }  // namespace
 
 ResultCode ServiceStateMachine::beginRecord(std::uint8_t slot,
@@ -20,6 +25,7 @@ ResultCode ServiceStateMachine::beginRecord(std::uint8_t slot,
     return ResultCode::UnsafeState;
   }
   status_ = {ServiceMode::Recording, ResultCode::Ok, slot, now};
+  session_ = nextSession(session_);
   armedSlot_ = 0;
   return ResultCode::Ok;
 }
@@ -35,7 +41,9 @@ ResultCode ServiceStateMachine::beginProcessing(std::uint32_t now) {
 }
 
 ResultCode ServiceStateMachine::finishSave(ResultCode result,
-                                           std::uint32_t now) {
+                                           std::uint32_t now,
+                                           std::uint32_t operation) {
+  if (operation != 0 && operation != session_) return ResultCode::Cancelled;
   if (status_.mode != ServiceMode::Processing) {
     return ResultCode::NotRecording;
   }
@@ -75,8 +83,18 @@ bool ServiceStateMachine::consumeArm(std::uint8_t slot) {
   return true;
 }
 
+std::uint32_t ServiceStateMachine::recordingSession() const {
+  return session_;
+}
+
+bool ServiceStateMachine::acceptsSample(std::uint32_t session) const {
+  return session != 0 && session == session_ &&
+         status_.mode == ServiceMode::Recording;
+}
+
 void ServiceStateMachine::cancel(std::uint32_t now) {
   armedSlot_ = 0;
+  session_ = nextSession(session_);
   status_ = {ServiceMode::Cancelled, ResultCode::Cancelled, status_.slot, now};
 }
 
