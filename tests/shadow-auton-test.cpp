@@ -1,7 +1,11 @@
+#include "aon/shadow/codec.hpp"
 #include "aon/shadow/recorder.hpp"
 #include "aon/shadow/processor.hpp"
 
+#include <array>
+#include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 
 #define CHECK(x) do { if (!(x)) { std::cerr << #x << '\n'; std::exit(1); } } while (false)
@@ -227,9 +231,144 @@ void processorTests() {
   CHECK(anchored.events[1].progress < 1.0F);
 }
 
+std::uint16_t encodedU16(const EncodedRecording& bytes, std::size_t offset) {
+  return static_cast<std::uint16_t>(bytes.data[offset]) |
+         static_cast<std::uint16_t>(bytes.data[offset + 1] << 8U);
+}
+
+std::uint32_t encodedU32(const EncodedRecording& bytes, std::size_t offset) {
+  return static_cast<std::uint32_t>(bytes.data[offset]) |
+         (static_cast<std::uint32_t>(bytes.data[offset + 1]) << 8U) |
+         (static_cast<std::uint32_t>(bytes.data[offset + 2]) << 16U) |
+         (static_cast<std::uint32_t>(bytes.data[offset + 3]) << 24U);
+}
+
+void setEncodedU16(EncodedRecording& bytes, std::size_t offset,
+                   std::uint16_t value) {
+  bytes.data[offset] = static_cast<std::uint8_t>(value);
+  bytes.data[offset + 1] = static_cast<std::uint8_t>(value >> 8U);
+}
+
+void setEncodedU32(EncodedRecording& bytes, std::size_t offset,
+                   std::uint32_t value) {
+  for (std::size_t index = 0; index < 4; ++index) {
+    bytes.data[offset + index] =
+        static_cast<std::uint8_t>(value >> (index * 8U));
+  }
+}
+
+void codecTests() {
+  Capture capture = captureWithPauseAndCartEvent();
+  capture.robot = RobotIdentity::Small;
+  capture.samples[1].leftX = -12;
+  capture.samples[1].leftY = 34;
+  capture.samples[1].rightX = -56;
+  capture.samples[1].rightY = 78;
+  capture.samples[1].leftCommand = -90;
+  capture.samples[1].rightCommand = 91;
+  const ProcessedRoute route = process(capture);
+
+  static EncodedRecording bytes{};
+  CHECK(encode(capture, route, 7, bytes) == ResultCode::Ok);
+  CHECK(bytes.size > 0);
+  static EncodedRecording repeated{};
+  CHECK(encode(capture, route, 7, repeated) == ResultCode::Ok);
+  CHECK(repeated.size == bytes.size);
+  CHECK(std::memcmp(bytes.data.data(), repeated.data.data(), bytes.size) == 0);
+
+  static DecodedRecording decoded{};
+  CHECK(decode(bytes.data.data(), bytes.size, RobotIdentity::Small, decoded) ==
+        ResultCode::Ok);
+  CHECK(decoded.generation == 7);
+  CHECK(decoded.capture.robot == capture.robot);
+  CHECK(decoded.capture.sampleCount == capture.sampleCount);
+  CHECK(decoded.capture.eventCount == capture.eventCount);
+  CHECK(decoded.capture.durationMs == capture.durationMs);
+  CHECK(decoded.capture.samples[1].y == capture.samples[1].y);
+  CHECK(decoded.capture.samples[1].leftX == capture.samples[1].leftX);
+  CHECK(decoded.capture.samples[1].rightY == capture.samples[1].rightY);
+  CHECK(decoded.capture.samples[1].leftCommand ==
+        capture.samples[1].leftCommand);
+  CHECK(decoded.capture.samples[1].direction ==
+        capture.samples[1].direction);
+  CHECK(decoded.capture.samples[1].poseValid ==
+        capture.samples[1].poseValid);
+  CHECK(decoded.capture.events[0].kind == capture.events[0].kind);
+  CHECK(decoded.capture.events[0].timeMs == capture.events[0].timeMs);
+  CHECK(decoded.capture.events[0].value == capture.events[0].value);
+  CHECK(decoded.route.result == ResultCode::Ok);
+  CHECK(decoded.route.segmentCount == route.segmentCount);
+  CHECK(decoded.route.pointCount == route.pointCount);
+  CHECK(decoded.route.eventCount == route.eventCount);
+  CHECK(decoded.route.start.x == route.start.x);
+  CHECK(decoded.route.points[1].y == route.points[1].y);
+  CHECK(decoded.route.segments[1].durationMs == route.segments[1].durationMs);
+  CHECK(decoded.route.points[1].speed == route.points[1].speed);
+  CHECK(decoded.route.events[0].progress == route.events[0].progress);
+  CHECK(decoded.route.events[0].offsetMs == route.events[0].offsetMs);
+
+  static EncodedRecording corrupted{};
+  corrupted = bytes;
+  corrupted.data[corrupted.size - 1] ^= 0x01U;
+  CHECK(decode(corrupted.data.data(), corrupted.size, RobotIdentity::Small,
+               decoded) == ResultCode::CorruptFile);
+
+  constexpr std::size_t kHeaderSize = 69;
+  CHECK(encodedU16(bytes, 10) == kHeaderSize);
+  std::array<std::size_t, 6> boundaries{};
+  boundaries[0] = kHeaderSize;
+  for (std::size_t section = 0; section < 5; ++section) {
+    boundaries[section + 1] = boundaries[section] +
+        encodedU32(bytes, 45 + section * 4);
+  }
+  CHECK(boundaries[5] == bytes.size);
+  for (std::size_t section = 0; section < 5; ++section) {
+    CHECK(decode(bytes.data.data(), boundaries[section], RobotIdentity::Small,
+                 decoded) == ResultCode::CorruptFile);
+  }
+  for (const auto boundary : boundaries) {
+    CHECK(decode(bytes.data.data(), boundary - 1, RobotIdentity::Small,
+                 decoded) == ResultCode::CorruptFile);
+  }
+
+  static EncodedRecording wrongMagic{};
+  wrongMagic = bytes;
+  wrongMagic.data[0] ^= 0x01U;
+  CHECK(decode(wrongMagic.data.data(), wrongMagic.size, RobotIdentity::Small,
+               decoded) == ResultCode::CorruptFile);
+
+  static EncodedRecording versionTwo{};
+  versionTwo = bytes;
+  setEncodedU16(versionTwo, 8, 2);
+  CHECK(decode(versionTwo.data.data(), versionTwo.size, RobotIdentity::Small,
+               decoded) == ResultCode::UnsupportedVersion);
+  CHECK(decode(bytes.data.data(), bytes.size, RobotIdentity::Big, decoded) ==
+        ResultCode::WrongRobot);
+
+  static EncodedRecording nonFinite{};
+  nonFinite = bytes;
+  setEncodedU32(nonFinite, 23, 0x7F800000U);
+  CHECK(decode(nonFinite.data.data(), nonFinite.size, RobotIdentity::Small,
+               decoded) == ResultCode::CorruptFile);
+
+  static EncodedRecording impossibleCount{};
+  impossibleCount = bytes;
+  setEncodedU16(impossibleCount, 35,
+                static_cast<std::uint16_t>(kMaximumSamples + 1));
+  CHECK(decode(impossibleCount.data.data(), impossibleCount.size,
+               RobotIdentity::Small, decoded) == ResultCode::CorruptFile);
+
+  CHECK(chooseGeneration({true, 4}, {true, 9}) == Generation::B);
+  CHECK(chooseGeneration({true, 4}, {false, 0}) == Generation::A);
+  CHECK(chooseGeneration({false, 0}, {true, 9}) == Generation::B);
+  CHECK(chooseGeneration({false, 0}, {false, 0}) == Generation::None);
+  CHECK(chooseGeneration({true, 9}, {true, 9}) == Generation::A);
+}
+
 int main() {
   recorderTests();
   capacityTests();
   processorTests();
+  codecTests();
   std::cout << "shadow auton tests passed\n";
 }
