@@ -28,7 +28,7 @@ This repository contains the code used for the VEX-U Push Back 2026 competition,
 Developing from both the lab laptop and another PC requires a clean handoff on
 the shared `Testing` branch. Read [the current development handoff](docs/CURRENT_HANDOFF.md)
 and follow [the two-computer workflow](docs/TWO_COMPUTER_WORKFLOW.md) before
-editing from a different machine or Codex task.
+editing from a different machine or development session.
 
 ### Requirements
 - VEX V5 Brain & Motors

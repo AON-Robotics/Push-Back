@@ -11,7 +11,7 @@ buildable commit and push it. On the other computer, pull before editing.
 
 ### Start a Session
 
-Run these commands before asking Codex to change code:
+Run these commands before starting development work:
 
 ```powershell
 git switch Testing
