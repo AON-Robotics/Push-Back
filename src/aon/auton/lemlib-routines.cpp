@@ -1,6 +1,7 @@
 #include "aon/auton/routines.hpp"
 #include "aon/globals.hpp"
 #include "aon/auton/actions.hpp"
+#include "aon/auton/figure-eight-validation.hpp"
 #include "aon/auton/mechanism-actions.hpp"
 #include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
@@ -8,6 +9,7 @@
 #include "pros/rtos.hpp"
 
 ASSET(path_jerryio_txt);
+ASSET(figure_eight_jerryio_txt);
 
 namespace aon::routines {
 namespace {
@@ -46,6 +48,31 @@ int RunLemLibForwardValidation() {
       {.forwards = true, .maxSpeed = 35});
   routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
   aon::auton::logStep("LemLib Forward 12in",
+                      result.succeeded ? "finish" : "failed");
+  return result.succeeded ? 1 : 0;
+#endif
+}
+
+int RunLemLibFigureEightValidation() {
+  auto& routine = aon::auton::actions();
+
+#if USING_BIG_ROBOT
+  aon::auton::logStep(aon::auton::FigureEightValidation::name,
+                      "unsupported big robot");
+  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+  return 0;
+#else
+  using aon::auton::FigureEightValidation;
+  aon::auton::logStep(FigureEightValidation::name, "start");
+  routine.setPose(FigureEightValidation::startX,
+                  FigureEightValidation::startY,
+                  FigureEightValidation::startHeading);
+  const auto result = routine.followPath(
+      FigureEightValidation::name, figure_eight_jerryio_txt,
+      FigureEightValidation::lookahead, FigureEightValidation::timeoutMs,
+      true);
+  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+  aon::auton::logStep(FigureEightValidation::name,
                       result.succeeded ? "finish" : "failed");
   return result.succeeded ? 1 : 0;
 #endif

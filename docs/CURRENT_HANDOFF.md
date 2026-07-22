@@ -9,7 +9,7 @@ Use Git history as the source of truth when this file and a chat disagree.
 - Remote: `origin` at `AON-Robotics/Push-Back`
 - Latest completed Shadow mechanism checkpoint: `d531935`
 - Hardware flag committed for uploads: `USING_BIG_ROBOT false`
-- Default autonomous test: red/blue AUT3, `TEST LemLib 12in`
+- Default autonomous test: red/blue AUT3, `TEST LemLib Figure 8`
 
 Confirm these claims before editing:
 
@@ -34,6 +34,8 @@ The approved architecture and implementation sequence are recorded in:
 - `docs/superpowers/plans/2026-07-17-motor-encoder-odometry-fallback.md`
 - `docs/superpowers/specs/2026-07-21-shadow-auton-design.md`
 - `docs/superpowers/plans/2026-07-21-shadow-auton.md`
+- `docs/superpowers/specs/2026-07-21-lemlib-figure-eight-validation-design.md`
+- `docs/superpowers/plans/2026-07-21-lemlib-figure-eight-validation.md`
 
 Task 1 is implemented. On a fresh boot, LemLib validation no longer starts the
 legacy odometry task. Native Kevin and Skills routines start legacy odometry
@@ -78,13 +80,24 @@ Shadow recording implementation is complete with playback authorization false.
 Do not implement or expose playback until the existing LemLib/native baseline
 gate passes and all three SD slots survive a full-reboot save/load test.
 
+The photographed Shadow `OPEN FAILED` result on empty cards was traced to a
+PROS 4.2.2 errno mismatch: a missing file open is reported as `ENFILE`, while
+the adapter previously required `ENOENT` before treating a slot as empty. The
+adapter now uses a bounded, fail-closed root-directory check and has host
+regression coverage. This explains the same result on the 32 GB card. The
+original 128 GB exFAT card remains unsupported; use FAT32 media no larger than
+32 GB and cold-boot the Brain after inserting it.
+
 ## Pending Physical Gate
 
 Do not begin the next calibration or autonomous-migration checkpoint until the
 following tests are recorded:
 
-1. Restart the brain and run AUT3 `TEST LemLib 12in`.
-2. Record physical distance and final LemLib X, Y, and heading.
+1. Clear a 44-by-44-inch (two-tile-by-two-tile) area, place the robot at the
+   figure-eight start, restart the Brain, and run AUT3
+   `TEST LemLib Figure 8`. Keep controller X ready to stop.
+2. Record completion time, final LemLib X, Y, and heading, crossover
+   oscillation, and any corner-cutting.
 3. Restart the brain again and cautiously run one native Kevin fallback.
 4. Record whether GUI selection, drivetrain motion, and mechanisms behave as
    they did before Task 1.
@@ -121,7 +134,8 @@ Compilation does not satisfy the pending physical gate.
 
 Tasks 5 and 6 are implemented and compile-verified. Test recording only:
 
-1. Insert a FAT-formatted SD card and restart the Brain.
+1. Insert a FAT32 SD card no larger than 32 GB while the Brain is off, then
+   cold-boot it. A fresh card should show all three slots as `EMPTY`.
 2. Record a short route into each slot, including drive and mechanism actions.
 3. Stop and save each route, restart the Brain, and confirm slot metadata loads.
 4. Overwrite one slot and delete another; restart and confirm both operations.

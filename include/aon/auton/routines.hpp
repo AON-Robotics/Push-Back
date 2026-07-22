@@ -34,6 +34,7 @@ void smallbotjorgeg();
 // LemLib-backed tests and experimental routes.
 int RunLemLibTurnCharacterization(const char* name, double heading);
 int RunLemLibForwardValidation();
+int RunLemLibFigureEightValidation();
 int RunJerryIoPathTest(const char* name);
 int RunStagedLoaderScoreExperiment();
 

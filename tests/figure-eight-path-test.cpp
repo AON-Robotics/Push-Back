@@ -1,4 +1,5 @@
 #include "aon/auton/figure-eight-validation.hpp"
+#include "aon/auton/routines.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #define CHECK(value) do { if (!(value)) { \
@@ -19,6 +21,9 @@ struct Point {
 };
 
 int main() {
+  static_assert(std::is_same_v<
+                decltype(&aon::routines::RunLemLibFigureEightValidation),
+                int (*)()>);
   using aon::auton::FigureEightValidation;
   CHECK(FigureEightValidation::startX == -20.0);
   CHECK(FigureEightValidation::startY == 22.0);

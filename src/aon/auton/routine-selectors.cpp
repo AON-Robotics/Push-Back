@@ -1,4 +1,5 @@
 #include "aon/auton/routines.hpp"
+#include "aon/auton/figure-eight-validation.hpp"
 #include "aon/auton/status.hpp"
 #include "aon/auton/fallback-status.hpp"
 
@@ -60,7 +61,8 @@ int RedRoutine2() {
 }
 
 int RedRoutine3() {
-  return runRoutine("TEST LemLib 12in", RunLemLibForwardValidation);
+  return runRoutine(aon::auton::FigureEightValidation::name,
+                    RunLemLibFigureEightValidation);
 }
 
 int BlueRoutine1() {
@@ -80,7 +82,8 @@ int BlueRoutine2() {
 }
 
 int BlueRoutine3() {
-  return runRoutine("TEST LemLib 12in", RunLemLibForwardValidation);
+  return runRoutine(aon::auton::FigureEightValidation::name,
+                    RunLemLibFigureEightValidation);
 }
 
 int SkillsRoutine1() {
