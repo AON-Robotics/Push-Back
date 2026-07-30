@@ -1,6 +1,7 @@
 #include "aon/shadow/storage.hpp"
 
 #include "aon/shadow/sd-directory.hpp"
+#include "aon/shadow/sd-write.hpp"
 
 #include "pros/error.h"
 #include "pros/misc.hpp"
@@ -89,19 +90,20 @@ ResultCode SdFileStore::read(const char* path, EncodedRecording& out) const {
 ResultCode SdFileStore::write(const char* path, const std::uint8_t* data,
                               std::size_t size) {
   if (!pros::usd::is_installed()) return ResultCode::NoSd;
-  if (data == nullptr || size > kMaximumEncodedBytes) {
+  if (!validSdPayload(data, size, kMaximumEncodedBytes)) {
     return ResultCode::WriteFailed;
   }
   std::FILE* file = std::fopen(path, "wb");
   if (file == nullptr) return writeOpenFailure();
 
-  const bool wrote = std::fwrite(data, 1, size, file) == size;
-  const bool flushed = std::fflush(file) == 0;
-  const bool closed = std::fclose(file) == 0;
-  if (!wrote) return ResultCode::WriteFailed;
-  if (!flushed) return ResultCode::FlushFailed;
-  if (!closed) return ResultCode::CloseFailed;
-  return ResultCode::Ok;
+  return writeSdPayload(
+      data, size,
+      [file](const std::uint8_t* chunk, std::size_t chunkSize) {
+        return std::fwrite(chunk, 1, chunkSize, file);
+      },
+      [file] { return std::fflush(file) == 0; },
+      [file] { return std::fclose(file) == 0; },
+      [path] { return std::remove(path) == 0 || errno == ENOENT; });
 }
 
 ResultCode SdFileStore::erase(const char* path) {

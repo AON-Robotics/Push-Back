@@ -88,6 +88,15 @@ regression coverage. This explains the same result on the 32 GB card. The
 original 128 GB exFAT card remains unsupported; use FAT32 media no larger than
 32 GB and cold-boot the Brain after inserting it.
 
+The first physical `STOP SAVE` attempt on the verified 32 GB FAT32 card created
+`aon-shadow-slot-1-a.bin` with a length of zero bytes. Windows CHKDSK reported
+the FAT32 volume healthy, and deleting only that zero-byte generation restored
+Brain startup. The SD adapter now writes encoded recordings in bounded 4 KiB
+chunks and removes the target generation after any write, flush, or close
+failure. This cleans up reported save failures when deletion succeeds; it
+cannot make FAT writes power-loss atomic. Never power off until processing
+finishes and the slot reports valid.
+
 ## Pending Physical Gate
 
 Do not begin the next calibration or autonomous-migration checkpoint until the
@@ -136,8 +145,11 @@ Tasks 5 and 6 are implemented and compile-verified. Test recording only:
 
 1. Insert a FAT32 SD card no larger than 32 GB while the Brain is off, then
    cold-boot it. A fresh card should show all three slots as `EMPTY`.
-2. Record a short route into each slot, including drive and mechanism actions.
-3. Stop and save each route, restart the Brain, and confirm slot metadata loads.
+2. Record a five-second drivetrain-only route into slot 1. Press `STOP SAVE`
+   and wait until processing finishes and the slot reports valid before
+   powering off.
+3. Restart the Brain and confirm slot 1 metadata loads. Only then repeat with
+   mechanism actions and the remaining slots.
 4. Overwrite one slot and delete another; restart and confirm both operations.
 5. Remove the SD card during a disposable recording and confirm the prior saved
    generation remains readable after reinserting it.

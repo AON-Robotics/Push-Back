@@ -21,6 +21,7 @@ enum class ResultCode : std::uint8_t {
   Ok, NotRecording, AlreadyRecording, SampleTooSoon, DuplicateEvent,
   CapacityReached, InvalidPose, PoseJump, EmptyRecording, NoSd, ReadOnly,
   OpenFailed, ReadFailed, WriteFailed, FlushFailed, CloseFailed, DeleteFailed,
+  WriteCleanupFailed, FlushCleanupFailed, CloseCleanupFailed,
   CorruptFile, UnsupportedVersion, WrongRobot, InvalidSlot, PlayLocked,
   UnsafeState, Cancelled, OdometryFailure, MotionFailure, UnsupportedRobot
 };

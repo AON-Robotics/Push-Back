@@ -30,6 +30,12 @@ const char* shadowResultName(shadow::ResultCode result) {
     case shadow::ResultCode::FlushFailed: return "FLUSH FAILED";
     case shadow::ResultCode::CloseFailed: return "CLOSE FAILED";
     case shadow::ResultCode::DeleteFailed: return "DELETE FAILED";
+    case shadow::ResultCode::WriteCleanupFailed:
+      return "WRITE+CLEANUP FAILED";
+    case shadow::ResultCode::FlushCleanupFailed:
+      return "FLUSH+CLEANUP FAILED";
+    case shadow::ResultCode::CloseCleanupFailed:
+      return "CLOSE+CLEANUP FAILED";
     case shadow::ResultCode::CorruptFile: return "CORRUPT";
     case shadow::ResultCode::UnsupportedVersion: return "BAD VERSION";
     case shadow::ResultCode::WrongRobot: return "WRONG ROBOT";
