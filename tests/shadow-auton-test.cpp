@@ -2,6 +2,7 @@
 #include "aon/intake/release-request.hpp"
 #include "aon/lemlib/drive-command.hpp"
 #include "aon/shadow/mechanisms.hpp"
+#include "aon/shadow/player.hpp"
 #include "aon/shadow/recorder.hpp"
 #include "aon/shadow/processor.hpp"
 #include "aon/shadow/service-state.hpp"
@@ -12,14 +13,252 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #define CHECK(x) do { if (!(x)) { std::cerr << #x << '\n'; std::exit(1); } } while (false)
 
 using namespace aon::shadow;
 using aon::lemlib_integration::packDriveCommand;
 using aon::lemlib_integration::unpackDriveCommand;
+
+DecodedRecording playbackRecording() {
+  DecodedRecording recording{};
+  recording.capture.robot = RobotIdentity::Small;
+  recording.capture.durationMs = 300;
+  recording.route.result = ResultCode::Ok;
+  recording.route.segmentCount = 3;
+  recording.route.pointCount = 4;
+  recording.route.eventCount = 3;
+  recording.route.points[0] = {0.0F, 0.0F, 40.0F};
+  recording.route.points[1] = {0.0F, 12.0F, 0.0F};
+  recording.route.points[2] = {0.0F, 12.0F, 40.0F};
+  recording.route.points[3] = {0.0F, 0.0F, 0.0F};
+  recording.route.segments[0] =
+      {SegmentKind::Motion, Direction::Forward, 0, 2, 100};
+  recording.route.segments[1] =
+      {SegmentKind::Dwell, Direction::Stopped, 0, 0, 100};
+  recording.route.segments[2] =
+      {SegmentKind::Motion, Direction::Reverse, 2, 2, 100};
+  recording.route.events[0] =
+      {{40, MechanismKind::Cart, 1}, 0, 0.4F, 0};
+  recording.route.events[1] =
+      {{50, MechanismKind::IntakeMode,
+        static_cast<std::int16_t>(IntakeIntent::Corridor)},
+       0, 0.4F, 0};
+  recording.route.events[2] =
+      {{150, MechanismKind::Cart, 0}, 1, 0.0F, 50};
+  return recording;
+}
+
+struct PlaybackSpy {
+  int follows = 0;
+  int dwells = 0;
+  int mechanisms = 0;
+  int stops = 0;
+  bool cancel = false;
+  ResultCode followResult = ResultCode::Ok;
+  ResultCode mechanismResult = ResultCode::Ok;
+  std::vector<std::string> log;
+};
+
+PlaybackCallbacks playbackCallbacks(PlaybackSpy& spy) {
+  return {
+      [&spy](const ProcessedRoute&, const RouteSegment& segment,
+             const MotionProgress& progress) {
+        ++spy.follows;
+        spy.log.push_back(segment.direction == Direction::Forward
+                              ? "follow-forward"
+                              : "follow-reverse");
+        if (spy.followResult != ResultCode::Ok) return spy.followResult;
+        for (const float value : {0.0F, 0.2F, 0.6F, 1.0F}) {
+          const ResultCode result = progress(value);
+          if (result != ResultCode::Ok) return result;
+        }
+        return ResultCode::Ok;
+      },
+      [&spy](std::uint32_t durationMs, const DwellProgress& progress) {
+        ++spy.dwells;
+        spy.log.push_back("dwell");
+        for (const std::uint32_t value : {0U, 20U, 40U, durationMs}) {
+          const ResultCode result = progress(value);
+          if (result != ResultCode::Ok) return result;
+        }
+        return ResultCode::Ok;
+      },
+      [&spy](const MechanismEvent& event) {
+        ++spy.mechanisms;
+        spy.log.push_back("event-" + std::to_string(event.value));
+        return spy.mechanismResult;
+      },
+      [&spy]() { return spy.cancel; },
+      [&spy]() {
+        ++spy.stops;
+        spy.log.push_back("stop");
+      },
+  };
+}
+
+void playbackPolicyTests() {
+  const auto recording = playbackRecording();
+  const PlaybackPolicy policies[] = {
+      {false, true, RobotIdentity::Small},
+      {true, false, RobotIdentity::Small},
+      {true, true, RobotIdentity::Big},
+  };
+  const ResultCode expected[] = {
+      ResultCode::PlayLocked, ResultCode::PlayLocked,
+      ResultCode::UnsupportedRobot,
+  };
+  for (std::size_t index = 0; index < 3; ++index) {
+    PlaybackSpy spy;
+    auto callbacks = playbackCallbacks(spy);
+    CHECK(playRecording(recording, policies[index], callbacks) ==
+          expected[index]);
+    CHECK(spy.follows == 0);
+    CHECK(spy.dwells == 0);
+    CHECK(spy.mechanisms == 0);
+    CHECK(spy.stops == 1);
+  }
+
+  auto wrongRobot = recording;
+  wrongRobot.capture.robot = RobotIdentity::Big;
+  PlaybackSpy wrongRobotSpy;
+  auto wrongRobotCallbacks = playbackCallbacks(wrongRobotSpy);
+  CHECK(playRecording(wrongRobot,
+                      {true, true, RobotIdentity::Small},
+                      wrongRobotCallbacks) == ResultCode::WrongRobot);
+  CHECK(wrongRobotSpy.follows == 0);
+  CHECK(wrongRobotSpy.stops == 1);
+
+  std::vector<DecodedRecording> corruptRecordings;
+  auto corruptPoint = recording;
+  corruptPoint.route.points[1].x = std::numeric_limits<float>::infinity();
+  corruptRecordings.push_back(corruptPoint);
+  auto corruptRange = recording;
+  corruptRange.route.segments[0].firstPoint = kMaximumPathPoints - 1;
+  corruptRecordings.push_back(corruptRange);
+  auto corruptDirection = recording;
+  corruptDirection.route.segments[0].direction = Direction::Stopped;
+  corruptRecordings.push_back(corruptDirection);
+  auto corruptEventIndex = recording;
+  corruptEventIndex.route.events[0].segmentIndex = 3;
+  corruptRecordings.push_back(corruptEventIndex);
+  auto corruptMechanism = recording;
+  corruptMechanism.route.events[0].event.value = 2;
+  corruptRecordings.push_back(corruptMechanism);
+
+  for (const auto& corrupt : corruptRecordings) {
+    PlaybackSpy corruptSpy;
+    auto corruptCallbacks = playbackCallbacks(corruptSpy);
+    CHECK(playRecording(corrupt, {true, true, RobotIdentity::Small},
+                        corruptCallbacks) == ResultCode::CorruptFile);
+    CHECK(corruptSpy.follows == 0);
+    CHECK(corruptSpy.dwells == 0);
+    CHECK(corruptSpy.mechanisms == 0);
+    CHECK(corruptSpy.stops == 1);
+  }
+
+  CHECK(playbackTimeoutMs(0) == 2000);
+  CHECK(playbackTimeoutMs(600) == 2200);
+  CHECK(playbackTimeoutMs(std::numeric_limits<std::uint32_t>::max()) ==
+        std::numeric_limits<int>::max());
+}
+
+void playbackSchedulerTests() {
+  const auto recording = playbackRecording();
+  const PlaybackPolicy policy{true, true, RobotIdentity::Small};
+
+  PlaybackSpy success;
+  auto successCallbacks = playbackCallbacks(success);
+  CHECK(playRecording(recording, policy, successCallbacks) == ResultCode::Ok);
+  CHECK(success.log == std::vector<std::string>({
+      "follow-forward", "event-1", "event-2", "dwell", "event-0",
+      "follow-reverse", "stop"}));
+  CHECK(success.mechanisms == 3);
+  CHECK(success.stops == 1);
+
+  PlaybackSpy motionFailure;
+  motionFailure.followResult = ResultCode::MotionFailure;
+  auto motionFailureCallbacks = playbackCallbacks(motionFailure);
+  CHECK(playRecording(recording, policy, motionFailureCallbacks) ==
+        ResultCode::MotionFailure);
+  CHECK(motionFailure.follows == 1);
+  CHECK(motionFailure.dwells == 0);
+  CHECK(motionFailure.mechanisms == 0);
+  CHECK(motionFailure.stops == 1);
+
+  PlaybackSpy mechanismFailure;
+  mechanismFailure.mechanismResult = ResultCode::MotionFailure;
+  auto mechanismFailureCallbacks = playbackCallbacks(mechanismFailure);
+  CHECK(playRecording(recording, policy, mechanismFailureCallbacks) ==
+        ResultCode::MotionFailure);
+  CHECK(mechanismFailure.follows == 1);
+  CHECK(mechanismFailure.dwells == 0);
+  CHECK(mechanismFailure.mechanisms == 1);
+  CHECK(mechanismFailure.stops == 1);
+
+  PlaybackSpy motionCancellation;
+  auto motionCancellationCallbacks = playbackCallbacks(motionCancellation);
+  motionCancellationCallbacks.follow =
+      [&motionCancellation](const ProcessedRoute&, const RouteSegment&,
+                            const MotionProgress& progress) {
+        ++motionCancellation.follows;
+        CHECK(progress(0.2F) == ResultCode::Ok);
+        motionCancellation.cancel = true;
+        return progress(0.6F);
+      };
+  CHECK(playRecording(recording, policy, motionCancellationCallbacks) ==
+        ResultCode::Cancelled);
+  CHECK(motionCancellation.follows == 1);
+  CHECK(motionCancellation.dwells == 0);
+  CHECK(motionCancellation.mechanisms == 0);
+  CHECK(motionCancellation.stops == 1);
+
+  PlaybackSpy dwellCancellation;
+  auto dwellCancellationCallbacks = playbackCallbacks(dwellCancellation);
+  dwellCancellationCallbacks.dwell =
+      [&dwellCancellation](std::uint32_t, const DwellProgress& progress) {
+        ++dwellCancellation.dwells;
+        dwellCancellation.log.push_back("dwell");
+        CHECK(progress(20) == ResultCode::Ok);
+        dwellCancellation.cancel = true;
+        return progress(40);
+      };
+  CHECK(playRecording(recording, policy, dwellCancellationCallbacks) ==
+        ResultCode::Cancelled);
+  CHECK(dwellCancellation.follows == 1);
+  CHECK(dwellCancellation.dwells == 1);
+  CHECK(dwellCancellation.mechanisms == 2);
+  CHECK(dwellCancellation.stops == 1);
+}
+
+void playbackProjectionTests() {
+  const PathPoint line[] = {
+      {0.0F, 0.0F, 40.0F}, {10.0F, 0.0F, 40.0F},
+      {20.0F, 0.0F, 0.0F}};
+  CHECK(monotonicPolylineProgress(line, 3, 0.0F, 0.0F, 0.0F) == 0.0F);
+  CHECK(monotonicPolylineProgress(line, 3, 10.0F, 0.0F, 0.0F) == 0.5F);
+  CHECK(monotonicPolylineProgress(line, 3, 20.0F, 0.0F, 0.0F) == 1.0F);
+  CHECK(monotonicPolylineProgress(line, 3, 5.0F, 3.0F, 0.0F) == 0.25F);
+  CHECK(monotonicPolylineProgress(line, 3, 2.0F, 0.0F, 0.7F) == 0.7F);
+  CHECK(monotonicPolylineProgress(nullptr, 0, 0.0F, 0.0F, 0.4F) ==
+        0.4F);
+  const PathPoint zeroLength[] = {
+      {1.0F, 1.0F, 10.0F}, {1.0F, 1.0F, 0.0F}};
+  CHECK(monotonicPolylineProgress(zeroLength, 2, 1.0F, 1.0F, 0.3F) ==
+        0.3F);
+  CHECK(monotonicPolylineProgress(line, 3,
+                                  std::numeric_limits<float>::infinity(),
+                                  0.0F, 0.2F) == 0.2F);
+  const PathPoint crossing[] = {
+      {-1.0F, -1.0F, 20.0F}, {1.0F, 1.0F, 20.0F},
+      {-1.0F, 1.0F, 20.0F}, {1.0F, -1.0F, 0.0F}};
+  CHECK(monotonicPolylineProgress(crossing, 4, 0.0F, 0.0F, 0.7F) >=
+        0.7F);
+}
 
 void releaseRequestTests() {
   using aon::intake_sync::nextReleaseRequest;
@@ -863,6 +1102,9 @@ void mechanismTests() {
 }
 
 int main() {
+  playbackPolicyTests();
+  playbackSchedulerTests();
+  playbackProjectionTests();
   releaseRequestTests();
   recorderTests();
   capacityTests();
