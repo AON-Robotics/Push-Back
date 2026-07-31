@@ -59,6 +59,7 @@ struct LemLibDriveConfig {
 struct RobotConfig {
   RobotIdentity identity;
   LemLibDriveConfig lemlib;
+  bool shadowPlaybackAuthorized;
 };
 
 /// Configuration selected by USING_BIG_ROBOT.

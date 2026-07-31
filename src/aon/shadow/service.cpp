@@ -1,10 +1,12 @@
 #include "aon/shadow/service.hpp"
 
 #include "aon/constants.hpp"
+#include "aon/config/robot-config.hpp"
 #include "aon/globals.hpp"
 #include "aon/lemlib/chassis.hpp"
 #include "aon/lemlib/drive-io.hpp"
 #include "aon/shadow/processor.hpp"
+#include "aon/shadow/player-pros.hpp"
 #include "aon/shadow/recorder.hpp"
 #include "aon/shadow/mechanisms.hpp"
 #include "lemlib/api.hpp"
@@ -47,6 +49,7 @@ struct ServiceStorage {
   Capture captureSnapshot{};
   ProcessedRoute routeSnapshot{};
   ProcessorWorkspace processorWorkspace{};
+  DecodedRecording playbackSnapshot{};
   std::array<SlotSummary, kSlotCount> cachedSlots{};
   std::uint32_t startedAt = 0;
   bool ioBusy = false;
@@ -70,6 +73,13 @@ Direction directionFor(std::int8_t left, std::int8_t right) {
   if (average > 10) return Direction::Forward;
   if (average < -10) return Direction::Reverse;
   return Direction::Stopped;
+}
+
+RobotIdentity activeShadowRobot() {
+  return aon::config::activeRobotConfig().identity ==
+                 aon::config::RobotIdentity::Small
+             ? RobotIdentity::Small
+             : RobotIdentity::Big;
 }
 
 ResultCode startRecordingLocked(ServiceStorage& serviceData,
@@ -204,9 +214,10 @@ ResultCode Service::erase(std::uint8_t slotValue, bool confirmed) {
     Lock lock(serviceData.mutex);
     const auto mode = serviceData.state.status().mode;
     if (serviceData.ioBusy || mode == ServiceMode::Recording ||
-        mode == ServiceMode::Processing) {
+        mode == ServiceMode::Processing || mode == ServiceMode::Playing) {
       return ResultCode::UnsafeState;
     }
+    if (mode == ServiceMode::Armed) serviceData.state.cancel(pros::millis());
     serviceData.ioBusy = true;
   }
   const ResultCode result = serviceData.storage.erase(slotValue);
@@ -249,6 +260,80 @@ Status Service::status() const {
   auto& serviceData = data();
   Lock lock(serviceData.mutex);
   return serviceData.state.status();
+}
+
+ResultCode Service::armPlayback(std::uint8_t slotValue, bool startConfirmed,
+                                bool robotDisabled) {
+  const auto& robotConfig = aon::config::activeRobotConfig();
+  const RobotIdentity robot = activeShadowRobot();
+  if (robot == RobotIdentity::Big) return ResultCode::UnsupportedRobot;
+  if (!robotConfig.shadowPlaybackAuthorized) return ResultCode::PlayLocked;
+  if (slotValue < 1 || slotValue > kSlotCount) return ResultCode::InvalidSlot;
+
+  const SlotSummary summary = slot(slotValue);
+  const ResultCode policy = authorizePlaybackArm(
+      robotConfig.shadowPlaybackAuthorized, robot, robotDisabled, summary);
+  if (policy != ResultCode::Ok) return policy;
+
+  auto& serviceData = data();
+  Lock lock(serviceData.mutex);
+  if (serviceData.ioBusy) return ResultCode::UnsafeState;
+  const ResultCode statePolicy = serviceData.state.authorizePlay(
+      startConfirmed, robotDisabled, summary.valid);
+  if (statePolicy != ResultCode::Ok) return statePolicy;
+  return serviceData.state.armPlay(slotValue, pros::millis());
+}
+
+ResultCode Service::runArmedPlayback() {
+  auto& serviceData = data();
+  const RobotIdentity robot = activeShadowRobot();
+  std::uint8_t slotValue = 0;
+  {
+    Lock lock(serviceData.mutex);
+    const Status current = serviceData.state.status();
+    if (current.mode != ServiceMode::Armed || serviceData.ioBusy) {
+      return ResultCode::PlayLocked;
+    }
+    slotValue = current.slot;
+    if (!serviceData.state.consumeArm(slotValue, pros::millis())) {
+      return ResultCode::PlayLocked;
+    }
+    serviceData.ioBusy = true;
+  }
+
+  ResultCode result = serviceData.storage.load(
+      slotValue, robot, serviceData.playbackSnapshot);
+  if (result == ResultCode::Ok &&
+      serviceData.playbackSnapshot.capture.robot != robot) {
+    result = ResultCode::WrongRobot;
+  }
+  if (result == ResultCode::Ok &&
+      serviceData.playbackSnapshot.route.result != ResultCode::Ok) {
+    result = ResultCode::CorruptFile;
+  }
+  if (result == ResultCode::Ok) {
+    result = playOnRobot(
+        serviceData.playbackSnapshot,
+        {aon::config::activeRobotConfig().shadowPlaybackAuthorized, true,
+         robot});
+  }
+
+  {
+    Lock lock(serviceData.mutex);
+    serviceData.ioBusy = false;
+    serviceData.state.finishPlayback(result, pros::millis());
+  }
+  return result;
+}
+
+void Service::clearPlaybackArm() {
+  cancelRobotPlayback();
+  auto& serviceData = data();
+  Lock lock(serviceData.mutex);
+  const auto mode = serviceData.state.status().mode;
+  if (mode == ServiceMode::Armed || mode == ServiceMode::Playing) {
+    serviceData.state.cancel(pros::millis());
+  }
 }
 
 void captureMechanism(MechanismKind kind, std::int16_t value) {
@@ -313,6 +398,7 @@ void Service::pollRecorder() {
 
 void Service::cancel() {
   auto& serviceData = data();
+  cancelRobotPlayback();
   serviceData.recordingActive.store(false);
   Lock lock(serviceData.mutex);
   if (serviceData.recorder.isRecording()) serviceData.recorder.stop();

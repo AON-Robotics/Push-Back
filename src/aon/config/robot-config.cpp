@@ -34,6 +34,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
+      false,
   };
 #else
   static const RobotConfig config{
@@ -64,6 +65,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
+      false,
   };
 #endif
   return config;

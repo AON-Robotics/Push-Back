@@ -6,6 +6,7 @@
 #include "aon/shadow/player-pros.hpp"
 #include "aon/shadow/recorder.hpp"
 #include "aon/shadow/processor.hpp"
+#include "aon/shadow/service.hpp"
 #include "aon/shadow/service-state.hpp"
 #include "aon/shadow/storage.hpp"
 
@@ -854,6 +855,71 @@ void storageTests() {
   CHECK(loaded.capture.samples[1].y == 6);
 }
 
+void playbackServicePolicyTests() {
+  SlotSummary valid{};
+  valid.result = ResultCode::Ok;
+  valid.valid = true;
+  CHECK(authorizePlaybackArm(false, RobotIdentity::Small, true, valid) ==
+        ResultCode::PlayLocked);
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Big, true, valid) ==
+        ResultCode::UnsupportedRobot);
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, false, valid) ==
+        ResultCode::UnsafeState);
+  SlotSummary wrongRobot{};
+  wrongRobot.result = ResultCode::WrongRobot;
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, true, wrongRobot) ==
+        ResultCode::WrongRobot);
+  SlotSummary empty{};
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, true, empty) ==
+        ResultCode::EmptyRecording);
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, true, valid) ==
+        ResultCode::Ok);
+
+  MemoryFileStore files;
+  Storage storage(files);
+  const Capture capture = captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(20, 0, 6, 0, Direction::Forward),
+  });
+  const ProcessedRoute route = process(capture);
+  CHECK(storage.save(2, RobotIdentity::Small, capture, route) ==
+        ResultCode::Ok);
+
+  ServiceStateMachine state;
+  CHECK(state.armPlay(2, 10) == ResultCode::Ok);
+  DecodedRecording snapshot{};
+  int runnerCalls = 0;
+  const PlaybackRunner failingRunner =
+      [&](const DecodedRecording& loaded, const PlaybackPolicy& policy) {
+        ++runnerCalls;
+        CHECK(loaded.capture.robot == RobotIdentity::Small);
+        CHECK(policy.authorized && policy.armed);
+        CHECK(policy.activeRobot == RobotIdentity::Small);
+        return ResultCode::MotionFailure;
+      };
+  CHECK(dispatchArmedPlayback(state, storage, 2, RobotIdentity::Small,
+                              snapshot, failingRunner, 20) ==
+        ResultCode::MotionFailure);
+  CHECK(runnerCalls == 1);
+  CHECK(state.status().mode == ServiceMode::Invalid);
+  CHECK(state.status().result == ResultCode::MotionFailure);
+  CHECK(dispatchArmedPlayback(state, storage, 2, RobotIdentity::Small,
+                              snapshot, failingRunner, 21) ==
+        ResultCode::PlayLocked);
+  CHECK(runnerCalls == 1);
+
+  ServiceStateMachine missingState;
+  CHECK(missingState.armPlay(3, 30) == ResultCode::Ok);
+  CHECK(dispatchArmedPlayback(missingState, storage, 3,
+                              RobotIdentity::Small, snapshot, failingRunner,
+                              31) == ResultCode::EmptyRecording);
+  CHECK(missingState.status().mode == ServiceMode::Invalid);
+  CHECK(missingState.status().result == ResultCode::EmptyRecording);
+  CHECK(dispatchArmedPlayback(missingState, storage, 3,
+                              RobotIdentity::Small, snapshot, failingRunner,
+                              32) == ResultCode::PlayLocked);
+}
+
 void serviceStateTests() {
   ServiceStateMachine pendingStart;
   const std::uint32_t pendingRevision = pendingStart.revision();
@@ -907,9 +973,37 @@ void serviceStateTests() {
   CHECK(state.authorizePlay(true, false, true) == ResultCode::PlayLocked);
   CHECK(state.authorizePlay(true, true, false) == ResultCode::EmptyRecording);
   CHECK(state.authorizePlay(true, true, true) == ResultCode::Ok);
-  CHECK(state.armPlay(1) == ResultCode::Ok);
-  CHECK(state.consumeArm(1));
-  CHECK(!state.consumeArm(1));
+  CHECK(state.armPlay(2, 100) == ResultCode::Ok);
+  CHECK(state.status().mode == ServiceMode::Armed);
+  CHECK(!state.consumeArm(1, 101));
+  CHECK(state.consumeArm(2, 102));
+  CHECK(state.status().mode == ServiceMode::Playing);
+  CHECK(state.status().changedAt == 102);
+  CHECK(!state.consumeArm(2, 103));
+  CHECK(state.finishPlayback(ResultCode::Ok, 200) == ResultCode::Ok);
+  CHECK(state.status().mode == ServiceMode::Finished);
+  CHECK(state.status().result == ResultCode::Ok);
+
+  CHECK(state.armPlay(1, 210) == ResultCode::Ok);
+  CHECK(state.beginRecord(1, true, 211) == ResultCode::Ok);
+  CHECK(!state.consumeArm(1, 212));
+  state.cancel(213);
+  CHECK(state.armPlay(1, 214) == ResultCode::Ok);
+  state.cancel(215);
+  CHECK(!state.consumeArm(1, 216));
+
+  ServiceStateMachine failedPlayback;
+  CHECK(failedPlayback.armPlay(1, 300) == ResultCode::Ok);
+  CHECK(failedPlayback.consumeArm(1, 301));
+  CHECK(failedPlayback.finishPlayback(ResultCode::MotionFailure, 302) ==
+        ResultCode::MotionFailure);
+  CHECK(failedPlayback.status().mode == ServiceMode::Invalid);
+  CHECK(failedPlayback.status().result == ResultCode::MotionFailure);
+  CHECK(failedPlayback.armPlay(1, 303) == ResultCode::Ok);
+  CHECK(failedPlayback.consumeArm(1, 304));
+  CHECK(failedPlayback.finishPlayback(ResultCode::Cancelled, 305) ==
+        ResultCode::Cancelled);
+  CHECK(failedPlayback.status().mode == ServiceMode::Cancelled);
   CHECK(state.armPlay(0) == ResultCode::InvalidSlot);
 }
 
@@ -1181,6 +1275,7 @@ int main() {
   processorTests();
   codecTests();
   storageTests();
+  playbackServicePolicyTests();
   serviceStateTests();
   mechanismTests();
   std::cout << "shadow auton tests passed\n";

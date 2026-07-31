@@ -1,4 +1,4 @@
-#include "aon/shadow/service-state.hpp"
+#include "aon/shadow/service.hpp"
 
 namespace aon::shadow {
 namespace {
@@ -59,7 +59,9 @@ ResultCode ServiceStateMachine::authorizePlay(bool startConfirmed,
                                               bool slotValid) const {
   if (!startConfirmed || !robotDisabled ||
       status_.mode == ServiceMode::Recording ||
-      status_.mode == ServiceMode::Processing) {
+      status_.mode == ServiceMode::Processing ||
+      status_.mode == ServiceMode::Armed ||
+      status_.mode == ServiceMode::Playing) {
     return ResultCode::PlayLocked;
   }
   return slotValid ? ResultCode::Ok : ResultCode::EmptyRecording;
@@ -69,18 +71,41 @@ ResultCode ServiceStateMachine::armPlay(std::uint8_t slot,
                                         std::uint32_t now) {
   if (!validSlot(slot)) return ResultCode::InvalidSlot;
   if (status_.mode == ServiceMode::Recording ||
-      status_.mode == ServiceMode::Processing) {
+      status_.mode == ServiceMode::Processing ||
+      status_.mode == ServiceMode::Playing) {
     return ResultCode::PlayLocked;
   }
   armedSlot_ = slot;
-  status_ = {ServiceMode::Playing, ResultCode::Ok, slot, now};
+  session_ = nextSession(session_);
+  status_ = {ServiceMode::Armed, ResultCode::Ok, slot, now};
   return ResultCode::Ok;
 }
 
-bool ServiceStateMachine::consumeArm(std::uint8_t slot) {
-  if (armedSlot_ == 0 || armedSlot_ != slot) return false;
+bool ServiceStateMachine::consumeArm(std::uint8_t slot, std::uint32_t now) {
+  if (status_.mode != ServiceMode::Armed || armedSlot_ == 0 ||
+      armedSlot_ != slot) {
+    return false;
+  }
   armedSlot_ = 0;
+  status_.mode = ServiceMode::Playing;
+  status_.result = ResultCode::Ok;
+  status_.changedAt = now;
   return true;
+}
+
+ResultCode ServiceStateMachine::finishPlayback(ResultCode result,
+                                               std::uint32_t now) {
+  if (status_.mode != ServiceMode::Playing) return ResultCode::UnsafeState;
+  if (result == ResultCode::Ok) {
+    status_.mode = ServiceMode::Finished;
+  } else if (result == ResultCode::Cancelled) {
+    status_.mode = ServiceMode::Cancelled;
+  } else {
+    status_.mode = ServiceMode::Invalid;
+  }
+  status_.result = result;
+  status_.changedAt = now;
+  return result;
 }
 
 std::uint32_t ServiceStateMachine::recordingSession() const {
@@ -117,5 +142,39 @@ void ServiceStateMachine::cancel(std::uint32_t now) {
 }
 
 Status ServiceStateMachine::status() const { return status_; }
+
+ResultCode authorizePlaybackArm(bool authorized, RobotIdentity activeRobot,
+                                bool robotDisabled,
+                                const SlotSummary& summary) {
+  if (activeRobot != RobotIdentity::Small) {
+    return ResultCode::UnsupportedRobot;
+  }
+  if (!authorized) return ResultCode::PlayLocked;
+  if (!robotDisabled) return ResultCode::UnsafeState;
+  if (summary.result != ResultCode::Ok) return summary.result;
+  return summary.valid ? ResultCode::Ok : ResultCode::EmptyRecording;
+}
+
+ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
+                                 std::uint8_t slot, RobotIdentity robot,
+                                 DecodedRecording& snapshot,
+                                 const PlaybackRunner& runner,
+                                 std::uint32_t now) {
+  if (!state.consumeArm(slot, now)) return ResultCode::PlayLocked;
+
+  ResultCode result = storage.load(slot, robot, snapshot);
+  if (result == ResultCode::Ok && snapshot.capture.robot != robot) {
+    result = ResultCode::WrongRobot;
+  }
+  if (result == ResultCode::Ok && snapshot.route.result != ResultCode::Ok) {
+    result = ResultCode::CorruptFile;
+  }
+  if (result == ResultCode::Ok) {
+    result = runner ? runner(snapshot, {true, true, robot})
+                    : ResultCode::CorruptFile;
+  }
+  state.finishPlayback(result, now);
+  return result;
+}
 
 }  // namespace aon::shadow

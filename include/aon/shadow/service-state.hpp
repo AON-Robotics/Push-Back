@@ -12,7 +12,9 @@ enum class ServiceMode : std::uint8_t {
   Processing,
   Saved,
   Invalid,
+  Armed,
   Playing,
+  Finished,
   Cancelled
 };
 
@@ -33,7 +35,8 @@ class ServiceStateMachine {
   ResultCode authorizePlay(bool startConfirmed, bool robotDisabled,
                            bool slotValid) const;
   ResultCode armPlay(std::uint8_t slot, std::uint32_t now = 0);
-  bool consumeArm(std::uint8_t slot);
+  bool consumeArm(std::uint8_t slot, std::uint32_t now = 0);
+  ResultCode finishPlayback(ResultCode result, std::uint32_t now = 0);
   std::uint32_t recordingSession() const;
   bool acceptsSample(std::uint32_t session) const;
   std::uint32_t revision() const;
