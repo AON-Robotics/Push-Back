@@ -40,7 +40,28 @@ struct ProcessedRoute {
   std::size_t segmentCount = 0, pointCount = 0, eventCount = 0;
 };
 
+struct ProcessorSource {
+  SegmentKind kind = SegmentKind::Motion;
+  Direction direction = Direction::Forward;
+  std::size_t first = 0;
+  std::size_t last = 0;
+};
+
+struct ProcessorWorkspace {
+  std::array<bool, kMaximumSamples> dwell{};
+  std::array<bool, kMaximumSamples> retained{};
+  std::array<bool, kMaximumSamples> eventAnchor{};
+  std::array<Direction, kMaximumSamples> direction{};
+  std::array<std::size_t, kMaximumSamples> intervalFirst{};
+  std::array<std::size_t, kMaximumSamples> intervalLast{};
+  std::array<ProcessorSource, kMaximumSegments> sources{};
+  std::array<std::size_t, kMaximumEvents> eventOrder{};
+  std::array<std::size_t, kMaximumEvents> eventSource{};
+};
+
 ProcessedRoute process(const Capture& capture);
 ResultCode process(const Capture& capture, ProcessedRoute& out);
+ResultCode process(const Capture& capture, ProcessedRoute& out,
+                   ProcessorWorkspace& workspace);
 
 }  // namespace aon::shadow

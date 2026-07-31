@@ -46,6 +46,7 @@ struct ServiceStorage {
   Recorder recorder;
   Capture captureSnapshot{};
   ProcessedRoute routeSnapshot{};
+  ProcessorWorkspace processorWorkspace{};
   std::array<SlotSummary, kSlotCount> cachedSlots{};
   std::uint32_t startedAt = 0;
   bool ioBusy = false;
@@ -170,8 +171,9 @@ ResultCode Service::stopAndSave() {
     serviceData.captureSnapshot = serviceData.recorder.capture();
   }
 
-  ResultCode saveResult =
-      process(serviceData.captureSnapshot, serviceData.routeSnapshot);
+  ResultCode saveResult = process(serviceData.captureSnapshot,
+                                  serviceData.routeSnapshot,
+                                  serviceData.processorWorkspace);
   if (saveResult == ResultCode::Ok) {
     saveResult = serviceData.storage.save(targetSlot, kRobotIdentity,
                                           serviceData.captureSnapshot,

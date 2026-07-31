@@ -14,13 +14,6 @@ constexpr std::uint32_t kMinimumDwellDurationMs = 100;
 constexpr float kMaximumPerpendicularError = 0.5F;
 constexpr float kHeadingRetentionDegrees = 5.0F;
 
-struct SegmentSource {
-  SegmentKind kind = SegmentKind::Motion;
-  Direction direction = Direction::Forward;
-  std::size_t first = 0;
-  std::size_t last = 0;
-};
-
 float headingDifference(float first, float second) {
   return std::fabs(std::remainder(second - first, 360.0F));
 }
@@ -41,7 +34,7 @@ float perpendicularError(const RawSample& point, const RawSample& first,
 }
 
 float inferredSpeed(const Capture& capture, std::size_t index,
-                    const SegmentSource& source) {
+                    const ProcessorSource& source) {
   std::size_t other = index;
   if (index < source.last) {
     other = index + 1;
@@ -54,7 +47,7 @@ float inferredSpeed(const Capture& capture, std::size_t index,
   return std::clamp(raw, 20.0F, 100.0F);
 }
 
-std::size_t nearestSample(const Capture& capture, const SegmentSource& source,
+std::size_t nearestSample(const Capture& capture, const ProcessorSource& source,
                           std::uint32_t timeMs) {
   std::size_t nearest = source.first;
   std::uint32_t best = capture.samples[nearest].timeMs > timeMs
@@ -73,8 +66,8 @@ std::size_t nearestSample(const Capture& capture, const SegmentSource& source,
 }
 
 std::size_t sourceForEvent(const Capture& capture,
-                           const std::array<SegmentSource,
-                                            kMaximumSegments>& sources,
+                           const std::array<ProcessorSource,
+                                             kMaximumSegments>& sources,
                            std::size_t sourceCount, std::uint32_t timeMs) {
   for (std::size_t i = 0; i < sourceCount; ++i) {
     if (sources[i].kind != SegmentKind::Dwell) continue;
@@ -91,7 +84,7 @@ std::size_t sourceForEvent(const Capture& capture,
   return sourceCount - 1;
 }
 
-float progressAt(const Capture& capture, const SegmentSource& source,
+float progressAt(const Capture& capture, const ProcessorSource& source,
                  std::uint32_t timeMs) {
   float total = 0.0F;
   float elapsed = 0.0F;
@@ -113,18 +106,19 @@ float progressAt(const Capture& capture, const SegmentSource& source,
 }
 
 bool appendMotionPoints(
-    const Capture& capture, const SegmentSource& source,
+    const Capture& capture, const ProcessorSource& source,
     const std::array<bool, kMaximumSamples>& eventAnchor,
-    ProcessedRoute& route) {
-  std::array<bool, kMaximumSamples> retained{};
+    ProcessedRoute& route, ProcessorWorkspace& workspace) {
+  auto& retained = workspace.retained;
+  std::fill(retained.begin(), retained.end(), false);
   retained[source.first] = true;
   retained[source.last] = true;
   for (std::size_t i = source.first; i <= source.last; ++i) {
     retained[i] = retained[i] || eventAnchor[i];
   }
 
-  std::array<std::size_t, kMaximumSamples> intervalFirst{};
-  std::array<std::size_t, kMaximumSamples> intervalLast{};
+  auto& intervalFirst = workspace.intervalFirst;
+  auto& intervalLast = workspace.intervalLast;
   std::size_t stackSize = 0;
   std::size_t anchor = source.first;
   while (anchor < source.last) {
@@ -189,7 +183,8 @@ bool appendMotionPoints(
 
 }  // namespace
 
-ResultCode process(const Capture& capture, ProcessedRoute& route) {
+ResultCode process(const Capture& capture, ProcessedRoute& route,
+                   ProcessorWorkspace& workspace) {
   route = {};
   if (capture.sampleCount == 0) return route.result;
   if (capture.sampleCount > kMaximumSamples ||
@@ -199,7 +194,8 @@ ResultCode process(const Capture& capture, ProcessedRoute& route) {
   }
   route.start = capture.samples[0];
 
-  std::array<bool, kMaximumSamples> dwell{};
+  auto& dwell = workspace.dwell;
+  std::fill(dwell.begin(), dwell.end(), false);
   for (std::size_t first = 0; first < capture.sampleCount;) {
     if (capture.samples[first].direction != Direction::Stopped) {
       ++first;
@@ -219,7 +215,8 @@ ResultCode process(const Capture& capture, ProcessedRoute& route) {
     first = last + 1;
   }
 
-  std::array<Direction, kMaximumSamples> direction{};
+  auto& direction = workspace.direction;
+  std::fill(direction.begin(), direction.end(), Direction::Stopped);
   Direction previous = Direction::Stopped;
   for (std::size_t i = 0; i < capture.sampleCount; ++i) {
     if (!dwell[i] && capture.samples[i].direction != Direction::Stopped) {
@@ -235,7 +232,7 @@ ResultCode process(const Capture& capture, ProcessedRoute& route) {
     if (!dwell[i] && direction[i] == Direction::Stopped) direction[i] = next;
   }
 
-  std::array<SegmentSource, kMaximumSegments> sources{};
+  auto& sources = workspace.sources;
   std::size_t sourceCount = 0;
   for (std::size_t first = 0; first < capture.sampleCount;) {
     const SegmentKind kind = dwell[first] ? SegmentKind::Dwell
@@ -267,7 +264,7 @@ ResultCode process(const Capture& capture, ProcessedRoute& route) {
     }
   }
 
-  std::array<std::size_t, kMaximumEvents> eventOrder{};
+  auto& eventOrder = workspace.eventOrder;
   for (std::size_t i = 0; i < capture.eventCount; ++i) {
     std::size_t position = i;
     while (position > 0 &&
@@ -279,8 +276,9 @@ ResultCode process(const Capture& capture, ProcessedRoute& route) {
     eventOrder[position] = i;
   }
 
-  std::array<std::size_t, kMaximumEvents> eventSource{};
-  std::array<bool, kMaximumSamples> eventAnchor{};
+  auto& eventSource = workspace.eventSource;
+  auto& eventAnchor = workspace.eventAnchor;
+  std::fill(eventAnchor.begin(), eventAnchor.end(), false);
   for (std::size_t i = 0; i < capture.eventCount; ++i) {
     const auto& event = capture.events[eventOrder[i]];
     eventSource[i] =
@@ -300,7 +298,8 @@ ResultCode process(const Capture& capture, ProcessedRoute& route) {
       segment.firstPoint = static_cast<std::uint16_t>(route.pointCount);
       segment.durationMs = capture.samples[source.last].timeMs -
                            capture.samples[source.first].timeMs;
-    } else if (!appendMotionPoints(capture, source, eventAnchor, route)) {
+    } else if (!appendMotionPoints(capture, source, eventAnchor, route,
+                                   workspace)) {
       route.result = ResultCode::CapacityReached;
       route.segmentCount = 0;
       route.pointCount = 0;
@@ -329,6 +328,11 @@ ResultCode process(const Capture& capture, ProcessedRoute& route) {
 
   route.result = ResultCode::Ok;
   return route.result;
+}
+
+ResultCode process(const Capture& capture, ProcessedRoute& route) {
+  static ProcessorWorkspace workspace;
+  return process(capture, route, workspace);
 }
 
 ProcessedRoute process(const Capture& capture) {

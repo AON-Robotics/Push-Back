@@ -192,11 +192,12 @@ const PathPoint& segmentPoint(const ProcessedRoute& route,
 
 void processorTests() {
   static ProcessedRoute outputRoute{};
+  static ProcessorWorkspace workspace{};
   const Capture outputCapture = captureAt({
       routeFrame(0, 0, 0, 0, Direction::Forward),
       routeFrame(20, 0, 6, 0, Direction::Forward),
   });
-  CHECK(process(outputCapture, outputRoute) == ResultCode::Ok);
+  CHECK(process(outputCapture, outputRoute, workspace) == ResultCode::Ok);
   CHECK(outputRoute.segmentCount == 1);
 
   const ProcessedRoute straight = process(captureAt({

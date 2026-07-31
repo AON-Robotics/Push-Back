@@ -97,6 +97,16 @@ failure. This cleans up reported save failures when deletion succeeds; it
 cannot make FAT writes power-loss atomic. Never power off until processing
 finishes and the slot reports valid.
 
+A later physical recording remained on `PROCESSING` for more than 10 minutes.
+The Shadow simplifier had approximately 35 KB of fixed-capacity scratch arrays
+as automatic locals inside the GUI-triggered save call, enough to overflow the
+V5 task stack and prevent `finishSave()` from running. `ProcessorWorkspace`
+now owns those arrays in persistent service storage. Host compiler stack-usage
+output reports 352 bytes for the main processor function and 240 bytes for its
+motion-point helper. The full-duration algorithm and physical save latency
+still require a new recording test; do not treat a long `PROCESSING` state as
+normal V5 performance.
+
 The first physical figure-eight asset failed: it moved clumsily and completed
 only an S-shaped half-route. Inspection against LemLib 0.5.6's pursuit
 implementation found that the original 174-inch parametric path combined
