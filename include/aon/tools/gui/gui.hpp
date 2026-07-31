@@ -65,7 +65,10 @@ public:
     None,
     Overwrite,
     Delete,
+    Play,
   };
+
+  static constexpr std::uint32_t kShadowPlayConfirmationMs = 5000;
 
   // Core auton selection: store the selected auton as an instance
   AutonOption selectedAuton = {"None", nullptr};
@@ -99,7 +102,7 @@ public:
   AutonOption skillsAutonOptions[autonOptionsCount] = {
     {"Skills AUT1", aon::routines::SkillsRoutine1},
     {"TEST Drive 6in", aon::routines::SkillsRoutine2},
-    {"TEST Turn 45deg", aon::routines::SkillsRoutine3},
+    {"SHADOW PLAYBACK", aon::routines::SkillsRoutine3},
   };
 
 

@@ -63,10 +63,28 @@ const char* shadowModeName(shadow::ServiceMode mode) {
     case shadow::ServiceMode::Processing: return "PROCESSING";
     case shadow::ServiceMode::Saved: return "SAVED";
     case shadow::ServiceMode::Invalid: return "INVALID";
+    case shadow::ServiceMode::Armed: return "ARMED";
     case shadow::ServiceMode::Playing: return "PLAYING";
+    case shadow::ServiceMode::Finished: return "FINISHED";
     case shadow::ServiceMode::Cancelled: return "CANCELLED";
   }
   return "UNKNOWN";
+}
+
+shadow::ResultCode shadowPlayEligibility(const shadow::SlotSummary& summary,
+                                         shadow::ServiceMode mode) {
+  if (mode == shadow::ServiceMode::Recording ||
+      mode == shadow::ServiceMode::Processing ||
+      mode == shadow::ServiceMode::Playing) {
+    return shadow::ResultCode::PlayLocked;
+  }
+  const auto& config = aon::config::activeRobotConfig();
+  const auto robot = config.identity == aon::config::RobotIdentity::Small
+                         ? shadow::RobotIdentity::Small
+                         : shadow::RobotIdentity::Big;
+  return shadow::authorizePlaybackArm(config.shadowPlaybackAuthorized, robot,
+                                      pros::competition::is_disabled(),
+                                      summary);
 }
 
 }  // namespace
@@ -328,6 +346,7 @@ void Gui::displayShadowMenu() {
   }
 
   const auto status = shadow::service().status();
+  const auto playEligibility = shadowPlayEligibility(selected, status.mode);
   pros::screen::set_pen(shadowSaving ||
                                 status.mode == shadow::ServiceMode::Processing
                             ? COLOR_ORANGE
@@ -347,6 +366,9 @@ void Gui::displayShadowMenu() {
   } else if (shadowConfirmation == ShadowConfirmation::Delete) {
     pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
                         "TAP DELETE? AGAIN WITHIN 5s");
+  } else if (shadowConfirmation == ShadowConfirmation::Play) {
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
+                        "VERIFY START POSE; CONFIRM WITHIN 5s");
   } else if (shadowHasActionResult) {
     pros::screen::set_pen(shadowActionResult == shadow::ResultCode::PlayLocked
                               ? COLOR_ORANGE
@@ -361,9 +383,14 @@ void Gui::displayShadowMenu() {
     pros::screen::print(pros::E_TEXT_SMALL, 10, 164, "%s",
                         shadowResultName(status.result));
   } else {
-    pros::screen::set_pen(COLOR_ORANGE);
-    pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
-                        "PLAYBACK DISABLED UNTIL PHYSICAL GATE");
+    pros::screen::set_pen(playEligibility == shadow::ResultCode::Ok
+                              ? COLOR_GREEN
+                              : COLOR_ORANGE);
+    pros::screen::print(
+        pros::E_TEXT_SMALL, 10, 164, "%s",
+        playEligibility == shadow::ResultCode::Ok
+            ? "READY: VERIFY START POSE BEFORE PLAY"
+            : shadowResultName(playEligibility));
   }
 
   shadowBackBtn.draw(pros::E_TEXT_SMALL);
@@ -390,7 +417,34 @@ void Gui::displayShadowMenu() {
     remove.bg = COLOR_ORANGE;
   }
   remove.draw(pros::E_TEXT_SMALL);
-  shadowPlayBtn.draw(pros::E_TEXT_SMALL);
+  ui::Button play = shadowPlayBtn;
+  if (shadowConfirmation == ShadowConfirmation::Play) {
+    play.label = "CONFIRM PLAY";
+    play.bg = COLOR_ORANGE;
+  } else if (status.mode == shadow::ServiceMode::Armed) {
+    play.label = "ARMED";
+    play.bg = COLOR_GREEN;
+  } else if (status.mode == shadow::ServiceMode::Playing) {
+    play.label = "PLAYING";
+    play.bg = COLOR_ORANGE;
+  } else if (status.mode == shadow::ServiceMode::Finished) {
+    play.label = "FINISHED";
+    play.bg = COLOR_GREEN;
+  } else if (status.mode == shadow::ServiceMode::Cancelled) {
+    play.label = "CANCELLED";
+    play.bg = COLOR_DARK_GRAY;
+  } else if (status.mode == shadow::ServiceMode::Invalid &&
+             status.result != shadow::ResultCode::Ok) {
+    play.label = shadowResultName(status.result);
+    play.bg = COLOR_RED;
+  } else if (playEligibility == shadow::ResultCode::Ok) {
+    play.label = "PLAY";
+    play.bg = COLOR_DARK_GREEN;
+  } else {
+    play.label = "PLAY LOCKED";
+    play.bg = COLOR_DARK_GRAY;
+  }
+  play.draw(pros::E_TEXT_SMALL);
 }
 
 }  // namespace aon

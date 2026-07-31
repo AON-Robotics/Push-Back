@@ -6,6 +6,11 @@
 
 namespace aon::shadow {
 
+constexpr bool confirmationExpired(std::uint32_t now,
+                                   std::uint32_t deadline) {
+  return static_cast<std::int32_t>(now - deadline) >= 0;
+}
+
 enum class ServiceMode : std::uint8_t {
   Idle,
   Recording,

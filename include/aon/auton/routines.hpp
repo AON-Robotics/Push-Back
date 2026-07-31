@@ -37,6 +37,7 @@ int RunLemLibForwardValidation();
 int RunLemLibFigureEightValidation();
 int RunJerryIoPathTest(const char* name);
 int RunStagedLoaderScoreExperiment();
+int RunShadowPlayback();
 
 // Low-speed native drivetrain checks. These never command mechanisms.
 int RunNativeForwardReverseTest();

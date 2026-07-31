@@ -1,5 +1,6 @@
 #include "aon/shadow/codec.hpp"
 #include "aon/intake/release-request.hpp"
+#include "aon/auton/routines.hpp"
 #include "aon/lemlib/drive-command.hpp"
 #include "aon/shadow/mechanisms.hpp"
 #include "aon/shadow/player.hpp"
@@ -17,6 +18,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -25,6 +27,9 @@
 using namespace aon::shadow;
 using aon::lemlib_integration::packDriveCommand;
 using aon::lemlib_integration::unpackDriveCommand;
+
+static_assert(std::is_same_v<decltype(&aon::routines::RunShadowPlayback),
+                             int (*)()>);
 
 DecodedRecording playbackRecording() {
   DecodedRecording recording{};
@@ -921,6 +926,10 @@ void playbackServicePolicyTests() {
 }
 
 void serviceStateTests() {
+  CHECK(!confirmationExpired(4999, 5000));
+  CHECK(confirmationExpired(5000, 5000));
+  CHECK(confirmationExpired(5, std::numeric_limits<std::uint32_t>::max()));
+
   ServiceStateMachine pendingStart;
   const std::uint32_t pendingRevision = pendingStart.revision();
   CHECK(pendingStart.revalidatePendingStart(pendingRevision, true) ==

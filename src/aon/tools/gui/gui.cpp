@@ -1,6 +1,7 @@
 #include "aon/tools/gui/gui.hpp"
 #include "aon/tools/gui/gui-debug.hpp"
 #include "aon/auton/fallback-status.hpp"
+#include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
 #include "aon/tools/gui/ui/gui-layout.hpp"
 
@@ -29,7 +30,36 @@ bool sameSlotSummary(const shadow::SlotSummary& left,
 }
 
 bool timeReached(std::uint32_t now, std::uint32_t deadline) {
-  return static_cast<std::int32_t>(now - deadline) >= 0;
+  return shadow::confirmationExpired(now, deadline);
+}
+
+shadow::RobotIdentity activeShadowRobot() {
+  return aon::config::activeRobotConfig().identity ==
+                 aon::config::RobotIdentity::Small
+             ? shadow::RobotIdentity::Small
+             : shadow::RobotIdentity::Big;
+}
+
+bool shadowArmExists() {
+  return shadow::service().status().mode == shadow::ServiceMode::Armed;
+}
+
+void clearShadowArmIfPresent() {
+  if (shadowArmExists()) shadow::service().clearPlaybackArm();
+}
+
+shadow::ResultCode shadowPlaybackEligibility(
+    const shadow::SlotSummary& summary, shadow::ServiceMode mode) {
+  if (mode == shadow::ServiceMode::Recording ||
+      mode == shadow::ServiceMode::Processing ||
+      mode == shadow::ServiceMode::Playing) {
+    return shadow::ResultCode::PlayLocked;
+  }
+  const auto& config = aon::config::activeRobotConfig();
+  return shadow::authorizePlaybackArm(config.shadowPlaybackAuthorized,
+                                      activeShadowRobot(),
+                                      pros::competition::is_disabled(),
+                                      summary);
 }
 
 void saveAutonSelection(Alliance alliance, int index) {
@@ -385,6 +415,7 @@ void Gui::handleShadowMenuTouch() {
   if (busy) return;
 
   if (shadowBackBtn.isHit(x, y)) {
+    clearShadowArmIfPresent();
     shadowConfirmation = ShadowConfirmation::None;
     displayMainMenu();
     currentScreen = MainMenu;
@@ -397,6 +428,7 @@ void Gui::handleShadowMenuTouch() {
     else if (shadowSlot2Btn.isHit(x, y)) slot = 2;
     else if (shadowSlot3Btn.isHit(x, y)) slot = 3;
     if (slot != 0) {
+      if (slot != selectedShadowSlot) clearShadowArmIfPresent();
       selectedShadowSlot = slot;
       shadowConfirmation = ShadowConfirmation::None;
       shadowHasActionResult = false;
@@ -434,6 +466,7 @@ void Gui::handleShadowMenuTouch() {
       return;
     }
 
+    clearShadowArmIfPresent();
     const auto result =
         shadow::service().beginRecording(selectedShadowSlot, confirmed);
     shadowConfirmation = ShadowConfirmation::None;
@@ -447,6 +480,7 @@ void Gui::handleShadowMenuTouch() {
 
   if (shadowDeleteBtn.isHit(x, y) &&
       status.mode != shadow::ServiceMode::Recording) {
+    clearShadowArmIfPresent();
     if (shadowSlots[selectedShadowSlot - 1].result ==
         shadow::ResultCode::EmptyRecording) {
       shadowActionResult = shadow::ResultCode::EmptyRecording;
@@ -481,9 +515,38 @@ void Gui::handleShadowMenuTouch() {
   }
 
   if (shadowPlayBtn.isHit(x, y)) {
-    shadowActionResult = shadow::ResultCode::PlayLocked;
-    shadowHasActionResult = true;
+    const auto eligibility = shadowPlaybackEligibility(
+        shadowSlots[selectedShadowSlot - 1], status.mode);
+    if (eligibility != shadow::ResultCode::Ok) {
+      shadowConfirmation = ShadowConfirmation::None;
+      shadowActionResult = eligibility;
+      shadowHasActionResult = true;
+      shadowDeleteSucceeded = false;
+      displayShadowMenu();
+      return;
+    }
+
+    const bool confirmed = shadowConfirmation == ShadowConfirmation::Play &&
+                           !timeReached(now, shadowConfirmationExpiresAt);
+    if (!confirmed) {
+      shadowConfirmation = ShadowConfirmation::Play;
+      shadowConfirmationExpiresAt = now + kShadowPlayConfirmationMs;
+      shadowHasActionResult = false;
+      shadowDeleteSucceeded = false;
+      displayShadowMenu();
+      return;
+    }
+
+    const auto result = shadow::service().armPlayback(
+        selectedShadowSlot, true, pros::competition::is_disabled());
+    shadowConfirmation = ShadowConfirmation::None;
+    shadowActionResult = result;
+    shadowHasActionResult = result != shadow::ResultCode::Ok;
     shadowDeleteSucceeded = false;
+    if (result == shadow::ResultCode::Ok) {
+      selectAutonByList(Alliance::Skills, 3);
+      shadowLastStatusChange = shadow::service().status().changedAt;
+    }
     displayShadowMenu();
   }
 }
@@ -504,6 +567,7 @@ void Gui::updateShadowMenu() {
   }
   if (shadowConfirmation != ShadowConfirmation::None &&
       timeReached(now, shadowConfirmationExpiresAt)) {
+    clearShadowArmIfPresent();
     shadowConfirmation = ShadowConfirmation::None;
     redraw = true;
   }

@@ -3,7 +3,9 @@
 #include "main.hpp"
 
 #include "aon/competition/autonomous-routines.hpp"
+#include "aon/auton/actions.hpp"
 #include "aon/lemlib/chassis.hpp"
+#include "aon/shadow/mechanisms.hpp"
 #include "aon/shadow/service.hpp"
 
 namespace aon::core {
@@ -37,7 +39,11 @@ void Robot::initialize() {
 #endif
 }
 
-void Robot::disabled() {}
+void Robot::disabled() {
+  aon::shadow::service().clearPlaybackArm();
+  aon::auton::actions().stop();
+  aon::shadow::stopAllMechanisms();
+}
 
 void Robot::competitionInitialize() {}
 

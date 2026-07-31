@@ -7,6 +7,7 @@
 #include "aon/drivetrain/legacy-motion.hpp"
 #include "aon/globals.hpp"
 #include "aon/auton/actions.hpp"
+#include "aon/shadow/service.hpp"
 
 namespace aon::routines {
 
@@ -106,7 +107,14 @@ int SkillsRoutine2() {
 }
 
 int SkillsRoutine3() {
-  return runDrivetrainTest("TEST Turn 45deg", RunNativeTurnTest);
+  return runRoutine("SHADOW PLAYBACK", RunShadowPlayback);
+}
+
+int RunShadowPlayback() {
+  return aon::shadow::service().runArmedPlayback() ==
+                 aon::shadow::ResultCode::Ok
+             ? 1
+             : 0;
 }
 
 }  // namespace aon::routines
