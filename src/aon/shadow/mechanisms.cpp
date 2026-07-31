@@ -146,4 +146,12 @@ ResultCode applyMechanism(const MechanismEvent& event) {
   return ResultCode::Ok;
 }
 
+void stopAllMechanisms() {
+#if USING_BIG_ROBOT
+  intake.stopReleasingAndWait();
+#endif
+  intake.stopScan();
+  intake.stop();
+}
+
 }  // namespace aon::shadow

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 
 #include "aon/auton/fallback-status.hpp"
 #include "lemlib/api.hpp"
@@ -31,7 +32,8 @@ class Actions {
   MotionResult arcadeFor(const char* name, int throttle, int turn,
                          std::uint32_t durationMs);
   MotionResult followPath(const char* name, const asset& path, float lookahead,
-                          int timeout, bool forwards = true);
+                          int timeout, bool forwards = true,
+                          const std::function<void()>& onPoll = {});
 
   void cancelMotion();
   /** @brief Rearms drivetrain actions at the start of a new autonomous run. */

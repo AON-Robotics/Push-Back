@@ -169,7 +169,8 @@ MotionResult runEncoder(const char* name, const ActionTarget& target,
 MotionResult runMonitored(const char* operation, const char* name,
                           const ActionTarget& target, MotionIntent intent,
                           int requestedMaxOutput, std::uint32_t timeoutMs,
-                          const std::function<void()>& startMotion) {
+                          const std::function<void()>& startMotion,
+                          const std::function<void()>& onPoll) {
   const FallbackStatusSnapshot status = fallbackStatus();
   logStart(operation, name);
   MotionLease lease(motionControl);
@@ -255,6 +256,7 @@ MotionResult runMonitored(const char* operation, const char* name,
       logFinish(operation, name, result);
       return result;
     }
+    if (onPoll) onPoll();
     pros::delay(20);
   }
 
@@ -292,7 +294,8 @@ MotionResult Actions::moveToPoint(const char* name, double x, double y,
   return runMonitored(
       "moveToPoint", name, {TargetKind::Point, x, y, 0.0, params.forwards},
       MotionIntent::Linear, static_cast<int>(params.maxSpeed), timeout,
-      [=] { lemlib_integration::chassis().moveToPoint(x, y, timeout, params); });
+      [=] { lemlib_integration::chassis().moveToPoint(x, y, timeout, params); },
+      {});
 }
 
 MotionResult Actions::moveToPose(const char* name, double x, double y,
@@ -303,7 +306,7 @@ MotionResult Actions::moveToPose(const char* name, double x, double y,
       {TargetKind::Pose, x, y, heading, params.forwards},
       MotionIntent::Linear, static_cast<int>(params.maxSpeed), timeout, [=] {
         lemlib_integration::chassis().moveToPose(x, y, heading, timeout, params);
-      });
+      }, {});
 }
 
 MotionResult Actions::turnToHeading(const char* name, double heading,
@@ -314,7 +317,7 @@ MotionResult Actions::turnToHeading(const char* name, double heading,
       {TargetKind::Heading, 0.0, 0.0, heading, true}, MotionIntent::Turn,
       params.maxSpeed, timeout, [=] {
         lemlib_integration::chassis().turnToHeading(heading, timeout, params);
-      });
+      }, {});
 }
 
 MotionResult Actions::arcadeFor(const char* name, int throttle, int turn,
@@ -360,13 +363,14 @@ MotionResult Actions::arcadeFor(const char* name, int throttle, int turn,
 }
 
 MotionResult Actions::followPath(const char* name, const asset& path,
-                                 float lookahead, int timeout, bool forwards) {
+                                 float lookahead, int timeout, bool forwards,
+                                 const std::function<void()>& onPoll) {
   return runMonitored(
       "followPath", name,
       {TargetKind::Unsupported, 0.0, 0.0, 0.0, forwards},
       MotionIntent::Linear, 127, timeout, [=, &path] {
         lemlib_integration::chassis().follow(path, lookahead, timeout, forwards);
-      });
+      }, onPoll);
 }
 
 void Actions::cancelMotion() {

@@ -3,6 +3,7 @@
 #include "aon/lemlib/drive-command.hpp"
 #include "aon/shadow/mechanisms.hpp"
 #include "aon/shadow/player.hpp"
+#include "aon/shadow/player-pros.hpp"
 #include "aon/shadow/recorder.hpp"
 #include "aon/shadow/processor.hpp"
 #include "aon/shadow/service-state.hpp"
@@ -258,6 +259,74 @@ void playbackProjectionTests() {
       {-1.0F, 1.0F, 20.0F}, {1.0F, -1.0F, 0.0F}};
   CHECK(monotonicPolylineProgress(crossing, 4, 0.0F, 0.0F, 0.7F) >=
         0.7F);
+}
+
+void runtimePathSerializationTests() {
+  const auto recording = playbackRecording();
+  RuntimePath output{};
+  CHECK(serializeRuntimePath(recording.route, recording.route.segments[0],
+                             output) == ResultCode::Ok);
+  CHECK(output.used > 0);
+  CHECK(output.used <= kRuntimePathCapacity);
+  const std::string text(reinterpret_cast<const char*>(output.bytes.data()),
+                         output.used);
+  CHECK(text.find("0.000000, 0.000000, 40.000000\n") == 0);
+  CHECK(text.find("0.000000, 12.000000, 0.000000\n") !=
+        std::string::npos);
+  CHECK(text.find("endData\n") != std::string::npos);
+  CHECK(text.find("#PATH.JERRYIO-DATA {\"appVersion\":\"0.11.0\",") !=
+        std::string::npos);
+  CHECK(text.find("\"format\":\"LemLib v0.5\"") != std::string::npos);
+  CHECK(text.find("\"name\":\"Shadow Runtime\"}") !=
+        std::string::npos);
+
+  auto invalidRange = recording.route;
+  invalidRange.segments[0].firstPoint = kMaximumPathPoints - 1;
+  CHECK(serializeRuntimePath(invalidRange, invalidRange.segments[0], output) ==
+        ResultCode::CorruptFile);
+  CHECK(output.used == 0);
+
+  auto invalidCount = recording.route;
+  invalidCount.segments[0].pointCount = 1;
+  CHECK(serializeRuntimePath(invalidCount, invalidCount.segments[0], output) ==
+        ResultCode::CorruptFile);
+  CHECK(output.used == 0);
+
+  auto invalidNan = recording.route;
+  invalidNan.points[0].x = std::numeric_limits<float>::quiet_NaN();
+  CHECK(serializeRuntimePath(invalidNan, invalidNan.segments[0], output) ==
+        ResultCode::CorruptFile);
+  CHECK(output.used == 0);
+
+  auto invalidInfinity = recording.route;
+  invalidInfinity.points[0].speed =
+      std::numeric_limits<float>::infinity();
+  CHECK(serializeRuntimePath(invalidInfinity, invalidInfinity.segments[0],
+                             output) == ResultCode::CorruptFile);
+  CHECK(output.used == 0);
+
+  auto invalidZeroLength = recording.route;
+  invalidZeroLength.points[1] = invalidZeroLength.points[0];
+  CHECK(serializeRuntimePath(invalidZeroLength,
+                             invalidZeroLength.segments[0], output) ==
+        ResultCode::CorruptFile);
+  CHECK(output.used == 0);
+
+  ProcessedRoute oversized{};
+  oversized.result = ResultCode::Ok;
+  oversized.pointCount = kMaximumPathPoints;
+  RouteSegment oversizedSegment{SegmentKind::Motion, Direction::Forward, 0,
+                                kMaximumPathPoints, 1000};
+  for (std::size_t index = 0; index < oversized.pointCount; ++index) {
+    oversized.points[index] = {
+        index % 2 == 0 ? std::numeric_limits<float>::max()
+                       : -std::numeric_limits<float>::max(),
+        static_cast<float>(index), index + 1 == oversized.pointCount ? 0.0F
+                                                                     : 100.0F};
+  }
+  CHECK(serializeRuntimePath(oversized, oversizedSegment, output) ==
+        ResultCode::CapacityReached);
+  CHECK(output.used == 0);
 }
 
 void releaseRequestTests() {
@@ -1105,6 +1174,7 @@ int main() {
   playbackPolicyTests();
   playbackSchedulerTests();
   playbackProjectionTests();
+  runtimePathSerializationTests();
   releaseRequestTests();
   recorderTests();
   capacityTests();

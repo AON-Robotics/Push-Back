@@ -257,5 +257,6 @@ void captureDrive(int left, int right);
 void captureMechanism(MechanismKind kind, std::int16_t value);
 ResultCode applyDriverIntakeIntent(IntakeIntent intent);
 ResultCode applyMechanism(const MechanismEvent& event);
+void stopAllMechanisms();
 
 }  // namespace aon::shadow
