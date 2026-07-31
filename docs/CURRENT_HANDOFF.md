@@ -97,12 +97,33 @@ failure. This cleans up reported save failures when deletion succeeds; it
 cannot make FAT writes power-loss atomic. Never power off until processing
 finishes and the slot reports valid.
 
+The first physical figure-eight asset failed: it moved clumsily and completed
+only an S-shaped half-route. Inspection against LemLib 0.5.6's pursuit
+implementation found that the original 174-inch parametric path combined
+roughly 3-inch-radius bends with an exactly duplicated start/end point.
+LemLib searches globally for the closest point and treats a zero-speed closest
+point as completion, so a closed, self-crossing asset is ambiguous.
+
+The replacement is one continuous separated-crossover figure eight. Its lower
+and upper center passes are at Y=18 and Y=30, respectively, so pose noise
+cannot make LemLib's global nearest-point search jump between them. The two
+outside turns are 6.5-inch-radius semicircles, just above the small robot's
+6.25-inch half-track; smooth S transitions join them. Curvature-aware speeds
+use the fastest centerline command that keeps the ideal outside wheel at or
+below 100, and only the unique endpoint has speed zero. This avoids closed-path
+ambiguity and all intermediate stop/restart transitions. The path uses a
+7-inch lookahead and a 12-second timeout. Host checks cover nonlocal clearance,
+non-intersection, the two separated center passes, unique endpoint, turn
+radius, path length, and an 18-by-16-inch exterior envelope inside the
+requested 48-by-48-inch area. Physical smoothness still requires the physical
+gate.
+
 ## Pending Physical Gate
 
 Do not begin the next calibration or autonomous-migration checkpoint until the
 following tests are recorded:
 
-1. Clear a 44-by-44-inch (two-tile-by-two-tile) area, place the robot at the
+1. Clear a 48-by-48-inch (two-tile-by-two-tile) area, place the robot at the
    figure-eight start, restart the Brain, and run AUT3
    `TEST LemLib Figure 8`. Keep controller X ready to stop.
 2. Record completion time, final LemLib X, Y, and heading, crossover
