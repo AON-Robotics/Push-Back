@@ -73,18 +73,13 @@ const char* shadowModeName(shadow::ServiceMode mode) {
 
 shadow::ResultCode shadowPlayEligibility(const shadow::SlotSummary& summary,
                                          shadow::ServiceMode mode) {
-  if (mode == shadow::ServiceMode::Recording ||
-      mode == shadow::ServiceMode::Processing ||
-      mode == shadow::ServiceMode::Playing) {
-    return shadow::ResultCode::PlayLocked;
-  }
   const auto& config = aon::config::activeRobotConfig();
   const auto robot = config.identity == aon::config::RobotIdentity::Small
                          ? shadow::RobotIdentity::Small
                          : shadow::RobotIdentity::Big;
-  return shadow::authorizePlaybackArm(config.shadowPlaybackAuthorized, robot,
-                                      pros::competition::is_disabled(),
-                                      summary);
+  return shadow::playbackEligibility(
+      config.shadowPlaybackAuthorized, robot,
+      pros::competition::is_disabled(), summary, mode);
 }
 
 }  // namespace
@@ -378,6 +373,10 @@ void Gui::displayShadowMenu() {
   } else if (shadowDeleteSucceeded) {
     pros::screen::set_pen(COLOR_GREEN);
     pros::screen::print(pros::E_TEXT_SMALL, 10, 164, "SLOT DELETED");
+  } else if (status.mode == shadow::ServiceMode::Armed) {
+    pros::screen::set_pen(COLOR_ORANGE);
+    pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
+                        "START AUTON WITHIN 5s");
   } else if (status.result != shadow::ResultCode::Ok) {
     pros::screen::set_pen(COLOR_RED);
     pros::screen::print(pros::E_TEXT_SMALL, 10, 164, "%s",

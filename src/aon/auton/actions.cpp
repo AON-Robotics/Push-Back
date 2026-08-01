@@ -428,6 +428,13 @@ void Actions::cancelMotion() {
   });
 }
 
+bool Actions::prepareMotion() {
+  return motionControl.stopAndPrepare([] {
+    lemlib_integration::chassis().cancelAllMotions();
+    lemlib_integration::stopDrive();
+  });
+}
+
 void Actions::resetCancellation() { motionControl.resetCancellation(); }
 
 void Actions::stop(pros::motor_brake_mode_e brakeMode) {

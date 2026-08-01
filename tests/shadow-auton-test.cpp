@@ -296,6 +296,12 @@ void playbackProjectionTests() {
         0.7F);
   CHECK(monotonicPolylineProgress(crossing, 4, 0.0F, 0.0F, 0.05F) <
         0.6F);
+  const PathPoint multiEdgeLine[] = {
+      {0.0F, 0.0F, 20.0F}, {10.0F, 0.0F, 20.0F},
+      {20.0F, 0.0F, 20.0F}, {30.0F, 0.0F, 20.0F},
+      {40.0F, 0.0F, 0.0F}};
+  CHECK(monotonicPolylineProgress(multiEdgeLine, 5, 35.0F, 0.0F, 0.0F) ==
+        0.875F);
 }
 
 void runtimePathSerializationTests() {
@@ -316,6 +322,7 @@ void runtimePathSerializationTests() {
   CHECK(text.find("\"format\":\"LemLib v0.5\"") != std::string::npos);
   CHECK(text.find("\"name\":\"Shadow Runtime\"}") !=
         std::string::npos);
+  CHECK(validateRuntimePaths(recording.route, output) == ResultCode::Ok);
 
   auto invalidRange = recording.route;
   invalidRange.segments[0].firstPoint = kMaximumPathPoints - 1;
@@ -364,6 +371,10 @@ void runtimePathSerializationTests() {
   CHECK(serializeRuntimePath(oversized, oversizedSegment, output) ==
         ResultCode::CapacityReached);
   CHECK(output.used == 0);
+  oversized.segmentCount = 1;
+  oversized.segments[0] = oversizedSegment;
+  CHECK(validateRuntimePaths(oversized, output) ==
+        ResultCode::CapacityReached);
 }
 
 void releaseRequestTests() {
@@ -910,6 +921,12 @@ void playbackServicePolicyTests() {
         ResultCode::EmptyRecording);
   CHECK(authorizePlaybackArm(true, RobotIdentity::Small, true, valid) ==
         ResultCode::Ok);
+  CHECK(playbackEligibility(true, RobotIdentity::Small, true, valid,
+                            ServiceMode::Saved) == ResultCode::Ok);
+  CHECK(playbackEligibility(true, RobotIdentity::Small, true, valid,
+                            ServiceMode::Armed) == ResultCode::PlayLocked);
+  CHECK(playbackEligibility(true, RobotIdentity::Small, true, valid,
+                            ServiceMode::Playing) == ResultCode::PlayLocked);
 
   MemoryFileStore files;
   Storage storage(files);
@@ -966,6 +983,11 @@ void serviceStateTests() {
                            5100, 5000));
   CHECK(!playbackArmExpired({ServiceMode::Finished, ResultCode::Ok, 1, 100},
                             5100, 5000));
+
+  ServiceStateMachine expiredArm;
+  CHECK(expiredArm.armPlay(1, 100) == ResultCode::Ok);
+  CHECK(!expiredArm.consumeArm(1, 5100));
+  CHECK(expiredArm.status().mode == ServiceMode::Cancelled);
 
   ServiceStateMachine pendingStart;
   const std::uint32_t pendingRevision = pendingStart.revision();
@@ -1050,6 +1072,15 @@ void serviceStateTests() {
   CHECK(failedPlayback.finishPlayback(ResultCode::Cancelled, 305) ==
         ResultCode::Cancelled);
   CHECK(failedPlayback.status().mode == ServiceMode::Cancelled);
+
+  ServiceStateMachine externallyCancelledPlayback;
+  CHECK(externallyCancelledPlayback.armPlay(1, 400) == ResultCode::Ok);
+  CHECK(externallyCancelledPlayback.consumeArm(1, 401));
+  externallyCancelledPlayback.cancel(402);
+  CHECK(externallyCancelledPlayback.finishPlayback(ResultCode::Ok, 403) ==
+        ResultCode::Cancelled);
+  CHECK(externallyCancelledPlayback.status().mode ==
+        ServiceMode::Cancelled);
   CHECK(state.armPlay(0) == ResultCode::InvalidSlot);
 }
 

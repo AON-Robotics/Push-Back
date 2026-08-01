@@ -50,16 +50,10 @@ void clearShadowArmIfPresent() {
 
 shadow::ResultCode shadowPlaybackEligibility(
     const shadow::SlotSummary& summary, shadow::ServiceMode mode) {
-  if (mode == shadow::ServiceMode::Recording ||
-      mode == shadow::ServiceMode::Processing ||
-      mode == shadow::ServiceMode::Playing) {
-    return shadow::ResultCode::PlayLocked;
-  }
   const auto& config = aon::config::activeRobotConfig();
-  return shadow::authorizePlaybackArm(config.shadowPlaybackAuthorized,
-                                      activeShadowRobot(),
-                                      pros::competition::is_disabled(),
-                                      summary);
+  return shadow::playbackEligibility(
+      config.shadowPlaybackAuthorized, activeShadowRobot(),
+      pros::competition::is_disabled(), summary, mode);
 }
 
 void saveAutonSelection(Alliance alliance, int index) {
@@ -515,6 +509,10 @@ void Gui::handleShadowMenuTouch() {
   }
 
   if (shadowPlayBtn.isHit(x, y)) {
+    if (status.mode == shadow::ServiceMode::Armed ||
+        status.mode == shadow::ServiceMode::Playing) {
+      return;
+    }
     const auto eligibility = shadowPlaybackEligibility(
         shadowSlots[selectedShadowSlot - 1], status.mode);
     if (eligibility != shadow::ResultCode::Ok) {

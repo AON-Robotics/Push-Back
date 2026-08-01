@@ -92,6 +92,21 @@ ResultCode serializeRuntimePath(const ProcessedRoute& route,
   return ResultCode::Ok;
 }
 
+ResultCode validateRuntimePaths(const ProcessedRoute& route,
+                                RuntimePath& scratch) {
+  if (route.segmentCount == 0 || route.segmentCount > kMaximumSegments) {
+    return ResultCode::CorruptFile;
+  }
+  for (std::size_t index = 0; index < route.segmentCount; ++index) {
+    if (route.segments[index].kind != SegmentKind::Motion) continue;
+    const ResultCode result =
+        serializeRuntimePath(route, route.segments[index], scratch);
+    if (result != ResultCode::Ok) return result;
+  }
+  scratch.used = 0;
+  return ResultCode::Ok;
+}
+
 #if defined(__arm__) || defined(__thumb__)
 ResultCode playOnRobot(const DecodedRecording& recording,
                        const PlaybackPolicy& policy) {
@@ -100,7 +115,17 @@ ResultCode playOnRobot(const DecodedRecording& recording,
   (void)policy;
   return ResultCode::UnsupportedRobot;
 #else
-  playbackCancelled.store(false);
+  const ResultCode validation = validatePlayback(recording, policy);
+  if (validation != ResultCode::Ok) {
+    cancelRobotPlayback();
+    return validation;
+  }
+  const ResultCode runtimeValidation =
+      validateRuntimePaths(recording.route, runtimePath);
+  if (runtimeValidation != ResultCode::Ok) {
+    cancelRobotPlayback();
+    return runtimeValidation;
+  }
   ResultCode observerFailure = ResultCode::Ok;
   PlaybackCallbacks callbacks{
       [&](const ProcessedRoute& route, const RouteSegment& segment,
@@ -162,6 +187,13 @@ ResultCode playOnRobot(const DecodedRecording& recording,
 #endif
 }
 
+ResultCode prepareRobotPlayback() {
+  playbackCancelled.store(false);
+  stopAllMechanisms();
+  return aon::auton::actions().prepareMotion() ? ResultCode::Ok
+                                               : ResultCode::Cancelled;
+}
+
 void cancelRobotPlayback() {
   playbackCancelled.store(true);
   aon::auton::actions().cancelMotion();
@@ -172,6 +204,8 @@ void cancelRobotPlayback() {
 ResultCode playOnRobot(const DecodedRecording&, const PlaybackPolicy&) {
   return ResultCode::UnsupportedRobot;
 }
+
+ResultCode prepareRobotPlayback() { return ResultCode::UnsupportedRobot; }
 
 void cancelRobotPlayback() {}
 #endif

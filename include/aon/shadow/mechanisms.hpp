@@ -257,6 +257,7 @@ void captureDrive(int left, int right);
 void captureMechanism(MechanismKind kind, std::int16_t value);
 ResultCode applyDriverIntakeIntent(IntakeIntent intent);
 ResultCode applyMechanism(const MechanismEvent& event);
+/** Stops motorized mechanisms; passive pneumatic target states are retained. */
 void stopAllMechanisms();
 
 }  // namespace aon::shadow

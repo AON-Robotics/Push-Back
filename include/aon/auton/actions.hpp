@@ -40,6 +40,8 @@ class Actions {
                               OdometryMonitoring::Configured);
 
   void cancelMotion();
+  /** Stops any idle output and rearms the drivetrain for a new routine. */
+  bool prepareMotion();
   /** @brief Rearms drivetrain actions at the start of a new autonomous run. */
   void resetCancellation();
   void stop(pros::motor_brake_mode_e brakeMode = pros::E_MOTOR_BRAKE_HOLD);

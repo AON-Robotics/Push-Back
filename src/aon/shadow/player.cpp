@@ -217,28 +217,11 @@ float monotonicPolylineProgress(const PathPoint* points, std::size_t count,
   }
   if (!(totalLength > 0.0F) || !std::isfinite(totalLength)) return previous;
 
-  const float previousLength =
-      std::clamp(previous, 0.0F, 1.0F) * totalLength;
-  std::size_t currentEdge = 1;
-  float currentEdgeStartLength = 0.0F;
-  float traversedLength = 0.0F;
-  for (std::size_t index = 1; index < count; ++index) {
-    const float length = std::hypot(points[index].x - points[index - 1].x,
-                                    points[index].y - points[index - 1].y);
-    if (previousLength < traversedLength + length || index + 1 == count) {
-      currentEdge = index;
-      currentEdgeStartLength = traversedLength;
-      break;
-    }
-    traversedLength += length;
-  }
-
+  constexpr float kDistanceTieTolerance = 0.0001F;
   float nearestDistanceSquared = std::numeric_limits<float>::infinity();
   float nearestProgress = previous;
-  float completedLength = currentEdgeStartLength;
-  const std::size_t lastCandidateEdge =
-      std::min(count - 1, currentEdge + 1);
-  for (std::size_t index = currentEdge; index <= lastCandidateEdge; ++index) {
+  float completedLength = 0.0F;
+  for (std::size_t index = 1; index < count; ++index) {
     const auto& start = points[index - 1];
     const auto& end = points[index];
     const float dx = end.x - start.x;
@@ -253,9 +236,20 @@ float monotonicPolylineProgress(const PathPoint* points, std::size_t count,
     const float offsetX = x - projectedX;
     const float offsetY = y - projectedY;
     const float distanceSquared = offsetX * offsetX + offsetY * offsetY;
-    if (distanceSquared < nearestDistanceSquared) {
+    const float candidateProgress =
+        (completedLength + local * length) / totalLength;
+    const bool candidateIsForward = candidateProgress >= previous;
+    const bool nearestIsForward = nearestProgress >= previous;
+    const bool clearlyCloser =
+        distanceSquared + kDistanceTieTolerance < nearestDistanceSquared;
+    const bool tiedAndSafer =
+        std::abs(distanceSquared - nearestDistanceSquared) <=
+            kDistanceTieTolerance &&
+        candidateIsForward &&
+        (!nearestIsForward || candidateProgress < nearestProgress);
+    if (clearlyCloser || tiedAndSafer) {
       nearestDistanceSquared = distanceSquared;
-      nearestProgress = (completedLength + local * length) / totalLength;
+      nearestProgress = candidateProgress;
     }
     completedLength += length;
   }

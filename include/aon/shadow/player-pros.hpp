@@ -18,8 +18,11 @@ struct RuntimePath {
 ResultCode serializeRuntimePath(const ProcessedRoute& route,
                                 const RouteSegment& segment,
                                 RuntimePath& output);
+ResultCode validateRuntimePaths(const ProcessedRoute& route,
+                                RuntimePath& scratch);
 ResultCode playOnRobot(const DecodedRecording& recording,
                        const PlaybackPolicy& policy);
+ResultCode prepareRobotPlayback();
 void cancelRobotPlayback();
 
 }  // namespace aon::shadow

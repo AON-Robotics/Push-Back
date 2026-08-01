@@ -301,20 +301,28 @@ ResultCode Service::runArmedPlayback() {
     serviceData.ioBusy = true;
   }
 
-  cancelRobotPlayback();
-  const ResultCode result = loadAndRunPlayback(
-      serviceData.storage, slotValue, robot, serviceData.playbackSnapshot,
-      [&](const DecodedRecording& recording, const PlaybackPolicy&) {
-        return playOnRobot(
-            recording,
-            {aon::config::activeRobotConfig().shadowPlaybackAuthorized, true,
-             robot});
-      });
+  ResultCode result = prepareRobotPlayback();
+  if (result == ResultCode::Ok) {
+    result = loadAndRunPlayback(
+        serviceData.storage, slotValue, robot, serviceData.playbackSnapshot,
+        [&](const DecodedRecording& recording, const PlaybackPolicy&) {
+          {
+            Lock lock(serviceData.mutex);
+            if (serviceData.state.status().mode != ServiceMode::Playing) {
+              return ResultCode::Cancelled;
+            }
+          }
+          return playOnRobot(
+              recording,
+              {aon::config::activeRobotConfig().shadowPlaybackAuthorized,
+               true, robot});
+        });
+  }
 
   {
     Lock lock(serviceData.mutex);
     serviceData.ioBusy = false;
-    serviceData.state.finishPlayback(result, pros::millis());
+    result = serviceData.state.finishPlayback(result, pros::millis());
   }
   return result;
 }

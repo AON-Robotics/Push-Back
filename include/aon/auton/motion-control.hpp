@@ -66,6 +66,19 @@ class MotionControl {
     mutex_.give();
   }
 
+  /** Atomically stops and rearms an idle drivetrain; refuses an active owner. */
+  template <typename Callback>
+  bool stopAndPrepare(Callback&& callback) {
+    mutex_.take();
+    const bool hadActiveOwner = state_.isActive();
+    state_.cancel();
+    std::forward<Callback>(callback)();
+    if (!hadActiveOwner) state_.resetCancellation();
+    const bool ready = !state_.isCancelled();
+    mutex_.give();
+    return ready;
+  }
+
   /**
    * @brief Reports whether the current drivetrain owner was cancelled.
    * @return true until the cancelled owner releases the drivetrain.

@@ -45,6 +45,9 @@ ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
 ResultCode authorizePlaybackArm(bool authorized, RobotIdentity activeRobot,
                                 bool robotDisabled,
                                 const SlotSummary& summary);
+ResultCode playbackEligibility(bool authorized, RobotIdentity activeRobot,
+                               bool robotDisabled,
+                               const SlotSummary& summary, ServiceMode mode);
 
 Service& service();
 

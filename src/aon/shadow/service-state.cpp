@@ -86,6 +86,10 @@ bool ServiceStateMachine::consumeArm(std::uint8_t slot, std::uint32_t now) {
       armedSlot_ != slot) {
     return false;
   }
+  if (playbackArmExpired(status_, now)) {
+    cancel(now);
+    return false;
+  }
   armedSlot_ = 0;
   status_.mode = ServiceMode::Playing;
   status_.result = ResultCode::Ok;
@@ -95,6 +99,7 @@ bool ServiceStateMachine::consumeArm(std::uint8_t slot, std::uint32_t now) {
 
 ResultCode ServiceStateMachine::finishPlayback(ResultCode result,
                                                std::uint32_t now) {
+  if (status_.mode == ServiceMode::Cancelled) return ResultCode::Cancelled;
   if (status_.mode != ServiceMode::Playing) return ResultCode::UnsafeState;
   if (result == ResultCode::Ok) {
     status_.mode = ServiceMode::Finished;
@@ -153,6 +158,16 @@ ResultCode authorizePlaybackArm(bool authorized, RobotIdentity activeRobot,
   if (!robotDisabled) return ResultCode::UnsafeState;
   if (summary.result != ResultCode::Ok) return summary.result;
   return summary.valid ? ResultCode::Ok : ResultCode::EmptyRecording;
+}
+
+ResultCode playbackEligibility(bool authorized, RobotIdentity activeRobot,
+                               bool robotDisabled,
+                               const SlotSummary& summary, ServiceMode mode) {
+  if (mode == ServiceMode::Recording || mode == ServiceMode::Processing ||
+      mode == ServiceMode::Armed || mode == ServiceMode::Playing) {
+    return ResultCode::PlayLocked;
+  }
+  return authorizePlaybackArm(authorized, activeRobot, robotDisabled, summary);
 }
 
 ResultCode loadAndRunPlayback(Storage& storage, std::uint8_t slot,
