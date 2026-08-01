@@ -65,7 +65,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
-      false,  // shadowPlaybackAuthorized; supervised physical test only.
+      true,  // shadowPlaybackAuthorized; supervised physical test only.
   };
 #endif
   return config;
