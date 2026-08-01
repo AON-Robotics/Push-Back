@@ -118,6 +118,38 @@ void checkRegistration() {
   CHECK(gui.find("RedSixBlock", skillsStart) == std::string::npos);
 }
 
+std::size_t occurrenceCount(const std::string& text, const char* needle) {
+  std::size_t count = 0;
+  std::size_t offset = 0;
+  while ((offset = text.find(needle, offset)) != std::string::npos) {
+    ++count;
+    offset += std::char_traits<char>::length(needle);
+  }
+  return count;
+}
+
+void checkSafetyWiring() {
+  const std::string routines = readText("src/aon/auton/lemlib-routines.cpp");
+  const std::string redRoutine = functionBody(
+      routines, "int RunRedSixBlockHybridAuton", "int RunRedSixBlockHybridFull");
+  CHECK(occurrenceCount(redRoutine, "OdometryMonitoring::FailClosed") == 7);
+
+  const std::string reverseAlignment = functionBody(
+      redRoutine, "case RedSixPhase::ReverseAlignment",
+      "case RedSixPhase::GoalPursuit");
+  CHECK(reverseAlignment.find(".minSpeed") == std::string::npos);
+  CHECK(reverseAlignment.find(".earlyExitRange") == std::string::npos);
+
+  const std::string collection = functionBody(
+      redRoutine, "case RedSixPhase::CollectSix",
+      "case RedSixPhase::ReverseClearance");
+  CHECK(collection.find("arcadeFor") != std::string::npos);
+
+  const std::string generator =
+      readText("tools/generate-red-six-block-paths.ps1");
+  CHECK(generator.find("ToString('F5', $invariant)") != std::string::npos);
+}
+
 void checkSequence() {
   using aon::auton::RedSixCallbacks;
   using aon::auton::RedSixPhase;
@@ -254,6 +286,7 @@ int main() {
   checkPath(goal, RedSixBlock::reverseAlignment, RedSixBlock::goalStage, 45.0);
   checkSequence();
   checkRegistration();
+  checkSafetyWiring();
 
   std::cout << "red six-block path tests passed\n";
 }

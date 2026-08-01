@@ -84,8 +84,10 @@ function New-Path {
 
     $lines = New-Object System.Collections.Generic.List[string]
     for ($index = 0; $index -lt $Count; ++$index) {
-        $lines.Add(('{0:F5}, {1:F5}, {2}' -f $points[$index][0],
-                    $points[$index][1], $speeds[$index]))
+        $x = $points[$index][0].ToString('F5', $invariant)
+        $y = $points[$index][1].ToString('F5', $invariant)
+        $speed = $speeds[$index].ToString($invariant)
+        $lines.Add("$x, $y, $speed")
     }
     $lines.Add('endData')
     $lines.Add('100')

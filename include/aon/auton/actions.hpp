@@ -26,13 +26,19 @@ class Actions {
   void setPose(double x, double y, double heading);
 
   MotionResult moveToPoint(const char* name, double x, double y, int timeout,
-                           lemlib::MoveToPointParams params = {});
+                           lemlib::MoveToPointParams params = {},
+                           OdometryMonitoring monitoring =
+                               OdometryMonitoring::Configured);
   MotionResult moveToPose(const char* name, double x, double y, double heading,
-                          int timeout, lemlib::MoveToPoseParams params = {});
+                          int timeout, lemlib::MoveToPoseParams params = {},
+                          OdometryMonitoring monitoring =
+                              OdometryMonitoring::Configured);
   MotionResult turnToHeading(const char* name, double heading, int timeout,
                              lemlib::TurnToHeadingParams params = {});
   MotionResult arcadeFor(const char* name, int throttle, int turn,
-                         std::uint32_t durationMs);
+                         std::uint32_t durationMs,
+                         OdometryMonitoring monitoring =
+                             OdometryMonitoring::Configured);
   MotionResult followPath(const char* name, const asset& path, float lookahead,
                           int timeout, bool forwards = true,
                           const std::function<void()>& onPoll = {},

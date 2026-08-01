@@ -246,7 +246,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        "red-six loader pursuit",
                        red_six_loader_approach_jerryio_txt,
                        RedSixBlock::loaderLookahead,
-                       RedSixBlock::loaderPathTimeoutMs, true));
+                       RedSixBlock::loaderPathTimeoutMs, true, {},
+                       aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::LoaderContact:
         // Approach forward at low speed for repeatable loader alignment.
         return redSixMotion(
@@ -255,10 +256,21 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        RedSixBlock::loaderContact.y,
                        RedSixBlock::loaderContact.heading,
                        RedSixBlock::loaderContactTimeoutMs,
-                       {.forwards = true, .maxSpeed = 30}));
+                       {.forwards = true, .maxSpeed = 30},
+                       aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::CollectSix: {
         aon::auton::mechanisms::beginLoaderCollection();
         const std::uint32_t startedAt = pros::millis();
+        // Seat against the loader briefly, then rely on the autonomous HOLD
+        // brake mode for the remainder of collection instead of heating the
+        // drivetrain against the wall for the full dwell.
+        const auto seating = routine.arcadeFor(
+            "red-six loader seating hold", 25, 0, 250,
+            aon::auton::OdometryMonitoring::FailClosed);
+        if (!seating.succeeded) {
+          aon::auton::mechanisms::finishLoaderCollection();
+          return false;
+        }
         bool completed = true;
         while (pros::millis() - startedAt <
                static_cast<std::uint32_t>(RedSixBlock::collectTimeoutMs)) {
@@ -285,7 +297,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        {.forwards = false,
                         .maxSpeed = 60,
                         .minSpeed = 25,
-                        .earlyExitRange = 2.5}));
+                        .earlyExitRange = 2.5},
+                       aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::ReverseAlignment:
         // Continue in reverse and finish at the goal path's entry heading.
         return redSixMotion(
@@ -295,10 +308,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        RedSixBlock::reverseAlignment.y,
                        RedSixBlock::reverseAlignment.heading,
                        RedSixBlock::reverseAlignmentTimeoutMs,
-                       {.forwards = false,
-                        .maxSpeed = 40,
-                        .minSpeed = 15,
-                        .earlyExitRange = 1.0}));
+                       {.forwards = false, .maxSpeed = 40},
+                       aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::GoalPursuit:
         // Raise the scorer during safe open travel, before goal contact.
         aon::auton::mechanisms::prepareTopScorer();
@@ -307,7 +318,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        "red-six goal pursuit",
                        red_six_goal_transfer_jerryio_txt,
                        RedSixBlock::goalLookahead,
-                       RedSixBlock::goalPathTimeoutMs, true));
+                       RedSixBlock::goalPathTimeoutMs, true, {},
+                       aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::GoalContact:
         // Final heading matters here, so use a slow forward pose action.
         return redSixMotion(
@@ -316,7 +328,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        RedSixBlock::goalContact.y,
                        RedSixBlock::goalContact.heading,
                        RedSixBlock::goalContactTimeoutMs,
-                       {.forwards = true, .maxSpeed = 30}));
+                       {.forwards = true, .maxSpeed = 30},
+                       aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::ScoreSix:
         aon::auton::mechanisms::scoreTopBlocks(
             RedSixBlock::scoreTimeoutMs);

@@ -70,6 +70,16 @@ MotionSample motionSample() {
   return sample;
 }
 
+MotionFailureReason invalidReason(const MotionSample& sample) {
+  if (!sample.poseValid) return MotionFailureReason::NonFinitePose;
+  if (!sample.leftMotorValid || !sample.rightMotorValid ||
+      !sample.leftTrackingValid || !sample.rightTrackingValid ||
+      !sample.backTrackingValid || !sample.imuValid) {
+    return MotionFailureReason::DeviceInvalid;
+  }
+  return MotionFailureReason::None;
+}
+
 void logStart(const char* operation, const char* name) {
   std::printf("AUTON_START operation=%s name=%s time=%lu\n", operation, name,
               static_cast<unsigned long>(pros::millis()));
@@ -213,15 +223,6 @@ MotionResult runMonitored(const char* operation, const char* name,
           status.mode == MotionMode::Tracking,
           config::activeRobotConfig()
               .lemlib.fallback.automaticFallbackAuthorized);
-  const auto invalidReason = [](const MotionSample& sample) {
-    if (!sample.poseValid) return MotionFailureReason::NonFinitePose;
-    if (!sample.leftMotorValid || !sample.rightMotorValid ||
-        !sample.leftTrackingValid || !sample.rightTrackingValid ||
-        !sample.backTrackingValid || !sample.imuValid) {
-      return MotionFailureReason::DeviceInvalid;
-    }
-    return MotionFailureReason::None;
-  };
   if (failClosedMonitoring) {
     const MotionFailureReason reason = invalidReason(initial);
     if (reason != MotionFailureReason::None) {
@@ -337,23 +338,25 @@ void Actions::setPose(double x, double y, double heading) {
 
 MotionResult Actions::moveToPoint(const char* name, double x, double y,
                                   int timeout,
-                                  lemlib::MoveToPointParams params) {
+                                  lemlib::MoveToPointParams params,
+                                  OdometryMonitoring monitoring) {
   return runMonitored(
       "moveToPoint", name, {TargetKind::Point, x, y, 0.0, params.forwards},
       MotionIntent::Linear, static_cast<int>(params.maxSpeed), timeout,
       [=] { lemlib_integration::chassis().moveToPoint(x, y, timeout, params); },
-      {});
+      {}, monitoring);
 }
 
 MotionResult Actions::moveToPose(const char* name, double x, double y,
                                  double heading, int timeout,
-                                 lemlib::MoveToPoseParams params) {
+                                 lemlib::MoveToPoseParams params,
+                                 OdometryMonitoring monitoring) {
   return runMonitored(
       "moveToPose", name,
       {TargetKind::Pose, x, y, heading, params.forwards},
       MotionIntent::Linear, static_cast<int>(params.maxSpeed), timeout, [=] {
         lemlib_integration::chassis().moveToPose(x, y, heading, timeout, params);
-      }, {});
+      }, {}, monitoring);
 }
 
 MotionResult Actions::turnToHeading(const char* name, double heading,
@@ -368,7 +371,8 @@ MotionResult Actions::turnToHeading(const char* name, double heading,
 }
 
 MotionResult Actions::arcadeFor(const char* name, int throttle, int turn,
-                                std::uint32_t durationMs) {
+                                std::uint32_t durationMs,
+                                OdometryMonitoring monitoring) {
   logStart("arcadeFor", name);
   const auto mode = fallbackStatus().mode;
   MotionLease lease(motionControl);
@@ -376,6 +380,24 @@ MotionResult Actions::arcadeFor(const char* name, int throttle, int turn,
     MotionResult result{false, mode, false, MotionFailureReason::Busy};
     logFinish("arcadeFor", name, result);
     return result;
+  }
+
+  const bool failClosedMonitoring =
+      monitoring == OdometryMonitoring::FailClosed;
+  if (failClosedMonitoring && mode != MotionMode::Tracking) {
+    lemlib_integration::stopDrive();
+    MotionResult result{false, mode, false, MotionFailureReason::DeviceInvalid};
+    logFinish("arcadeFor", name, result);
+    return result;
+  }
+  if (failClosedMonitoring) {
+    const MotionFailureReason initialReason = invalidReason(motionSample());
+    if (initialReason != MotionFailureReason::None) {
+      lemlib_integration::stopDrive();
+      MotionResult result{false, mode, false, initialReason};
+      logFinish("arcadeFor", name, result);
+      return result;
+    }
   }
 
   auto& robotChassis = lemlib_integration::chassis();
@@ -394,15 +416,24 @@ MotionResult Actions::arcadeFor(const char* name, int throttle, int turn,
       reason = MotionFailureReason::Cancelled;
       break;
     }
-    const auto drive = lemlib_integration::sampleDriveSensors();
-    if (!driveFeedbackValid(drive.leftMotorValid, drive.rightMotorValid)) {
-      reason = MotionFailureReason::DeviceInvalid;
-      break;
+    if (failClosedMonitoring) {
+      reason = invalidReason(motionSample());
+      if (reason != MotionFailureReason::None) break;
+    } else {
+      const auto drive = lemlib_integration::sampleDriveSensors();
+      if (!driveFeedbackValid(drive.leftMotorValid, drive.rightMotorValid)) {
+        reason = MotionFailureReason::DeviceInvalid;
+        break;
+      }
     }
     pros::delay(20);
   }
   motionControl.runIfActive([&] { robotChassis.arcade(0, 0, true); });
   lemlib_integration::stopDrive();
+  if (failClosedMonitoring && reason != MotionFailureReason::None &&
+      reason != MotionFailureReason::Cancelled) {
+    latchFallbackFault(reason, name);
+  }
   MotionResult result{reason == MotionFailureReason::None, mode,
                       mode != MotionMode::Tracking, reason};
   logFinish("arcadeFor", name, result);
