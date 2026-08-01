@@ -65,7 +65,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
-      false,  // Enable only in the supervised physical-test checkpoint.
+      false,  // shadowPlaybackAuthorized; supervised physical test only.
   };
 #endif
   return config;
