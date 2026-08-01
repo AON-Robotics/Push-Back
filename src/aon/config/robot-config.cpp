@@ -34,7 +34,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
-      false,
+      false,  // shadowPlaybackAuthorized
   };
 #else
   static const RobotConfig config{
@@ -65,7 +65,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
-      false,
+      true,  // shadowPlaybackAuthorized
   };
 #endif
   return config;
