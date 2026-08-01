@@ -51,6 +51,8 @@ int RunStagedLoaderScoreExperiment();
  */
 int RunRedSixBlockHybridAuton(
     aon::auton::RedSixPhase stopAfter = aon::auton::RedSixPhase::ScoreSix);
+/** @brief Runs the complete red six-block route for selector registration. */
+int RunRedSixBlockHybridFull();
 int RunShadowPlayback();
 
 // Low-speed native drivetrain checks. These never command mechanisms.

@@ -76,6 +76,48 @@ std::vector<PathPoint> readPath(const char* filename) {
   return points;
 }
 
+std::string readText(const char* filename) {
+  std::ifstream input(filename);
+  CHECK(input.is_open());
+  return {std::istreambuf_iterator<char>(input),
+          std::istreambuf_iterator<char>()};
+}
+
+std::string functionBody(const std::string& source, const char* name,
+                         const char* nextName) {
+  const std::size_t begin = source.find(name);
+  CHECK(begin != std::string::npos);
+  const std::size_t end = source.find(nextName, begin + 1);
+  CHECK(end != std::string::npos);
+  return source.substr(begin, end - begin);
+}
+
+void checkRegistration() {
+  const std::string selectors =
+      readText("src/aon/auton/routine-selectors.cpp");
+  const std::string redThree =
+      functionBody(selectors, "int RedRoutine3()", "int BlueRoutine1()");
+  const std::string blueThree =
+      functionBody(selectors, "int BlueRoutine3()", "int SkillsRoutine1()");
+  const std::string skillsThree =
+      functionBody(selectors, "int SkillsRoutine3()", "int RunShadowPlayback()");
+  CHECK(redThree.find("RunRedSixBlockHybridFull") != std::string::npos);
+  CHECK(blueThree.find("RunLemLibFigureEightValidation") !=
+        std::string::npos);
+  CHECK(skillsThree.find("RunRedSixBlock") == std::string::npos);
+  CHECK(selectors.find("int RedRoutine1()") != std::string::npos);
+  CHECK(selectors.find("int RedRoutine2()") != std::string::npos);
+
+  const std::string gui = readText("include/aon/tools/gui/gui.hpp");
+  CHECK(gui.find("{aon::auton::RedSixBlock::name, "
+                 "aon::routines::RedRoutine3}") != std::string::npos);
+  CHECK(gui.find("{aon::auton::FigureEightValidation::name, "
+                 "aon::routines::BlueRoutine3}") != std::string::npos);
+  const std::size_t skillsStart = gui.find("skillsAutonOptions");
+  CHECK(skillsStart != std::string::npos);
+  CHECK(gui.find("RedSixBlock", skillsStart) == std::string::npos);
+}
+
 void checkSequence() {
   using aon::auton::RedSixCallbacks;
   using aon::auton::RedSixPhase;
@@ -211,6 +253,7 @@ int main() {
   checkPath(loader, RedSixBlock::start, RedSixBlock::loaderStage, 90.0);
   checkPath(goal, RedSixBlock::reverseAlignment, RedSixBlock::goalStage, 45.0);
   checkSequence();
+  checkRegistration();
 
   std::cout << "red six-block path tests passed\n";
 }

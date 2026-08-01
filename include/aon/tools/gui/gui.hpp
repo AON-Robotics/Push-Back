@@ -12,6 +12,7 @@
 #include "../../../api.h"
 #include "aon/auton/routines.hpp"
 #include "aon/auton/figure-eight-validation.hpp"
+#include "aon/auton/red-six-block.hpp"
 #include "aon/auton/status.hpp"
 #include "aon/constants.hpp"
 #include "aon/math/pose.hpp"
@@ -90,7 +91,7 @@ public:
   AutonOption redAutonOptions[autonOptionsCount] = {
     {"Kevin Loader", aon::routines::RedRoutine1},
     {"Kevin Park", aon::routines::RedRoutine2},
-    {aon::auton::FigureEightValidation::name, aon::routines::RedRoutine3},
+    {aon::auton::RedSixBlock::name, aon::routines::RedRoutine3},
   };
   
   AutonOption blueAutonOptions[autonOptionsCount] = {

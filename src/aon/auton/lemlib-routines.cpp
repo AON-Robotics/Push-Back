@@ -338,4 +338,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
 #endif
 }
 
+int RunRedSixBlockHybridFull() {
+  return RunRedSixBlockHybridAuton(aon::auton::RedSixPhase::ScoreSix);
+}
+
 }  // namespace aon::routines
