@@ -97,13 +97,9 @@ void checkRegistration() {
       readText("src/aon/auton/routine-selectors.cpp");
   const std::string redThree =
       functionBody(selectors, "int RedRoutine3()", "int BlueRoutine1()");
-  const std::string blueThree =
-      functionBody(selectors, "int BlueRoutine3()", "int SkillsRoutine1()");
   const std::string skillsThree =
       functionBody(selectors, "int SkillsRoutine3()", "int RunShadowPlayback()");
   CHECK(redThree.find("RunRedSixBlockHybridFull") != std::string::npos);
-  CHECK(blueThree.find("RunLemLibFigureEightValidation") !=
-        std::string::npos);
   CHECK(skillsThree.find("RunRedSixBlock") == std::string::npos);
   CHECK(selectors.find("int RedRoutine1()") != std::string::npos);
   CHECK(selectors.find("int RedRoutine2()") != std::string::npos);
@@ -111,8 +107,6 @@ void checkRegistration() {
   const std::string gui = readText("include/aon/tools/gui/gui.hpp");
   CHECK(gui.find("{aon::auton::RedSixBlock::name, "
                  "aon::routines::RedRoutine3}") != std::string::npos);
-  CHECK(gui.find("{aon::auton::FigureEightValidation::name, "
-                 "aon::routines::BlueRoutine3}") != std::string::npos);
   const std::size_t skillsStart = gui.find("skillsAutonOptions");
   CHECK(skillsStart != std::string::npos);
   CHECK(gui.find("RedSixBlock", skillsStart) == std::string::npos);

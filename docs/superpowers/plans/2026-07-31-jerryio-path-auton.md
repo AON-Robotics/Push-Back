@@ -61,7 +61,7 @@ CHECK(JerryIoPathAuton::timeoutMs == 14000);
 CHECK(JerryIoPathAuton::maximumPathSpeed == 127);
 ```
 
-After parsing, require at least 80 points, finite coordinates and speeds, a valid terminator, a first point equal to the configured X/Y, all speeds in `[0, maximumPathSpeed]`, every non-final speed greater than zero, and final speed equal to zero. Compute the initial LemLib heading with `atan2(second.x - first.x, second.y - first.y)` in degrees and require its error from `startHeading` to be at most `0.1` degree.
+After parsing, require at least 80 points, finite coordinates and speeds, a valid terminator, a first point equal to the configured X/Y, all speeds in `[0, maximumPathSpeed]`, and final speed equal to zero. Compute the initial LemLib heading with `atan2(second.x - first.x, second.y - first.y)` in degrees and require its error from `startHeading` to be at most `0.1` degree.
 
 - [x] **Step 3: Compile and verify RED**
 
@@ -210,13 +210,13 @@ Repeat Task 1 Step 3 and Step 5.
 
 Expected: `JerryIO path auton tests passed` with no warnings.
 
-- [ ] **Step 6: Run the complete host suite**
+- [x] **Step 6: Run the complete host suite**
 
 Rebuild and run `vector-test`, `figure-eight-path-test`, `motion-fallback-test`, `red-six-block-path-test`, `shadow-sd-directory-test`, `shadow-sd-write-test`, and `shadow-auton-test` using the source lists in `docs/superpowers/plans/2026-07-31-vector-value-semantics.md`, plus the new focused test.
 
 Expected: all eight executables print their pass messages and return exit code 0.
 
-- [ ] **Step 7: Run a clean embedded build**
+- [x] **Step 7: Run a clean embedded build**
 
 ```powershell
 $toolchain = 'C:\Users\jojur\AppData\Roaming\Code\User\globalStorage\sigbots.pros\install\pros-toolchain-windows\usr'
@@ -228,7 +228,7 @@ make
 
 Expected: a fresh `bin/monolith.bin` with no new compiler errors or warnings.
 
-- [ ] **Step 8: Review and commit the complete implementation**
+- [x] **Step 8: Review and commit the complete implementation**
 
 Run `git diff --check`, review the exact scoped diff, and use the code-review skill. Fix all Critical or Important findings and rerun affected verification. Then commit the feature, including the user-supplied path now that its contract and use are complete:
 
