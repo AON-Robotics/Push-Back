@@ -32,7 +32,8 @@ All other observable behavior remains unchanged:
   direction with `std::atan2`.
 - `SetMagnitude` keeps the existing absolute stored magnitude while using the
   supplied signed value to calculate Cartesian components.
-- Degree/radian normalization continues to be performed by `Angle`.
+- Degree/radian conversion continues to be performed by `Angle`; values are
+  not normalized or wrapped.
 - Arithmetic operators retain their existing Cartesian or polar meanings.
 - Existing public method names, parameter types, return types, implicit
   conversions, and stream output remain source-compatible.
@@ -74,7 +75,8 @@ The green suite also covers:
 - copy construction and copy assignment independence;
 - addition, subtraction, vector/scalar multiplication, division, dot product,
   and normalization;
-- degree/radian wrap behavior inherited from `Angle`;
+- degree/radian conversion for values outside one revolution, preserving
+  `Angle`'s current lack of automatic wrapping;
 - representative chained setters used by drivetrain and odometry callers.
 
 Tests compile as C++17 with GCC 13.1 and `-Wall -Wextra -Werror`, matching the
