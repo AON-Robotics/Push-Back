@@ -971,6 +971,18 @@ void playbackServicePolicyTests() {
   CHECK(dispatchArmedPlayback(missingState, storage, 3,
                               RobotIdentity::Small, snapshot, failingRunner,
                               32) == ResultCode::PlayLocked);
+
+  ServiceStateMachine cancelledDuringRun;
+  CHECK(cancelledDuringRun.armPlay(2, 40) == ResultCode::Ok);
+  const PlaybackRunner cancellingRunner =
+      [&](const DecodedRecording&, const PlaybackPolicy&) {
+        cancelledDuringRun.cancel(41);
+        return ResultCode::Ok;
+      };
+  CHECK(dispatchArmedPlayback(cancelledDuringRun, storage, 2,
+                              RobotIdentity::Small, snapshot,
+                              cancellingRunner, 42) ==
+        ResultCode::Cancelled);
 }
 
 void serviceStateTests() {

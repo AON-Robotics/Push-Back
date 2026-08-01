@@ -197,8 +197,7 @@ ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
 
   const ResultCode result =
       loadAndRunPlayback(storage, slot, robot, snapshot, runner);
-  state.finishPlayback(result, now);
-  return result;
+  return state.finishPlayback(result, now);
 }
 
 }  // namespace aon::shadow
