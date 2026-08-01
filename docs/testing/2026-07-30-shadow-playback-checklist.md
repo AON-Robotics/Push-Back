@@ -5,6 +5,18 @@ clear field. Keep controller X ready as the emergency stop throughout every
 run. The automated host and cross-configuration build gates must pass before
 uploading.
 
+## Current gate status
+
+- Automated host suites: passed on 2026-07-31.
+- Clean ARM builds: small, big, then restored small all passed on 2026-07-31.
+- Small playback authorization: `false` pending the physical tests below.
+- Physical tests: not run.
+
+Create a dedicated supervised-test checkpoint that changes only the small
+configuration's `shadowPlaybackAuthorized` value to `true` immediately before
+uploading the physical-test build. Keep the big configuration locked. If either
+physical gate fails, restore the small value to `false` before any further run.
+
 ## Progressive test
 
 1. Clear the field, confirm the robot is using the small configuration, and
@@ -38,4 +50,4 @@ unexpected, stop immediately and set the small configuration's
 
 Tested by:  
 Date/time:  
-Small-build commit:  
+Small-build commit: `e264c49`  
