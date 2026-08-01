@@ -1,6 +1,8 @@
 #include "aon/auton/red-six-block.hpp"
+#include "aon/auton/hybrid-sequence.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -70,6 +72,64 @@ std::vector<PathPoint> readPath(const char* filename) {
   }
   CHECK(terminated);
   return points;
+}
+
+void checkSequence() {
+  using aon::auton::RedSixCallbacks;
+  using aon::auton::RedSixPhase;
+  constexpr std::array<RedSixPhase, 8> phases{{
+      RedSixPhase::LoaderPursuit, RedSixPhase::LoaderContact,
+      RedSixPhase::CollectSix, RedSixPhase::ReverseClearance,
+      RedSixPhase::ReverseAlignment, RedSixPhase::GoalPursuit,
+      RedSixPhase::GoalContact, RedSixPhase::ScoreSix}};
+
+  for (std::size_t failure = 0; failure < phases.size(); ++failure) {
+    std::vector<RedSixPhase> visited;
+    int stopCount = 0;
+    RedSixCallbacks callbacks{
+        [&](RedSixPhase phase) {
+          visited.push_back(phase);
+          return phase != phases[failure];
+        },
+        [&] { ++stopCount; }};
+    const auto result = aon::auton::runRedSixSequence(callbacks);
+    CHECK(!result.succeeded);
+    CHECK(result.failedPhase == phases[failure]);
+    CHECK(visited.size() == failure + 1);
+    CHECK(stopCount == 1);
+  }
+
+  for (const RedSixPhase stopAfter :
+       {RedSixPhase::LoaderPursuit, RedSixPhase::LoaderContact,
+        RedSixPhase::CollectSix, RedSixPhase::ReverseAlignment,
+        RedSixPhase::GoalContact, RedSixPhase::ScoreSix}) {
+    std::vector<RedSixPhase> visited;
+    int stopCount = 0;
+    RedSixCallbacks callbacks{
+        [&](RedSixPhase phase) {
+          visited.push_back(phase);
+          return true;
+        },
+        [&] { ++stopCount; }};
+    const auto result = aon::auton::runRedSixSequence(callbacks, stopAfter);
+    CHECK(result.succeeded);
+    CHECK(visited.back() == stopAfter);
+    CHECK(stopCount == 1);
+  }
+
+  int runCount = 0;
+  int stopCount = 0;
+  RedSixCallbacks invalidCallbacks{
+      [&](RedSixPhase) {
+        ++runCount;
+        return true;
+      },
+      [&] { ++stopCount; }};
+  const auto invalid = aon::auton::runRedSixSequence(
+      invalidCallbacks, static_cast<RedSixPhase>(255));
+  CHECK(!invalid.succeeded);
+  CHECK(runCount == 0);
+  CHECK(stopCount == 1);
 }
 
 void checkPath(const std::vector<PathPoint>& points,
@@ -145,6 +205,7 @@ int main() {
   CHECK(goal.size() == aon::auton::RedSixBlockGenerated::goalPointCount);
   checkPath(loader, RedSixBlock::start, RedSixBlock::loaderStage, 90.0);
   checkPath(goal, RedSixBlock::reverseAlignment, RedSixBlock::goalStage, 45.0);
+  checkSequence();
 
   std::cout << "red six-block path tests passed\n";
 }
