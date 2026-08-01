@@ -44,6 +44,8 @@ class Actions {
   bool prepareMotion();
   /** @brief Rearms drivetrain actions at the start of a new autonomous run. */
   void resetCancellation();
+  /** @brief Reports whether emergency cancellation remains latched. */
+  bool isCancellationLatched() const;
   void stop(pros::motor_brake_mode_e brakeMode = pros::E_MOTOR_BRAKE_HOLD);
 };
 

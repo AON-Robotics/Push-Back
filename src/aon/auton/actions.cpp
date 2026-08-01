@@ -437,6 +437,10 @@ bool Actions::prepareMotion() {
 
 void Actions::resetCancellation() { motionControl.resetCancellation(); }
 
+bool Actions::isCancellationLatched() const {
+  return motionControl.isCancelled();
+}
+
 void Actions::stop(pros::motor_brake_mode_e brakeMode) {
   cancelMotion();
   lemlib_integration::setDriveBrakeMode(brakeMode);

@@ -2,14 +2,22 @@
 #include "aon/globals.hpp"
 #include "aon/auton/actions.hpp"
 #include "aon/auton/figure-eight-validation.hpp"
+#include "aon/auton/hybrid-sequence.hpp"
 #include "aon/auton/mechanism-actions.hpp"
+#include "aon/auton/motion-health.hpp"
+#include "aon/auton/red-six-block.hpp"
 #include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
 
 #include "pros/rtos.hpp"
+#include "pros/misc.hpp"
+
+#include <cstdio>
 
 ASSET(path_jerryio_txt);
 ASSET(figure_eight_jerryio_txt);
+ASSET(red_six_loader_approach_jerryio_txt);
+ASSET(red_six_goal_transfer_jerryio_txt);
 
 namespace aon::routines {
 namespace {
@@ -51,6 +59,38 @@ int RunLemLibForwardValidation() {
                       result.succeeded ? "finish" : "failed");
   return result.succeeded ? 1 : 0;
 #endif
+}
+
+const char* redSixPhaseName(aon::auton::RedSixPhase phase) {
+  using aon::auton::RedSixPhase;
+  switch (phase) {
+    case RedSixPhase::LoaderPursuit:
+      return "loader pursuit";
+    case RedSixPhase::LoaderContact:
+      return "loader contact";
+    case RedSixPhase::CollectSix:
+      return "collect six";
+    case RedSixPhase::ReverseClearance:
+      return "reverse clearance";
+    case RedSixPhase::ReverseAlignment:
+      return "reverse alignment";
+    case RedSixPhase::GoalPursuit:
+      return "goal pursuit";
+    case RedSixPhase::GoalContact:
+      return "goal contact";
+    case RedSixPhase::ScoreSix:
+      return "score six";
+  }
+  return "invalid phase";
+}
+
+bool redSixMotion(aon::auton::RedSixPhase phase,
+                  const aon::auton::MotionResult& result) {
+  if (result.succeeded) return true;
+  std::printf("AUTON_RED_SIX_FAILURE phase=%s reason=%s\n",
+              redSixPhaseName(phase),
+              aon::auton::motionFailureName(result.reason));
+  return false;
 }
 
 int RunLemLibFigureEightValidation() {
@@ -172,6 +212,130 @@ int RunStagedLoaderScoreExperiment() {
   routine.stop();
   aon::auton::mechanisms::stopAll();
   return 1;
+}
+
+int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
+  using aon::auton::RedSixBlock;
+  using aon::auton::RedSixCallbacks;
+  using aon::auton::RedSixPhase;
+  auto& routine = aon::auton::actions();
+
+#if USING_BIG_ROBOT
+  (void)stopAfter;
+  aon::auton::logStep(RedSixBlock::name, "unsupported big robot");
+  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+  aon::auton::mechanisms::stopAll();
+  return 0;
+#else
+  aon::auton::logStep(RedSixBlock::name, "start");
+  // The pose is the tracking center at the repeatable red-side start. Heading
+  // zero faces +Y; coordinates are local to this autonomous placement.
+  routine.setPose(RedSixBlock::start.x, RedSixBlock::start.y,
+                  RedSixBlock::start.heading);
+  aon::auton::mechanisms::finishLoaderCollection();
+  aon::auton::mechanisms::prepareLoaderCart();
+
+  RedSixCallbacks callbacks;
+  callbacks.run = [&](RedSixPhase phase) {
+    aon::auton::logStep(RedSixBlock::name, redSixPhaseName(phase));
+    switch (phase) {
+      case RedSixPhase::LoaderPursuit:
+        // Smooth forward travel keeps the loader mechanism leading the route.
+        return redSixMotion(
+            phase, routine.followPath(
+                       "red-six loader pursuit",
+                       red_six_loader_approach_jerryio_txt,
+                       RedSixBlock::loaderLookahead,
+                       RedSixBlock::loaderPathTimeoutMs, true));
+      case RedSixPhase::LoaderContact:
+        // Approach forward at low speed for repeatable loader alignment.
+        return redSixMotion(
+            phase, routine.moveToPose(
+                       "red-six loader contact", RedSixBlock::loaderContact.x,
+                       RedSixBlock::loaderContact.y,
+                       RedSixBlock::loaderContact.heading,
+                       RedSixBlock::loaderContactTimeoutMs,
+                       {.forwards = true, .maxSpeed = 30}));
+      case RedSixPhase::CollectSix: {
+        aon::auton::mechanisms::beginLoaderCollection();
+        const std::uint32_t startedAt = pros::millis();
+        bool completed = true;
+        while (pros::millis() - startedAt <
+               static_cast<std::uint32_t>(RedSixBlock::collectTimeoutMs)) {
+          if (routine.isCancellationLatched() ||
+              pros::competition::is_disabled()) {
+            completed = false;
+            break;
+          }
+          pros::delay(20);
+        }
+        aon::auton::mechanisms::finishLoaderCollection();
+        return completed;
+      }
+      case RedSixPhase::ReverseClearance:
+        aon::auton::mechanisms::resetLoaderCart();
+        // Reverse so the robot clears the loader without turning its front
+        // mechanism through the wall; early exit carries speed into alignment.
+        return redSixMotion(
+            phase, routine.moveToPoint(
+                       "red-six reverse clearance",
+                       RedSixBlock::reverseClearance.x,
+                       RedSixBlock::reverseClearance.y,
+                       RedSixBlock::reverseClearanceTimeoutMs,
+                       {.forwards = false,
+                        .maxSpeed = 60,
+                        .minSpeed = 25,
+                        .earlyExitRange = 2.5}));
+      case RedSixPhase::ReverseAlignment:
+        // Continue in reverse and finish at the goal path's entry heading.
+        return redSixMotion(
+            phase, routine.moveToPose(
+                       "red-six reverse alignment",
+                       RedSixBlock::reverseAlignment.x,
+                       RedSixBlock::reverseAlignment.y,
+                       RedSixBlock::reverseAlignment.heading,
+                       RedSixBlock::reverseAlignmentTimeoutMs,
+                       {.forwards = false,
+                        .maxSpeed = 40,
+                        .minSpeed = 15,
+                        .earlyExitRange = 1.0}));
+      case RedSixPhase::GoalPursuit:
+        // Raise the scorer during safe open travel, before goal contact.
+        aon::auton::mechanisms::prepareTopScorer();
+        return redSixMotion(
+            phase, routine.followPath(
+                       "red-six goal pursuit",
+                       red_six_goal_transfer_jerryio_txt,
+                       RedSixBlock::goalLookahead,
+                       RedSixBlock::goalPathTimeoutMs, true));
+      case RedSixPhase::GoalContact:
+        // Final heading matters here, so use a slow forward pose action.
+        return redSixMotion(
+            phase, routine.moveToPose(
+                       "red-six goal contact", RedSixBlock::goalContact.x,
+                       RedSixBlock::goalContact.y,
+                       RedSixBlock::goalContact.heading,
+                       RedSixBlock::goalContactTimeoutMs,
+                       {.forwards = true, .maxSpeed = 30}));
+      case RedSixPhase::ScoreSix:
+        aon::auton::mechanisms::scoreTopBlocks(
+            RedSixBlock::scoreTimeoutMs);
+        return !routine.isCancellationLatched() &&
+               !pros::competition::is_disabled();
+    }
+    return false;
+  };
+  callbacks.stopAll = [&] {
+    routine.stop();
+    aon::auton::mechanisms::finishLoaderCollection();
+    aon::auton::mechanisms::stopAll();
+  };
+
+  const auto result = aon::auton::runRedSixSequence(callbacks, stopAfter);
+  aon::auton::logStep(RedSixBlock::name,
+                      result.succeeded ? "finish" : "failed");
+  return result.succeeded ? 1 : 0;
+#endif
 }
 
 }  // namespace aon::routines

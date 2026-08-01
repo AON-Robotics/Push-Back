@@ -1,5 +1,7 @@
 #pragma once
 
+#include "aon/auton/hybrid-sequence.hpp"
+
 namespace aon::routines {
 
 /**
@@ -37,6 +39,18 @@ int RunLemLibForwardValidation();
 int RunLemLibFigureEightValidation();
 int RunJerryIoPathTest(const char* name);
 int RunStagedLoaderScoreExperiment();
+/**
+ * @brief Runs the red-side six-block loader-to-long-goal autonomous.
+ *
+ * Starting configuration:
+ * - Tracking center at the documented local red starting origin.
+ * - Robot front facing +Y at heading zero.
+ * - Loader cart and scorer clear for initialization.
+ *
+ * @param stopAfter Inclusive phase used by progressive physical gates.
+ */
+int RunRedSixBlockHybridAuton(
+    aon::auton::RedSixPhase stopAfter = aon::auton::RedSixPhase::ScoreSix);
 int RunShadowPlayback();
 
 // Low-speed native drivetrain checks. These never command mechanisms.

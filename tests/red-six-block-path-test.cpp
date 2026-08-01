@@ -1,5 +1,6 @@
 #include "aon/auton/red-six-block.hpp"
 #include "aon/auton/hybrid-sequence.hpp"
+#include "aon/auton/routines.hpp"
 
 #include <algorithm>
 #include <array>
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #define CHECK(value)                                                        \
@@ -186,6 +188,9 @@ void checkPath(const std::vector<PathPoint>& points,
 }  // namespace
 
 int main() {
+  static_assert(std::is_same_v<
+                decltype(&aon::routines::RunRedSixBlockHybridAuton),
+                int (*)(aon::auton::RedSixPhase)>);
   using aon::auton::RedSixBlock;
   constexpr int configuredBudget =
       RedSixBlock::loaderPathTimeoutMs +
