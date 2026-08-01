@@ -8,6 +8,8 @@
 
 namespace aon::auton {
 
+enum class OdometryMonitoring { Configured, FailClosed };
+
 struct MotionResult {
   bool succeeded;
   MotionMode mode;
@@ -33,7 +35,9 @@ class Actions {
                          std::uint32_t durationMs);
   MotionResult followPath(const char* name, const asset& path, float lookahead,
                           int timeout, bool forwards = true,
-                          const std::function<void()>& onPoll = {});
+                          const std::function<void()>& onPoll = {},
+                          OdometryMonitoring monitoring =
+                              OdometryMonitoring::Configured);
 
   void cancelMotion();
   /** @brief Rearms drivetrain actions at the start of a new autonomous run. */

@@ -301,22 +301,15 @@ ResultCode Service::runArmedPlayback() {
     serviceData.ioBusy = true;
   }
 
-  ResultCode result = serviceData.storage.load(
-      slotValue, robot, serviceData.playbackSnapshot);
-  if (result == ResultCode::Ok &&
-      serviceData.playbackSnapshot.capture.robot != robot) {
-    result = ResultCode::WrongRobot;
-  }
-  if (result == ResultCode::Ok &&
-      serviceData.playbackSnapshot.route.result != ResultCode::Ok) {
-    result = ResultCode::CorruptFile;
-  }
-  if (result == ResultCode::Ok) {
-    result = playOnRobot(
-        serviceData.playbackSnapshot,
-        {aon::config::activeRobotConfig().shadowPlaybackAuthorized, true,
-         robot});
-  }
+  cancelRobotPlayback();
+  const ResultCode result = loadAndRunPlayback(
+      serviceData.storage, slotValue, robot, serviceData.playbackSnapshot,
+      [&](const DecodedRecording& recording, const PlaybackPolicy&) {
+        return playOnRobot(
+            recording,
+            {aon::config::activeRobotConfig().shadowPlaybackAuthorized, true,
+             robot});
+      });
 
   {
     Lock lock(serviceData.mutex);

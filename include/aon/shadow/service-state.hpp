@@ -30,6 +30,12 @@ struct Status {
   std::uint32_t changedAt = 0;
 };
 
+constexpr bool playbackArmExpired(const Status& status, std::uint32_t now,
+                                  std::uint32_t maximumAgeMs) {
+  return status.mode == ServiceMode::Armed &&
+         confirmationExpired(now, status.changedAt + maximumAgeMs);
+}
+
 class ServiceStateMachine {
  public:
   ResultCode beginRecord(std::uint8_t slot, bool overwriteConfirmed,

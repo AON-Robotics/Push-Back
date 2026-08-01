@@ -571,6 +571,11 @@ void Gui::updateShadowMenu() {
     shadowConfirmation = ShadowConfirmation::None;
     redraw = true;
   }
+  if (shadow::playbackArmExpired(shadowStatus, now,
+                                 kShadowPlayConfirmationMs)) {
+    clearShadowArmIfPresent();
+    redraw = true;
+  }
   if (redraw) displayShadowMenu();
 }
 

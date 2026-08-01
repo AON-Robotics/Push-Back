@@ -25,33 +25,6 @@ constexpr char kRuntimePathMetadata[] =
     "#PATH.JERRYIO-DATA {\"appVersion\":\"0.11.0\",\"format\":\"LemLib "
     "v0.5\",\"name\":\"Shadow Runtime\"}\n";
 
-bool validRuntimeSegment(const ProcessedRoute& route,
-                         const RouteSegment& segment) {
-  if (segment.kind != SegmentKind::Motion ||
-      (segment.direction != Direction::Forward &&
-       segment.direction != Direction::Reverse) ||
-      segment.pointCount < 2 || segment.firstPoint > route.pointCount ||
-      segment.pointCount > route.pointCount - segment.firstPoint) {
-    return false;
-  }
-  for (std::size_t offset = 0; offset < segment.pointCount; ++offset) {
-    const auto& point = route.points[segment.firstPoint + offset];
-    if (!std::isfinite(point.x) || !std::isfinite(point.y) ||
-        !std::isfinite(point.speed)) {
-      return false;
-    }
-    if (offset + 1 < segment.pointCount &&
-        (point.speed < 1.0F || point.speed > 100.0F)) {
-      return false;
-    }
-    if (offset > 0) {
-      const auto& previous = route.points[segment.firstPoint + offset - 1];
-      if (point.x == previous.x && point.y == previous.y) return false;
-    }
-  }
-  return true;
-}
-
 bool append(RuntimePath& output, const char* data, std::size_t size) {
   if (size > output.bytes.size() - output.used) return false;
   std::memcpy(output.bytes.data() + output.used, data, size);
@@ -95,7 +68,7 @@ ResultCode serializeRuntimePath(const ProcessedRoute& route,
                                 const RouteSegment& segment,
                                 RuntimePath& output) {
   output.used = 0;
-  if (!validRuntimeSegment(route, segment)) return ResultCode::CorruptFile;
+  if (!validMotionSegment(route, segment)) return ResultCode::CorruptFile;
 
   char line[192];
   for (std::size_t offset = 0; offset < segment.pointCount; ++offset) {
@@ -144,11 +117,16 @@ ResultCode playOnRobot(const DecodedRecording& recording,
             observerFailure = ResultCode::Cancelled;
           } else {
             const auto pose = aon::lemlib_integration::chassis().getPose();
-            previousProgress = monotonicPolylineProgress(
-                activeRoute->points.data() + activeSegment->firstPoint,
-                activeSegment->pointCount, static_cast<float>(pose.x),
-                static_cast<float>(pose.y), previousProgress);
-            observerFailure = progress(previousProgress);
+            if (!std::isfinite(pose.x) || !std::isfinite(pose.y) ||
+                !std::isfinite(pose.theta)) {
+              observerFailure = ResultCode::OdometryFailure;
+            } else {
+              previousProgress = monotonicPolylineProgress(
+                  activeRoute->points.data() + activeSegment->firstPoint,
+                  activeSegment->pointCount, static_cast<float>(pose.x),
+                  static_cast<float>(pose.y), previousProgress);
+              observerFailure = progress(previousProgress);
+            }
           }
           if (observerFailure != ResultCode::Ok) {
             aon::auton::actions().cancelMotion();
@@ -157,7 +135,8 @@ ResultCode playOnRobot(const DecodedRecording& recording,
         const auto result = aon::auton::actions().followPath(
             "Shadow segment", runtimeAsset, 6.0F,
             playbackTimeoutMs(segment.durationMs),
-            segment.direction == Direction::Forward, poll);
+            segment.direction == Direction::Forward, poll,
+            aon::auton::OdometryMonitoring::FailClosed);
         if (observerFailure != ResultCode::Ok) return observerFailure;
         return motionResult(result);
       },
@@ -186,6 +165,7 @@ ResultCode playOnRobot(const DecodedRecording& recording,
 void cancelRobotPlayback() {
   playbackCancelled.store(true);
   aon::auton::actions().cancelMotion();
+  aon::auton::actions().stop();
   stopAllMechanisms();
 }
 #else

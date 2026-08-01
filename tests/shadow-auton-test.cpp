@@ -156,6 +156,9 @@ void playbackPolicyTests() {
   auto corruptMechanism = recording;
   corruptMechanism.route.events[0].event.value = 2;
   corruptRecordings.push_back(corruptMechanism);
+  auto corruptSpeed = recording;
+  corruptSpeed.route.points[0].speed = 0.0F;
+  corruptRecordings.push_back(corruptSpeed);
 
   for (const auto& corrupt : corruptRecordings) {
     PlaybackSpy corruptSpy;
@@ -240,6 +243,32 @@ void playbackSchedulerTests() {
   CHECK(dwellCancellation.dwells == 1);
   CHECK(dwellCancellation.mechanisms == 2);
   CHECK(dwellCancellation.stops == 1);
+
+  auto initialEvents = recording;
+  initialEvents.route.eventCount = 2;
+  initialEvents.route.events[0] =
+      {{0, MechanismKind::Cart, 1}, 0, 0.0F, 0};
+  initialEvents.route.events[1] =
+      {{100, MechanismKind::Cart, 0}, 1, 0.0F, 0};
+  PlaybackSpy initialEventSpy;
+  auto initialEventCallbacks = playbackCallbacks(initialEventSpy);
+  initialEventCallbacks.follow =
+      [&initialEventSpy](const ProcessedRoute&, const RouteSegment& segment,
+                         const MotionProgress&) {
+        CHECK(initialEventSpy.mechanisms ==
+              (segment.direction == Direction::Forward ? 1 : 2));
+        initialEventSpy.log.push_back("follow-after-initial-event");
+        return ResultCode::Ok;
+      };
+  initialEventCallbacks.dwell =
+      [&initialEventSpy](std::uint32_t, const DwellProgress&) {
+        CHECK(initialEventSpy.mechanisms == 2);
+        initialEventSpy.log.push_back("dwell-after-initial-event");
+        return ResultCode::Ok;
+      };
+  CHECK(playRecording(initialEvents, policy, initialEventCallbacks) ==
+        ResultCode::Ok);
+  CHECK(initialEventSpy.stops == 1);
 }
 
 void playbackProjectionTests() {
@@ -265,6 +294,8 @@ void playbackProjectionTests() {
       {-1.0F, 1.0F, 20.0F}, {1.0F, -1.0F, 0.0F}};
   CHECK(monotonicPolylineProgress(crossing, 4, 0.0F, 0.0F, 0.7F) >=
         0.7F);
+  CHECK(monotonicPolylineProgress(crossing, 4, 0.0F, 0.0F, 0.05F) <
+        0.6F);
 }
 
 void runtimePathSerializationTests() {
@@ -929,6 +960,12 @@ void serviceStateTests() {
   CHECK(!confirmationExpired(4999, 5000));
   CHECK(confirmationExpired(5000, 5000));
   CHECK(confirmationExpired(5, std::numeric_limits<std::uint32_t>::max()));
+  CHECK(!playbackArmExpired({ServiceMode::Armed, ResultCode::Ok, 1, 100},
+                            5099, 5000));
+  CHECK(playbackArmExpired({ServiceMode::Armed, ResultCode::Ok, 1, 100},
+                           5100, 5000));
+  CHECK(!playbackArmExpired({ServiceMode::Finished, ResultCode::Ok, 1, 100},
+                            5100, 5000));
 
   ServiceStateMachine pendingStart;
   const std::uint32_t pendingRevision = pendingStart.revision();

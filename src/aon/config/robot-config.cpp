@@ -65,7 +65,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
-      true,  // shadowPlaybackAuthorized
+      false,  // shadowPlaybackAuthorized: enable only after physical gate
   };
 #endif
   return config;

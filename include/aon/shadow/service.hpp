@@ -31,6 +31,11 @@ class Service {
 using PlaybackRunner = std::function<ResultCode(
     const DecodedRecording&, const PlaybackPolicy&)>;
 
+ResultCode loadAndRunPlayback(Storage& storage, std::uint8_t slot,
+                              RobotIdentity robot,
+                              DecodedRecording& snapshot,
+                              const PlaybackRunner& runner);
+
 ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
                                  std::uint8_t slot, RobotIdentity robot,
                                  DecodedRecording& snapshot,

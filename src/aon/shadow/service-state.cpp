@@ -155,13 +155,10 @@ ResultCode authorizePlaybackArm(bool authorized, RobotIdentity activeRobot,
   return summary.valid ? ResultCode::Ok : ResultCode::EmptyRecording;
 }
 
-ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
-                                 std::uint8_t slot, RobotIdentity robot,
-                                 DecodedRecording& snapshot,
-                                 const PlaybackRunner& runner,
-                                 std::uint32_t now) {
-  if (!state.consumeArm(slot, now)) return ResultCode::PlayLocked;
-
+ResultCode loadAndRunPlayback(Storage& storage, std::uint8_t slot,
+                              RobotIdentity robot,
+                              DecodedRecording& snapshot,
+                              const PlaybackRunner& runner) {
   ResultCode result = storage.load(slot, robot, snapshot);
   if (result == ResultCode::Ok && snapshot.capture.robot != robot) {
     result = ResultCode::WrongRobot;
@@ -173,6 +170,18 @@ ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
     result = runner ? runner(snapshot, {true, true, robot})
                     : ResultCode::CorruptFile;
   }
+  return result;
+}
+
+ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
+                                 std::uint8_t slot, RobotIdentity robot,
+                                 DecodedRecording& snapshot,
+                                 const PlaybackRunner& runner,
+                                 std::uint32_t now) {
+  if (!state.consumeArm(slot, now)) return ResultCode::PlayLocked;
+
+  const ResultCode result =
+      loadAndRunPlayback(storage, slot, robot, snapshot, runner);
   state.finishPlayback(result, now);
   return result;
 }

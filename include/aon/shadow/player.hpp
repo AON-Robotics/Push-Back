@@ -27,6 +27,8 @@ struct PlaybackCallbacks {
   std::function<void()> stopAll;
 };
 
+bool validMotionSegment(const ProcessedRoute& route,
+                        const RouteSegment& segment);
 ResultCode validatePlayback(const DecodedRecording& recording,
                             const PlaybackPolicy& policy);
 ResultCode playRecording(const DecodedRecording& recording,

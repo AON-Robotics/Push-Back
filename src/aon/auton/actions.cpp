@@ -170,7 +170,9 @@ MotionResult runMonitored(const char* operation, const char* name,
                           const ActionTarget& target, MotionIntent intent,
                           int requestedMaxOutput, std::uint32_t timeoutMs,
                           const std::function<void()>& startMotion,
-                          const std::function<void()>& onPoll) {
+                          const std::function<void()>& onPoll,
+                          OdometryMonitoring monitoring =
+                              OdometryMonitoring::Configured) {
   const FallbackStatusSnapshot status = fallbackStatus();
   logStart(operation, name);
   MotionLease lease(motionControl);
@@ -183,6 +185,16 @@ MotionResult runMonitored(const char* operation, const char* name,
   MotionSample initial = motionSample();
 
   if (status.mode != MotionMode::Tracking) {
+    if (monitoring == OdometryMonitoring::FailClosed) {
+      lemlib_integration::stopDrive();
+      const MotionFailureReason reason =
+          status.reason == MotionFailureReason::None
+              ? MotionFailureReason::DeviceInvalid
+              : status.reason;
+      MotionResult result{false, status.mode, false, reason};
+      logFinish(operation, name, result);
+      return result;
+    }
     MotionResult result =
         runEncoder(name, target, initial, requestedMaxOutput, timeoutMs,
                    status.mode, status.reason);
@@ -193,10 +205,32 @@ MotionResult runMonitored(const char* operation, const char* name,
   MotionHealthMonitor monitor(
       config::activeRobotConfig().lemlib.fallback.health);
   monitor.reset(initial);
-  const bool automaticMonitoring = shouldMonitorAutomatically(
-      status.mode == MotionMode::Tracking,
-      config::activeRobotConfig()
-          .lemlib.fallback.automaticFallbackAuthorized);
+  const bool failClosedMonitoring =
+      monitoring == OdometryMonitoring::FailClosed;
+  const bool healthMonitoring =
+      failClosedMonitoring ||
+      shouldMonitorAutomatically(
+          status.mode == MotionMode::Tracking,
+          config::activeRobotConfig()
+              .lemlib.fallback.automaticFallbackAuthorized);
+  const auto invalidReason = [](const MotionSample& sample) {
+    if (!sample.poseValid) return MotionFailureReason::NonFinitePose;
+    if (!sample.leftMotorValid || !sample.rightMotorValid ||
+        !sample.leftTrackingValid || !sample.rightTrackingValid ||
+        !sample.backTrackingValid || !sample.imuValid) {
+      return MotionFailureReason::DeviceInvalid;
+    }
+    return MotionFailureReason::None;
+  };
+  if (failClosedMonitoring) {
+    const MotionFailureReason reason = invalidReason(initial);
+    if (reason != MotionFailureReason::None) {
+      lemlib_integration::stopDrive();
+      MotionResult result{false, MotionMode::Tracking, false, reason};
+      logFinish(operation, name, result);
+      return result;
+    }
+  }
   const std::uint32_t startedAt = pros::millis();
   if (!motionControl.runIfActive([&] { startMotion(); })) {
     MotionResult result{false, status.mode, false,
@@ -225,10 +259,23 @@ MotionResult runMonitored(const char* operation, const char* name,
     }
 
     const MotionSample sample = motionSample();
+    const MotionFailureReason immediateReason =
+        failClosedMonitoring ? invalidReason(sample)
+                             : MotionFailureReason::None;
     const MotionFailureReason reason =
-        automaticMonitoring ? monitor.observe(sample, intent)
-                            : MotionFailureReason::None;
+        immediateReason != MotionFailureReason::None
+            ? immediateReason
+            : (healthMonitoring ? monitor.observe(sample, intent)
+                                : MotionFailureReason::None);
     if (reason != MotionFailureReason::None) {
+      if (failClosedMonitoring) {
+        robotChassis.cancelAllMotions();
+        lemlib_integration::stopDrive();
+        latchFallbackFault(reason, name);
+        MotionResult result{false, MotionMode::Tracking, false, reason};
+        logFinish(operation, name, result);
+        return result;
+      }
       const MotionSample trusted = monitor.lastTrustedSample();
       logFallback(name, reason, trusted, sample, target);
       if (!stopAndSettle()) {
@@ -364,13 +411,14 @@ MotionResult Actions::arcadeFor(const char* name, int throttle, int turn,
 
 MotionResult Actions::followPath(const char* name, const asset& path,
                                  float lookahead, int timeout, bool forwards,
-                                 const std::function<void()>& onPoll) {
+                                 const std::function<void()>& onPoll,
+                                 OdometryMonitoring monitoring) {
   return runMonitored(
       "followPath", name,
       {TargetKind::Unsupported, 0.0, 0.0, 0.0, forwards},
       MotionIntent::Linear, 127, timeout, [=, &path] {
         lemlib_integration::chassis().follow(path, lookahead, timeout, forwards);
-      }, onPoll);
+      }, onPoll, monitoring);
 }
 
 void Actions::cancelMotion() {

@@ -16,39 +16,38 @@ bool finitePoint(const PathPoint& point) {
          std::isfinite(point.speed);
 }
 
-bool validSegmentShape(const ProcessedRoute& route,
-                       const RouteSegment& segment) {
+bool validDwellSegment(const RouteSegment& segment) {
   if (segment.durationMs == 0) return false;
-  switch (segment.kind) {
-    case SegmentKind::Motion:
-      if (segment.direction != Direction::Forward &&
-          segment.direction != Direction::Reverse) {
-        return false;
-      }
-      if (segment.pointCount < 2 || segment.firstPoint > route.pointCount ||
-          segment.pointCount > route.pointCount - segment.firstPoint) {
-        return false;
-      }
-      for (std::size_t index = segment.firstPoint;
-           index < static_cast<std::size_t>(segment.firstPoint) +
-                       segment.pointCount;
-           ++index) {
-        if (!finitePoint(route.points[index])) return false;
-        if (index > segment.firstPoint) {
-          const auto& before = route.points[index - 1];
-          const auto& current = route.points[index];
-          if (before.x == current.x && before.y == current.y) return false;
-        }
-      }
-      return true;
-    case SegmentKind::Dwell:
-      return segment.direction == Direction::Stopped &&
-             segment.firstPoint == 0 && segment.pointCount == 0;
-  }
-  return false;
+  return segment.kind == SegmentKind::Dwell &&
+         segment.direction == Direction::Stopped && segment.firstPoint == 0 &&
+         segment.pointCount == 0;
 }
 
 }  // namespace
+
+bool validMotionSegment(const ProcessedRoute& route,
+                        const RouteSegment& segment) {
+  if (segment.kind != SegmentKind::Motion || segment.durationMs == 0 ||
+      (segment.direction != Direction::Forward &&
+       segment.direction != Direction::Reverse) ||
+      segment.pointCount < 2 || segment.firstPoint > route.pointCount ||
+      segment.pointCount > route.pointCount - segment.firstPoint) {
+    return false;
+  }
+  for (std::size_t offset = 0; offset < segment.pointCount; ++offset) {
+    const auto& point = route.points[segment.firstPoint + offset];
+    if (!finitePoint(point)) return false;
+    if (offset + 1 < segment.pointCount &&
+        (point.speed < 1.0F || point.speed > 100.0F)) {
+      return false;
+    }
+    if (offset > 0) {
+      const auto& previous = route.points[segment.firstPoint + offset - 1];
+      if (point.x == previous.x && point.y == previous.y) return false;
+    }
+  }
+  return true;
+}
 
 ResultCode validatePlayback(const DecodedRecording& recording,
                             const PlaybackPolicy& policy) {
@@ -69,7 +68,10 @@ ResultCode validatePlayback(const DecodedRecording& recording,
   }
 
   for (std::size_t index = 0; index < route.segmentCount; ++index) {
-    if (!validSegmentShape(route, route.segments[index])) {
+    const auto& segment = route.segments[index];
+    if (segment.kind == SegmentKind::Motion
+            ? !validMotionSegment(route, segment)
+            : !validDwellSegment(segment)) {
       return ResultCode::CorruptFile;
     }
   }
@@ -161,7 +163,10 @@ ResultCode playRecording(const DecodedRecording& recording,
           return event.progress <= clamped;
         });
       };
-      result = callbacks.follow(route, segment, observer);
+      result = observer(0.0F);
+      if (result == ResultCode::Ok) {
+        result = callbacks.follow(route, segment, observer);
+      }
       if (result == ResultCode::Ok) result = observer(1.0F);
     } else {
       const DwellProgress observer = [&](std::uint32_t elapsedMs) {
@@ -171,7 +176,10 @@ ResultCode playRecording(const DecodedRecording& recording,
           return event.offsetMs <= clamped;
         });
       };
-      result = callbacks.dwell(segment.durationMs, observer);
+      result = observer(0);
+      if (result == ResultCode::Ok) {
+        result = callbacks.dwell(segment.durationMs, observer);
+      }
       if (result == ResultCode::Ok) result = observer(segment.durationMs);
     }
     if (result != ResultCode::Ok) return finish(result);
@@ -209,10 +217,28 @@ float monotonicPolylineProgress(const PathPoint* points, std::size_t count,
   }
   if (!(totalLength > 0.0F) || !std::isfinite(totalLength)) return previous;
 
+  const float previousLength =
+      std::clamp(previous, 0.0F, 1.0F) * totalLength;
+  std::size_t currentEdge = 1;
+  float currentEdgeStartLength = 0.0F;
+  float traversedLength = 0.0F;
+  for (std::size_t index = 1; index < count; ++index) {
+    const float length = std::hypot(points[index].x - points[index - 1].x,
+                                    points[index].y - points[index - 1].y);
+    if (previousLength < traversedLength + length || index + 1 == count) {
+      currentEdge = index;
+      currentEdgeStartLength = traversedLength;
+      break;
+    }
+    traversedLength += length;
+  }
+
   float nearestDistanceSquared = std::numeric_limits<float>::infinity();
   float nearestProgress = previous;
-  float completedLength = 0.0F;
-  for (std::size_t index = 1; index < count; ++index) {
+  float completedLength = currentEdgeStartLength;
+  const std::size_t lastCandidateEdge =
+      std::min(count - 1, currentEdge + 1);
+  for (std::size_t index = currentEdge; index <= lastCandidateEdge; ++index) {
     const auto& start = points[index - 1];
     const auto& end = points[index];
     const float dx = end.x - start.x;
