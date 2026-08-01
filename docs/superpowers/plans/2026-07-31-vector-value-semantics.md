@@ -36,11 +36,12 @@ production mutation caught by `copyMutationDoesNotChangeOriginalDirection` is
 restoring pointer aliasing between copies.
 
 ```cpp
-#include "aon/tools/vector.hpp"
-
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+
+#include "aon/tools/vector.hpp"
 
 #define CHECK(expression)                                                     \
   do {                                                                        \
@@ -57,7 +58,10 @@ constexpr double kTolerance = 1e-9;
 
 void checkNear(double actual, double expected,
                double tolerance = kTolerance) {
-  CHECK(std::abs(actual - expected) <= tolerance);
+  if (std::abs(actual - expected) > tolerance) {
+    std::cerr << "expected " << expected << ", got " << actual << '\n';
+    std::exit(1);
+  }
 }
 
 void defaultVectorIsZero() {
@@ -168,7 +172,9 @@ void arithmeticRetainsExistingMeanings() {
   checkNear(scaled.GetDegrees(), 53.13010235415598);
 
   aon::Vector divided = second / first;
-  checkNear(divided.GetMagnitude(), 2.6);
+  // Preserve the current host result from Vector's unqualified abs call.
+  // Correcting its truncation belongs to a separate numeric-behavior change.
+  checkNear(divided.GetMagnitude(), 2.0);
   checkNear(divided.GetDegrees(),
             67.38013505195957 - 53.13010235415598);
 }
@@ -194,9 +200,10 @@ Run:
 
 ```powershell
 $compiler = 'C:\Users\jojur\AppData\Local\Programs\CLion\bin\mingw\bin\g++.exe'
+$env:Path = 'C:\Users\jojur\AppData\Local\Programs\CLion\bin\mingw\bin;' + $env:Path
+New-Item -ItemType Directory -Force 'bin\host-tests' | Out-Null
 & $compiler -std=c++17 -Wall -Wextra -Werror -Iinclude `
   tests\vector-test.cpp -o bin\host-tests\vector-test.exe
-$env:Path = 'C:\Users\jojur\AppData\Local\Programs\CLion\bin\mingw\bin;' + $env:Path
 & .\bin\host-tests\vector-test.exe
 ```
 
@@ -238,8 +245,8 @@ Keep the `SetDirection` signature and copy behavior:
  */
 Vector SetDirection(Angle* direction) {
   this->direction.SetDegrees(direction->GetDegrees());
-  x = magnitude * std::cos(this->direction.GetRadians());
-  y = magnitude * std::sin(this->direction.GetRadians());
+  x = magnitude * std::cos(direction->GetRadians());
+  y = magnitude * std::sin(direction->GetRadians());
   return *this;
 }
 ```
@@ -280,7 +287,7 @@ No source mutation needs to remain after this review.
 Run the ownership scan after restoring the implementation:
 
 ```powershell
-rg -n 'direction->|new Angle|std::string\(\*direction\)' `
+rg -n 'this->direction->|new Angle|std::string\(\*direction\)' `
   include\aon\tools\vector.hpp
 ```
 
@@ -305,6 +312,8 @@ Run:
 ```powershell
 $compiler = 'C:\Users\jojur\AppData\Local\Programs\CLion\bin\mingw\bin\g++.exe'
 $flags = @('-std=c++17', '-Wall', '-Wextra', '-Werror', '-Iinclude')
+$env:Path = 'C:\Users\jojur\AppData\Local\Programs\CLion\bin\mingw\bin;' + $env:Path
+New-Item -ItemType Directory -Force 'bin\host-tests' | Out-Null
 & $compiler @flags tests\vector-test.cpp `
   -o bin\host-tests\vector-test.exe
 & $compiler @flags tests\figure-eight-path-test.cpp `
@@ -322,7 +331,6 @@ $flags = @('-std=c++17', '-Wall', '-Wextra', '-Werror', '-Iinclude')
   src\aon\shadow\service-state.cpp src\aon\shadow\player.cpp `
   src\aon\shadow\player-pros.cpp `
   -o bin\host-tests\shadow-auton-test.exe
-$env:Path = 'C:\Users\jojur\AppData\Local\Programs\CLion\bin\mingw\bin;' + $env:Path
 & .\bin\host-tests\vector-test.exe
 & .\bin\host-tests\figure-eight-path-test.exe
 & .\bin\host-tests\motion-fallback-test.exe

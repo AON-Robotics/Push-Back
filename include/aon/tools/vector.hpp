@@ -329,7 +329,8 @@ inline std::ostream &operator<<(std::ostream &out, Angle direction) {
  *
  * \details Represents vector both in cartesian and polar coordinates.
  *     Therefore, the literal magnitude and directions are stored as are its "x"
- *     component and "y" component.
+ *     component and "y" component. Vector is a value type: copies own
+ *     independent direction state and mutation performs no dynamic allocation.
  * \code{.cpp}
 int main(){
   aon::Vector v1 = aon::Vector().SetPos(3, 4);
@@ -356,7 +357,7 @@ class Vector {
   //> Magnitude of the vector.
   double magnitude = 0;
   //> Direction of the vector.
-  Angle *direction = new Angle();
+  Angle direction{};
 
  public:
   /**
@@ -382,7 +383,7 @@ int main(){
   Vector SetX(double x) {
     this->x = x;
     magnitude = std::hypot(x, y);
-    direction->SetRadians(std::atan2(y, x));
+    direction.SetRadians(std::atan2(y, x));
 
     return *this;
   }
@@ -410,7 +411,7 @@ int main(){
   Vector SetY(double y) {
     this->y = y;
     magnitude = std::hypot(x, y);
-    direction->SetRadians(std::atan2(y, x));
+    direction.SetRadians(std::atan2(y, x));
 
     return *this;
   }
@@ -442,7 +443,7 @@ int main(){
     this->x = x;
     this->y = y;
     magnitude = std::hypot(x, y);
-    direction->SetRadians(std::atan2(y, x));
+    direction.SetRadians(std::atan2(y, x));
 
     return *this;
   }
@@ -472,8 +473,8 @@ int main(){
    */
   Vector SetMagnitude(double magnitude) {
     this->magnitude = abs(magnitude);
-    x = magnitude * std::cos(direction->GetRadians());
-    y = magnitude * std::sin(direction->GetRadians());
+    x = magnitude * std::cos(direction.GetRadians());
+    y = magnitude * std::sin(direction.GetRadians());
 
     return *this;
   }
@@ -484,13 +485,14 @@ int main(){
   /**
    * \brief Set the vector's direction and update the X and Y components.
    *
-   * \param direction The new direction as an Angle object's pointer
+   * \param direction Required non-owning pointer to the direction to copy
    *
    * \returns This object so it can be initialized as it is created. See
    *     example.
    *
-   * \note This method is mainly intended for internal use, but it's still
-   *     public for convenience.
+   * \pre `direction` is not null.
+   * \note This method copies the pointed-to value and does not retain or take
+   *     ownership of the pointer.
    *
    * \code{.cpp}
 
@@ -506,8 +508,7 @@ int main(){
    * \endcode
    */
   Vector SetDirection(Angle *direction) {
-    this->direction = new Angle();
-    this->direction->SetDegrees(direction->GetDegrees());
+    this->direction.SetDegrees(direction->GetDegrees());
 
     x = magnitude * std::cos(direction->GetRadians());
     y = magnitude * std::sin(direction->GetRadians());
@@ -536,11 +537,9 @@ int main(){
    * \endcode
    */
   Vector SetDegrees(double degrees) {
-    Angle *angle = new Angle();
-    angle->SetDegrees(degrees);
-    SetDirection(angle);
-
-    return *this;
+    Angle angle;
+    angle.SetDegrees(degrees);
+    return SetDirection(&angle);
   }
 
   /**
@@ -564,11 +563,9 @@ int main(){
    * \endcode
    */
   Vector SetRadians(double radians) {
-    Angle *angle = new Angle();
-    angle->SetRadians(radians);
-    SetDirection(angle);
-
-    return *this;
+    Angle angle;
+    angle.SetRadians(radians);
+    return SetDirection(&angle);
   }
 
   //> Retrieve X component of vector.
@@ -578,9 +575,9 @@ int main(){
   //> Retrieve magnitude of vector.
   double GetMagnitude() { return magnitude; }
   //> Retrieve direction of vector in degrees.
-  double GetDegrees() { return direction->GetDegrees(); }
+  double GetDegrees() { return direction.GetDegrees(); }
   //> Retrieve direction of vector in radians.
-  double GetRadians() { return direction->GetRadians(); }
+  double GetRadians() { return direction.GetRadians(); }
 
   /**
    * \brief Normalize the vector and return a copy.
@@ -600,7 +597,7 @@ int main(){
    * \endcode
    */
   Vector Normalize() {
-    return Vector().SetMagnitude(1).SetDegrees(direction->GetDegrees());
+    return Vector().SetMagnitude(1).SetDegrees(direction.GetDegrees());
   }
 
   /**
@@ -874,7 +871,7 @@ int main(){
     // up to "precision" units to the right of the period.
     str = str.substr(0, str.find(".") + precision + 1);
 
-    return "" + str + " ∠ " + std::string(*direction);
+    return "" + str + " ∠ " + std::string(direction);
   }
 
   //> Integer conversion operator for Vector object. Returns magnitude.
