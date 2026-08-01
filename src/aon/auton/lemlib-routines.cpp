@@ -3,6 +3,7 @@
 #include "aon/auton/actions.hpp"
 #include "aon/auton/figure-eight-validation.hpp"
 #include "aon/auton/hybrid-sequence.hpp"
+#include "aon/auton/jerryio-path-auton.hpp"
 #include "aon/auton/mechanism-actions.hpp"
 #include "aon/auton/motion-health.hpp"
 #include "aon/auton/red-six-block.hpp"
@@ -118,15 +119,27 @@ int RunLemLibFigureEightValidation() {
 #endif
 }
 
-int RunJerryIoPathTest(const char* name) {
+int RunJerryIoPathAuton() {
+  using aon::auton::JerryIoPathAuton;
   auto& routine = aon::auton::actions();
-  // The asset is rotated so heading zero and the initial path tangent both
-  // point along +Y. The third asset column is speed, not robot heading.
-  routine.setPose(0, 0, 0);
-  const auto result =
-      routine.followPath(name, path_jerryio_txt, 10, 14000, true);
-  routine.stop();
+
+#if USING_BIG_ROBOT
+  aon::auton::logStep(JerryIoPathAuton::name, "unsupported big robot");
+  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+  return 0;
+#else
+  aon::auton::logStep(JerryIoPathAuton::name, "start");
+  routine.setPose(JerryIoPathAuton::startX, JerryIoPathAuton::startY,
+                  JerryIoPathAuton::startHeading);
+  const auto result = routine.followPath(
+      JerryIoPathAuton::name, path_jerryio_txt, JerryIoPathAuton::lookahead,
+      JerryIoPathAuton::timeoutMs, true, {},
+      aon::auton::OdometryMonitoring::FailClosed);
+  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+  aon::auton::logStep(JerryIoPathAuton::name,
+                      result.succeeded ? "finish" : "failed");
   return result.succeeded ? 1 : 0;
+#endif
 }
 
 int RunStagedLoaderScoreExperiment() {

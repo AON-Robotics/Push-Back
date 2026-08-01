@@ -1,5 +1,5 @@
 #include "aon/auton/routines.hpp"
-#include "aon/auton/figure-eight-validation.hpp"
+#include "aon/auton/jerryio-path-auton.hpp"
 #include "aon/auton/red-six-block.hpp"
 #include "aon/auton/status.hpp"
 #include "aon/auton/fallback-status.hpp"
@@ -84,8 +84,8 @@ int BlueRoutine2() {
 }
 
 int BlueRoutine3() {
-  return runRoutine(aon::auton::FigureEightValidation::name,
-                    RunLemLibFigureEightValidation);
+  return runRoutine(aon::auton::JerryIoPathAuton::name,
+                    RunJerryIoPathAuton);
 }
 
 int SkillsRoutine1() {

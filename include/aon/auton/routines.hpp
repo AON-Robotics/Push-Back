@@ -37,7 +37,7 @@ void smallbotjorgeg();
 int RunLemLibTurnCharacterization(const char* name, double heading);
 int RunLemLibForwardValidation();
 int RunLemLibFigureEightValidation();
-int RunJerryIoPathTest(const char* name);
+int RunJerryIoPathAuton();
 int RunStagedLoaderScoreExperiment();
 /**
  * @brief Runs the red-side six-block loader-to-long-goal autonomous.

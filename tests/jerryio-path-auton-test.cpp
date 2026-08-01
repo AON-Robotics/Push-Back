@@ -1,4 +1,5 @@
 #include "aon/auton/jerryio-path-auton.hpp"
+#include "aon/auton/routines.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -7,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #define CHECK(value)                                                        \
@@ -62,6 +64,8 @@ std::vector<PathPoint> readPath(const char* filename) {
 }  // namespace
 
 int main() {
+  static_assert(std::is_same_v<
+                decltype(&aon::routines::RunJerryIoPathAuton), int (*)()>);
   using aon::auton::JerryIoPathAuton;
 
   CHECK(std::string(JerryIoPathAuton::name) == "TEST JerryIO Path");

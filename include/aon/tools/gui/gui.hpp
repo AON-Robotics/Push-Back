@@ -11,7 +11,7 @@
 #include <functional>
 #include "../../../api.h"
 #include "aon/auton/routines.hpp"
-#include "aon/auton/figure-eight-validation.hpp"
+#include "aon/auton/jerryio-path-auton.hpp"
 #include "aon/auton/red-six-block.hpp"
 #include "aon/auton/status.hpp"
 #include "aon/constants.hpp"
@@ -97,7 +97,7 @@ public:
   AutonOption blueAutonOptions[autonOptionsCount] = {
     {"Kevin Loader", aon::routines::BlueRoutine1},
     {"Kevin Park", aon::routines::BlueRoutine2},
-    {aon::auton::FigureEightValidation::name, aon::routines::BlueRoutine3},
+    {aon::auton::JerryIoPathAuton::name, aon::routines::BlueRoutine3},
   };
   
   AutonOption skillsAutonOptions[autonOptionsCount] = {
