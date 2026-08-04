@@ -1,30 +1,15 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 
 #include "aon/auton/motion-health.hpp"
+#include "aon/config/hardware-map.hpp"
 
 namespace aon::config {
 
 enum class RobotIdentity {
   Small,
   Big,
-};
-
-struct DrivePorts {
-  std::array<std::int8_t, 4> left;
-  std::array<std::int8_t, 4> right;
-};
-
-struct TrackingPorts {
-  std::int8_t left;
-  std::int8_t right;
-  std::int8_t back;
-  std::int8_t imu;
-  bool leftReversed;
-  bool rightReversed;
-  bool backReversed;
 };
 
 struct FallbackConfig {

@@ -2,7 +2,20 @@
 
 #include <memory>
 
+#include "aon/config/hardware-map.hpp"
+
 namespace aon::core {
+namespace {
+
+#if USING_BIG_ROBOT
+constexpr const aon::config::RobotHardwareMap& selectedHardwareMap =
+    aon::config::bigRobotHardwareMap;
+#else
+constexpr const aon::config::RobotHardwareMap& selectedHardwareMap =
+    aon::config::smallRobotHardwareMap;
+#endif
+
+}  // namespace
 
 Hardware::Hardware()
 #if USING_BIG_ROBOT
@@ -10,12 +23,23 @@ Hardware::Hardware()
       driver(operator_control::FABIAN),
       startingPose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y,
                    INITIAL_ODOMETRY_THETA),
-      odometry(5, -6, 7, 0, 14),
+      odometry(selectedHardwareMap.legacyTracking.left,
+               selectedHardwareMap.legacyTracking.right,
+               selectedHardwareMap.legacyTracking.back, 0,
+               selectedHardwareMap.legacyTracking.imu),
       speedFactors(0.6, 1.0, 0.6, 1.0, 1.0, 1.0),
       xProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
       yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
       thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-      drivetrain({12, -13, -18, 19}, {-1, 2, 3, -4}, {-15}, startingPose,
+      drivetrain({selectedHardwareMap.drive.left[0],
+                  selectedHardwareMap.drive.left[1],
+                  selectedHardwareMap.drive.left[2],
+                  selectedHardwareMap.drive.left[3]},
+                 {selectedHardwareMap.drive.right[0],
+                  selectedHardwareMap.drive.right[1],
+                  selectedHardwareMap.drive.right[2],
+                  selectedHardwareMap.drive.right[3]},
+                 {-15}, startingPose,
                  std::make_unique<Odometry>(odometry), speedFactors,
                  std::make_unique<MotionProfile>(xProfile),
                  std::make_unique<MotionProfile>(yProfile),
@@ -28,11 +52,22 @@ Hardware::Hardware()
       driver(operator_control::KEVIN),
       startingPose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y,
                    INITIAL_ODOMETRY_THETA),
-      odometry(19, -18, 5, 0, 16),
+      odometry(selectedHardwareMap.legacyTracking.left,
+               selectedHardwareMap.legacyTracking.right,
+               selectedHardwareMap.legacyTracking.back, 0,
+               selectedHardwareMap.legacyTracking.imu),
       speedFactors(0.6, 0.0, 0.6, 1.0, 0.0, 0.667),
       yProfile(MAX_RPM, MAX_ACCEL, MAX_DECEL, MAX_ACCEL),
       thetaProfile(MAX_RPM, MAX_ACCEL * 3, MAX_DECEL * 0.8, MAX_ACCEL * 3),
-      drivetrain({11, -12, 13, -14}, {1, -2, 3, -4}, startingPose,
+      drivetrain({selectedHardwareMap.drive.left[0],
+                  selectedHardwareMap.drive.left[1],
+                  selectedHardwareMap.drive.left[2],
+                  selectedHardwareMap.drive.left[3]},
+                 {selectedHardwareMap.drive.right[0],
+                  selectedHardwareMap.drive.right[1],
+                  selectedHardwareMap.drive.right[2],
+                  selectedHardwareMap.drive.right[3]},
+                 startingPose,
                  std::make_unique<Odometry>(odometry), speedFactors,
                  std::make_unique<MotionProfile>(yProfile),
                  std::make_unique<MotionProfile>(thetaProfile)),

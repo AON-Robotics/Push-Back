@@ -6,11 +6,12 @@ namespace aon::config {
 
 const RobotConfig& activeRobotConfig() {
 #if USING_BIG_ROBOT
+  constexpr const RobotHardwareMap& hardwareMap = bigRobotHardwareMap;
   static const RobotConfig config{
       RobotIdentity::Big,
       {
-          {{{12, -13, -18, 19}}, {{-1, 2, 3, -4}}},
-          {5, -6, 7, 14, false, false, false},
+          hardwareMap.drive,
+          hardwareMap.lemlibTracking,
           DRIVE_WHEEL_DIAMETER,
           TRACKING_WHEEL_DIAMETER,
           DRIVE_WIDTH,
@@ -37,11 +38,12 @@ const RobotConfig& activeRobotConfig() {
       false,  // shadowPlaybackAuthorized
   };
 #else
+  constexpr const RobotHardwareMap& hardwareMap = smallRobotHardwareMap;
   static const RobotConfig config{
       RobotIdentity::Small,
       {
-          {{{11, -12, 13, -14}}, {{1, -2, 3, -4}}},
-          {19, 18, 5, 16, false, true, false},
+          hardwareMap.drive,
+          hardwareMap.lemlibTracking,
           DRIVE_WHEEL_DIAMETER,
           TRACKING_WHEEL_DIAMETER,
           DRIVE_WIDTH,
