@@ -549,13 +549,19 @@ git commit -m "Narrow autonomous route interfaces"
 
 Keep `globals.hpp` compatibility references for untouched code. Do not migrate drivetrain, GUI, intake tasks, and operator control simultaneously.
 
-- [ ] **Step 2: Convert one autonomous translation unit per commit**
+- [x] **Step 2: Convert one autonomous translation unit per commit**
 
 Build both configurations after each conversion. A commit must not mix dependency migration with route tuning or file movement.
 
-- [ ] **Step 3: Stop when remaining globals are shared with operator control or background tasks**
+- [x] **Step 3: Stop when remaining globals are shared with operator control or background tasks**
 
 Those require a separate concurrency and lifecycle plan rather than mechanical replacement.
+
+Migration stopped after the native small-robot, native big-robot, and LemLib
+translation units passed the explicit mechanism-action object boundary. The
+remaining autonomous aliases directly command drivetrain, intake, and parking
+hardware also used by operator control or background intake tasks; changing
+their ownership requires a dedicated concurrency and lifecycle plan.
 
 ### Phase 5 Risk Gate
 
