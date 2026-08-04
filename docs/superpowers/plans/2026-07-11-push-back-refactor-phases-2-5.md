@@ -545,7 +545,7 @@ git commit -m "Narrow autonomous route interfaces"
 - Modify: `include/aon/core/hardware.hpp`
 - Modify: autonomous source files one at a time
 
-- [ ] **Step 1: Pass `aon::core::Hardware&` into mechanism actions**
+- [x] **Step 1: Pass `aon::core::Hardware&` into mechanism actions**
 
 Keep `globals.hpp` compatibility references for untouched code. Do not migrate drivetrain, GUI, intake tasks, and operator control simultaneously.
 
