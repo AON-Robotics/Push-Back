@@ -2,6 +2,7 @@
 #include "aon/auton/mechanism-actions.hpp"
 #include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
+#include "aon/core/hardware.hpp"
 #include "aon/globals.hpp"
 
 namespace aon::routines {
@@ -9,14 +10,15 @@ namespace aon::routines {
 #if !USING_BIG_ROBOT
 
 void smallBotRoutine(){
+  auto& hardware = aon::core::hardware();
   aon::auton::logStep("Kevin Loader", "start");
   aon::auton::logStep("Kevin Loader", "align loader");
   drivetrain.move(31); // Align with match loader
   drivetrain.turn(86);
-  aon::auton::mechanisms::prepareLoaderCart();
+  aon::auton::mechanisms::prepareLoaderCart(hardware);
   pros::delay(200);
   drivetrain.move(4); // Go to match loader
-  aon::auton::mechanisms::beginLoaderCollection();
+  aon::auton::mechanisms::beginLoaderCollection(hardware);
   aon::auton::logStep("Kevin Loader", "collect blocks");
   drivetrain.motors(-MAX_RPM / 2); // Jerk back
   pros::delay(100); // for an instance,
@@ -24,16 +26,16 @@ void smallBotRoutine(){
   pros::delay(400); // for a bit of time,
   drivetrain.stop(); // and stop.
   pros::delay(5000); // Take up some blocks (6);
-  aon::auton::mechanisms::finishLoaderCollection();
+  aon::auton::mechanisms::finishLoaderCollection(hardware);
   aon::auton::logStep("Kevin Loader", "approach long goal");
   drivetrain.move(-13); // Move to Long goal
-  aon::auton::mechanisms::resetLoaderCart();
+  aon::auton::mechanisms::resetLoaderCart(hardware);
   drivetrain.turn(85);
   drivetrain.turn(85);
-  aon::auton::mechanisms::prepareTopScorer();
+  aon::auton::mechanisms::prepareTopScorer(hardware);
   drivetrain.move(6.5);
   aon::auton::logStep("Kevin Loader", "score long goal");
-  aon::auton::mechanisms::scoreTopBlocks(3000);
+  aon::auton::mechanisms::scoreTopBlocks(hardware, 3000);
   aon::auton::logStep("Kevin Loader", "park setup");
   drivetrain.move(-23); // Go back a little
   drivetrain.turn(-93); // Orient towards parking
@@ -157,12 +159,13 @@ void smallBotCurves(){
 }
 
 void smallBotPark(){
+  auto& hardware = aon::core::hardware();
   aon::auton::logStep("Kevin Park", "start");
   drivetrain.move(-5, false);
   aon::auton::logStep("Kevin Park", "parking push");
   drivetrain.motors(MAX_RPM, 500); // Push into parking to put a row of wheels over for a bit of time, then stop.
   aon::auton::logStep("Kevin Park", "deploy park mechanism");
-  aon::auton::mechanisms::deployParkMechanism();
+  aon::auton::mechanisms::deployParkMechanism(hardware);
   aon::auton::logStep("Kevin Park", "finish");
 }
 
