@@ -6,7 +6,7 @@ param(
   [string]$NativeTestsObject,
 
   [Parameter(Mandatory = $true)]
-  [string]$NativeRoutinesObject,
+  [string[]]$NativeRouteObjects,
 
   [switch]$ExpectXDrive
 )
@@ -60,7 +60,9 @@ if ($ExpectXDrive) {
 }
 
 $testSymbols = Get-DefinedSymbols -ObjectPath $NativeTestsObject
-$routeSymbols = Get-DefinedSymbols -ObjectPath $NativeRoutinesObject
+$routeSymbols = @($NativeRouteObjects | ForEach-Object {
+    Get-DefinedSymbols -ObjectPath $_
+  })
 $missing = @($expectedSymbols | Where-Object { $_ -notin $testSymbols })
 $leftInRoutes = @($expectedSymbols | Where-Object { $_ -in $routeSymbols })
 

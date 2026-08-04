@@ -511,9 +511,9 @@ git commit -m "Separate big robot native autonomous routes"
 git commit -m "Separate small robot native autonomous routes"
 ```
 
-- [ ] **Step 5: Move skills route bodies and remove the empty source file**
+- [x] **Step 5: Move skills route bodies and remove the empty source file**
 
-- [ ] **Step 6: Build both configurations and commit**
+- [x] **Step 6: Build both configurations and commit**
 
 ```powershell
 git commit -m "Separate native skills autonomous routes"

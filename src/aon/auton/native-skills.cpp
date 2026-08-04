@@ -1,30 +1,19 @@
 #include "aon/auton/routines.hpp"
-#include "aon/auton/mechanism-actions.hpp"
-#include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
 #include "aon/globals.hpp"
 
-namespace aon {
-// ============================================================================|
-//   ___  ___  _   _ _____ ___ _  _ ___ ___                                    |
-//  | _ \/ _ \| | | |_   _|_ _| \| | __/ __|                                   |
-//  |   / (_) | |_| | | |  | || .` | _|\__ \                                   |
-//  |_|_\\___/ \___/  |_| |___|_|\_|___|___/                                   |
-//                                                                             |
-// ============================================================================|
-
-namespace routines {
+namespace aon::routines {
 
 #if USING_BIG_ROBOT
 
 void BigBotSkillsRoutine(){
   drivetrain.strafe(28.5);
-  intake.dropCart(); 
-  drivetrain.move(6); 
-  drivetrain.motors(MAX_RPM / 2); 
-  pros::delay(200); 
-  drivetrain.stop(); 
-  pros::delay(8000); 
+  intake.dropCart();
+  drivetrain.move(6);
+  drivetrain.motors(MAX_RPM / 2);
+  pros::delay(200);
+  drivetrain.stop();
+  pros::delay(8000);
   drivetrain.move(-22);
   intake.raiseCart();
   drivetrain.motors(-MAX_RPM / 2);
@@ -33,18 +22,18 @@ void BigBotSkillsRoutine(){
   drivetrain.strafe(-10.5);
   drivetrain.move(50);
   drivetrain.strafe(10.5);
-  intake.dropCart(); 
-  drivetrain.move(6); 
-  drivetrain.motors(MAX_RPM / 2); 
-  pros::delay(200); 
-  drivetrain.stop(); 
-  pros::delay(8000); 
+  intake.dropCart();
+  drivetrain.move(6);
+  drivetrain.motors(MAX_RPM / 2);
+  pros::delay(200);
+  drivetrain.stop();
+  pros::delay(8000);
   drivetrain.strafe(10);
-  intake.dropCart(); 
+  intake.dropCart();
   drivetrain.turn(90);
   drivetrain.motors(MAX_RPM);
-  pros::delay(1000); 
-  drivetrain.stop(); 
+  pros::delay(1000);
+  drivetrain.stop();
   brooks.activate();
 }
 
@@ -54,9 +43,9 @@ void smallbotjorgeg(){
   drivetrain.move(31); // Align with match loader
   drivetrain.turn(87);
   intake.dropCart(); // Prepare loader mechanism
-  pros::delay(200);  
+  pros::delay(200);
   drivetrain.move(5); // Go to match loader
-  intake.activateScan(); 
+  intake.activateScan();
   drivetrain.motors(-MAX_RPM / 2); // Push into loader
   pros::delay(100); // for a bit of time,
   drivetrain.motors(MAX_RPM / 2); // Push into loader
@@ -82,13 +71,9 @@ void smallbotjorgeg(){
   drivetrain.turn(90); // allign for middle-middle
   drivetrain.move(20);
   drivetrain.turn(-45);
-  drivetrain.move();  
+  drivetrain.move();
 }
 
 #endif
 
-} // namespace aon::routines
-
-};  // namespace aon
-
-#include "aon/auton/routines.hpp"
+}  // namespace aon::routines
