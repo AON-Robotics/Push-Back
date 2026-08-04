@@ -1,7 +1,6 @@
 #include "aon/auton/routines.hpp"
 #include "aon/auton/lemlib-routes.hpp"
 #include "aon/auton/native-routes.hpp"
-#include "aon/auton/native-tests.hpp"
 #include "aon/auton/jerryio-path-auton.hpp"
 #include "aon/auton/red-six-block.hpp"
 #include "aon/auton/status.hpp"
@@ -34,15 +33,6 @@ int runRoutine(const char* name, int (*routine)()) {
   const int result = routine();
   drivetrain.stop();
   intake.stop();
-  aon::auton::finishRoutine(result != 0);
-  return result;
-}
-
-int runDrivetrainTest(const char* name, int (*routine)()) {
-  aon::auton::startRoutine(name);
-  aon::legacy_motion::prepare();
-  const int result = routine();
-  drivetrain.stop();
   aon::auton::finishRoutine(result != 0);
   return result;
 }
@@ -107,7 +97,8 @@ int SkillsRoutine1() {
 }
 
 int SkillsRoutine2() {
-  return runDrivetrainTest("TEST Drive 6in", RunNativeForwardReverseTest);
+  return runRoutine("TEST LemLib Forward 12in",
+                    RunLemLibForwardValidation);
 }
 
 int SkillsRoutine3() {

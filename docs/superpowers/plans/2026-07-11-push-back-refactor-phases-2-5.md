@@ -375,13 +375,13 @@ git commit -m "Add isolated LemLib validation routines"
 - Modify: `src/aon/auton/routine-selectors.cpp`
 - Modify: `include/aon/tools/gui/gui.hpp`
 
-- [ ] **Step 1: Map the forward test to one clearly labeled skills slot**
+- [x] **Step 1: Map the forward test to one clearly labeled skills slot**
 
 Do not expose all tests simultaneously. Keep native red and blue slots unchanged.
 
-- [ ] **Step 2: Build both robot configurations**
+- [x] **Step 2: Build both robot configurations**
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```powershell
 git add src/aon/auton/routine-selectors.cpp include/aon/tools/gui/gui.hpp

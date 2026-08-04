@@ -102,7 +102,7 @@ public:
   
   AutonOption skillsAutonOptions[autonOptionsCount] = {
     {"Skills AUT1", aon::routines::SkillsRoutine1},
-    {"TEST Drive 6in", aon::routines::SkillsRoutine2},
+    {"TEST LemLib Forward 12in", aon::routines::SkillsRoutine2},
     {"SHADOW PLAYBACK", aon::routines::SkillsRoutine3},
   };
 
