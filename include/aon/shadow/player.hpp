@@ -25,6 +25,11 @@ struct PlaybackCallbacks {
   std::function<ResultCode(const MechanismEvent&)> mechanism;
   std::function<bool()> cancelled;
   std::function<void()> stopAll;
+  /**
+   * Initializes odometry from the recording's confirmed starting pose.
+   * Called exactly once before any segment or mechanism callback.
+   */
+  std::function<ResultCode(const RawSample& start)> initializePose;
 };
 
 bool validMotionSegment(const ProcessedRoute& route,

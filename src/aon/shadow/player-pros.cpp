@@ -182,6 +182,10 @@ ResultCode playOnRobot(const DecodedRecording& recording,
         aon::auton::actions().cancelMotion();
         aon::auton::actions().stop();
         stopAllMechanisms();
+      },
+      [](const RawSample& start) {
+        aon::auton::actions().setPose(start.x, start.y, start.heading);
+        return ResultCode::Ok;
       }};
   return playRecording(recording, policy, callbacks);
 #endif

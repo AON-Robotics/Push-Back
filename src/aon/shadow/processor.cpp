@@ -181,6 +181,21 @@ bool appendMotionPoints(
   return true;
 }
 
+bool validGeneratedMotionSegment(const ProcessedRoute& route,
+                                 const RouteSegment& segment) {
+  if (segment.durationMs == 0 || segment.pointCount < 2 ||
+      segment.firstPoint > route.pointCount ||
+      segment.pointCount > route.pointCount - segment.firstPoint) {
+    return false;
+  }
+  for (std::size_t offset = 1; offset < segment.pointCount; ++offset) {
+    const auto& previous = route.points[segment.firstPoint + offset - 1];
+    const auto& current = route.points[segment.firstPoint + offset];
+    if (current.x == previous.x && current.y == previous.y) return false;
+  }
+  return true;
+}
+
 }  // namespace
 
 ResultCode process(const Capture& capture, ProcessedRoute& route,
@@ -294,16 +309,24 @@ ResultCode process(const Capture& capture, ProcessedRoute& route,
     auto& segment = route.segments[route.segmentCount];
     segment.kind = source.kind;
     segment.direction = source.direction;
+    const std::uint32_t firstTime = capture.samples[source.first].timeMs;
+    const std::uint32_t lastTime = capture.samples[source.last].timeMs;
+    if (lastTime < firstTime) {
+      route = {};
+      return route.result;
+    }
+    segment.durationMs = lastTime - firstTime;
     if (source.kind == SegmentKind::Dwell) {
       segment.firstPoint = static_cast<std::uint16_t>(route.pointCount);
-      segment.durationMs = capture.samples[source.last].timeMs -
-                           capture.samples[source.first].timeMs;
     } else if (!appendMotionPoints(capture, source, eventAnchor, route,
                                    workspace)) {
       route.result = ResultCode::CapacityReached;
       route.segmentCount = 0;
       route.pointCount = 0;
       route.eventCount = 0;
+      return route.result;
+    } else if (!validGeneratedMotionSegment(route, segment)) {
+      route = {};
       return route.result;
     }
     ++route.segmentCount;

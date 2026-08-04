@@ -36,6 +36,8 @@ DecodedRecording playbackRecording() {
   recording.capture.robot = RobotIdentity::Small;
   recording.capture.durationMs = 300;
   recording.route.result = ResultCode::Ok;
+  recording.route.start = {0, 3.0F, -4.0F, 25.0F, 0, 0, 0, 0, 0, 0,
+                           Direction::Forward, true};
   recording.route.segmentCount = 3;
   recording.route.pointCount = 4;
   recording.route.eventCount = 3;
@@ -61,12 +63,14 @@ DecodedRecording playbackRecording() {
 }
 
 struct PlaybackSpy {
+  int initializations = 0;
   int follows = 0;
   int dwells = 0;
   int mechanisms = 0;
   int stops = 0;
   bool cancel = false;
   ResultCode followResult = ResultCode::Ok;
+  ResultCode initializationResult = ResultCode::Ok;
   ResultCode mechanismResult = ResultCode::Ok;
   std::vector<std::string> log;
 };
@@ -104,6 +108,14 @@ PlaybackCallbacks playbackCallbacks(PlaybackSpy& spy) {
       [&spy]() {
         ++spy.stops;
         spy.log.push_back("stop");
+      },
+      [&spy](const RawSample& start) {
+        ++spy.initializations;
+        CHECK(start.x == 3.0F);
+        CHECK(start.y == -4.0F);
+        CHECK(start.heading == 25.0F);
+        spy.log.push_back("initialize-pose");
+        return spy.initializationResult;
       },
   };
 }
@@ -159,6 +171,13 @@ void playbackPolicyTests() {
   auto corruptSpeed = recording;
   corruptSpeed.route.points[0].speed = 0.0F;
   corruptRecordings.push_back(corruptSpeed);
+  auto invalidStartPose = recording;
+  invalidStartPose.route.start.poseValid = false;
+  corruptRecordings.push_back(invalidStartPose);
+  auto nonFiniteStartPose = recording;
+  nonFiniteStartPose.route.start.heading =
+      std::numeric_limits<float>::infinity();
+  corruptRecordings.push_back(nonFiniteStartPose);
 
   for (const auto& corrupt : corruptRecordings) {
     PlaybackSpy corruptSpy;
@@ -185,10 +204,28 @@ void playbackSchedulerTests() {
   auto successCallbacks = playbackCallbacks(success);
   CHECK(playRecording(recording, policy, successCallbacks) == ResultCode::Ok);
   CHECK(success.log == std::vector<std::string>({
-      "follow-forward", "event-1", "event-2", "dwell", "event-0",
-      "follow-reverse", "stop"}));
+      "initialize-pose", "follow-forward", "event-1", "event-2", "dwell",
+      "event-0", "follow-reverse", "stop"}));
+  CHECK(success.initializations == 1);
   CHECK(success.mechanisms == 3);
   CHECK(success.stops == 1);
+
+  PlaybackSpy initializationFailure;
+  initializationFailure.initializationResult = ResultCode::OdometryFailure;
+  auto initializationFailureCallbacks = playbackCallbacks(initializationFailure);
+  CHECK(playRecording(recording, policy, initializationFailureCallbacks) ==
+        ResultCode::OdometryFailure);
+  CHECK(initializationFailure.initializations == 1);
+  CHECK(initializationFailure.follows == 0);
+  CHECK(initializationFailure.stops == 1);
+
+  PlaybackSpy missingInitializer;
+  auto missingInitializerCallbacks = playbackCallbacks(missingInitializer);
+  missingInitializerCallbacks.initializePose = {};
+  CHECK(playRecording(recording, policy, missingInitializerCallbacks) ==
+        ResultCode::CorruptFile);
+  CHECK(missingInitializer.follows == 0);
+  CHECK(missingInitializer.stops == 1);
 
   PlaybackSpy motionFailure;
   motionFailure.followResult = ResultCode::MotionFailure;
@@ -566,8 +603,31 @@ void processorTests() {
   CHECK(straight.segments[0].kind == SegmentKind::Motion);
   CHECK(straight.segments[0].direction == Direction::Forward);
   CHECK(straight.segments[0].pointCount == 2);
+  CHECK(straight.segments[0].durationMs == 40);
   CHECK(segmentPoint(straight, 0, 0).y == 0.0F);
   CHECK(segmentPoint(straight, 0, 1).y == 12.0F);
+
+  DecodedRecording processedRecording{};
+  processedRecording.capture = captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(20, 0, 6, 0, Direction::Forward),
+      routeFrame(40, 0, 12, 0, Direction::Forward),
+  });
+  processedRecording.route = process(processedRecording.capture);
+  CHECK(validatePlayback(processedRecording,
+                         {true, true, RobotIdentity::Small}) ==
+        ResultCode::Ok);
+
+  const ProcessedRoute singleSample = process(captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+  }));
+  CHECK(singleSample.result == ResultCode::EmptyRecording);
+
+  const ProcessedRoute stationaryMotion = process(captureAt({
+      routeFrame(0, 0, 0, 0, Direction::Forward),
+      routeFrame(20, 0, 0, 0, Direction::Forward),
+  }));
+  CHECK(stationaryMotion.result == ResultCode::EmptyRecording);
 
   const ProcessedRoute corner = process(captureAt({
       routeFrame(0, 0, 0, 0, Direction::Forward),

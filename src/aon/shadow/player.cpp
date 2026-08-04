@@ -66,6 +66,10 @@ ResultCode validatePlayback(const DecodedRecording& recording,
       route.eventCount > kMaximumEvents) {
     return ResultCode::CorruptFile;
   }
+  if (!route.start.poseValid || !std::isfinite(route.start.x) ||
+      !std::isfinite(route.start.y) || !std::isfinite(route.start.heading)) {
+    return ResultCode::CorruptFile;
+  }
 
   for (std::size_t index = 0; index < route.segmentCount; ++index) {
     const auto& segment = route.segments[index];
@@ -130,9 +134,13 @@ ResultCode playRecording(const DecodedRecording& recording,
   const ResultCode validation = validatePlayback(recording, policy);
   if (validation != ResultCode::Ok) return finish(validation);
   if (!callbacks.follow || !callbacks.dwell || !callbacks.mechanism ||
-      !callbacks.cancelled || !callbacks.stopAll) {
+      !callbacks.cancelled || !callbacks.stopAll ||
+      !callbacks.initializePose) {
     return finish(ResultCode::CorruptFile);
   }
+  if (callbacks.cancelled()) return finish(ResultCode::Cancelled);
+  const ResultCode initialization = callbacks.initializePose(recording.route.start);
+  if (initialization != ResultCode::Ok) return finish(initialization);
 
   const auto& route = recording.route;
   std::size_t nextEvent = 0;
