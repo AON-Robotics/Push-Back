@@ -503,9 +503,9 @@ git commit -m "Separate native drivetrain tests from autonomous routes"
 git commit -m "Separate big robot native autonomous routes"
 ```
 
-- [ ] **Step 3: Move small-robot route bodies unchanged**
+- [x] **Step 3: Move small-robot route bodies unchanged**
 
-- [ ] **Step 4: Build both configurations and commit**
+- [x] **Step 4: Build both configurations and commit**
 
 ```powershell
 git commit -m "Separate small robot native autonomous routes"
