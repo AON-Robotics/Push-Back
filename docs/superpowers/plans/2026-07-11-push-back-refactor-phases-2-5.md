@@ -350,19 +350,19 @@ git commit -m "Use named mechanism actions in park and LemLib routes"
 - Produces: isolated forward, reverse, clockwise-turn, counterclockwise-turn, and combined tests.
 - Consumes: `aon::auton::Actions` and `activeRobotConfig()`.
 
-- [ ] **Step 1: Define conservative validation routines**
+- [x] **Step 1: Define conservative validation routines**
 
 Use 12 inches for straight tests, 90 degrees for turn tests, maximum speed 40, and explicit timeouts. Every test sets pose to `(0, 0, 0)`, logs expected motion, runs one motion, stops, and prints final pose.
 
-- [ ] **Step 2: Add a stable result line**
+- [x] **Step 2: Add a stable result line**
 
 ```text
 LEMLIB_VALIDATION test=forward expected_x=0 expected_y=12 expected_h=0 actual_x=... actual_y=... actual_h=...
 ```
 
-- [ ] **Step 3: Build both robot configurations**
+- [x] **Step 3: Build both robot configurations**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add include/aon/auton/lemlib-validation.hpp src/aon/auton/lemlib-validation.cpp include/aon/auton/routines.hpp

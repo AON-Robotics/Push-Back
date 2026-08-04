@@ -44,26 +44,6 @@ int RunLemLibTurnCharacterization(const char* name, double heading) {
   return result.succeeded ? 1 : 0;
 }
 
-int RunLemLibForwardValidation() {
-  auto& routine = aon::auton::actions();
-
-#if USING_BIG_ROBOT
-  aon::auton::logStep("LemLib Forward 12in", "unsupported big robot");
-  routine.stop();
-  return 0;
-#else
-  aon::auton::logStep("LemLib Forward 12in", "start");
-  routine.setPose(0.0, 0.0, 0.0);
-  const auto result = routine.moveToPoint(
-      "LemLib Forward 12in", 0.0, 12.0, 3000,
-      {.forwards = true, .maxSpeed = 35});
-  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
-  aon::auton::logStep("LemLib Forward 12in",
-                      result.succeeded ? "finish" : "failed");
-  return result.succeeded ? 1 : 0;
-#endif
-}
-
 const char* redSixPhaseName(aon::auton::RedSixPhase phase) {
   using aon::auton::RedSixPhase;
   switch (phase) {

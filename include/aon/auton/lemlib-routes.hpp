@@ -18,6 +18,17 @@ int RunLemLibTurnCharacterization(const char* name, double heading);
 
 /** @brief Runs the isolated forward LemLib validation motion. */
 int RunLemLibForwardValidation();
+/** @brief Runs the isolated reverse LemLib validation motion. */
+int RunLemLibReverseValidation();
+/** @brief Runs the isolated clockwise 90-degree validation motion. */
+int RunLemLibClockwiseTurnValidation();
+/** @brief Runs the isolated counterclockwise 90-degree validation motion. */
+int RunLemLibCounterclockwiseTurnValidation();
+/**
+ * @brief Runs all isolated LemLib primitives in safety-first order.
+ * @warning Use only after every primitive passes five repeatable physical runs.
+ */
+int RunLemLibCombinedValidation();
 /** @brief Runs the configured LemLib figure-eight path validation. */
 int RunLemLibFigureEightValidation();
 /** @brief Runs the configured JerryIO path autonomous experiment. */
