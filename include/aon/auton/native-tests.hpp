@@ -70,3 +70,23 @@ void xDriveRoutine();
 #endif
 
 }  // namespace aon::tests
+
+namespace aon::routines {
+
+/**
+ * @brief Moves six inches forward and backward at reduced native-drive speed.
+ * @return One after the drivetrain is stopped and its velocity limit restored.
+ * @warning Commands drivetrain hardware synchronously; mechanisms are never
+ * commanded. Run only with the robot secured or in a clear field.
+ */
+int RunNativeForwardReverseTest();
+
+/**
+ * @brief Turns 45 degrees clockwise and counterclockwise at reduced speed.
+ * @return One after the drivetrain is stopped and its velocity limit restored.
+ * @warning Commands drivetrain hardware synchronously; mechanisms are never
+ * commanded. Run only with the robot secured or in a clear field.
+ */
+int RunNativeTurnTest();
+
+}  // namespace aon::routines

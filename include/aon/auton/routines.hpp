@@ -1,62 +1,38 @@
 #pragma once
 
-#include "aon/auton/hybrid-sequence.hpp"
-
 namespace aon::routines {
 
 /**
- * @brief Competition autonomous slots exposed to the GUI and PROS callbacks.
+ * @name Competition autonomous slots
+ *
+ * Each slot synchronously commands initialized robot hardware through its
+ * selected route, stops the drivetrain and intake before returning, and
+ * reports execution through the shared autonomous status service.
+ *
+ * @return Nonzero when the selected route completes successfully; zero when a
+ * route with recoverable failure reporting does not complete.
+ * @warning These entry points are not thread-safe and must only be invoked by
+ * the competition or isolated debug autonomous task.
+ * @{
  */
+/** @brief Runs the first red-alliance competition slot. */
 int RedRoutine1();
+/** @brief Runs the second red-alliance competition slot. */
 int RedRoutine2();
+/** @brief Runs the third red-alliance competition slot. */
 int RedRoutine3();
+/** @brief Runs the first blue-alliance competition slot. */
 int BlueRoutine1();
+/** @brief Runs the second blue-alliance competition slot. */
 int BlueRoutine2();
+/** @brief Runs the third blue-alliance competition slot. */
 int BlueRoutine3();
+/** @brief Runs the first skills/debug slot. */
 int SkillsRoutine1();
+/** @brief Runs the second skills/debug slot. */
 int SkillsRoutine2();
+/** @brief Runs the third skills/debug slot. */
 int SkillsRoutine3();
-
-// Native PROS route bodies kept for proven Kevin-style autonomous behavior.
-void safeBigBotRoutine();
-void bigBotCurves();
-void bigBotContinuity();
-void bigBotStayThere();
-void bigBotLongGoalThenPark();
-void bigBotPark();
-void BigBotSkillsRoutine();
-void smallBotRoutine();
-void blackBeard();
-void jackSparrow();
-void smallBotRoutineWorlds();
-void smallBotCurves();
-void smallBotPark();
-void smallbotjorgeg();
-
-// LemLib-backed tests and experimental routes.
-int RunLemLibTurnCharacterization(const char* name, double heading);
-int RunLemLibForwardValidation();
-int RunLemLibFigureEightValidation();
-int RunJerryIoPathAuton();
-int RunStagedLoaderScoreExperiment();
-/**
- * @brief Runs the red-side six-block loader-to-long-goal autonomous.
- *
- * Starting configuration:
- * - Tracking center at the documented local red starting origin.
- * - Robot front facing +Y at heading zero.
- * - Loader cart and scorer clear for initialization.
- *
- * @param stopAfter Inclusive phase used by progressive physical gates.
- */
-int RunRedSixBlockHybridAuton(
-    aon::auton::RedSixPhase stopAfter = aon::auton::RedSixPhase::ScoreSix);
-/** @brief Runs the complete red six-block route for selector registration. */
-int RunRedSixBlockHybridFull();
-int RunShadowPlayback();
-
-// Low-speed native drivetrain checks. These never command mechanisms.
-int RunNativeForwardReverseTest();
-int RunNativeTurnTest();
+/** @} */
 
 }  // namespace aon::routines

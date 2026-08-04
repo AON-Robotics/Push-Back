@@ -526,13 +526,13 @@ git commit -m "Separate native skills autonomous routes"
 - Create: `include/aon/auton/native-routes.hpp`
 - Create: `include/aon/auton/lemlib-routes.hpp`
 
-- [ ] **Step 1: Keep only competition slot entry points in `routines.hpp`**
+- [x] **Step 1: Keep only competition slot entry points in `routines.hpp`**
 
-- [ ] **Step 2: Put native route bodies and LemLib experimental entry points in their respective internal headers**
+- [x] **Step 2: Put native route bodies and LemLib experimental entry points in their respective internal headers**
 
-- [ ] **Step 3: Build both robot configurations**
+- [x] **Step 3: Build both robot configurations**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add include/aon/auton/routines.hpp include/aon/auton/native-routes.hpp include/aon/auton/lemlib-routes.hpp src/aon/auton

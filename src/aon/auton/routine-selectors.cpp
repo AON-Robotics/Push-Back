@@ -1,4 +1,7 @@
 #include "aon/auton/routines.hpp"
+#include "aon/auton/lemlib-routes.hpp"
+#include "aon/auton/native-routes.hpp"
+#include "aon/auton/native-tests.hpp"
 #include "aon/auton/jerryio-path-auton.hpp"
 #include "aon/auton/red-six-block.hpp"
 #include "aon/auton/status.hpp"
