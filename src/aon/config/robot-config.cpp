@@ -36,6 +36,7 @@ const RobotConfig& activeRobotConfig() {
           },
       },
       false,  // shadowPlaybackAuthorized
+      {false, false},  // Experimental routes await physical validation.
   };
 #else
   constexpr const RobotHardwareMap& hardwareMap = smallRobotHardwareMap;
@@ -68,6 +69,7 @@ const RobotConfig& activeRobotConfig() {
           },
       },
       true,  // shadowPlaybackAuthorized; supervised physical test only.
+      {false, false},  // Experimental routes await physical validation.
   };
 #endif
   return config;

@@ -9,6 +9,7 @@
 #include "aon/auton/red-six-block.hpp"
 #include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
+#include "aon/config/robot-config.hpp"
 #include "aon/core/hardware.hpp"
 
 #include "pros/rtos.hpp"
@@ -104,6 +105,15 @@ int RunLemLibFigureEightValidation() {
 int RunJerryIoPathAuton() {
   using aon::auton::JerryIoPathAuton;
   auto& routine = aon::auton::actions();
+
+  if (!aon::config::activeRobotConfig()
+           .autonomousAuthorizations.allows(
+               aon::config::ExperimentalRoute::JerryIoPath)) {
+    aon::auton::logStep(JerryIoPathAuton::name,
+                        "locked: physical validation required");
+    routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+    return 0;
+  }
 
 #if USING_BIG_ROBOT
   aon::auton::logStep(JerryIoPathAuton::name, "unsupported big robot");
@@ -352,6 +362,15 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
 }
 
 int RunRedSixBlockHybridFull() {
+  auto& routine = aon::auton::actions();
+  if (!aon::config::activeRobotConfig()
+           .autonomousAuthorizations.allows(
+               aon::config::ExperimentalRoute::RedSixBlock)) {
+    aon::auton::logStep(aon::auton::RedSixBlock::name,
+                        "locked: physical validation required");
+    routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+    return 0;
+  }
   return RunRedSixBlockHybridAuton(aon::auton::RedSixPhase::ScoreSix);
 }
 

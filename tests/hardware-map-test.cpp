@@ -1,4 +1,5 @@
 #include "aon/config/hardware-map.hpp"
+#include "aon/config/robot-config.hpp"
 
 #include <array>
 #include <cstdint>
@@ -86,6 +87,23 @@ void validatorRejectsPortsOutsideTheV5Range() {
         HardwareMapIssue::InvalidPort);
 }
 
+void experimentalRoutesRequireIndividualAuthorization() {
+  using aon::config::AutonomousAuthorizations;
+  using aon::config::ExperimentalRoute;
+
+  const AutonomousAuthorizations locked{false, false};
+  CHECK(!locked.allows(ExperimentalRoute::RedSixBlock));
+  CHECK(!locked.allows(ExperimentalRoute::JerryIoPath));
+
+  const AutonomousAuthorizations redOnly{true, false};
+  CHECK(redOnly.allows(ExperimentalRoute::RedSixBlock));
+  CHECK(!redOnly.allows(ExperimentalRoute::JerryIoPath));
+
+  const AutonomousAuthorizations jerryOnly{false, true};
+  CHECK(!jerryOnly.allows(ExperimentalRoute::RedSixBlock));
+  CHECK(jerryOnly.allows(ExperimentalRoute::JerryIoPath));
+}
+
 }  // namespace
 
 int main() {
@@ -93,6 +111,7 @@ int main() {
   bigRobotValuesAndKnownMismatchRemainVisible();
   validatorDistinguishesPortAndReversalFailures();
   validatorRejectsPortsOutsideTheV5Range();
+  experimentalRoutesRequireIndividualAuthorization();
   std::cout << "hardware map tests passed\n";
   return 0;
 }

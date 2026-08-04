@@ -12,6 +12,35 @@ enum class RobotIdentity {
   Big,
 };
 
+/** Experimental autonomous routes that require individual field validation. */
+enum class ExperimentalRoute {
+  RedSixBlock,
+  JerryIoPath,
+};
+
+/**
+ * @brief Explicit execution gates for autonomous routes not yet field-proven.
+ *
+ * A route must remain disabled until its physical checklist has passed. These
+ * flags affect autonomous execution only; they do not enable hardware or
+ * bypass the robot identity checks performed by each routine.
+ */
+struct AutonomousAuthorizations {
+  bool redSixBlock;
+  bool jerryIoPath;
+
+  /** Returns whether the specified route may issue autonomous commands. */
+  [[nodiscard]] constexpr bool allows(ExperimentalRoute route) const noexcept {
+    switch (route) {
+      case ExperimentalRoute::RedSixBlock:
+        return redSixBlock;
+      case ExperimentalRoute::JerryIoPath:
+        return jerryIoPath;
+    }
+    return false;
+  }
+};
+
 struct FallbackConfig {
   double wheelRevolutionsPerMotorRevolution;
   double distanceKp;
@@ -45,6 +74,7 @@ struct RobotConfig {
   RobotIdentity identity;
   LemLibDriveConfig lemlib;
   bool shadowPlaybackAuthorized;
+  AutonomousAuthorizations autonomousAuthorizations;
 };
 
 /// Configuration selected by USING_BIG_ROBOT.
