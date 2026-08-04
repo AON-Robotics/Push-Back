@@ -472,15 +472,15 @@ Do not proceed based only on successful compilation.
 - Moves existing test bodies without renaming or changing them.
 - Keeps competition route declarations in `include/aon/auton/routines.hpp`.
 
-- [ ] **Step 1: Move functions from `alignRobotTo` through `xDriveRoutine` into the test file**
+- [x] **Step 1: Move functions from `alignRobotTo` through `xDriveRoutine` into the test file**
 
 Use `git diff --color-moved` to confirm the bodies are moves rather than rewrites.
 
-- [ ] **Step 2: Include only headers required by each resulting translation unit**
+- [x] **Step 2: Include only headers required by each resulting translation unit**
 
-- [ ] **Step 3: Build both robot configurations**
+- [x] **Step 3: Build both robot configurations**
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add include/aon/auton/native-tests.hpp src/aon/auton/native-tests.cpp src/aon/auton/native-routines.cpp
