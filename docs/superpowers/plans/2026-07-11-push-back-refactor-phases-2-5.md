@@ -495,9 +495,9 @@ git commit -m "Separate native drivetrain tests from autonomous routes"
 - Create: `src/aon/auton/native-skills.cpp`
 - Delete after successful moves: `src/aon/auton/native-routines.cpp`
 
-- [ ] **Step 1: Move big-robot route bodies unchanged**
+- [x] **Step 1: Move big-robot route bodies unchanged**
 
-- [ ] **Step 2: Build both configurations and commit**
+- [x] **Step 2: Build both configurations and commit**
 
 ```powershell
 git commit -m "Separate big robot native autonomous routes"
