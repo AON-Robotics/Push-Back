@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <type_traits>
 
 #include "aon/tools/vector.hpp"
 
@@ -93,6 +94,29 @@ void setDirectionCopiesRequiredNonOwningInput() {
   checkNear(vector.GetY(), 1.0);
 }
 
+void setDirectionSupportsReferencesAndNullCompatibility() {
+  using ReferenceSetter =
+      aon::Vector (aon::Vector::*)(const aon::Angle&);
+  static_assert(std::is_same_v<
+                decltype(static_cast<ReferenceSetter>(
+                    &aon::Vector::SetDirection)),
+                ReferenceSetter>);
+
+  const aon::Angle angle = aon::Angle().SetDegrees(120.0);
+  aon::Vector vector = aon::Vector().SetMagnitude(2.0).SetDirection(angle);
+  checkNear(vector.GetDegrees(), 120.0);
+  checkNear(vector.GetX(), -1.0);
+  checkNear(vector.GetY(), std::sqrt(3.0));
+
+  const double priorX = vector.GetX();
+  const double priorY = vector.GetY();
+  const double priorDegrees = vector.GetDegrees();
+  vector.SetDirection(static_cast<aon::Angle*>(nullptr));
+  checkNear(vector.GetX(), priorX);
+  checkNear(vector.GetY(), priorY);
+  checkNear(vector.GetDegrees(), priorDegrees);
+}
+
 void copyMutationDoesNotChangeOriginalDirection() {
   aon::Vector original = aon::Vector().SetPosition(3.0, 4.0);
   aon::Vector copy = original;
@@ -149,6 +173,7 @@ int main() {
   polarSettersPreserveCurrentConversions();
   extendedAnglesRemainUnwrapped();
   setDirectionCopiesRequiredNonOwningInput();
+  setDirectionSupportsReferencesAndNullCompatibility();
   copyMutationDoesNotChangeOriginalDirection();
   arithmeticRetainsExistingMeanings();
   std::cout << "vector tests passed\n";

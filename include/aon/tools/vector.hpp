@@ -137,10 +137,10 @@ int main(){
   Angle SetPos(double x, double y) { return SetRadians(std::atan2(y, x)); }
 
   //> Retrieve angle in units of degrees.
-  double GetDegrees() { return degrees; }
+  double GetDegrees() const { return degrees; }
 
   //> Retrieve angle in units of radians.
-  double GetRadians() { return radians; }
+  double GetRadians() const { return radians; }
 
   /**
    * \brief Convert object to string using precision of 2 decimal points.
@@ -485,14 +485,12 @@ int main(){
   /**
    * \brief Set the vector's direction and update the X and Y components.
    *
-   * \param direction Required non-owning pointer to the direction to copy
+   * \param direction Direction value to copy
    *
    * \returns This object so it can be initialized as it is created. See
    *     example.
    *
-   * \pre `direction` is not null.
-   * \note This method copies the pointed-to value and does not retain or take
-   *     ownership of the pointer.
+   * \note This method copies the value and retains no reference to it.
    *
    * \code{.cpp}
 
@@ -507,13 +505,25 @@ int main(){
 
    * \endcode
    */
-  Vector SetDirection(Angle *direction) {
-    this->direction.SetDegrees(direction->GetDegrees());
+  Vector SetDirection(const Angle& direction) {
+    this->direction.SetDegrees(direction.GetDegrees());
 
-    x = magnitude * std::cos(direction->GetRadians());
-    y = magnitude * std::sin(direction->GetRadians());
+    x = magnitude * std::cos(direction.GetRadians());
+    y = magnitude * std::sin(direction.GetRadians());
 
     return *this;
+  }
+
+  /**
+   * \brief Compatibility overload for legacy pointer callers.
+   *
+   * \param direction Optional non-owning pointer to the direction to copy.
+   * \returns The unchanged vector when `direction` is null; otherwise behaves
+   *     like SetDirection(const Angle&).
+   * \note The pointer is never retained and ownership remains with the caller.
+   */
+  Vector SetDirection(Angle* direction) {
+    return direction == nullptr ? *this : SetDirection(*direction);
   }
 
   /**
@@ -539,7 +549,7 @@ int main(){
   Vector SetDegrees(double degrees) {
     Angle angle;
     angle.SetDegrees(degrees);
-    return SetDirection(&angle);
+    return SetDirection(angle);
   }
 
   /**
@@ -565,7 +575,7 @@ int main(){
   Vector SetRadians(double radians) {
     Angle angle;
     angle.SetRadians(radians);
-    return SetDirection(&angle);
+    return SetDirection(angle);
   }
 
   //> Retrieve X component of vector.

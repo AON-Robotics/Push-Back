@@ -7,6 +7,7 @@
 
 namespace aon::shadow {
 
+/** Summary returned without exposing the owned recording buffers. */
 struct SlotSummary {
   ResultCode result = ResultCode::EmptyRecording;
   bool valid = false;
@@ -17,6 +18,12 @@ struct SlotSummary {
   float startHeading = 0;
 };
 
+/**
+ * @brief Replaceable byte-storage boundary for Shadow recordings.
+ *
+ * Implementations borrow paths and buffers only for each call. Methods return
+ * ResultCode values rather than throwing and are not required to be thread-safe.
+ */
 class FileStore {
  public:
   virtual ~FileStore() = default;
@@ -26,6 +33,12 @@ class FileStore {
   virtual ResultCode erase(const char* path) = 0;
 };
 
+/**
+ * @brief Redundant A/B slot storage with encode/decode verification.
+ *
+ * The FileStore dependency is required and must outlive this object. Public
+ * operations use internal scratch buffers and must not run concurrently.
+ */
 class Storage {
  public:
   explicit Storage(FileStore& files);
@@ -47,6 +60,7 @@ class Storage {
   mutable DecodedRecording decodedVerify_{};
 };
 
+/** FileStore implementation for the V5 Brain SD card under `/usd`. */
 class SdFileStore final : public FileStore {
  public:
   ResultCode read(const char* path, EncodedRecording& out) const override;

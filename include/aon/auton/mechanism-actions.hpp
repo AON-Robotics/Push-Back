@@ -14,6 +14,7 @@ namespace aon::auton::mechanisms {
  */
 void beginLoaderCollection(aon::core::Hardware& hardware);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void beginLoaderCollection();
 
 /**
@@ -22,6 +23,7 @@ void beginLoaderCollection();
  */
 void finishLoaderCollection(aon::core::Hardware& hardware);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void finishLoaderCollection();
 
 /**
@@ -30,6 +32,7 @@ void finishLoaderCollection();
  */
 void prepareLoaderCart(aon::core::Hardware& hardware);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void prepareLoaderCart();
 
 /**
@@ -38,6 +41,7 @@ void prepareLoaderCart();
  */
 void resetLoaderCart(aon::core::Hardware& hardware);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void resetLoaderCart();
 
 /**
@@ -49,6 +53,7 @@ void resetLoaderCart();
  */
 void prepareTopScorer(aon::core::Hardware& hardware);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void prepareTopScorer();
 
 /**
@@ -58,6 +63,7 @@ void prepareTopScorer();
  */
 void scoreTopBlocks(aon::core::Hardware& hardware, std::uint32_t durationMs);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void scoreTopBlocks(std::uint32_t durationMs);
 
 /**
@@ -66,6 +72,7 @@ void scoreTopBlocks(std::uint32_t durationMs);
  */
 void deployParkMechanism(aon::core::Hardware& hardware);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void deployParkMechanism();
 
 /**
@@ -77,6 +84,7 @@ void deployParkMechanism();
  */
 void stopAll(aon::core::Hardware& hardware);
 /** @brief Compatibility overload using the process hardware owner. */
+[[deprecated("Pass Hardware& explicitly")]]
 void stopAll();
 
 }  // namespace aon::auton::mechanisms
