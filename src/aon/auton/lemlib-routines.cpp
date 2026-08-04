@@ -9,6 +9,7 @@
 #include "aon/auton/red-six-block.hpp"
 #include "aon/auton/step-logger.hpp"
 #include "aon/constants.hpp"
+#include "aon/core/hardware.hpp"
 
 #include "pros/rtos.hpp"
 #include "pros/misc.hpp"
@@ -23,10 +24,11 @@ ASSET(red_six_goal_transfer_jerryio_txt);
 namespace aon::routines {
 namespace {
 
-bool requiredMotion(const aon::auton::MotionResult& result) {
+bool requiredMotion(const aon::auton::MotionResult& result,
+                    aon::core::Hardware& hardware) {
   if (result.succeeded) return true;
   aon::auton::actions().stop();
-  aon::auton::mechanisms::stopAll();
+  aon::auton::mechanisms::stopAll(hardware);
   return false;
 }
 
@@ -144,6 +146,10 @@ int RunJerryIoPathAuton() {
 
 int RunStagedLoaderScoreExperiment() {
   auto& routine = aon::auton::actions();
+  auto& hardware = aon::core::hardware();
+  const auto requireMotion = [&](const aon::auton::MotionResult& result) {
+    return requiredMotion(result, hardware);
+  };
 
 #if USING_BIG_ROBOT
   aon::auton::logStep("Staged Loader", "unsupported big robot");
@@ -153,77 +159,77 @@ int RunStagedLoaderScoreExperiment() {
 
   aon::auton::logStep("Staged Loader", "start");
   routine.setPose(0, 0, 0);
-  aon::auton::mechanisms::finishLoaderCollection();
+  aon::auton::mechanisms::finishLoaderCollection(hardware);
 
   // Heading zero points along +Y. Chain most of the loader approach, then
   // slow down for the heading-sensitive final alignment.
   aon::auton::logStep("Staged Loader", "fast loader approach");
-  if (!requiredMotion(routine.moveToPoint(
+  if (!requireMotion(routine.moveToPoint(
           "staged loader: fast approach", 0.0, 24.0, 1800,
           {.forwards = true,
            .maxSpeed = 70,
            .minSpeed = 35,
            .earlyExitRange = 8})))
     return 0;
-  if (!requiredMotion(routine.moveToPoint(
+  if (!requireMotion(routine.moveToPoint(
           "staged loader: alignment point", 0.0, 31.0, 1400,
           {.forwards = true, .maxSpeed = 45})))
     return 0;
-  if (!requiredMotion(routine.turnToHeading(
+  if (!requireMotion(routine.turnToHeading(
           "staged loader: face loader", 86.0, 1200,
           {.direction = lemlib::AngularDirection::AUTO, .maxSpeed = 45})))
     return 0;
 
   aon::auton::logStep("Staged Loader", "collect blocks");
-  aon::auton::mechanisms::prepareLoaderCart();
+  aon::auton::mechanisms::prepareLoaderCart(hardware);
   pros::delay(200);
-  aon::auton::mechanisms::beginLoaderCollection();
-  if (!requiredMotion(routine.moveToPoint(
+  aon::auton::mechanisms::beginLoaderCollection(hardware);
+  if (!requireMotion(routine.moveToPoint(
           "staged loader: slow contact", 4.0, 31.0, 1000,
           {.forwards = true, .maxSpeed = 30})))
     return 0;
-  if (!requiredMotion(
+  if (!requireMotion(
           routine.arcadeFor("staged loader: hold against loader", 25, 0, 250)))
     return 0;
   pros::delay(4000);
-  aon::auton::mechanisms::finishLoaderCollection();
+  aon::auton::mechanisms::finishLoaderCollection(hardware);
 
   aon::auton::logStep("Staged Loader", "back out");
-  if (!requiredMotion(routine.moveToPoint(
+  if (!requireMotion(routine.moveToPoint(
           "staged loader: fast retreat", -5.0, 31.0, 1300,
           {.forwards = false,
            .maxSpeed = 55,
            .minSpeed = 30,
            .earlyExitRange = 4})))
     return 0;
-  if (!requiredMotion(routine.moveToPoint(
+  if (!requireMotion(routine.moveToPoint(
           "staged loader: retreat finish", -9.0, 31.0, 1000,
           {.forwards = false, .maxSpeed = 35})))
     return 0;
 
   aon::auton::logStep("Staged Loader", "face long goal");
-  aon::auton::mechanisms::resetLoaderCart();
-  if (!requiredMotion(routine.turnToHeading(
+  aon::auton::mechanisms::resetLoaderCart(hardware);
+  if (!requireMotion(routine.turnToHeading(
           "staged loader: face long goal", 171.0, 1600,
           {.direction = lemlib::AngularDirection::AUTO, .maxSpeed = 45})))
     return 0;
 
   aon::auton::logStep("Staged Loader", "precise score approach");
 #if !USING_BIG_ROBOT
-  aon::auton::mechanisms::prepareTopScorer();
+  aon::auton::mechanisms::prepareTopScorer(hardware);
 #endif
-  if (!requiredMotion(routine.moveToPose(
+  if (!requireMotion(routine.moveToPose(
           "staged loader: long goal", -8.0, 25.0, 171.0, 2200,
           {.forwards = true,
            .horizontalDrift = 8,
            .lead = 0.1,
            .maxSpeed = 35})))
     return 0;
-  aon::auton::mechanisms::scoreTopBlocks(3000);
+  aon::auton::mechanisms::scoreTopBlocks(hardware, 3000);
 
   aon::auton::logStep("Staged Loader", "finish");
   routine.stop();
-  aon::auton::mechanisms::stopAll();
+  aon::auton::mechanisms::stopAll(hardware);
   return 1;
 }
 
@@ -232,12 +238,13 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
   using aon::auton::RedSixCallbacks;
   using aon::auton::RedSixPhase;
   auto& routine = aon::auton::actions();
+  auto& hardware = aon::core::hardware();
 
 #if USING_BIG_ROBOT
   (void)stopAfter;
   aon::auton::logStep(RedSixBlock::name, "unsupported big robot");
   routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
-  aon::auton::mechanisms::stopAll();
+  aon::auton::mechanisms::stopAll(hardware);
   return 0;
 #else
   aon::auton::logStep(RedSixBlock::name, "start");
@@ -245,8 +252,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
   // zero faces +Y; coordinates are local to this autonomous placement.
   routine.setPose(RedSixBlock::start.x, RedSixBlock::start.y,
                   RedSixBlock::start.heading);
-  aon::auton::mechanisms::finishLoaderCollection();
-  aon::auton::mechanisms::prepareLoaderCart();
+  aon::auton::mechanisms::finishLoaderCollection(hardware);
+  aon::auton::mechanisms::prepareLoaderCart(hardware);
 
   RedSixCallbacks callbacks;
   callbacks.run = [&](RedSixPhase phase) {
@@ -272,7 +279,7 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        {.forwards = true, .maxSpeed = 30},
                        aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::CollectSix: {
-        aon::auton::mechanisms::beginLoaderCollection();
+        aon::auton::mechanisms::beginLoaderCollection(hardware);
         const std::uint32_t startedAt = pros::millis();
         // Seat against the loader briefly, then rely on the autonomous HOLD
         // brake mode for the remainder of collection instead of heating the
@@ -281,7 +288,7 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
             "red-six loader seating hold", 25, 0, 250,
             aon::auton::OdometryMonitoring::FailClosed);
         if (!seating.succeeded) {
-          aon::auton::mechanisms::finishLoaderCollection();
+          aon::auton::mechanisms::finishLoaderCollection(hardware);
           return false;
         }
         bool completed = true;
@@ -294,11 +301,11 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
           }
           pros::delay(20);
         }
-        aon::auton::mechanisms::finishLoaderCollection();
+        aon::auton::mechanisms::finishLoaderCollection(hardware);
         return completed;
       }
       case RedSixPhase::ReverseClearance:
-        aon::auton::mechanisms::resetLoaderCart();
+        aon::auton::mechanisms::resetLoaderCart(hardware);
         // Reverse so the robot clears the loader without turning its front
         // mechanism through the wall; early exit carries speed into alignment.
         return redSixMotion(
@@ -325,7 +332,7 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::GoalPursuit:
         // Raise the scorer during safe open travel, before goal contact.
-        aon::auton::mechanisms::prepareTopScorer();
+        aon::auton::mechanisms::prepareTopScorer(hardware);
         return redSixMotion(
             phase, routine.followPath(
                        "red-six goal pursuit",
@@ -345,7 +352,7 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
                        aon::auton::OdometryMonitoring::FailClosed));
       case RedSixPhase::ScoreSix:
         aon::auton::mechanisms::scoreTopBlocks(
-            RedSixBlock::scoreTimeoutMs);
+            hardware, RedSixBlock::scoreTimeoutMs);
         return !routine.isCancellationLatched() &&
                !pros::competition::is_disabled();
     }
@@ -353,8 +360,8 @@ int RunRedSixBlockHybridAuton(aon::auton::RedSixPhase stopAfter) {
   };
   callbacks.stopAll = [&] {
     routine.stop();
-    aon::auton::mechanisms::finishLoaderCollection();
-    aon::auton::mechanisms::stopAll();
+    aon::auton::mechanisms::finishLoaderCollection(hardware);
+    aon::auton::mechanisms::stopAll(hardware);
   };
 
   const auto result = aon::auton::runRedSixSequence(callbacks, stopAfter);
