@@ -4,56 +4,59 @@
 
 #ifndef AON_TOOLS_FUNCTION_READER_HPP_
 #define AON_TOOLS_FUNCTION_READER_HPP_
-#include <algorithm>
+#include "aon/tools/function-registry.hpp"
+#include "pros/rtos.hpp"
+
 #include <functional>
-#include <map>
 #include <string>
 #include <vector>
 
 /**
  * FUNCTION_READER
  *
- * Generates and stores functions in order for them to be executed in
- * multiple threads and to be identified in further telemetry procedures.
+ * @brief Thread-safe registry used to select a named callable across PROS
+ * tasks.
  *
- * @tparam T return type of stored function (only supports int, float, long,
- * double)
+ * The registry owns its callables. ExecuteFunction copies the selected
+ * callable while holding the mutex, then releases the mutex before invoking
+ * it. Registration can therefore proceed while a long-running routine is
+ * executing. Missing names return a value-initialized T.
  *
- * Recommended to use floating point
+ * @tparam T Default-constructible return type of stored functions.
  */
 template <class T>
 class FunctionReader {
  private:
-  std::map<std::string, std::function<T()>> FunctionMap;
-  std::vector<std::string> Keys;
+  mutable pros::MutexVar<aon::tools::FunctionRegistry<T>> registry_;
 
  public:
-  FunctionReader() {}
-  ~FunctionReader() {}
+  FunctionReader() = default;
+  ~FunctionReader() = default;
 
   /// Add function to be stored and executed later on
   /// \param name Specific name function to be stored as
   /// \param func Callable (function pointer, lambda, or std::function)
   void AddFunction(std::string name, std::function<T()> func) {
-    Keys.push_back(name);
-    FunctionMap[name] = std::move(func);
+    auto registry = registry_.lock();
+    registry->add(std::move(name), std::move(func));
   }
 
   /// Find and execute function stored in the function map
   /// \param name Specific name of function that could be stored inside the
   /// reader
-  T ExecuteFunction(std::string name) {
-    if (FunctionMap.find(name) != FunctionMap.end()) {
-      return FunctionMap[name]();
+  [[nodiscard]] T ExecuteFunction(const std::string& name) const {
+    std::function<T()> function;
+    {
+      auto registry = registry_.lock();
+      function = registry->find(name);
     }
-    T temp;
-    return temp;
+    return aon::tools::FunctionRegistry<T>::executeOrDefault(function);
   }
 
   /// Return full list of function names that are stored
-  std::vector<std::string> GetFunctionNames() {
-    std::sort(Keys.begin(), Keys.end());
-    return Keys;
+  [[nodiscard]] std::vector<std::string> GetFunctionNames() const {
+    auto registry = registry_.lock();
+    return registry->names();
   }
 };
 #endif  // AON_TOOLS_FUNCTION_READER_HPP_

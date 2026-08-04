@@ -54,7 +54,8 @@ void Robot::autonomous() {
   aon::lemlib_integration::runTurnTest(LEMLIB_TURN_TEST_ANGLE);
 #elif !LEMLIB_SENSOR_TEST
   aon::Configure(false);
-  aon::autonomousReader->ExecuteFunction("autonomous");
+  static_cast<void>(
+      aon::autonomousReader->ExecuteFunction("autonomous"));
   pros::delay(10);
 #endif
 }
@@ -67,7 +68,8 @@ void Robot::opcontrol() {
   while (true) {
 #if TESTING_AUTONOMOUS
     aon::Configure(false);
-    aon::autonomousReader->ExecuteFunction("autonomous");
+    static_cast<void>(
+        aon::autonomousReader->ExecuteFunction("autonomous"));
     pros::delay(5000);
 #else
     aon::operator_control::Run(driver);
