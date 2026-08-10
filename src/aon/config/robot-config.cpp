@@ -68,7 +68,7 @@ const RobotConfig& activeRobotConfig() {
               false,
           },
       },
-      true,  // shadowPlaybackAuthorized; supervised physical test only.
+      false,  // shadowPlaybackAuthorized: physical checklist remains incomplete.
       {false, false},  // Experimental routes await physical validation.
   };
 #endif

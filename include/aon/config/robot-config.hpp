@@ -41,6 +41,27 @@ struct AutonomousAuthorizations {
   }
 };
 
+/** Snapshot of every behavior that remains gated by physical validation. */
+struct AuthorizationSnapshot {
+  bool automaticEncoderFallback;
+  bool forcedEncoderTesting;
+  bool shadowPlayback;
+  bool redSixBlock;
+  bool jerryIoPath;
+};
+
+/**
+ * @brief Reports whether no unvalidated behavior is enabled.
+ *
+ * This pure policy is shared by host checks and the configuration handoff. It
+ * does not grant authorization; it only proves that all risky gates are shut.
+ */
+[[nodiscard]] constexpr bool safeForUnvalidatedBaseline(
+    const AuthorizationSnapshot& value) noexcept {
+  return !value.automaticEncoderFallback && !value.forcedEncoderTesting &&
+         !value.shadowPlayback && !value.redSixBlock && !value.jerryIoPath;
+}
+
 struct FallbackConfig {
   double wheelRevolutionsPerMotorRevolution;
   double distanceKp;
@@ -76,6 +97,18 @@ struct RobotConfig {
   bool shadowPlaybackAuthorized;
   AutonomousAuthorizations autonomousAuthorizations;
 };
+
+/** Returns the physical-validation gates currently active in a robot config. */
+[[nodiscard]] constexpr AuthorizationSnapshot authorizationSnapshot(
+    const RobotConfig& config) noexcept {
+  return {
+      config.lemlib.fallback.automaticFallbackAuthorized,
+      config.lemlib.fallback.forcedEncoderTestingAuthorized,
+      config.shadowPlaybackAuthorized,
+      config.autonomousAuthorizations.allows(ExperimentalRoute::RedSixBlock),
+      config.autonomousAuthorizations.allows(ExperimentalRoute::JerryIoPath),
+  };
+}
 
 /// Configuration selected by USING_BIG_ROBOT.
 ///

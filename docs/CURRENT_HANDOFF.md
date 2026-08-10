@@ -1,5 +1,38 @@
 # Current Development Handoff
 
+## 2026-08-10 Fail-Closed Authorization Checkpoint
+
+Phase 0 Tasks 1 and 2 are implemented. Both robot configurations now fail the
+unvalidated-baseline policy if any of these gates is enabled:
+
+- automatic encoder fallback;
+- forced encoder testing;
+- Shadow playback;
+- Red Six Block;
+- JerryIO path autonomous.
+
+The small-robot Shadow playback flag was restored from the supervised-test
+value `true` to `false` because the committed playback checklist still records
+all physical results as `Not run`. The big configuration and every other gate
+remain false.
+
+Verification for this checkpoint:
+
+- authorization policy test passed for the active small configuration;
+- the same linked policy test passed with `USING_BIG_ROBOT true`;
+- all ten dependency-free host executables passed with warnings as errors;
+- clean big-robot build linked successfully;
+- the expected small configuration was restored and clean-built successfully;
+- the only build warning was the existing vendored `json.hpp` `std::is_pod`
+  deprecation;
+- linker-reported BSS was approximately 48.53 MB for big and 48.59 MB for
+  small, so the roadmap memory-budget gate remains mandatory.
+
+The next checkpoint publishes
+`docs/testing/2026-08-10-roadmap-baseline-checklist.md`, then stops for physical
+measurements. Do not enable a gate or start later roadmap implementation before
+that checklist is completed and committed.
+
 ## 2026-08-10 Roadmap Planning Note
 
 The approved architecture for the twelve-system reliability roadmap is

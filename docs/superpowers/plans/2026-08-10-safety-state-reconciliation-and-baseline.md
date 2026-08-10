@@ -20,6 +20,21 @@
 - Clean-build both configurations and restore `USING_BIG_ROBOT false` before committing robot-code changes.
 - Stop after publishing the physical checklist; a human with the robots must perform the gate.
 
+## Execution Status
+
+- Tasks 1 and 2 were completed together in the first fail-closed checkpoint.
+- The implementation uses a stronger behavior test than the proposed source
+  grep: it links the real `activeRobotConfig()`, converts it through
+  `authorizationSnapshot()`, and rejects any enabled unvalidated gate.
+- The test was observed failing first for the missing snapshot seam, then for
+  the live small-robot Shadow playback authorization, before the flag was
+  restored to false.
+- The active configuration test passed for both small and big builds. The full
+  ten-executable host suite passed, and clean big/restored-small ARM builds
+  linked successfully. The only compiler warning was the existing vendored
+  `json.hpp` `std::is_pod` deprecation.
+- Task 3 is the next checkpoint and ends at the physical robot gate.
+
 ---
 
 ## File Structure
