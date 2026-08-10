@@ -1,4 +1,6 @@
 #include "aon/navigation/dynamic-obstacles.hpp"
+#include "aon/navigation/path-planner.hpp"
+#include "aon/field/push-back-field.hpp"
 
 #include <cmath>
 #include <cstdlib>
@@ -21,11 +23,19 @@ using aon::navigation::DynamicObstacleMap;
 using aon::navigation::ObstacleDetection;
 using aon::navigation::ObstacleShape;
 using aon::navigation::ObstacleUpdateResult;
+using aon::navigation::PathPlanner;
+using aon::navigation::PlanStatus;
 
 ObstacleDetection circle(double x, double y, std::uint32_t timeMs,
                          double confidence = 0.8) {
   return {ObstacleShape::Circle, {x, y}, 4.0, 0.0, 0.0, 0.0, confidence,
           timeMs};
+}
+
+ObstacleDetection rectangle(double x, double y, double halfWidth,
+                            double halfHeight, std::uint32_t timeMs) {
+  return {ObstacleShape::Rectangle, {x, y}, 0.0, halfWidth, halfHeight,
+          0.0, 0.9, timeMs};
 }
 
 void detectionsAssociateIntoMovingTracksAndExpire() {
@@ -89,6 +99,53 @@ void invalidGeometryAndConfigurationFailClosed() {
   CHECK(invalidConfig.size() == 0);
 }
 
+void plannerUsesDirectRoutesAndDetoursAroundInflatedObstacles() {
+  using namespace aon::field;
+  using namespace aon::navigation;
+
+  const FieldMap& field = pushBackField();
+  DynamicObstacleMap clearObstacles({6.0, 500, 0.5});
+  PathPlanner planner({1.0});
+
+  const PlanResult direct =
+      planner.plan({-20.0, 0.0}, {20.0, 0.0}, 2.0, field,
+                   clearObstacles);
+  CHECK(direct.status == PlanStatus::Success);
+  CHECK(direct.path.size == 2);
+
+  DynamicObstacleMap blockedObstacles({6.0, 500, 0.5});
+  CHECK(blockedObstacles.update(circle(0.0, 0.0, 100)) ==
+        ObstacleUpdateResult::Inserted);
+  const PlanResult detour =
+      planner.plan({-20.0, 0.0}, {20.0, 0.0}, 2.0, field,
+                   blockedObstacles);
+  CHECK(detour.status == PlanStatus::Success);
+  CHECK(detour.path.size > 2);
+  CHECK(planner.pathHasClearance(detour.path, 2.0, field,
+                                 blockedObstacles));
+}
+
+void plannerHandlesSatisfiedAndUnreachableRequests() {
+  using namespace aon::field;
+  using namespace aon::navigation;
+
+  const FieldMap& field = pushBackField();
+  PathPlanner planner({1.0});
+  DynamicObstacleMap obstacles({6.0, 500, 0.5});
+  const PlanResult satisfied =
+      planner.plan({5.0, 5.0}, {5.0, 5.0}, 2.0, field, obstacles);
+  CHECK(satisfied.status == PlanStatus::Success);
+  CHECK(satisfied.path.size == 1);
+  CHECK(std::abs(satisfied.costInches) < 1e-9);
+
+  CHECK(obstacles.update(rectangle(0.0, 0.0, 70.0, 2.0, 100)) ==
+        ObstacleUpdateResult::Inserted);
+  const PlanResult unreachable =
+      planner.plan({0.0, -20.0}, {0.0, 20.0}, 1.0, field, obstacles);
+  CHECK(unreachable.status == PlanStatus::Unreachable);
+  CHECK(unreachable.path.size == 0);
+}
+
 }  // namespace
 
 int main() {
@@ -96,6 +153,8 @@ int main() {
   olderDetectionCannotForkAnExistingTrack();
   fullMapPreservesStrongerTracks();
   invalidGeometryAndConfigurationFailClosed();
+  plannerUsesDirectRoutesAndDetoursAroundInflatedObstacles();
+  plannerHandlesSatisfiedAndUnreachableRequests();
   std::cout << "navigation tests passed\n";
   return 0;
 }
