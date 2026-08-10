@@ -7,6 +7,7 @@
 #include "aon/auton/fallback-status.hpp"
 
 #include "aon/constants.hpp"
+#include "aon/config/robot-config.hpp"
 #include "aon/drivetrain/legacy-motion.hpp"
 #include "aon/globals.hpp"
 #include "aon/lemlib/chassis.hpp"
@@ -18,6 +19,17 @@
 namespace aon::routines {
 
 namespace {
+
+bool localizationAvailableForMotion() {
+  if (!lemlib_integration::localizationReady()) return false;
+  if (!config::activeRobotConfig().localization.fusedLemLibAuthorized) {
+    return true;
+  }
+  const core::TaskStartResult result =
+      lemlib_integration::startFusedLocalization();
+  return result == core::TaskStartResult::Started ||
+         result == core::TaskStartResult::AlreadyRunning;
+}
 
 bool prepareNativeLocalization() {
   const core::TaskStartResult result = legacy_motion::prepare();
@@ -32,7 +44,7 @@ bool prepareNativeLocalization() {
 }
 
 int runNativeRoutine(const char* name, void (*routine)()) {
-  if (!aon::lemlib_integration::localizationReady()) return 0;
+  if (!localizationAvailableForMotion()) return 0;
   aon::auton::startRoutine(name);
   if (!prepareNativeLocalization()) {
     aon::auton::finishRoutine(false);
@@ -46,7 +58,7 @@ int runNativeRoutine(const char* name, void (*routine)()) {
 }
 
 int runRoutine(const char* name, int (*routine)()) {
-  if (!aon::lemlib_integration::localizationReady()) return 0;
+  if (!localizationAvailableForMotion()) return 0;
   aon::auton::actions().resetCancellation();
   aon::auton::startRoutine(name);
   aon::auton::lockFallbackSelection();
@@ -102,7 +114,7 @@ int BlueRoutine3() {
 }
 
 int SkillsRoutine1() {
-  if (!aon::lemlib_integration::localizationReady()) return 0;
+  if (!localizationAvailableForMotion()) return 0;
   aon::auton::startRoutine("Skills AUT1");
   if (!prepareNativeLocalization()) {
     aon::auton::finishRoutine(false);

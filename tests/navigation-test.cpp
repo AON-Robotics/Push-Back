@@ -114,6 +114,14 @@ void invalidGeometryAndConfigurationFailClosed() {
   CHECK(invalidConfig.update(circle(0.0, 0.0, 1)) ==
         ObstacleUpdateResult::Invalid);
   CHECK(invalidConfig.size() == 0);
+
+  DynamicObstacleMap ambiguousLifetime(
+      {6.0,
+       static_cast<std::uint32_t>(
+           std::numeric_limits<std::int32_t>::max()),
+       0.5});
+  CHECK(ambiguousLifetime.update(circle(0.0, 0.0, 1)) ==
+        ObstacleUpdateResult::Invalid);
 }
 
 void plannerUsesDirectRoutesAndDetoursAroundInflatedObstacles() {
@@ -278,7 +286,7 @@ void finalHeadingAlignmentMustKeepMakingProgress() {
   path.points[0] = {0.0, 0.0};
   path.size = 1;
   const PathFollowerConfig config{8.0, 30.0, 100.0, 1000.0, 1.0, 0.05,
-                                  2.0, 0.2, 3000, 500, 0.25, 0.1};
+                                  2.0, 0.2, 3000, 500, 0.0, 0.0};
 
   PathFollower stalled(config);
   CHECK(stalled.start(path, 1.0, true, 0) == FollowerStatus::Following);
@@ -297,6 +305,13 @@ void finalHeadingAlignmentMustKeepMakingProgress() {
             .status == FollowerStatus::Following);
   CHECK(progressing.update({{0.0, 0.0, 0.3}, 0.5, 0.02, true}, 0.02, 520)
             .status == FollowerStatus::Following);
+
+  PathFollowerConfig ambiguousTimeout = config;
+  ambiguousTimeout.timeoutMs = static_cast<std::uint32_t>(
+      std::numeric_limits<std::int32_t>::max());
+  PathFollower invalidTimeout(ambiguousTimeout);
+  CHECK(invalidTimeout.start(path, 1.0, true, 0) ==
+        FollowerStatus::InvalidPath);
 }
 
 }  // namespace

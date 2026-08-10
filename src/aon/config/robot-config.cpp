@@ -5,7 +5,8 @@
 namespace aon::config {
 namespace {
 
-const LocalizationConfig& localizationConfig() {
+const LocalizationConfig& localizationConfig(
+    const AuthorizationSnapshot& authorizations) {
   // These geometry values preserve the existing LemLib configuration; they
   // remain nominal until the signed full-turn measurements are recorded.
   static const LocalizationConfig config{
@@ -30,17 +31,17 @@ const LocalizationConfig& localizationConfig() {
           1e-12,
       },
       {
-          false,
+          authorizations.gpsHardware,
           0,
           0.0,
           0.0,
           0.0,
-          false,
+          authorizations.gpsHeadingFusion,
           {-72.0, 72.0, -72.0, 72.0, 6.0, 18.0,
            aon::localization::radians(45.0), 50U, 9.21, 6.63},
       },
-      false,
-      false,
+      authorizations.fusedLemLib,
+      authorizations.fusedNavigation,
   };
   return config;
 }
@@ -52,7 +53,8 @@ const RobotConfig& activeRobotConfig() {
   constexpr const RobotHardwareMap& hardwareMap = bigRobotHardwareMap;
   constexpr auto authorizations =
       baselineAuthorizations(RobotIdentity::Big);
-  const LocalizationConfig& localization = localizationConfig();
+  const LocalizationConfig& localization =
+      localizationConfig(authorizations);
   static const RobotConfig config{
       RobotIdentity::Big,
       {
@@ -89,7 +91,8 @@ const RobotConfig& activeRobotConfig() {
   constexpr const RobotHardwareMap& hardwareMap = smallRobotHardwareMap;
   constexpr auto authorizations =
       baselineAuthorizations(RobotIdentity::Small);
-  const LocalizationConfig& localization = localizationConfig();
+  const LocalizationConfig& localization =
+      localizationConfig(authorizations);
   static const RobotConfig config{
       RobotIdentity::Small,
       {

@@ -104,7 +104,7 @@ PathPlanner::PathPlanner(PathPlannerConfig config) noexcept : config_(config) {}
 
 bool PathPlanner::pointBlocked(
     field::Point2 point, double clearanceInches,
-    const DynamicObstacleMap& obstacles) const noexcept {
+    const DynamicObstacleMap& obstacles) noexcept {
   for (std::size_t index = 0; index < obstacles.size(); ++index) {
     const DynamicObstacle* obstacle = obstacles.at(index);
     if (obstacle != nullptr &&
@@ -118,7 +118,7 @@ bool PathPlanner::pointBlocked(
 bool PathPlanner::segmentVisible(
     const field::Segment& segment, double clearanceInches,
     const field::FieldMap& field,
-    const DynamicObstacleMap& obstacles) const noexcept {
+    const DynamicObstacleMap& obstacles) noexcept {
   if (!field.segmentHasClearance(segment, clearanceInches)) return false;
   for (std::size_t index = 0; index < obstacles.size(); ++index) {
     const DynamicObstacle* obstacle = obstacles.at(index);
@@ -261,12 +261,20 @@ bool PathPlanner::pathHasClearance(
     const Path& path, double robotRadiusInches,
     const field::FieldMap& field,
     const DynamicObstacleMap& obstacles) const noexcept {
+  return pathHasClearance(path, robotRadiusInches,
+                          config_.safetyMarginInches, field, obstacles);
+}
+
+bool PathPlanner::pathHasClearance(
+    const Path& path, double robotRadiusInches,
+    double safetyMarginInches, const field::FieldMap& field,
+    const DynamicObstacleMap& obstacles) noexcept {
   if (path.size == 0 || path.size > path.points.size() ||
-      !std::isfinite(robotRadiusInches) || robotRadiusInches < 0.0) {
+      !std::isfinite(robotRadiusInches) || robotRadiusInches < 0.0 ||
+      !std::isfinite(safetyMarginInches) || safetyMarginInches < 0.0) {
     return false;
   }
-  const double clearance =
-      robotRadiusInches + config_.safetyMarginInches;
+  const double clearance = robotRadiusInches + safetyMarginInches;
   if (!field.contains(path.points[0], clearance) ||
       pointBlocked(path.points[0], clearance, obstacles)) {
     return false;

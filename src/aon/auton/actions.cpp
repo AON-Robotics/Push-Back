@@ -340,7 +340,10 @@ MotionResult runMonitored(const char* operation, const char* name,
 void Actions::setPose(double x, double y, double heading) {
   if (config::activeRobotConfig().localization.fusedLemLibAuthorized) {
     Odometry& odometry = core::hardware().odometry;
-    odometry.resetPose(x, y, heading);
+    if (!odometry.resetPose(x, y, heading)) {
+      cancelMotion();
+      return;
+    }
     const Pose fused = odometry.getPose();
     lemlib_integration::chassis().setPose(fused.x, fused.y, fused.theta);
     return;

@@ -20,9 +20,9 @@ bool Replanner::remainingRouteIsClear(
     if (remaining.size == remaining.points.size()) return false;
     remaining.points[remaining.size++] = route.path.points[index];
   }
-  PathPlanner planner({config_.safetyMarginInches});
-  return planner.pathHasClearance(remaining, config_.robotRadiusInches, field,
-                                  obstacles);
+  return PathPlanner::pathHasClearance(
+      remaining, config_.robotRadiusInches, config_.safetyMarginInches,
+      field, obstacles);
 }
 
 ReplanDecision Replanner::evaluate(

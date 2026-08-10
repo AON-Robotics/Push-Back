@@ -42,7 +42,8 @@ bool PathFollower::validConfig() const noexcept {
          config_.maximumPositionStandardDeviationInches >= 0.0 &&
          std::isfinite(config_.maximumHeadingStandardDeviationRadians) &&
          config_.maximumHeadingStandardDeviationRadians >= 0.0 &&
-         config_.timeoutMs > 0 && config_.blockedDwellMs > 0 &&
+         time::validInterval(config_.timeoutMs) &&
+         time::validInterval(config_.blockedDwellMs) &&
          std::isfinite(config_.minimumProgressInches) &&
          config_.minimumProgressInches >= 0.0 &&
          std::isfinite(config_.minimumHeadingProgressRadians) &&
@@ -77,10 +78,9 @@ FollowerStatus PathFollower::start(const Path& path,
   return status_;
 }
 
-bool PathFollower::safeEstimate(const FollowerEstimate& estimate) const noexcept {
-  return estimate.valid && std::isfinite(estimate.pose.xInches) &&
-         std::isfinite(estimate.pose.yInches) &&
-         std::isfinite(estimate.pose.headingRadians) &&
+bool PathFollower::safeEstimate(
+    const FollowerEstimate& estimate) const noexcept {
+  return estimate.valid && localization::isFinite(estimate.pose) &&
          std::isfinite(estimate.positionStandardDeviationInches) &&
          estimate.positionStandardDeviationInches >= 0.0 &&
          estimate.positionStandardDeviationInches <=
@@ -110,16 +110,26 @@ bool PathFollower::recordProgress(double distanceErrorInches,
                                   double headingErrorRadians,
                                   std::uint32_t nowMs) noexcept {
   const double absoluteHeadingError = std::abs(headingErrorRadians);
+  const double distanceImprovement =
+      bestDistanceInches_ - distanceErrorInches;
+  const double headingImprovement =
+      bestHeadingErrorRadians_ - absoluteHeadingError;
+  const bool distanceProgress = config_.minimumProgressInches > 0.0
+                                    ? distanceImprovement >=
+                                          config_.minimumProgressInches
+                                    : distanceImprovement > 0.0;
+  const bool headingProgress = config_.minimumHeadingProgressRadians > 0.0
+                                   ? headingImprovement >=
+                                         config_.minimumHeadingProgressRadians
+                                   : headingImprovement > 0.0;
   bool progressed = false;
   if (!std::isfinite(bestDistanceInches_) ||
-      bestDistanceInches_ - distanceErrorInches >=
-          config_.minimumProgressInches) {
+      distanceProgress) {
     bestDistanceInches_ = distanceErrorInches;
     progressed = true;
   }
   if (!std::isfinite(bestHeadingErrorRadians_) ||
-      bestHeadingErrorRadians_ - absoluteHeadingError >=
-          config_.minimumHeadingProgressRadians) {
+      headingProgress) {
     bestHeadingErrorRadians_ = absoluteHeadingError;
     progressed = true;
   }

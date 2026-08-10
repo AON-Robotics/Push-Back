@@ -113,6 +113,9 @@ Invoke-HostTest -Name 'localization-integration-test' -Sources @(
 ) -WithoutIncludes
 Invoke-HostTest -Name 'resource-policy-test' -Sources @(
   'tests\resource-policy-test.cpp'
+)
+Invoke-HostTest -Name 'pros-resource-policy-test' -Sources @(
+  'tests\pros-resource-policy-test.cpp'
 ) -Standard 'gnu++20' -ExtraFlags @(
   '-Wno-deprecated-declarations',
   '-Wno-sign-compare',

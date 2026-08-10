@@ -1,8 +1,17 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 namespace aon::time {
+
+/// True when a nonzero interval is unambiguous for signed modular ordering.
+[[nodiscard]] constexpr bool validInterval(
+    std::uint32_t duration) noexcept {
+  return duration > 0U &&
+         duration < static_cast<std::uint32_t>(
+                        std::numeric_limits<std::int32_t>::max());
+}
 
 /// @brief Returns the signed modular distance from earlier to later.
 /// @details Comparisons are unambiguous when timestamps differ by less than

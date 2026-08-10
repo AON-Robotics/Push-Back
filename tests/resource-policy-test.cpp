@@ -1,15 +1,16 @@
-#include "aon/drivetrain/drivetrain.hpp"
 #include "aon/communication/pi-protocol.hpp"
 #include "aon/core/task-start.hpp"
 #include "aon/navigation/dynamic-obstacles.hpp"
 #include "aon/navigation/path-planner.hpp"
+#include "aon/odometry/diagnostics.hpp"
 #include "aon/odometry/ekf.hpp"
 #include "aon/odometry/sensor-measurements.hpp"
+#include "aon/time/monotonic.hpp"
 #include "aon/tools/timed-mutex-lock.hpp"
-#include "aon/tools/gui/gui-debug.hpp"
 
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <type_traits>
 
 #define CHECK(expression)                                                     \
@@ -67,27 +68,33 @@ void timedMutexLockReleasesOnlyAnOwnedLock() {
 }
 
 void taskStatePolicyRecognizesOnlyLiveProsStates() {
-  CHECK(aon::core::isLiveTaskState(pros::E_TASK_STATE_RUNNING));
-  CHECK(aon::core::isLiveTaskState(pros::E_TASK_STATE_READY));
-  CHECK(aon::core::isLiveTaskState(pros::E_TASK_STATE_BLOCKED));
-  CHECK(aon::core::isLiveTaskState(pros::E_TASK_STATE_SUSPENDED));
-  CHECK(!aon::core::isLiveTaskState(pros::E_TASK_STATE_DELETED));
-  CHECK(!aon::core::isLiveTaskState(pros::E_TASK_STATE_INVALID));
+  using aon::core::TaskState;
+  CHECK(aon::core::isLiveTaskState(
+      static_cast<std::uint32_t>(TaskState::Running)));
+  CHECK(aon::core::isLiveTaskState(
+      static_cast<std::uint32_t>(TaskState::Ready)));
+  CHECK(aon::core::isLiveTaskState(
+      static_cast<std::uint32_t>(TaskState::Blocked)));
+  CHECK(aon::core::isLiveTaskState(
+      static_cast<std::uint32_t>(TaskState::Suspended)));
+  CHECK(!aon::core::isLiveTaskState(
+      static_cast<std::uint32_t>(TaskState::Deleted)));
+  CHECK(!aon::core::isLiveTaskState(
+      static_cast<std::uint32_t>(TaskState::Invalid)));
 }
 
 }  // namespace
 
-static_assert(std::has_virtual_destructor_v<aon::Gui>);
-static_assert(std::has_virtual_destructor_v<aon::Drivetrain>);
-static_assert(!std::is_copy_constructible_v<aon::Gui>);
-static_assert(!std::is_move_constructible_v<aon::Gui>);
-static_assert(!std::is_copy_constructible_v<aon::Drivetrain>);
-static_assert(!std::is_move_constructible_v<aon::Drivetrain>);
 static_assert(sizeof(aon::navigation::PathPlanner) <= 16U * 1024U);
 static_assert(sizeof(aon::navigation::PathPlanner) >
               sizeof(aon::navigation::PathPlannerConfig));
 static_assert(sizeof(aon::communication::FrameParser) <= 512U);
 static_assert(sizeof(aon::navigation::DynamicObstacleMap) <= 4U * 1024U);
+static_assert(sizeof(aon::localization::LocalizationDiagnostics) <= 1024U);
+static_assert(aon::time::validInterval(1U));
+static_assert(!aon::time::validInterval(
+    static_cast<std::uint32_t>(
+        std::numeric_limits<std::int32_t>::max())));
 
 constexpr aon::localization::WheelDistances kDefaultWheels;
 constexpr aon::localization::GpsMeasurement kDefaultGps;

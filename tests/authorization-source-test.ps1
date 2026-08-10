@@ -26,6 +26,16 @@ foreach ($mapping in @(
     throw "Authorization snapshot does not map localization gate: $mapping"
   }
 }
+
+foreach ($gate in @(
+    'authorizations\.gpsHardware',
+    'authorizations\.gpsHeadingFusion',
+    'authorizations\.fusedLemLib',
+    'authorizations\.fusedNavigation')) {
+  if ($configSource -notmatch $gate) {
+    throw "Localization config bypasses baseline authorization: $gate"
+  }
+}
 $lockedBaselinePattern =
   'baselineAuthorizations\s*\([^)]*\)\s*noexcept\s*\{\s*return\s*\{\s*\}\s*;\s*\}'
 $baselineIsEntirelyLocked = $configHeader -match $lockedBaselinePattern

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <utility>
+
 #include "../compat/okapi.hpp"
 #include "../odometry/odometry.hpp"
 #include "../controls/smart_motor.hpp"

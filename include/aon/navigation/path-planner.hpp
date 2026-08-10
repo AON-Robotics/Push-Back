@@ -52,6 +52,12 @@ class PathPlanner {
       const field::FieldMap& field,
       const DynamicObstacleMap& obstacles) const noexcept;
 
+  /** Checks clearance without constructing the planner scratch workspace. */
+  [[nodiscard]] static bool pathHasClearance(
+      const Path& path, double robotRadiusInches,
+      double safetyMarginInches, const field::FieldMap& field,
+      const DynamicObstacleMap& obstacles) noexcept;
+
  private:
   static constexpr std::size_t kMaximumNodes =
       2 + DynamicObstacleMap::kMaximumObstacles * 4;
@@ -64,13 +70,13 @@ class PathPlanner {
     std::array<field::Point2, kMaximumNodes> reverse{};
   };
 
-  [[nodiscard]] bool pointBlocked(
+  [[nodiscard]] static bool pointBlocked(
       field::Point2 point, double clearanceInches,
-      const DynamicObstacleMap& obstacles) const noexcept;
-  [[nodiscard]] bool segmentVisible(
+      const DynamicObstacleMap& obstacles) noexcept;
+  [[nodiscard]] static bool segmentVisible(
       const field::Segment& segment, double clearanceInches,
       const field::FieldMap& field,
-      const DynamicObstacleMap& obstacles) const noexcept;
+      const DynamicObstacleMap& obstacles) noexcept;
 
   PathPlannerConfig config_;
   Workspace workspace_{};

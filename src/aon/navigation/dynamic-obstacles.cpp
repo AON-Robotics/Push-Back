@@ -2,7 +2,6 @@
 #include "aon/time/monotonic.hpp"
 
 #include <cmath>
-#include <limits>
 
 namespace aon::navigation {
 namespace {
@@ -21,7 +20,8 @@ DynamicObstacleMap::DynamicObstacleMap(DynamicObstacleConfig config) noexcept
 bool DynamicObstacleMap::valid(
     const ObstacleDetection& detection) const noexcept {
   if (!std::isfinite(config_.associationDistanceInches) ||
-      config_.associationDistanceInches < 0.0 || config_.lifetimeMs == 0 ||
+      config_.associationDistanceInches < 0.0 ||
+      !time::validInterval(config_.lifetimeMs) ||
       !std::isfinite(config_.velocitySmoothing) ||
       config_.velocitySmoothing < 0.0 || config_.velocitySmoothing > 1.0) {
     return false;

@@ -280,7 +280,10 @@ void initializeChassis() {
     return;
   }
   configuredChassis.calibrate(false);
-  odometry.resetPose(0.0, 0.0, 0.0);
+  if (!odometry.resetPose(0.0, 0.0, 0.0)) {
+    std::fprintf(stderr, "AON localization pose reset failed\n");
+    return;
+  }
   publishFusedPose(odometry.getPose());
   localizationBootReady.store(true);
   if (startFusedLocalization() == core::TaskStartResult::Failed) {

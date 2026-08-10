@@ -37,7 +37,8 @@ class Odometry {
   /** Returns diagnostics and the cumulative two-millisecond lock timeouts. */
   localization::LocalizationDiagnostics getDiagnostics();
 
-  void resetPose(double x, double y, double thetaDegrees);
+  /** Returns false without changing state when validation or locking fails. */
+  bool resetPose(double x, double y, double thetaDegrees);
   void update();
 
   // IMU calibration is a boot operation. Runtime pose resets only change the

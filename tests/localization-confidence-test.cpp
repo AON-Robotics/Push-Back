@@ -59,6 +59,13 @@ void invalidAndOutOfOrderCandidatesFailClosed() {
   CHECK(monitor.observe(
             {std::numeric_limits<double>::infinity(), 0.0, 0.0, 110})
             .status == RecoveryStatus::Invalid);
+
+  RecoveryMonitor ambiguousWindow(
+      {2, 2.0, radians(5.0),
+       static_cast<std::uint32_t>(
+           std::numeric_limits<std::int32_t>::max())});
+  CHECK(ambiguousWindow.observe({0.0, 0.0, 0.0, 100}).status ==
+        RecoveryStatus::Invalid);
 }
 
 void recoveryObservationsRemainOrderedAcrossClockRollover() {

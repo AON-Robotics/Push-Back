@@ -26,7 +26,7 @@ bool validRecoveryPolicy(const RecoveryPolicy& policy) noexcept {
          policy.maximumPositionSeparationInches >= 0.0 &&
          std::isfinite(policy.maximumHeadingSeparationRadians) &&
          policy.maximumHeadingSeparationRadians >= 0.0 &&
-         policy.maximumObservationWindowMs > 0;
+         time::validInterval(policy.maximumObservationWindowMs);
 }
 
 bool finiteCandidate(const RecoveryCandidate& candidate) noexcept {

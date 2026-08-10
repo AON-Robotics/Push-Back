@@ -41,7 +41,7 @@ void odometryExposesOneCoherentInterface() {
 
   CHECK(header.find("Pose getPose()") != std::string::npos);
   CHECK(header.find("Pose rawOdometryPose()") != std::string::npos);
-  CHECK(header.find("void resetPose(") != std::string::npos);
+  CHECK(header.find("bool resetPose(") != std::string::npos);
   CHECK(header.find("void update()") != std::string::npos);
   CHECK(header.find("LocalizationDiagnostics getDiagnostics()") !=
         std::string::npos);
@@ -115,7 +115,8 @@ void localizationSchedulingIsDeterministicAndQuiet() {
   CHECK(legacy.find("runLocalizationLoop()") != std::string::npos);
 
   const std::size_t update = source.find("void Odometry::update()");
-  const std::size_t updateEnd = source.find("bool Odometry::calibrateImu", update);
+  const std::size_t updateEnd =
+      source.find("bool Odometry::calibrateImu", update);
   CHECK(update != std::string::npos && updateEnd != std::string::npos);
   const std::string updateBody = source.substr(update, updateEnd - update);
   CHECK(updateBody.find("pros::delay") == std::string::npos);
@@ -123,21 +124,24 @@ void localizationSchedulingIsDeterministicAndQuiet() {
   CHECK(updateBody.find("cout") == std::string::npos);
   CHECK(updateBody.find("lcd::") == std::string::npos);
 
-  const std::size_t snapshot = updateBody.find("const std::uint32_t generation");
+  const std::size_t snapshot =
+      updateBody.find("const std::uint32_t generation");
   const std::size_t sensorRead = updateBody.find("encoderLeft_.get_position()");
   CHECK(snapshot != std::string::npos && sensorRead != std::string::npos);
   CHECK(snapshot < sensorRead);
   CHECK(source.find("if (!std::isfinite(x) || !std::isfinite(y) ||") !=
         std::string::npos);
-  CHECK(source.find("candidateBaselines = currentWheels") !=
+  CHECK(source.find("consumeWheelDistances(currentWheels,") !=
         std::string::npos);
-  CHECK(source.find("publisher(publicPose)") != std::string::npos);
+  CHECK(source.find("candidateBaselines = currentWheels") ==
+        std::string::npos);
+  CHECK(source.find("publisher(snapshotPose)") != std::string::npos);
   CHECK(header.find("pros::Mutex publicationMutex_") != std::string::npos);
 
   const std::size_t publishFunction =
       source.find("void Odometry::publishCurrent");
   const std::size_t publishCall =
-      source.find("publisher(publicPose);", publishFunction);
+      source.find("publisher(snapshotPose);", publishFunction);
   const std::size_t snapshotLock =
       source.find("TimedMutexLock snapshotLock", publishFunction);
   const std::size_t snapshotScopeEnd =
@@ -177,6 +181,8 @@ void fusedLemLibModeIsPresentButAuthorizationGated() {
   CHECK(actions.find("MotionLease(MotionLease&&) = delete") !=
         std::string::npos);
   CHECK(actions.find("~MotionLease() noexcept") != std::string::npos);
+  CHECK(actions.find("if (!odometry.resetPose(x, y, heading))") !=
+        std::string::npos);
 
   const std::size_t setPose = actions.find("void Actions::setPose");
   CHECK(setPose != std::string::npos);

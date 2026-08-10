@@ -101,10 +101,10 @@ localization::LocalizationDiagnostics Odometry::getDiagnostics() {
   return diagnostics;
 }
 
-void Odometry::resetPose(double x, double y, double thetaDegrees) {
+bool Odometry::resetPose(double x, double y, double thetaDegrees) {
   if (!std::isfinite(x) || !std::isfinite(y) ||
       !std::isfinite(thetaDegrees)) {
-    return;
+    return false;
   }
   // This lock orders reset and external publication without holding the state
   // lock while calling into LemLib.
@@ -112,7 +112,7 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
                                  kPublicationLockTimeoutMs);
   if (!publicationLock.ownsLock()) {
     ++publicationLockTimeouts_;
-    return;
+    return false;
   }
 
   const std::int32_t leftReading = encoderLeft_.get_position();
@@ -128,7 +128,7 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
   if (!lock.ownsLock()) {
     ++snapshotLockTimeouts_;
-    return;
+    return false;
   }
   ++generation_;
   wheelBaselines_ = {
@@ -166,6 +166,7 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   diagnostics.snapshotLockTimeouts = snapshotLockTimeouts_.load();
   diagnostics.resetCount = published_.diagnostics.resetCount + 1U;
   published_ = {publicPose(requested), publicPose(requested), diagnostics};
+  return true;
 }
 
 void Odometry::update() {
@@ -269,7 +270,6 @@ void Odometry::update() {
 
   const localization::WheelDeltas wheelDeltas =
       localization::consumeWheelDistances(currentWheels, candidateBaselines);
-  candidateBaselines = currentWheels;
 
   const localization::LocalMotion motion =
       localization::localMotion(wheelDeltas, config_.geometry);
@@ -398,8 +398,10 @@ void Odometry::runLocalizationLoop() {
 }
 
 void Odometry::runLocalizationLoop(void (*publisher)(const Pose&)) {
-  resetPose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y,
-            INITIAL_ODOMETRY_THETA);
+  if (!resetPose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y,
+                 INITIAL_ODOMETRY_THETA)) {
+    return;
+  }
   std::uint32_t wake = pros::millis();
   while (true) {
     const std::uint32_t deadline = wake + config_.loopPeriodMs;
@@ -421,18 +423,18 @@ void Odometry::publishCurrent(void (*publisher)(const Pose&)) {
     return;
   }
 
-  Pose publicPose;
+  Pose snapshotPose;
   {
     TimedMutexLock snapshotLock(snapshotMutex_, kSnapshotLockTimeoutMs);
     if (!snapshotLock.ownsLock()) {
       ++snapshotLockTimeouts_;
       return;
     }
-    publicPose = published_.fusedPose;
+    snapshotPose = published_.fusedPose;
   }
   // publicationMutex_ preserves reset ordering; the state lock is intentionally
   // released before invoking code outside this module.
-  publisher(publicPose);
+  publisher(snapshotPose);
 }
 
 void Odometry::recordDeadlineMiss() {
