@@ -4,6 +4,7 @@
 #include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
 #include "aon/tools/gui/ui/gui-layout.hpp"
+#include "aon/tools/gui-image-generator/gui-images.hpp"
 
 #include <array>
 #include <cstdio>

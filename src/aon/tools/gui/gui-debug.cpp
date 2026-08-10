@@ -1,4 +1,5 @@
 #include "aon/tools/gui/gui-debug.hpp"
+#include "aon/tools/gui-image-generator/gui-images.hpp"
 namespace aon {
 
 // ============================================================================

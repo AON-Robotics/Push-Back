@@ -1,5 +1,6 @@
 #include "aon/tools/gui/gui.hpp"
 #include "aon/tools/gui/gui-debug.hpp"
+#include "aon/tools/gui-image-generator/gui-images.hpp"
 #include "aon/auton/fallback-status.hpp"
 #include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
