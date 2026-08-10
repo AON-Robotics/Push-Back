@@ -37,6 +37,7 @@ class Odometry {
   // field offset and therefore never impose a multi-second autonomous pause.
   bool calibrateImu(std::uint32_t timeoutMs = 3000U);
   void runLocalizationLoop();
+  void runLocalizationLoop(void (*publisher)(const Pose&));
 
   // Legacy motion code still needs direct cumulative sensor travel. These
   // references do not transfer ownership and will also serve the LemLib adapter.

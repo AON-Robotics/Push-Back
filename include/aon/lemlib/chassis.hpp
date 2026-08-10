@@ -15,6 +15,9 @@ lemlib::Chassis& chassis();
 /// Calibrates LemLib sensors and starts its odometry task for normal operation.
 void initializeChassis();
 
+/// Starts the authorized AON localization publisher. Repeated calls are safe.
+void startFusedLocalization();
+
 /// Calibrates LemLib odometry and continuously displays its pose.
 /// This function never commands a motor.
 void startSensorTest();

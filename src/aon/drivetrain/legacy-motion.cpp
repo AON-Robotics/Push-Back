@@ -2,11 +2,18 @@
 
 #include <memory>
 
+#include "aon/config/robot-config.hpp"
 #include "aon/globals.hpp"
+#include "aon/lemlib/chassis.hpp"
 
 namespace aon::legacy_motion {
 
 void prepare() {
+  if (config::activeRobotConfig().localization.fusedLemLibAuthorized) {
+    lemlib_integration::startFusedLocalization();
+    return;
+  }
+
   static pros::Mutex taskMutex;
   static std::unique_ptr<pros::Task> odometryTask;
 

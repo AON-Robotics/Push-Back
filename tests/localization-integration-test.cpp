@@ -117,6 +117,34 @@ void localizationSchedulingIsDeterministicAndQuiet() {
   CHECK(updateBody.find("lcd::") == std::string::npos);
 }
 
+void fusedLemLibModeIsPresentButAuthorizationGated() {
+  const std::string chassis = readFile("src/aon/lemlib/chassis.cpp");
+  const std::string chassisHeader =
+      readFile("include/aon/lemlib/chassis.hpp");
+  const std::string actions = readFile("src/aon/auton/actions.cpp");
+  const std::string legacy =
+      readFile("src/aon/drivetrain/legacy-motion.cpp");
+
+  CHECK(chassis.find("fusedLemLibAuthorized") != std::string::npos);
+  CHECK(chassis.find("nullptr, nullptr, nullptr, nullptr, nullptr") !=
+        std::string::npos);
+  CHECK(chassis.find("calibrateImu()") != std::string::npos);
+  CHECK(chassis.find("calibrate(false)") != std::string::npos);
+  CHECK(chassis.find("runLocalizationLoop(publishFusedPose)") !=
+        std::string::npos);
+  CHECK(chassisHeader.find("void startFusedLocalization()") !=
+        std::string::npos);
+  CHECK(legacy.find("startFusedLocalization()") != std::string::npos);
+
+  const std::size_t setPose = actions.find("void Actions::setPose");
+  CHECK(setPose != std::string::npos);
+  const std::size_t reset = actions.find("odometry.resetPose", setPose);
+  const std::size_t publish = actions.find("chassis().setPose", setPose);
+  CHECK(reset != std::string::npos);
+  CHECK(publish != std::string::npos);
+  CHECK(reset < publish);
+}
+
 }  // namespace
 
 int main() {
@@ -124,6 +152,7 @@ int main() {
   drivetrainUsesTheHardwareOwnedEstimator();
   lemlibSharesTheHardwareOwnedTrackingDevices();
   localizationSchedulingIsDeterministicAndQuiet();
+  fusedLemLibModeIsPresentButAuthorizationGated();
   std::cout << "localization integration tests passed\n";
   return 0;
 }

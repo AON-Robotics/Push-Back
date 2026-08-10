@@ -5,6 +5,7 @@
 #include "aon/auton/motion-control.hpp"
 #include "aon/auton/motion-health.hpp"
 #include "aon/config/robot-config.hpp"
+#include "aon/core/hardware.hpp"
 #include "aon/lemlib/chassis.hpp"
 #include "aon/lemlib/drive-io.hpp"
 #include "pros/rtos.hpp"
@@ -333,6 +334,13 @@ MotionResult runMonitored(const char* operation, const char* name,
 }  // namespace
 
 void Actions::setPose(double x, double y, double heading) {
+  if (config::activeRobotConfig().localization.fusedLemLibAuthorized) {
+    Odometry& odometry = core::hardware().odometry;
+    odometry.resetPose(x, y, heading);
+    const Pose fused = odometry.getPose();
+    lemlib_integration::chassis().setPose(fused.x, fused.y, fused.theta);
+    return;
+  }
   lemlib_integration::chassis().setPose(x, y, heading);
 }
 

@@ -307,12 +307,17 @@ bool Odometry::calibrateImu(std::uint32_t timeoutMs) {
 }
 
 void Odometry::runLocalizationLoop() {
+  runLocalizationLoop(nullptr);
+}
+
+void Odometry::runLocalizationLoop(void (*publisher)(const Pose&)) {
   resetPose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y,
             INITIAL_ODOMETRY_THETA);
   std::uint32_t wake = pros::millis();
   while (true) {
     const std::uint32_t deadline = wake + config_.loopPeriodMs;
     update();
+    if (publisher != nullptr) publisher(getPose());
     if (static_cast<std::int32_t>(pros::millis() - deadline) > 0) {
       recordDeadlineMiss();
     }

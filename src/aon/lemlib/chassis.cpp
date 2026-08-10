@@ -142,10 +142,16 @@ CalibrationResult reportCalibration(const char* label,
   return {end.rotation - start.rotation, leftOffset, rightOffset, backOffset};
 }
 
+void publishFusedPose(const Pose& pose) {
+  chassis().setPose(pose.x, pose.y, pose.theta);
+}
+
 }  // namespace
 
 lemlib::Chassis& chassis() {
   const auto& config = aon::config::activeRobotConfig().lemlib;
+  const bool fusedLemLibAuthorized =
+      aon::config::activeRobotConfig().localization.fusedLemLibAuthorized;
   static lemlib::TrackingWheel leftTrackingWheel(
       &leftEncoder(), config.trackingWheelDiameter, config.leftTrackingOffset);
   static lemlib::TrackingWheel rightTrackingWheel(
@@ -175,16 +181,19 @@ lemlib::Chassis& chassis() {
       2.0, 0.0, 10.0, 0.0, 1.0, 100.0, 3.0, 500.0, config.angularSlew,
   };
 
-  static lemlib::OdomSensors sensors{
+  static lemlib::OdomSensors trackingSensors{
       &leftTrackingWheel,
       &rightTrackingWheel,
       &backTrackingWheel,
       nullptr,
       &imu(),
   };
+  static lemlib::OdomSensors externalPoseSensors(
+      nullptr, nullptr, nullptr, nullptr, nullptr);
 
   static lemlib::Chassis configuredChassis(
-      drivetrain, lateralController, angularController, sensors);
+      drivetrain, lateralController, angularController,
+      fusedLemLibAuthorized ? externalPoseSensors : trackingSensors);
   return configuredChassis;
 }
 
@@ -253,8 +262,39 @@ void setDriveBrakeMode(pros::motor_brake_mode_e brakeMode) {
 
 void initializeChassis() {
   lemlib::Chassis& configuredChassis = chassis();
-  configuredChassis.calibrate();
-  configuredChassis.setPose(0.0, 0.0, 0.0);
+  if (!aon::config::activeRobotConfig()
+           .localization.fusedLemLibAuthorized) {
+    configuredChassis.calibrate();
+    configuredChassis.setPose(0.0, 0.0, 0.0);
+    return;
+  }
+
+  Odometry& odometry = aon::core::hardware().odometry;
+  if (!odometry.calibrateImu()) {
+    std::fprintf(stderr, "AON localization IMU calibration failed\n");
+    return;
+  }
+  configuredChassis.calibrate(false);
+  odometry.resetPose(0.0, 0.0, 0.0);
+  publishFusedPose(odometry.getPose());
+  startFusedLocalization();
+}
+
+void startFusedLocalization() {
+  if (!aon::config::activeRobotConfig()
+           .localization.fusedLemLibAuthorized) {
+    return;
+  }
+
+  static pros::Mutex taskMutex;
+  static std::unique_ptr<pros::Task> localizationTask;
+  taskMutex.take();
+  if (!localizationTask) {
+    localizationTask = std::make_unique<pros::Task>([] {
+      aon::core::hardware().odometry.runLocalizationLoop(publishFusedPose);
+    }, "AON Fused Localization");
+  }
+  taskMutex.give();
 }
 
 void startSensorTest() {
