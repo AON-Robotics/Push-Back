@@ -64,6 +64,13 @@ class Drivetrain {
     odometry.resetPose(pose.x, pose.y, pose.theta);
   }
 
+  virtual ~Drivetrain() noexcept = default;
+
+  Drivetrain(const Drivetrain&) = delete;
+  Drivetrain& operator=(const Drivetrain&) = delete;
+  Drivetrain(Drivetrain&&) = delete;
+  Drivetrain& operator=(Drivetrain&&) = delete;
+
   enum DriveMode {
     TANK,
     ARCADE,

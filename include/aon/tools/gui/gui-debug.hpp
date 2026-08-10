@@ -100,7 +100,7 @@ public:
 
   // Constructor
   GuiDebug() = default; // Default to use TESTING_AUTONOMOUS for conditional display
-  virtual ~GuiDebug() = default;
+  ~GuiDebug() noexcept override = default;
 
   // Override initialize to include debug setup
   virtual void initialize() override;

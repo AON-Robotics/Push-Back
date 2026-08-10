@@ -14,11 +14,14 @@ function Invoke-HostTest {
   param(
     [Parameter(Mandatory = $true)][string]$Name,
     [Parameter(Mandatory = $true)][string[]]$Sources,
-    [switch]$WithoutIncludes
+    [switch]$WithoutIncludes,
+    [string]$Standard = 'c++17',
+    [string[]]$ExtraFlags = @()
   )
 
   $executable = Join-Path $outputDirectory "$Name.exe"
-  $arguments = @('-std=c++17', '-Wall', '-Wextra', '-Werror')
+  $arguments = @("-std=$Standard", '-Wall', '-Wextra', '-Werror')
+  $arguments += $ExtraFlags
   if (-not $WithoutIncludes) {
     $arguments += '-Iinclude'
   }
@@ -108,5 +111,12 @@ Invoke-HostTest 'localization-config-big-test' @(
 Invoke-HostTest -Name 'localization-integration-test' -Sources @(
   'tests\localization-integration-test.cpp'
 ) -WithoutIncludes
+Invoke-HostTest -Name 'resource-policy-test' -Sources @(
+  'tests\resource-policy-test.cpp'
+) -Standard 'gnu++20' -ExtraFlags @(
+  '-Wno-deprecated-declarations',
+  '-Wno-sign-compare',
+  '-Wno-unused-parameter'
+)
 
 Write-Host 'All fused localization and navigation host tests passed'

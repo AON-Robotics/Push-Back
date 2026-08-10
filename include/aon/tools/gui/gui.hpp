@@ -18,7 +18,6 @@
 #include "aon/math/pose.hpp"
 #include "aon/shadow/service.hpp"
 #include "../function-reader.hpp"
-#include "../gui-image-generator/gui-images.hpp"
 
 extern volatile Alliance& ALLIANCE;
 
@@ -62,6 +61,14 @@ static constexpr int autonOptionsCount = 3;
 // Base Gui class - handles core GUI functionality without debug features
 class Gui {
 public:
+  Gui() = default;
+  virtual ~Gui() noexcept = default;
+
+  Gui(const Gui&) = delete;
+  Gui& operator=(const Gui&) = delete;
+  Gui(Gui&&) = delete;
+  Gui& operator=(Gui&&) = delete;
+
   enum class ShadowConfirmation : std::uint8_t {
     None,
     Overwrite,
