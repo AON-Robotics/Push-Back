@@ -15,10 +15,12 @@ The hardening plan is implemented through bounded runtime ownership:
 - RTOS task creation returns a typed result and autonomous callers stop on
   failure.
 
-Fresh verification passed all host tests with warnings as errors. Clean ARM
-builds linked for both robot configurations; the committed selector is
-`USING_BIG_ROBOT false`. Linker-reported BSS remains approximately 48.53 MB
-for big and 48.59 MB for small. The only compiler warning is the existing
+Fresh dependency-free host verification passed under C++17 with warnings as
+errors. The separate PROS ownership probe uses GNU C++20 because the bundled
+PROS headers require C++20; its suppressions cover vendor/header warnings only.
+Clean ARM builds linked for both robot configurations; the committed selector
+is `USING_BIG_ROBOT false`. Linker-reported BSS remains approximately 48.53 MB
+for big and 48.59 MB for small. The only ARM compiler warning is the existing
 vendored `json.hpp` `std::is_pod` deprecation.
 
 Static inspection found no first-party manual `new`/`delete` or

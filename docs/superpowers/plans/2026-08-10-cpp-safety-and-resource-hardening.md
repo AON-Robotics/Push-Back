@@ -17,7 +17,9 @@
 - No allocation from periodic localization, navigation, protocol, or logging loops.
 - All time intervals used with wrap-safe helpers must be less than `INT32_MAX` milliseconds.
 - Use concise Doxygen briefs only for safety-significant public interfaces touched by this plan.
-- Use `-std=c++17 -Wall -Wextra -Werror` for host compilation.
+- Use `-std=c++17 -Wall -Wextra -Werror` for dependency-free host tests. The
+  PROS-header ownership probe uses the project's GNU C++20 standard and
+  suppresses vendor-header warnings only.
 - Commit and push each completed task independently; never stage unrelated concurrent work.
 
 ## Completion Record

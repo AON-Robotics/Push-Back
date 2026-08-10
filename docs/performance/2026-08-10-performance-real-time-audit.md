@@ -12,7 +12,7 @@ This is a static engineering audit, not a claim that a particular loop is alread
 
 The highest-leverage findings are:
 
-1. **P0 — native odometry snapshots are not coherent.** `Odometry::getPose()` in `src/aon/odometry.cpp:108` obtains X, Y, and heading through three independent mutex acquisitions. Every getter ignores the return value of a 1 ms timed `take()`, then reads and gives the mutex anyway. A reader can therefore receive coordinates from different updates or access state without owning the lock after a timeout. `Odometry::update()` also reads its own state through repeated getters and locks while publishing position and heading separately.
+1. **Resolved — native odometry now publishes coherent snapshots.** Readers use one bounded RAII lock and return typed invalid/default data after a two-millisecond timeout. Update/reset commits use the same snapshot boundary, and diagnostics count acquisition failures.
 2. **P0 — confirmed cross-task state uses `volatile` instead of synchronization.** Intake `scanning` and hardware `alliance` have demonstrated writers and background-task readers; `volatile` does not make those accesses thread-safe in C++. Intake `scoreDown` has no reader/caller at the audited commit, and Orbit has no production startup, so those fields are dormant/conditional hazards rather than confirmed active races. Inventory their owners before enabling those paths.
 3. **P1 — the safety task becomes an unthrottled loop while X is held.** `autonSafety()` in `include/aon/globals.hpp:128-134` repeatedly invokes `STOP()` with no delay inside the inner loop. That can consume a core and repeatedly issue stop/cancel motor operations exactly during an abnormal event.
 4. **P1 — two drivetrain/odometry stacks coexist.** LemLib is calibrated at boot and owns the normal driver/autonomous motion path, while `legacy_motion::prepare()` can start the native 10 ms odometry task for native routes. Both stacks wrap the same physical drive and tracking ports. This is deliberate migration compatibility, but it adds duplicate sensor work and creates a motor-ownership hazard unless selection guarantees that only one motion stack commands at a time.
@@ -37,7 +37,7 @@ This front layer answers the added C++ safety and design criteria. The detailed 
 
 ### 1.2 Memory and resource management brief
 
-The dominant memory concern is bounded static RAM, not a confirmed heap leak. Shadow avoids runtime allocation but reserves large fixed buffers; Section 9 identifies the exact owners and measurement plan.
+The dominant memory concern is bounded static RAM, not a confirmed heap leak. Shadow and navigation avoid periodic allocation; planner scratch state is now bounded, planner-owned storage instead of task-stack data. Section 9 identifies the remaining large owners and measurement plan.
 
 | Concern | Status | Repository evidence | Decision |
 |---|---|---|---|
@@ -45,20 +45,20 @@ The dominant memory concern is bounded static RAM, not a confirmed heap leak. Sh
 | Manual file-resource cleanup | **Conditional** | `src/aon/tools/gui/gui.cpp:60-78` closes each successful `fopen`. `src/aon/shadow/storage-pros.cpp:60-106` closes reads directly and writes through the bounded cleanup path in `include/aon/shadow/sd-write.hpp:25-53` | Current paths close handles, but a small nonthrowing file guard would make future early returns safer; validate behavior before refactoring |
 | Dangling pointers or use-after-free | **Not found** | No owning raw heap pointer was found. `Storage` borrows `FileStore&` and documents the lifetime contract in `include/aon/shadow/storage.hpp:38-50`; `ServiceStorage` declares `files` before `storage` in `src/aon/shadow/service.cpp:43-47` | Preserve declaration order and the documented lifetime contract; add a construction/lifetime test if these members move |
 | Moved-from misuse | **Not found** | Native drivetrain constructors transfer `unique_ptr` parameters once with `std::move` in `include/aon/drivetrain/drivetrain.hpp:61-64`; no later use of those parameters was found | No optimization work justified |
-| Uninitialized reads | **Not found** | Core samples use default member initializers in `include/aon/auton/motion-health.hpp:25-41` and `include/aon/lemlib/drive-io.hpp:8-20`. Reviewed production aggregates are fully assigned before return | This finding is scan-limited. Enable full embedded warnings/static analysis when the ARM toolchain is available |
-| Ignored RAII | **Not found** | `MotionLease` releases motion ownership in `src/aon/auton/actions.cpp:33-45`. Shadow `Lock` releases its mutex and deletes copying in `src/aon/shadow/service.cpp:32-41` | Extend this pattern only to manual file handles if it reduces cleanup risk without adding exceptions or heap use |
+| Uninitialized reads | **Hardened** | Localization measurements, poses, covariance, and EKF configuration now use explicit safe defaults; compile-time tests cover representative zero/invalid states | Keep warnings-as-errors in host tests and retain explicit invalid/default states |
+| Ignored RAII | **Fixed where demonstrated** | `TimedMutexLock` now bounds odometry and task-start mutex acquisition, releases only owned locks, and cannot be copied or moved. `MotionLease` and Shadow `Lock` retain scoped cleanup | Keep file-handle RAII conditional on a demonstrated early-exit risk; do not add heap ownership to periodic paths |
 
 ### 1.3 Object lifetime and C++ correctness brief
 
-One polymorphic lifetime defect is confirmed. Other Rule-of-3/5/0 and slicing concerns are conditional because the audited call graph does not exercise unsafe base ownership.
+The demonstrated polymorphic lifetime defects are fixed. Other Rule-of-3/5/0 and slicing concerns remain conditional because the audited call graph does not exercise unsafe base ownership.
 
 | Concern | Status | Repository evidence | Decision |
 |---|---|---|---|
-| Rule of 3/5/0: GUI base deletion | **Confirmed** | `Gui` has virtual methods but no virtual destructor in `include/aon/tools/gui/gui.hpp:48-183`. `src/aon/tools/gui/gui.cpp:91-95` stores `GuiDebug` in `std::unique_ptr<Gui>` | Treat as a correctness fix before any lifecycle/reset feature; verify the embedded program's shutdown model and add a base-ownership destructor test |
-| Rule of 3/5/0: native drivetrain base | **Conditional** | `Drivetrain` owns `unique_ptr` members and has virtual methods but no virtual destructor (`include/aon/drivetrain/drivetrain.hpp:16-764`). No `Drivetrain*` or `unique_ptr<Drivetrain>` owner was found | Either forbid base deletion explicitly or define a safe virtual destructor before polymorphic ownership is introduced |
+| Rule of 3/5/0: GUI base deletion | **Fixed** | `Gui` now has a virtual nonthrowing destructor and deleted copy/move operations; `GuiDebug` declares `override`. Compile-time policy tests cover the ownership contract | Preserve base-owned `unique_ptr<Gui>` and the test when adding GUI variants |
+| Rule of 3/5/0: native drivetrain base | **Fixed defensively** | `Drivetrain` now has a virtual nonthrowing destructor and deleted copy/move operations even though no base owner is active | Keep hardware owners non-copyable and pass them by reference |
 | Rule of 3/5/0: explicit resource wrappers | **Not found** | `FileStore` and `LemLibValidationMotion` define virtual default destructors; Shadow `Lock` deletes copy operations | Keep Rule-of-Zero defaults where members own resources safely |
 | Object slicing | **Not found** | Derived drivetrain, GUI, scaler, file-store, and validation objects are not passed or assigned as base values in the inspected first-party call graph | Prefer references or owning smart pointers if new polymorphic APIs appear |
-| Destructor exceptions | **Not found** | First-party custom destructors only release motion or mutex ownership. No destructor contains `throw`; `MotionLease` and `Lock` call nonthrowing-style PROS/state methods | Mark cleanup functions `noexcept` only after verifying called APIs cannot propagate; do not add catch-all logic without an exception policy |
+| Destructor exceptions | **Not found** | First-party cleanup destructors contain no `throw`; polymorphic bases and `TimedMutexLock` are explicitly `noexcept` | Keep exceptions out of cleanup and RTOS task boundaries; use typed failure for startup/runtime operations |
 | General exception policy | **Conditional** | `common.mk` does not disable exceptions. Native number/profile headers contain explicit throws, while real-time paths mostly return status values | Keep exceptions out of task/control boundaries; document whether invalid configuration is allowed to terminate during initialization |
 
 ### 1.4 Code design and architecture brief
@@ -68,8 +68,8 @@ The hierarchy depth is shallow. The main design costs are duplicated motion owne
 | Concern | Status | Repository evidence | Decision |
 |---|---|---|---|
 | Deep inheritance | **Not found** | First-party drivetrain, GUI, scaler, file-store, and validation hierarchies are one derived layer deep | Do not flatten working hierarchies for style alone |
-| Excessive virtual dispatch | **Conditional** | `Gui` exposes many virtual no-op debug hooks in `include/aon/tools/gui/gui.hpp:111-182`. Drivetrain virtual calls represent real hardware variants | Keep virtual dispatch off measured hot paths where practical; prioritize the GUI destructor defect over speculative vtable cost |
-| Excessive getters/setters | **Confirmed** | Native `Odometry::getPose()` composes three separately locked scalar getters. `Drivetrain` keeps a local `pose`, but its scalar getters query odometry while scalar setters update only the local pose | Replace this split boundary with one documented pose source and coherent snapshot before micro-optimizing accessors |
+| Excessive virtual dispatch | **Conditional** | `Gui` exposes many virtual no-op debug hooks. Drivetrain virtual calls represent real hardware variants | Keep virtual dispatch off measured hot paths; no hierarchy rewrite is justified without profiling |
+| Excessive getters/setters | **Partly fixed** | Native odometry now exposes one coherent pose snapshot. Legacy drivetrain still keeps a separate pose facade | Preserve the coherent snapshot and reconcile the remaining legacy facade route by route |
 | Over-engineering | **Confirmed** | LemLib and the legacy native drivetrain both wrap the same drive hardware. Section 4 shows separate task and ownership paths | Define one active motion owner per mode; retain legacy code only behind an explicit migration/test boundary |
 | Simple data versus objects | **Not found** | Shadow samples, sensor snapshots, configuration, and status values are plain structs with bounded storage | Preserve these value types; do not add inheritance or heap ownership without a concrete need |
 | Broad public hardware surface | **Conditional** | `include/aon/core/hardware.hpp:20-25` calls public members a temporary compatibility surface | Shrink the surface only with route-by-route tests; avoid a large encapsulation rewrite during competition tuning |
@@ -89,12 +89,12 @@ No clean-build timing is available. The build is conventional for PROS and alrea
 
 ### 1.6 Priority brief
 
-The added criteria change one priority: polymorphic GUI destruction joins the correctness backlog. They do not justify a heap rewrite, modules migration, or package-manager replacement.
+The hardening pass closes polymorphic destruction, rollover, bounded planner workspace, and task-start/lock failures. It does not justify a heap rewrite, modules migration, or package-manager replacement.
 
 | Priority | Act now | Measure or defer |
 |---|---|---|
-| **P0** | Native pose locking/snapshot; demonstrated cross-task `volatile`; exclusive motor ownership | None of the new general memory concerns outranks these active correctness defects |
-| **P1** | Define safe `Gui` base destruction; bound safety/native control loops; clarify active motion stack | File-handle RAII, header fan-out, and exception policy after behavior/toolchain checks |
+| **P0** | Demonstrated cross-task `volatile`; exclusive motor ownership | Coherent native pose locking is closed by the hardening pass |
+| **P1** | Bound remaining safety/native control loops; clarify active motion stack | File-handle RAII, header fan-out, and exception policy after behavior/toolchain checks |
 | **P2** | Preserve fixed-capacity Shadow design and quantify RAM | Compile-time decomposition and broad interface cleanup |
 | **P3** | Correct stale comments during touched work | Modules, fixed-point math, STL removal, and package-manager changes without evidence |
 
@@ -184,7 +184,7 @@ No V5 brain was attached, so this audit does not invent execution-time numbers, 
 
 No nested acquisition of two first-party mutexes was found in the normal paths, so there is no demonstrated lock-order cycle. The main risks are instead:
 
-- **Ignored acquisition failure:** all native odometry getters/setters use `take(1)` without checking success.
+- **Resolved acquisition failure:** native odometry now uses a checked two-millisecond RAII guard and counts timeouts.
 - **Unbounded waits:** Shadow's RAII `Lock` and most status/motion locks wait indefinitely. Their critical sections are generally short, but SD I/O is correctly moved outside the Shadow service lock in the inspected paths. Preserve that property.
 - **Device calls under lock:** big-robot `commandSortMotors()` holds `sortMotorMutex` across motor API calls and rechecks atomics. This is defensible for ownership but should be timed; `faultAndStopSortMotors()` contains a fallback that sends stop commands without owning the mutex after a 10 ms timeout, intentionally favoring safety over serialization.
 - **String copies under lock:** `routineStatus()` copies `std::string` while holding `statusMutex`; GUI calls it every 100 ms. Names likely fit small-string optimization, but measure wait time before redesigning.
@@ -194,9 +194,9 @@ No nested acquisition of two first-party mutexes was found in the normal paths, 
 
 ### 5.1 Existing native architecture
 
-`src/aon/odometry.cpp` implements the lazy-started legacy odometry used by native routes. LemLib maintains a separate pose for current LemLib routes and driver control.
+`src/aon/odometry.cpp` implements the lazy-started legacy odometry used by native routes. LemLib maintains a separate pose for current LemLib routes and driver control. The detailed findings below describe the pinned audit baseline; the coherent-snapshot and bounded-lock defects are resolved in the current branch.
 
-One native iteration currently does this:
+At the pinned audit baseline, one native iteration did this:
 
 1. Read right and left rotation sensors (`update():148-149`). The back rotation read is commented out.
 2. Convert cumulative angles to distance, then derive both angle and distance deltas.
@@ -212,7 +212,7 @@ This is more synchronization and trig than the algorithm requires, but correctne
 
 ### 5.2 Confirmed correctness and coherence risks
 
-- `getX()`, `getY()`, `getPosition()`, `SetPosition()`, `getDegrees()`, `setDegrees()`, `getRadians()`, and `setRadians()` call `Mutex::take(1)` and ignore its Boolean result. They then access state and call `give()` even if ownership was not obtained. Students should first confirm PROS mutex return semantics on target, then treat failed acquisition explicitly.
+- The pinned baseline ignored timed-lock results and split pose state. The current implementation checks acquisition, releases only owned locks, and publishes one pose snapshot.
 - X/Y share one mutex and orientation uses another. `getPose()` calls three getters, so a task switch between them can mix two odometry iterations. A pose used for path following, GUI, or a terminal condition should be one coherent sample.
 - Publishing heading before position creates an interval where readers observe new heading with old position. Publishing position later through a different lock cannot make the tuple atomic.
 - The unprotected class data (`encoder*_data`, `gyro_data`, `deltaDlocal`, `changeWeb`, and member `deltaTheta`) can race with `resetCurrent()` or `debug()` if those are invoked while the odometry task is running.
@@ -612,12 +612,12 @@ Keep raw data and analysis script in version control. Do not report only screens
 
 | Priority | Subsystem | File / function | Observed issue | Why it matters | How to measure | Recommended student investigation | Expected impact | Change risk |
 |---|---|---|---|---|---|---|---|---|
-| P0 | Native odometry | `src/aon/odometry.cpp`; getters, setters, `getPose()`, `update()` | timed mutex results ignored; X/Y/heading published/read separately | undefined ownership behavior and incoherent controller input | lock failures/wait; sensor-trace equivalence; 20-run endpoint spread | design one checked lock policy and complete pose snapshot; serialize reset/update | Very high reliability/determinism | High: pose semantics |
+| Closed | Native odometry | `src/aon/odometry.cpp`; `TimedMutexLock` | checked two-millisecond lock; coherent pose publication; timeout counter | remaining risk is physical timing under contention | lock-timeout count; sensor-trace equivalence; 20-run endpoint spread | retain fail-closed reads and measure on hardware | High reliability/determinism | Physical validation remains |
 | P0 | Cross-task state | `include/aon/intake/intake.hpp`, `include/aon/core/hardware.hpp`; conditional inventory in `include/aon/orbit/orbit.hpp` | demonstrated `scanning`/`alliance` cross-task access uses `volatile`; `scoreDown`/Orbit are dormant at the audited commit | active races can produce stale/undefined state; dormant fields become hazardous if enabled without ownership | transition/cancel latency, writer/reader inventory, race-focused tests | synchronize demonstrated shared state; document or remove dormant state only after proving its intended owner | High reliability | Medium |
 | P0 | Motor ownership | intake/Orbit/drivetrain call sites | multiple tasks/abstractions can command same motors | last-writer-wins nondeterminism and unsafe cancellation | command-owner trace; conflict counter | exclusive owner/command state machine; prove route selection prevents LemLib/legacy overlap | Very high | High |
 | P0 | Unbounded controllers | `Drivetrain::drivePID()`, H/Mecanum/X `goToPose()`, Orbit rotate methods | loops lack timeout/cancel | sensor/mechanism failure can hang autonomous/task forever | fault injection, timeout tests | add architectural timeout/cancel requirement before competition enablement | Very high safety | Medium |
 | P1 | Safety task | `include/aon/globals.hpp:128` `autonSafety()` | no yield while X held; repeated STOP | CPU starvation/device flood during fault | held-X loop time, command count, cancellation latency | edge-trigger stop plus bounded watchdog/yield | High | Low-medium |
-| P1 | Polymorphic lifetime | `include/aon/tools/gui/gui.hpp`; `src/aon/tools/gui/gui.cpp:91-95` | `unique_ptr<Gui>` can own `GuiDebug`, but `Gui` has no virtual destructor | deletion through the base owner has undefined behavior; embedded teardown may hide it | host destructor probe; compile-time base-destructor assertion; shutdown/reset path review | define and test one safe base-ownership contract before adding lifecycle/reset behavior | High correctness | Low |
+| Closed | Polymorphic lifetime | `Gui`, `GuiDebug`, and `Drivetrain` headers | virtual nonthrowing base destruction; copy/move disabled for hardware owners | compile-time resource policy guards the contract | host compile-time assertions; ARM build | preserve ownership policy when adding variants | High correctness | Low |
 | P1 | Native path following | `pure-pursuit.hpp:98`; native follow/goToPose loops | path copied/scanned and pose/diagnostics repeated every iteration | heap/O(N), jitter, incoherent reads | allocations, exec max, path size scaling | const path view; retain safe progress index; one pose/distance snapshot | High | Medium: path behavior |
 | P1 | Loop telemetry | native drivetrain loops | formatted LCD/controller writes at 10/20 ms | variable I/O can dominate budget | loop max with logging on/off | compile-time levels and rate-limited snapshot diagnostics | High | Low |
 | P1 | Periodic scheduling | odom/opcontrol/Shadow/actions/fallback/native control | relative delays add work time and drift | variable sample/control timing | period/jitter/deadline misses | deadline-based release grid with overrun accounting | High determinism | Medium |
