@@ -21,7 +21,9 @@ struct LocalizationDiagnostics {
   GpsRejectionReason gpsRejectionReason{GpsRejectionReason::None};
   CovarianceDiagonal covariance{};
   double dtSeconds{0.0};
+  double wheelHeadingDeltaRadians{0.0};
   std::uint32_t executionMicroseconds{0U};
+  std::uint32_t maximumExecutionMicroseconds{0U};
   std::uint32_t deadlineMisses{0U};
   std::uint32_t wheelSensorErrors{0U};
   std::uint32_t imuSensorErrors{0U};

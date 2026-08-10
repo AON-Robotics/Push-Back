@@ -65,6 +65,7 @@ class Odometry {
   localization::EstimatorPose rawPose_{};
   localization::Ekf ekf_;
   localization::GpsGate gpsGate_;
+  localization::GpsFreshnessTracker gpsFreshness_;
   localization::VelocityEstimator velocityEstimator_{{0.35, 0.001, 0.2}};
   localization::WheelDistances wheelBaselines_{};
   double imuFieldOffsetRadians_{0.0};
@@ -75,6 +76,7 @@ class Odometry {
   pros::Mutex snapshotMutex_;
 
   void recordDeadlineMiss();
+  void publishCurrent(void (*publisher)(const Pose&));
 };
 
 }  // namespace aon

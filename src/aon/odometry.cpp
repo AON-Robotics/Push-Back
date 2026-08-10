@@ -1,5 +1,6 @@
 #include "aon/odometry/odometry.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 
@@ -85,6 +86,10 @@ localization::LocalizationDiagnostics Odometry::getDiagnostics() {
 }
 
 void Odometry::resetPose(double x, double y, double thetaDegrees) {
+  if (!std::isfinite(x) || !std::isfinite(y) ||
+      !std::isfinite(thetaDegrees)) {
+    return;
+  }
   const std::int32_t leftReading = encoderLeft_.get_position();
   const std::int32_t rightReading = encoderRight_.get_position();
   const std::int32_t backReading = encoderBack_.get_position();
@@ -119,7 +124,9 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   rawPose_ = requested;
   ekf_.reset(requested);
   velocityEstimator_.reset();
+  wallObservationAdapter_.reset();
   gpsGate_.reset();
+  gpsFreshness_.reset();
   lastUpdateMs_ = pros::millis();
 
   localization::LocalizationDiagnostics diagnostics{};
@@ -132,9 +139,47 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   snapshotMutex_.give();
 }
 
+localization::WallCorrectionResult Odometry::applyWallObservation(
+    const lidar::WallObservation& observation, double maximumNis) {
+  if (!config_.fusedNavigationAuthorized) {
+    return localization::WallCorrectionResult::Unauthorized;
+  }
+  const std::uint32_t nowMs = pros::millis();
+  snapshotMutex_.take();
+  const localization::WallCorrectionResult result =
+      wallObservationAdapter_.apply(ekf_, observation, maximumNis, nowMs);
+  if (result == localization::WallCorrectionResult::Accepted) {
+    ++generation_;
+    const localization::EstimatorPose corrected = ekf_.pose();
+    published_.fusedPose = publicPose(corrected);
+    published_.diagnostics.fusedPose = corrected;
+    published_.diagnostics.covariance = ekf_.covarianceDiagonal();
+    published_.diagnostics.timestampMs = nowMs;
+  }
+  snapshotMutex_.give();
+  return result;
+}
+
 void Odometry::update() {
   const std::uint32_t executionStartUs = pros::micros();
   const std::uint32_t nowMs = pros::millis();
+
+  // Capture reset-sensitive state before sampling hardware. A reset that
+  // overlaps this update changes generation_ and discards the whole sample.
+  snapshotMutex_.take();
+  const std::uint32_t generation = generation_;
+  localization::EstimatorPose candidateRawPose = rawPose_;
+  localization::Ekf candidateEkf = ekf_;
+  localization::GpsGate candidateGpsGate = gpsGate_;
+  localization::GpsFreshnessTracker candidateGpsFreshness = gpsFreshness_;
+  localization::VelocityEstimator candidateVelocityEstimator =
+      velocityEstimator_;
+  localization::WheelDistances candidateBaselines = wheelBaselines_;
+  double candidateImuOffset = imuFieldOffsetRadians_;
+  bool candidateImuOffsetValid = imuFieldOffsetValid_;
+  localization::LocalizationDiagnostics diagnostics = published_.diagnostics;
+  const std::uint32_t previousUpdateMs = lastUpdateMs_;
+  snapshotMutex_.give();
 
   const std::int32_t leftReading = encoderLeft_.get_position();
   const std::int32_t rightReading = encoderRight_.get_position();
@@ -169,24 +214,11 @@ void Odometry::update() {
         std::isfinite(position.x) && std::isfinite(position.y) &&
             std::isfinite(errorMeters),
         std::isfinite(headingDegrees),
-        true,
-        nowMs,
+        false,
+        0U,
     };
+    candidateGpsFreshness.observe(gpsMeasurement, nowMs);
   }
-
-  snapshotMutex_.take();
-  const std::uint32_t generation = generation_;
-  localization::EstimatorPose candidateRawPose = rawPose_;
-  localization::Ekf candidateEkf = ekf_;
-  localization::GpsGate candidateGpsGate = gpsGate_;
-  localization::VelocityEstimator candidateVelocityEstimator =
-      velocityEstimator_;
-  localization::WheelDistances candidateBaselines = wheelBaselines_;
-  double candidateImuOffset = imuFieldOffsetRadians_;
-  bool candidateImuOffsetValid = imuFieldOffsetValid_;
-  localization::LocalizationDiagnostics diagnostics = published_.diagnostics;
-  const std::uint32_t previousUpdateMs = lastUpdateMs_;
-  snapshotMutex_.give();
 
   const double dtSeconds = previousUpdateMs == 0U
                                ? static_cast<double>(config_.loopPeriodMs) /
@@ -194,26 +226,9 @@ void Odometry::update() {
                                : static_cast<double>(nowMs - previousUpdateMs) /
                                      1000.0;
 
-  const localization::WheelDeltas wheelDeltas{
-      currentWheels.leftInches - candidateBaselines.leftInches,
-      currentWheels.rightInches - candidateBaselines.rightInches,
-      currentWheels.backInches - candidateBaselines.backInches,
-      currentWheels.leftValid && candidateBaselines.leftValid,
-      currentWheels.rightValid && candidateBaselines.rightValid,
-      currentWheels.backValid && candidateBaselines.backValid,
-  };
-  if (currentWheels.leftValid) {
-    candidateBaselines.leftInches = currentWheels.leftInches;
-    candidateBaselines.leftValid = true;
-  }
-  if (currentWheels.rightValid) {
-    candidateBaselines.rightInches = currentWheels.rightInches;
-    candidateBaselines.rightValid = true;
-  }
-  if (currentWheels.backValid) {
-    candidateBaselines.backInches = currentWheels.backInches;
-    candidateBaselines.backValid = true;
-  }
+  const localization::WheelDeltas wheelDeltas =
+      localization::consumeWheelDistances(currentWheels, candidateBaselines);
+  candidateBaselines = currentWheels;
 
   const localization::LocalMotion motion =
       localization::localMotion(wheelDeltas, config_.geometry);
@@ -268,6 +283,8 @@ void Odometry::update() {
           gpsMeasurement.xInches, gpsMeasurement.yInches,
           config_.gps.validation.maximumPositionNis);
       if (!diagnostics.gpsPositionAccepted) {
+        diagnostics.gpsRejectionReason =
+            localization::GpsRejectionReason::InnovationRejected;
         ++diagnostics.numericalRejections;
       }
     }
@@ -276,9 +293,14 @@ void Odometry::update() {
           gpsMeasurement.headingRadians,
           config_.gps.validation.maximumHeadingNis, true);
       if (!diagnostics.gpsHeadingAccepted) {
+        diagnostics.gpsRejectionReason =
+            localization::GpsRejectionReason::InnovationRejected;
         ++diagnostics.numericalRejections;
       }
     }
+    candidateGpsGate.commit(gpsMeasurement,
+                            diagnostics.gpsPositionAccepted,
+                            diagnostics.gpsHeadingAccepted);
     if (!gpsMeasurement.positionValid) ++diagnostics.gpsSensorErrors;
   }
 
@@ -292,13 +314,18 @@ void Odometry::update() {
   diagnostics.covariance = candidateEkf.covarianceDiagonal();
   diagnostics.velocity = candidateVelocityEstimator.velocity();
   diagnostics.dtSeconds = dtSeconds;
+  diagnostics.wheelHeadingDeltaRadians = motion.headingRadians;
   diagnostics.executionMicroseconds = pros::micros() - executionStartUs;
+  diagnostics.maximumExecutionMicroseconds =
+      std::max(diagnostics.maximumExecutionMicroseconds,
+               diagnostics.executionMicroseconds);
 
   snapshotMutex_.take();
   if (generation_ == generation) {
     rawPose_ = candidateRawPose;
     ekf_ = candidateEkf;
     gpsGate_ = candidateGpsGate;
+    gpsFreshness_ = candidateGpsFreshness;
     velocityEstimator_ = candidateVelocityEstimator;
     wheelBaselines_ = candidateBaselines;
     imuFieldOffsetRadians_ = candidateImuOffset;
@@ -331,12 +358,22 @@ void Odometry::runLocalizationLoop(void (*publisher)(const Pose&)) {
   while (true) {
     const std::uint32_t deadline = wake + config_.loopPeriodMs;
     update();
-    if (publisher != nullptr) publisher(getPose());
+    publishCurrent(publisher);
     if (static_cast<std::int32_t>(pros::millis() - deadline) > 0) {
       recordDeadlineMiss();
     }
     pros::Task::delay_until(&wake, config_.loopPeriodMs);
   }
+}
+
+void Odometry::publishCurrent(void (*publisher)(const Pose&)) {
+  if (publisher == nullptr) return;
+  snapshotMutex_.take();
+  const Pose publicPose = published_.fusedPose;
+  // Serialize publication with resetPose so an old snapshot cannot reach the
+  // path follower after a newer reset has already been published.
+  publisher(publicPose);
+  snapshotMutex_.give();
 }
 
 void Odometry::recordDeadlineMiss() {

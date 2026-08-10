@@ -59,6 +59,31 @@ void measurementTypesCarryValuesAndValidity() {
   CHECK(gps.timestampMs == 100U);
 }
 
+void wheelRecoveryRebaselinesWithoutAccumulatedMotion() {
+  using namespace aon::localization;
+
+  WheelDistances baselines{10.0, 10.0, 2.0, true, true, true};
+  WheelDistances deltas = consumeWheelDistances(
+      {0.0, 11.0, 2.0, false, true, true}, baselines);
+  CHECK(!deltas.leftValid);
+  CHECK(deltas.rightValid);
+  checkNear(deltas.rightInches, 1.0);
+  CHECK(!baselines.leftValid);
+
+  deltas = consumeWheelDistances(
+      {12.0, 12.0, 2.0, true, true, true}, baselines);
+  CHECK(!deltas.leftValid);
+  CHECK(deltas.rightValid);
+  checkNear(deltas.rightInches, 1.0);
+  CHECK(baselines.leftValid);
+
+  deltas = consumeWheelDistances(
+      {13.0, 13.0, 2.0, true, true, true}, baselines);
+  CHECK(deltas.leftValid && deltas.rightValid);
+  checkNear(deltas.leftInches, 1.0);
+  checkNear(deltas.rightInches, 1.0);
+}
+
 void checkMotion(const aon::localization::LocalMotion& actual,
                  double expectedRight, double expectedForward,
                  double expectedHeading) {
@@ -315,8 +340,9 @@ void gpsGateRejectsBadSamplesWithTypedReasons() {
   }
   {
     GpsGate gate(config);
-    CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
-              .positionAccepted);
+    const GpsMeasurement first = gpsSample(0.0, 0.0, 0.0, 100U);
+    CHECK(gate.evaluate(first).positionAccepted);
+    gate.commit(first, true, true);
     CHECK(gate.evaluate(gpsSample(1.0, 1.0, 0.0, 120U)).reason ==
           GpsRejectionReason::StaleTimestamp);
   }
@@ -334,15 +360,17 @@ void gpsGateRejectsBadSamplesWithTypedReasons() {
   }
   {
     GpsGate gate(config);
-    CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
-              .positionAccepted);
+    const GpsMeasurement first = gpsSample(0.0, 0.0, 0.0, 100U);
+    CHECK(gate.evaluate(first).positionAccepted);
+    gate.commit(first, true, true);
     CHECK(gate.evaluate(gpsSample(30.0, 0.0, 0.0, 160U)).reason ==
           GpsRejectionReason::PositionJump);
   }
   {
     GpsGate gate(config);
-    CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
-              .headingAccepted);
+    const GpsMeasurement first = gpsSample(0.0, 0.0, 0.0, 100U);
+    CHECK(gate.evaluate(first).headingAccepted);
+    gate.commit(first, true, true);
     const GpsGateResult result =
         gate.evaluate(gpsSample(1.0, 0.0, radians(90.0), 160U));
     CHECK(result.positionAccepted);
@@ -355,8 +383,9 @@ void gpsGateRecoversAfterTemporaryLoss() {
   using namespace aon::localization;
 
   GpsGate gate(testGpsGateConfig());
-  CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
-            .positionAccepted);
+  const GpsMeasurement first = gpsSample(0.0, 0.0, 0.0, 100U);
+  CHECK(gate.evaluate(first).positionAccepted);
+  gate.commit(first, true, true);
   GpsMeasurement missing = gpsSample(1.0, 0.0, 0.0, 160U);
   missing.positionValid = false;
   CHECK(gate.evaluate(missing).reason ==
@@ -365,6 +394,40 @@ void gpsGateRecoversAfterTemporaryLoss() {
       gate.evaluate(gpsSample(2.0, 0.0, 0.0, 220U));
   CHECK(recovered.positionAccepted);
   CHECK(recovered.headingAccepted);
+}
+
+void gpsGateOnlyCommitsFilterAcceptedSamples() {
+  using namespace aon::localization;
+
+  GpsGate gate(testGpsGateConfig());
+  const GpsMeasurement origin = gpsSample(0.0, 0.0, 0.0, 100U);
+  const GpsGateResult originResult = gate.evaluate(origin);
+  CHECK(originResult.positionAccepted);
+  gate.commit(origin, true, true);
+
+  const GpsMeasurement rejected = gpsSample(15.0, 0.0, 0.0, 160U);
+  CHECK(gate.evaluate(rejected).positionAccepted);
+  gate.commit(rejected, false, false);
+
+  const GpsMeasurement recovered = gpsSample(1.0, 0.0, 0.0, 220U);
+  CHECK(gate.evaluate(recovered).positionAccepted);
+}
+
+void gpsFreshnessRequiresAChangedHardwareObservation() {
+  using namespace aon::localization;
+
+  GpsFreshnessTracker tracker;
+  GpsMeasurement first = gpsSample(1.0, 2.0, radians(5.0), 0U);
+  CHECK(tracker.observe(first, 100U));
+  CHECK(first.fresh && first.timestampMs == 100U);
+
+  GpsMeasurement duplicate = gpsSample(1.0, 2.0, radians(5.0), 0U);
+  CHECK(!tracker.observe(duplicate, 110U));
+  CHECK(!duplicate.fresh && duplicate.timestampMs == 100U);
+
+  GpsMeasurement changed = gpsSample(1.01, 2.0, radians(5.0), 0U);
+  CHECK(tracker.observe(changed, 120U));
+  CHECK(changed.fresh && changed.timestampMs == 120U);
 }
 
 void gpsPositionCorrectionIsWeightedAndOutlierGated() {
@@ -419,6 +482,7 @@ int main() {
   angleConversionsAndWrappingAreConsistent();
   sincIsStableNearZero();
   measurementTypesCarryValuesAndValidity();
+  wheelRecoveryRebaselinesWithoutAccumulatedMotion();
   threeWheelMotionUsesSignedOffsets();
   posePropagationMatchesTheFieldConvention();
   ekfPredictionPropagatesPoseAndCovariance();
@@ -427,6 +491,8 @@ int main() {
   imuJosephUpdateIsStableAndRejectsInvalidMeasurements();
   gpsGateRejectsBadSamplesWithTypedReasons();
   gpsGateRecoversAfterTemporaryLoss();
+  gpsGateOnlyCommitsFilterAcceptedSamples();
+  gpsFreshnessRequiresAChangedHardwareObservation();
   gpsPositionCorrectionIsWeightedAndOutlierGated();
   gpsHeadingCorrectionWrapsAndCanRemainDisabled();
   std::cout << "localization math tests passed\n";

@@ -16,6 +16,22 @@ struct WheelDistances {
   bool backValid;
 };
 
+inline WheelDistances consumeWheelDistances(
+    WheelDistances current, WheelDistances& baselines) noexcept {
+  const WheelDistances deltas{
+      current.leftInches - baselines.leftInches,
+      current.rightInches - baselines.rightInches,
+      current.backInches - baselines.backInches,
+      current.leftValid && baselines.leftValid,
+      current.rightValid && baselines.rightValid,
+      current.backValid && baselines.backValid,
+  };
+  // Invalid sensors also invalidate their baseline. The first recovered sample
+  // establishes a new baseline instead of accumulating motion during the gap.
+  baselines = current;
+  return deltas;
+}
+
 struct ImuMeasurement {
   double headingRadians;
   bool valid;
@@ -55,6 +71,7 @@ enum class GpsRejectionReason {
   OutsideFieldBounds,
   PositionJump,
   HeadingJump,
+  InnovationRejected,
 };
 
 struct GpsGateResult {
@@ -102,7 +119,7 @@ class GpsGate {
     lastHeadingRadians_ = 0.0;
   }
 
-  GpsGateResult evaluate(GpsMeasurement measurement) noexcept {
+  GpsGateResult evaluate(GpsMeasurement measurement) const noexcept {
     if (!measurement.fresh) {
       return {false, false, GpsRejectionReason::NotFresh};
     }
@@ -145,11 +162,6 @@ class GpsGate {
       return {false, false, GpsRejectionReason::PositionJump};
     }
 
-    lastXInches_ = measurement.xInches;
-    lastYInches_ = measurement.yInches;
-    lastTimestampMs_ = measurement.timestampMs;
-    hasPosition_ = true;
-
     if (!measurement.headingValid) {
       return {true, false, GpsRejectionReason::None};
     }
@@ -160,9 +172,23 @@ class GpsGate {
       return {true, false, GpsRejectionReason::HeadingJump};
     }
 
-    lastHeadingRadians_ = wrapRadians(measurement.headingRadians);
-    hasHeading_ = true;
     return {true, true, GpsRejectionReason::None};
+  }
+
+  void commit(GpsMeasurement measurement, bool positionAccepted,
+              bool headingAccepted) noexcept {
+    // Physical plausibility is only advanced after the EKF accepts the same
+    // observation; a statistical outlier must not poison the next jump check.
+    if (positionAccepted) {
+      lastXInches_ = measurement.xInches;
+      lastYInches_ = measurement.yInches;
+      lastTimestampMs_ = measurement.timestampMs;
+      hasPosition_ = true;
+    }
+    if (headingAccepted) {
+      lastHeadingRadians_ = wrapRadians(measurement.headingRadians);
+      hasHeading_ = true;
+    }
   }
 
  private:
@@ -173,6 +199,32 @@ class GpsGate {
   double lastXInches_{0.0};
   double lastYInches_{0.0};
   double lastHeadingRadians_{0.0};
+};
+
+class GpsFreshnessTracker {
+ public:
+  void reset() noexcept { hasSample_ = false; }
+
+  bool observe(GpsMeasurement& sample, std::uint32_t observationMs) noexcept {
+    const bool changed =
+        !hasSample_ || sample.xInches != last_.xInches ||
+        sample.yInches != last_.yInches ||
+        sample.headingRadians != last_.headingRadians ||
+        sample.positionErrorInches != last_.positionErrorInches ||
+        sample.positionValid != last_.positionValid ||
+        sample.headingValid != last_.headingValid;
+    sample.fresh = changed;
+    sample.timestampMs = changed ? observationMs : last_.timestampMs;
+    if (changed) {
+      last_ = sample;
+      hasSample_ = true;
+    }
+    return changed;
+  }
+
+ private:
+  bool hasSample_{false};
+  GpsMeasurement last_{};
 };
 
 }  // namespace aon::localization

@@ -119,6 +119,7 @@ bool Ekf::predict(LocalMotion motion) noexcept {
       config_.headingVariancePerRadian *
           std::abs(motion.headingRadians);
 
+  stabilizeCovariance(candidateCovariance, config_.singularityTolerance);
   if (!validCovariance(candidateCovariance,
                        config_.singularityTolerance)) {
     return false;

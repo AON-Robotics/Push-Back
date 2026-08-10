@@ -9,6 +9,7 @@
 #include "aon/constants.hpp"
 #include "aon/drivetrain/legacy-motion.hpp"
 #include "aon/globals.hpp"
+#include "aon/lemlib/chassis.hpp"
 #include "aon/auton/actions.hpp"
 #include "aon/shadow/service.hpp"
 
@@ -17,6 +18,7 @@ namespace aon::routines {
 namespace {
 
 int runNativeRoutine(const char* name, void (*routine)()) {
+  if (!aon::lemlib_integration::localizationReady()) return 0;
   aon::auton::startRoutine(name);
   aon::legacy_motion::prepare();
   routine();
@@ -27,6 +29,7 @@ int runNativeRoutine(const char* name, void (*routine)()) {
 }
 
 int runRoutine(const char* name, int (*routine)()) {
+  if (!aon::lemlib_integration::localizationReady()) return 0;
   aon::auton::actions().resetCancellation();
   aon::auton::startRoutine(name);
   aon::auton::lockFallbackSelection();
@@ -82,6 +85,7 @@ int BlueRoutine3() {
 }
 
 int SkillsRoutine1() {
+  if (!aon::lemlib_integration::localizationReady()) return 0;
   aon::auton::startRoutine("Skills AUT1");
   aon::legacy_motion::prepare();
 #if USING_BIG_ROBOT

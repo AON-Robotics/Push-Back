@@ -24,6 +24,7 @@ namespace aon::lemlib_integration {
 namespace {
 
 std::atomic<std::uint16_t> effectiveDrive{packDriveCommand(0, 0)};
+std::atomic<bool> localizationBootReady{false};
 
 struct TrackingSample {
   double left;
@@ -261,11 +262,13 @@ void setDriveBrakeMode(pros::motor_brake_mode_e brakeMode) {
 }
 
 void initializeChassis() {
+  localizationBootReady.store(false);
   lemlib::Chassis& configuredChassis = chassis();
   if (!aon::config::activeRobotConfig()
            .localization.fusedLemLibAuthorized) {
     configuredChassis.calibrate();
     configuredChassis.setPose(0.0, 0.0, 0.0);
+    localizationBootReady.store(true);
     return;
   }
 
@@ -277,7 +280,12 @@ void initializeChassis() {
   configuredChassis.calibrate(false);
   odometry.resetPose(0.0, 0.0, 0.0);
   publishFusedPose(odometry.getPose());
+  localizationBootReady.store(true);
   startFusedLocalization();
+}
+
+bool localizationReady() {
+  return localizationBootReady.load();
 }
 
 void startFusedLocalization() {
@@ -285,6 +293,7 @@ void startFusedLocalization() {
            .localization.fusedLemLibAuthorized) {
     return;
   }
+  if (!localizationReady()) return;
 
   static pros::Mutex taskMutex;
   static std::unique_ptr<pros::Task> localizationTask;

@@ -62,7 +62,6 @@ void odometryExposesOneCoherentInterface() {
         std::string::npos);
   CHECK(source.find("candidateVelocityEstimator.update(") !=
         std::string::npos);
-
   const std::size_t getter = source.find("Pose Odometry::getPose()");
   CHECK(getter != std::string::npos);
   const std::size_t getterEnd = source.find("\n}\n", getter);
@@ -119,6 +118,16 @@ void localizationSchedulingIsDeterministicAndQuiet() {
   CHECK(updateBody.find("printf") == std::string::npos);
   CHECK(updateBody.find("cout") == std::string::npos);
   CHECK(updateBody.find("lcd::") == std::string::npos);
+
+  const std::size_t snapshot = updateBody.find("const std::uint32_t generation");
+  const std::size_t sensorRead = updateBody.find("encoderLeft_.get_position()");
+  CHECK(snapshot != std::string::npos && sensorRead != std::string::npos);
+  CHECK(snapshot < sensorRead);
+  CHECK(source.find("if (!std::isfinite(x) || !std::isfinite(y) ||") !=
+        std::string::npos);
+  CHECK(source.find("candidateBaselines = currentWheels") !=
+        std::string::npos);
+  CHECK(source.find("publisher(publicPose)") != std::string::npos);
 }
 
 void fusedLemLibModeIsPresentButAuthorizationGated() {
@@ -139,6 +148,8 @@ void fusedLemLibModeIsPresentButAuthorizationGated() {
   CHECK(chassisHeader.find("void startFusedLocalization()") !=
         std::string::npos);
   CHECK(legacy.find("startFusedLocalization()") != std::string::npos);
+  CHECK(chassisHeader.find("bool localizationReady()") != std::string::npos);
+  CHECK(chassis.find("localizationBootReady") != std::string::npos);
 
   const std::size_t setPose = actions.find("void Actions::setPose");
   CHECK(setPose != std::string::npos);
