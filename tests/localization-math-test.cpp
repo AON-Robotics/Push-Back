@@ -1,7 +1,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 
+#include "aon/odometry/ekf.hpp"
 #include "aon/odometry/pose-estimator.hpp"
 #include "aon/odometry/sensor-measurements.hpp"
 
@@ -132,6 +134,93 @@ void posePropagationMatchesTheFieldConvention() {
             combined.headingRadians);
 }
 
+double square(double value) { return value * value; }
+
+aon::localization::EkfConfig testEkfConfig() {
+  using namespace aon::localization;
+  return {4.0,
+          square(radians(5.0)),
+          1e-6,
+          1e-8,
+          0.01,
+          0.01,
+          square(radians(2.0)),
+          4.0,
+          square(radians(8.0)),
+          1e-12};
+}
+
+void ekfPredictionPropagatesPoseAndCovariance() {
+  using namespace aon::localization;
+
+  const EkfConfig config = testEkfConfig();
+  Ekf ekf(config);
+  ekf.reset({2.0, 3.0, radians(30.0)});
+  checkPose(ekf.pose(), 2.0, 3.0, radians(30.0));
+
+  CovarianceDiagonal diagonal = ekf.covarianceDiagonal();
+  checkNear(diagonal.xVariance, config.initialPositionVariance);
+  checkNear(diagonal.yVariance, config.initialPositionVariance);
+  checkNear(diagonal.headingVariance, config.initialHeadingVariance);
+
+  CHECK(ekf.predict({0.0, 0.0, 0.0, true}));
+  checkPose(ekf.pose(), 2.0, 3.0, radians(30.0));
+  diagonal = ekf.covarianceDiagonal();
+  checkNear(diagonal.xVariance,
+            config.initialPositionVariance +
+                config.stationaryPositionVariance);
+  checkNear(diagonal.yVariance,
+            config.initialPositionVariance +
+                config.stationaryPositionVariance);
+  checkNear(diagonal.headingVariance,
+            config.initialHeadingVariance +
+                config.stationaryHeadingVariance);
+
+  ekf.reset({0.0, 0.0, 0.0});
+  CHECK(ekf.predict({0.0, 12.0, 0.0, true}));
+  checkPose(ekf.pose(), 0.0, 12.0, 0.0);
+
+  const LocalMotion combined{2.0, 6.0, radians(20.0), true};
+  const EstimatorPose expected = propagatePose(ekf.pose(), combined);
+  CHECK(ekf.predict(combined));
+  checkPose(ekf.pose(), expected.xInches, expected.yInches,
+            expected.headingRadians);
+}
+
+void ekfPredictionStaysFiniteAndRejectsBadInput() {
+  using namespace aon::localization;
+
+  Ekf ekf(testEkfConfig());
+  ekf.reset({0.0, 0.0, 0.0});
+  for (int index = 0; index < 10000; ++index) {
+    const double turn = index % 2 == 0 ? 0.002 : -0.002;
+    CHECK(ekf.predict({0.001, 0.01, turn, true}));
+  }
+
+  const Matrix3 covariance = ekf.covariance();
+  for (std::size_t row = 0; row < covariance.size(); ++row) {
+    CHECK(std::isfinite(covariance[row][row]));
+    CHECK(covariance[row][row] >= 0.0);
+    for (std::size_t column = 0; column < covariance.size(); ++column) {
+      CHECK(std::isfinite(covariance[row][column]));
+      checkNear(covariance[row][column], covariance[column][row], 1e-8);
+    }
+  }
+
+  const EstimatorPose beforePose = ekf.pose();
+  const Matrix3 beforeCovariance = ekf.covariance();
+  const double invalid = std::numeric_limits<double>::quiet_NaN();
+  CHECK(!ekf.predict({0.0, invalid, 0.0, false}));
+  checkPose(ekf.pose(), beforePose.xInches, beforePose.yInches,
+            beforePose.headingRadians);
+  const Matrix3 afterCovariance = ekf.covariance();
+  for (std::size_t row = 0; row < beforeCovariance.size(); ++row) {
+    for (std::size_t column = 0; column < beforeCovariance.size(); ++column) {
+      checkNear(afterCovariance[row][column], beforeCovariance[row][column]);
+    }
+  }
+}
+
 }  // namespace
 
 int main() {
@@ -140,6 +229,8 @@ int main() {
   measurementTypesCarryValuesAndValidity();
   threeWheelMotionUsesSignedOffsets();
   posePropagationMatchesTheFieldConvention();
+  ekfPredictionPropagatesPoseAndCovariance();
+  ekfPredictionStaysFiniteAndRejectsBadInput();
   std::cout << "localization math tests passed\n";
   return 0;
 }
