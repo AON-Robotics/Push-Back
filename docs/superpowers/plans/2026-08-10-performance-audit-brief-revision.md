@@ -91,22 +91,22 @@ Check logical order, paragraph lengths, table structure, citations, and `git dif
 - Consumes: the complete concise review layer and original detailed audit.
 - Produces: a consistent, verified final report and completion record.
 
-- [ ] **Step 1: Review information order and eliminate contradictions**
+- [x] **Step 1: Review information order and eliminate contradictions**
 
 Ensure conclusions precede evidence, definitions precede statuses, and the concise layer agrees with detailed memory, concurrency, compiler, and backlog sections.
 
-- [ ] **Step 2: Tighten new prose**
+- [x] **Step 2: Tighten new prose**
 
 Remove repetition, vague intensifiers, and generic advice. Keep each new prose paragraph at or below 240 characters without weakening evidence or limitations.
 
-- [ ] **Step 3: Validate coverage mechanically**
+- [x] **Step 3: Validate coverage mechanically**
 
 Confirm all user-supplied criteria appear, all explicit source paths exist, all new tables have consistent columns, and no placeholder language remains.
 
-- [ ] **Step 4: Rebuild and run host tests**
+- [x] **Step 4: Rebuild and run host tests**
 
 Compile all 13 host executables with `-std=c++17 -Wall -Wextra -Werror -Iinclude`, run each executable, and record the embedded-toolchain limitation if it remains unavailable.
 
-- [ ] **Step 5: Review and commit**
+- [x] **Step 5: Prepare the final review checkpoint**
 
-Run `git diff --check`, verify audit-owned changes are documentation-only, inspect repository status, mark Task 3 complete, and commit `docs: finalize concise performance audit revision`.
+Run `git diff --check`, verify audit-owned changes are documentation-only, inspect repository status, and mark Task 3 complete. Commit the resulting checkpoint as `docs: finalize concise performance audit revision`.
