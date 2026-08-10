@@ -41,7 +41,7 @@ class PathPlanner {
   [[nodiscard]] PlanResult plan(
       field::Point2 start, field::Point2 goal, double robotRadiusInches,
       const field::FieldMap& field,
-      const DynamicObstacleMap& obstacles) const noexcept;
+      const DynamicObstacleMap& obstacles) noexcept;
 
   [[nodiscard]] bool pathHasClearance(
       const Path& path, double robotRadiusInches,
@@ -52,6 +52,14 @@ class PathPlanner {
   static constexpr std::size_t kMaximumNodes =
       2 + DynamicObstacleMap::kMaximumObstacles * 4;
 
+  struct Workspace {
+    std::array<field::Point2, kMaximumNodes> nodes{};
+    std::array<double, kMaximumNodes> costs{};
+    std::array<int, kMaximumNodes> previous{};
+    std::array<bool, kMaximumNodes> visited{};
+    std::array<field::Point2, kMaximumNodes> reverse{};
+  };
+
   [[nodiscard]] bool pointBlocked(
       field::Point2 point, double clearanceInches,
       const DynamicObstacleMap& obstacles) const noexcept;
@@ -61,6 +69,7 @@ class PathPlanner {
       const DynamicObstacleMap& obstacles) const noexcept;
 
   PathPlannerConfig config_;
+  Workspace workspace_{};
 };
 
 }  // namespace aon::navigation

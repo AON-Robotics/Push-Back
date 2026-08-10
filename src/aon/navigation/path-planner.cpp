@@ -133,7 +133,7 @@ bool PathPlanner::segmentVisible(
 PlanResult PathPlanner::plan(field::Point2 start, field::Point2 goal,
                              double robotRadiusInches,
                              const field::FieldMap& field,
-                             const DynamicObstacleMap& obstacles) const noexcept {
+                             const DynamicObstacleMap& obstacles) noexcept {
   PlanResult result;
   if (!field::isFinite(start) || !field::isFinite(goal) ||
       !std::isfinite(robotRadiusInches) || robotRadiusInches < 0.0 ||
@@ -161,7 +161,7 @@ PlanResult PathPlanner::plan(field::Point2 start, field::Point2 goal,
     return result;
   }
 
-  std::array<field::Point2, kMaximumNodes> nodes{};
+  auto& nodes = workspace_.nodes;
   std::size_t nodeCount = 2;
   nodes[0] = start;
   nodes[1] = goal;
@@ -191,11 +191,12 @@ PlanResult PathPlanner::plan(field::Point2 start, field::Point2 goal,
   }
 
   const double infinity = std::numeric_limits<double>::infinity();
-  std::array<double, kMaximumNodes> costs{};
-  std::array<int, kMaximumNodes> previous{};
-  std::array<bool, kMaximumNodes> visited{};
+  auto& costs = workspace_.costs;
+  auto& previous = workspace_.previous;
+  auto& visited = workspace_.visited;
   costs.fill(infinity);
   previous.fill(-1);
+  visited.fill(false);
   costs[0] = 0.0;
 
   for (std::size_t iteration = 0; iteration < nodeCount; ++iteration) {
@@ -228,7 +229,7 @@ PlanResult PathPlanner::plan(field::Point2 start, field::Point2 goal,
     result.status = PlanStatus::Unreachable;
     return result;
   }
-  std::array<field::Point2, kMaximumNodes> reverse{};
+  auto& reverse = workspace_.reverse;
   std::size_t reverseCount = 0;
   for (int current = 1; current >= 0;
        current = previous[static_cast<std::size_t>(current)]) {

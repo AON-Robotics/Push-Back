@@ -161,6 +161,12 @@ void plannerHandlesSatisfiedAndUnreachableRequests() {
       planner.plan({0.0, -20.0}, {0.0, 20.0}, 1.0, field, obstacles);
   CHECK(unreachable.status == PlanStatus::Unreachable);
   CHECK(unreachable.path.size == 0);
+
+  obstacles.clear();
+  const PlanResult recovered =
+      planner.plan({-20.0, 0.0}, {20.0, 0.0}, 1.0, field, obstacles);
+  CHECK(recovered.status == PlanStatus::Success);
+  CHECK(recovered.path.size == 2);
 }
 
 void replanningOnlyTriggersForMeaningfulRouteChanges() {
