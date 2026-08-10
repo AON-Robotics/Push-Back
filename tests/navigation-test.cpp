@@ -1,6 +1,7 @@
 #include "aon/navigation/dynamic-obstacles.hpp"
 #include "aon/navigation/path-planner.hpp"
 #include "aon/navigation/replanner.hpp"
+#include "aon/navigation/path-follower.hpp"
 #include "aon/field/push-back-field.hpp"
 
 #include <cmath>
@@ -184,6 +185,71 @@ void replanningOnlyTriggersForMeaningfulRouteChanges() {
         ReplanReason::InvalidRoute);
 }
 
+void followerConsumesFusedPoseAndStopsAtTheGoal() {
+  using namespace aon::navigation;
+
+  Path path;
+  path.points[0] = {0.0, 0.0};
+  path.points[1] = {0.0, 12.0};
+  path.size = 2;
+  PathFollower follower({8.0, 30.0, 100.0, 1000.0, 1.0, 0.05,
+                         2.0, 0.2, 3000, 500, 0.25});
+  CHECK(follower.start(path, 0.0, false, 0) == FollowerStatus::Following);
+
+  FollowerEstimate estimate{{0.0, 0.0, 0.0}, 0.5, 0.02, true};
+  const FollowerOutput driving = follower.update(estimate, 0.02, 20);
+  CHECK(driving.status == FollowerStatus::Following);
+  CHECK(driving.leftCommand > 0.0);
+  CHECK(std::abs(driving.leftCommand - driving.rightCommand) < 1e-9);
+
+  estimate.pose.yInches = 12.0;
+  const FollowerOutput complete = follower.update(estimate, 0.02, 40);
+  CHECK(complete.status == FollowerStatus::Complete);
+  CHECK(std::abs(complete.leftCommand) < 1e-9);
+  CHECK(std::abs(complete.rightCommand) < 1e-9);
+}
+
+void followerFailsClosedForCancellationAndUnsafeLocalization() {
+  using namespace aon::navigation;
+
+  Path path;
+  path.points[0] = {0.0, 0.0};
+  path.points[1] = {0.0, 12.0};
+  path.size = 2;
+  PathFollower follower({8.0, 30.0, 100.0, 1000.0, 1.0, 0.05,
+                         2.0, 0.2, 3000, 500, 0.25});
+  CHECK(follower.start(path, 0.0, false, 0) == FollowerStatus::Following);
+  follower.cancel();
+  const FollowerOutput cancelled =
+      follower.update({{0.0, 0.0, 0.0}, 0.5, 0.02, true}, 0.02, 20);
+  CHECK(cancelled.status == FollowerStatus::Cancelled);
+  CHECK(cancelled.leftCommand == 0.0 && cancelled.rightCommand == 0.0);
+
+  CHECK(follower.start(path, 0.0, false, 100) == FollowerStatus::Following);
+  const FollowerOutput unsafe =
+      follower.update({{0.0, 0.0, 0.0}, 3.0, 0.02, true}, 0.02, 120);
+  CHECK(unsafe.status == FollowerStatus::LocalizationUnsafe);
+  CHECK(unsafe.leftCommand == 0.0 && unsafe.rightCommand == 0.0);
+}
+
+void turningProgressDoesNotLookLikeABlockedRobot() {
+  using namespace aon::navigation;
+
+  Path path;
+  path.points[0] = {0.0, 0.0};
+  path.points[1] = {12.0, 0.0};
+  path.size = 2;
+  PathFollower follower({8.0, 30.0, 100.0, 1000.0, 1.0, 0.05,
+                         2.0, 0.2, 3000, 500, 0.25});
+  CHECK(follower.start(path, 0.0, false, 0) == FollowerStatus::Following);
+  CHECK(follower.update({{0.0, 0.0, 0.0}, 0.5, 0.02, true}, 0.02, 20).status ==
+        FollowerStatus::Following);
+  CHECK(follower.update({{0.0, 0.0, 0.5}, 0.5, 0.02, true}, 0.02, 300).status ==
+        FollowerStatus::Following);
+  CHECK(follower.update({{0.0, 0.0, 1.0}, 0.5, 0.02, true}, 0.02, 520).status ==
+        FollowerStatus::Following);
+}
+
 }  // namespace
 
 int main() {
@@ -194,6 +260,9 @@ int main() {
   plannerUsesDirectRoutesAndDetoursAroundInflatedObstacles();
   plannerHandlesSatisfiedAndUnreachableRequests();
   replanningOnlyTriggersForMeaningfulRouteChanges();
+  followerConsumesFusedPoseAndStopsAtTheGoal();
+  followerFailsClosedForCancellationAndUnsafeLocalization();
+  turningProgressDoesNotLookLikeABlockedRobot();
   std::cout << "navigation tests passed\n";
   return 0;
 }
