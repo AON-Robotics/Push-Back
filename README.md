@@ -15,6 +15,9 @@ This repository contains the code used for the VEX-U Push Back 2026 competition,
 - **Multiple Drivetrains**: Differential, X-drive, mecanum, and H-drive implementations.
 - **Motion Algorithms**: PID, pure pursuit, holonomic motion, trapezoidal profiles, S-curve profiles, and exponential profiles.
 - **Odometry and Sensors**: Tracking-wheel odometry plus encoder, IMU, distance, vision, proximity, and color-sensing support.
+- **Gated Sensor Fusion**: Allocation-free three-wheel pose propagation and a
+  fixed 3-state EKF with IMU and optional GPS corrections. The fused LemLib
+  adapter and GPS remain disabled until physical validation.
 - **Mechanism Control**: Intake, elevator, scoring, cart, trapdoor, lever, piston, and ring-handling controls.
 - **Automated Sorting**: Ring scanning, color sorting, rejection, storage, and scoring-height control.
 - **Driver Controls**: Custom controller mappings, joystick scaling, brake-mode configuration, and mechanism toggles.
@@ -29,6 +32,15 @@ Developing from both the lab laptop and another PC requires a clean handoff on
 the shared `Testing` branch. Read [the current development handoff](docs/CURRENT_HANDOFF.md)
 and follow [the two-computer workflow](docs/TWO_COMPUTER_WORKFLOW.md) before
 editing from a different machine or development session.
+
+### Localization contract
+
+Localization uses inches and degrees at public interfaces, with `+X` right,
+`+Y` forward at heading zero, and clockwise-positive heading. Autonomous code
+continues to consume LemLib's preserved pose path until the physical integration
+gate authorizes the fused adapter. See
+[the localization validation and benchmark procedure](docs/testing/localization-benchmark.md)
+for equations, tuning values, assumptions, and required robot measurements.
 
 ### Requirements
 - VEX V5 Brain & Motors

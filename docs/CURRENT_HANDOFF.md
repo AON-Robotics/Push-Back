@@ -1,5 +1,37 @@
 # Current Development Handoff
 
+## 2026-08-10 Localization/EKF Software Checkpoint
+
+The corrected three-wheel motion model, fixed three-state EKF, wrapped IMU
+update, gated GPS math, coherent `Odometry` snapshot, shared tracking-sensor
+ownership, deterministic 10 ms loop, opt-in CSV diagnostics, and inactive
+LemLib fused-pose adapter are implemented.
+
+An independent final review found and closed reset/publication races,
+wheel-sensor recovery skew, repeated identical GPS fusion, GPS gate poisoning,
+non-finite reset input, covariance asymmetry, and IMU-calibration fail-open
+behavior. Autonomous routines now refuse to start when the selected
+localization path did not complete its boot checks.
+
+Host localization suites pass with warnings as errors. Both small- and
+big-robot configurations compiled and linked during implementation, with
+`USING_BIG_ROBOT false` restored. The only accepted warning remains the
+vendored `json.hpp` `std::is_pod` deprecation.
+
+This is not physical authorization:
+
+- `fusedLemLibAuthorized` is false for both robots;
+- GPS is disabled with port zero for both robots;
+- existing LemLib wheel/IMU odometry remains the competition default;
+- nominal wheel diameter/offsets and all filter noise values still require
+  measurement or tuning;
+- no EKF accuracy improvement is claimed.
+
+Run and record the existing baseline gate first, then follow
+`docs/testing/localization-benchmark.md`. Do not enable fusion unless the raw
+geometry/sign tests pass and pausing AON publication proves LemLib has no
+independent pose writer. Configure GPS only from a measured installation.
+
 ## 2026-08-10 Fail-Closed Authorization Checkpoint
 
 Phase 0 Tasks 1 and 2 are implemented. Both robot configurations now fail the
