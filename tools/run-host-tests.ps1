@@ -79,6 +79,13 @@ Invoke-HostTest 'lidar-scan-test' @(
   'src\aon\field\push-back-field.cpp'
 )
 Invoke-HostTest 'localization-config-test' @(
+  '-DUSING_BIG_ROBOT=0',
+  'tests\localization-config-test.cpp',
+  'src\aon\config\robot-config.cpp',
+  'src\aon\config\hardware-map.cpp'
+)
+Invoke-HostTest 'localization-config-big-test' @(
+  '-DUSING_BIG_ROBOT=1',
   'tests\localization-config-test.cpp',
   'src\aon\config\robot-config.cpp',
   'src\aon\config\hardware-map.cpp'

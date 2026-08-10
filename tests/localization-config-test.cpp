@@ -27,6 +27,7 @@ void localizationPolicyStartsSafeAndExplicit() {
   CHECK(config.localization.geometry.backOffsetInches < 0.0);
   CHECK(config.localization.trackingWheelDiameterInches > 0.0);
   CHECK(!config.localization.fusedLemLibAuthorized);
+  CHECK(!config.localization.fusedNavigationAuthorized);
   CHECK(!config.localization.gps.enabled);
   CHECK(config.localization.gps.port == 0);
   CHECK(!config.localization.gps.headingUpdateEnabled);

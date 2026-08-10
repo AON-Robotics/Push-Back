@@ -118,6 +118,7 @@ struct LocalizationConfig {
   aon::localization::EkfConfig ekf;
   GpsHardwareConfig gps;
   bool fusedLemLibAuthorized;
+  bool fusedNavigationAuthorized;
 };
 
 struct RobotConfig {

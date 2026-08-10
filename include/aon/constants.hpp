@@ -36,7 +36,9 @@ inline constexpr auto COLOR_YELLOW_GREEN = pros::c::COLOR_YELLOW_GREEN;
 #define TILE_DIAG_LENGTH 33.4066195836 // Calculated with the Pythagorean theorem
 
 // NOT using big robot = Using small robot
+#ifndef USING_BIG_ROBOT
 #define USING_BIG_ROBOT false
+#endif
 #define TESTING_AUTONOMOUS false
 #define LEMLIB_SENSOR_TEST false
 #define LEMLIB_TURN_TEST false

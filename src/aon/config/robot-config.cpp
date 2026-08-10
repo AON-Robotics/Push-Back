@@ -40,6 +40,7 @@ const LocalizationConfig& localizationConfig() {
            aon::localization::radians(45.0), 50U, 9.21, 6.63},
       },
       false,
+      false,
   };
   return config;
 }
