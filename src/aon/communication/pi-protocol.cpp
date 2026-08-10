@@ -1,5 +1,8 @@
 #include "aon/communication/pi-protocol.hpp"
 
+#include <cmath>
+#include <cstring>
+
 namespace aon::communication {
 namespace {
 
@@ -33,6 +36,20 @@ std::uint32_t read32(const std::uint8_t* input) noexcept {
   for (std::size_t index = 0; index < 4; ++index) {
     value |= static_cast<std::uint32_t>(input[index]) << (index * 8U);
   }
+  return value;
+}
+
+void writeFloat(std::uint8_t* output, float value) noexcept {
+  std::uint32_t bits = 0;
+  static_assert(sizeof(bits) == sizeof(value), "float wire size changed");
+  std::memcpy(&bits, &value, sizeof(bits));
+  write32(output, bits);
+}
+
+float readFloat(const std::uint8_t* input) noexcept {
+  const std::uint32_t bits = read32(input);
+  float value = 0.0F;
+  std::memcpy(&value, &bits, sizeof(value));
   return value;
 }
 
@@ -199,6 +216,92 @@ void LinkHealthTracker::reset() noexcept {
   seen_ = false;
   lastSequence_ = 0;
   lastAcceptedAtMs_ = 0;
+}
+
+PayloadStatus encodePoseSnapshot(const PoseSnapshotPayload& payload,
+                                 ProtocolMessage& message) noexcept {
+  if (!std::isfinite(payload.xInches) || !std::isfinite(payload.yInches) ||
+      !std::isfinite(payload.headingRadians) ||
+      !std::isfinite(payload.positionVariance) ||
+      !std::isfinite(payload.headingVariance) ||
+      payload.positionVariance < 0.0 || payload.headingVariance < 0.0) {
+    return PayloadStatus::InvalidValue;
+  }
+  message = {};
+  message.type = MessageType::PoseSnapshot;
+  message.payloadSize = 24;
+  writeFloat(&message.payload[0], static_cast<float>(payload.xInches));
+  writeFloat(&message.payload[4], static_cast<float>(payload.yInches));
+  writeFloat(&message.payload[8], static_cast<float>(payload.headingRadians));
+  writeFloat(&message.payload[12],
+             static_cast<float>(payload.positionVariance));
+  writeFloat(&message.payload[16],
+             static_cast<float>(payload.headingVariance));
+  write32(&message.payload[20], payload.estimateTimestampMs);
+  return PayloadStatus::Success;
+}
+
+PayloadStatus decodePoseSnapshot(const ProtocolMessage& message,
+                                 PoseSnapshotPayload& payload) noexcept {
+  if (message.type != MessageType::PoseSnapshot) {
+    return PayloadStatus::WrongMessageType;
+  }
+  if (message.payloadSize != 24) return PayloadStatus::InvalidLength;
+  PoseSnapshotPayload decoded{
+      readFloat(&message.payload[0]), readFloat(&message.payload[4]),
+      readFloat(&message.payload[8]), readFloat(&message.payload[12]),
+      readFloat(&message.payload[16]), read32(&message.payload[20])};
+  if (!std::isfinite(decoded.xInches) || !std::isfinite(decoded.yInches) ||
+      !std::isfinite(decoded.headingRadians) ||
+      !std::isfinite(decoded.positionVariance) ||
+      !std::isfinite(decoded.headingVariance) ||
+      decoded.positionVariance < 0.0 || decoded.headingVariance < 0.0) {
+    return PayloadStatus::InvalidValue;
+  }
+  payload = decoded;
+  return PayloadStatus::Success;
+}
+
+PayloadStatus encodeWallObservation(const WallObservationPayload& payload,
+                                    ProtocolMessage& message) noexcept {
+  if ((payload.axis != WallObservationAxis::X &&
+       payload.axis != WallObservationAxis::Y) ||
+      !std::isfinite(payload.positionInches) ||
+      !std::isfinite(payload.variance) || payload.variance <= 0.0 ||
+      payload.support == 0) {
+    return PayloadStatus::InvalidValue;
+  }
+  message = {};
+  message.type = MessageType::LocalizationObservation;
+  message.payloadSize = 15;
+  message.payload[0] = static_cast<std::uint8_t>(payload.axis);
+  writeFloat(&message.payload[1], static_cast<float>(payload.positionInches));
+  writeFloat(&message.payload[5], static_cast<float>(payload.variance));
+  write16(&message.payload[9], payload.support);
+  write32(&message.payload[11], payload.captureTimestampMs);
+  return PayloadStatus::Success;
+}
+
+PayloadStatus decodeWallObservation(const ProtocolMessage& message,
+                                    WallObservationPayload& payload) noexcept {
+  if (message.type != MessageType::LocalizationObservation) {
+    return PayloadStatus::WrongMessageType;
+  }
+  if (message.payloadSize != 15) return PayloadStatus::InvalidLength;
+  if (message.payload[0] > static_cast<std::uint8_t>(WallObservationAxis::Y)) {
+    return PayloadStatus::InvalidValue;
+  }
+  WallObservationPayload decoded{
+      static_cast<WallObservationAxis>(message.payload[0]),
+      readFloat(&message.payload[1]), readFloat(&message.payload[5]),
+      read16(&message.payload[9]), read32(&message.payload[11])};
+  if (!std::isfinite(decoded.positionInches) ||
+      !std::isfinite(decoded.variance) || decoded.variance <= 0.0 ||
+      decoded.support == 0) {
+    return PayloadStatus::InvalidValue;
+  }
+  payload = decoded;
+  return PayloadStatus::Success;
 }
 
 }  // namespace aon::communication

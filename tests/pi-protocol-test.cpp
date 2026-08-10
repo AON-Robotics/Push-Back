@@ -1,8 +1,10 @@
 #include "aon/communication/pi-protocol.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 
 #define CHECK(expression)                                                     \
   do {                                                                        \
@@ -98,12 +100,44 @@ void linkHealthRequiresFreshForwardSequenceProgress() {
   CHECK(link.state(400) == LinkState::Fresh);
 }
 
+void typedPoseAndWallPayloadsRoundTripAndRejectNonFiniteValues() {
+  using namespace aon::communication;
+
+  ProtocolMessage poseMessage;
+  const PoseSnapshotPayload pose{12.5, -8.25, 1.5, 0.4, 0.02, 1234};
+  CHECK(encodePoseSnapshot(pose, poseMessage) == PayloadStatus::Success);
+  CHECK(poseMessage.type == MessageType::PoseSnapshot);
+  PoseSnapshotPayload decodedPose;
+  CHECK(decodePoseSnapshot(poseMessage, decodedPose) ==
+        PayloadStatus::Success);
+  CHECK(std::abs(decodedPose.xInches - 12.5) < 1e-6);
+  CHECK(std::abs(decodedPose.yInches + 8.25) < 1e-6);
+  CHECK(decodedPose.estimateTimestampMs == 1234);
+
+  ProtocolMessage wallMessage;
+  const WallObservationPayload wall{WallObservationAxis::Y, 24.0, 0.5, 8,
+                                    1300};
+  CHECK(encodeWallObservation(wall, wallMessage) == PayloadStatus::Success);
+  WallObservationPayload decodedWall;
+  CHECK(decodeWallObservation(wallMessage, decodedWall) ==
+        PayloadStatus::Success);
+  CHECK(decodedWall.axis == WallObservationAxis::Y);
+  CHECK(std::abs(decodedWall.positionInches - 24.0) < 1e-6);
+  CHECK(decodedWall.support == 8);
+
+  PoseSnapshotPayload invalid = pose;
+  invalid.xInches = std::numeric_limits<double>::quiet_NaN();
+  CHECK(encodePoseSnapshot(invalid, poseMessage) ==
+        PayloadStatus::InvalidValue);
+}
+
 }  // namespace
 
 int main() {
   heartbeatRoundTripsThroughFragmentedInput();
   corruptionAndUnknownTypesFailClosedThenParserResynchronizes();
   linkHealthRequiresFreshForwardSequenceProgress();
+  typedPoseAndWallPayloadsRoundTripAndRejectNonFiniteValues();
   std::cout << "Pi protocol tests passed\n";
   return 0;
 }

@@ -97,4 +97,39 @@ class LinkHealthTracker {
   std::uint32_t lastAcceptedAtMs_ = 0;
 };
 
+enum class PayloadStatus : std::uint8_t {
+  Success,
+  WrongMessageType,
+  InvalidLength,
+  InvalidValue,
+};
+
+struct PoseSnapshotPayload {
+  double xInches = 0.0;
+  double yInches = 0.0;
+  double headingRadians = 0.0;
+  double positionVariance = 0.0;
+  double headingVariance = 0.0;
+  std::uint32_t estimateTimestampMs = 0;
+};
+
+enum class WallObservationAxis : std::uint8_t { X = 0, Y = 1 };
+
+struct WallObservationPayload {
+  WallObservationAxis axis = WallObservationAxis::X;
+  double positionInches = 0.0;
+  double variance = 0.0;
+  std::uint16_t support = 0;
+  std::uint32_t captureTimestampMs = 0;
+};
+
+[[nodiscard]] PayloadStatus encodePoseSnapshot(
+    const PoseSnapshotPayload& payload, ProtocolMessage& message) noexcept;
+[[nodiscard]] PayloadStatus decodePoseSnapshot(
+    const ProtocolMessage& message, PoseSnapshotPayload& payload) noexcept;
+[[nodiscard]] PayloadStatus encodeWallObservation(
+    const WallObservationPayload& payload, ProtocolMessage& message) noexcept;
+[[nodiscard]] PayloadStatus decodeWallObservation(
+    const ProtocolMessage& message, WallObservationPayload& payload) noexcept;
+
 }  // namespace aon::communication
