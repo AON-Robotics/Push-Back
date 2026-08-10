@@ -1,4 +1,5 @@
 #include "aon/navigation/path-follower.hpp"
+#include "aon/time/monotonic.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -105,6 +106,31 @@ double PathFollower::slew(double requested, double previous,
          std::clamp(requested - previous, -maximumChange, maximumChange);
 }
 
+bool PathFollower::recordProgress(double distanceErrorInches,
+                                  double headingErrorRadians,
+                                  std::uint32_t nowMs) noexcept {
+  const double absoluteHeadingError = std::abs(headingErrorRadians);
+  bool progressed = false;
+  if (!std::isfinite(bestDistanceInches_) ||
+      bestDistanceInches_ - distanceErrorInches >=
+          config_.minimumProgressInches) {
+    bestDistanceInches_ = distanceErrorInches;
+    progressed = true;
+  }
+  if (!std::isfinite(bestHeadingErrorRadians_) ||
+      bestHeadingErrorRadians_ - absoluteHeadingError >=
+          config_.minimumHeadingProgressRadians) {
+    bestHeadingErrorRadians_ = absoluteHeadingError;
+    progressed = true;
+  }
+  if (progressed) {
+    lastProgressAtMs_ = nowMs;
+    return true;
+  }
+  return !time::elapsedAtLeast(nowMs, lastProgressAtMs_,
+                               config_.blockedDwellMs);
+}
+
 FollowerOutput PathFollower::update(const FollowerEstimate& estimate,
                                     double dtSeconds,
                                     std::uint32_t nowMs) noexcept {
@@ -134,6 +160,15 @@ FollowerOutput PathFollower::update(const FollowerEstimate& estimate,
         std::abs(finalError) <= config_.finalHeadingToleranceRadians) {
       return stopped(FollowerStatus::Complete);
     }
+    if (!finalAlignmentStarted_) {
+      finalAlignmentStarted_ = true;
+      bestDistanceInches_ = std::numeric_limits<double>::infinity();
+      bestHeadingErrorRadians_ = std::numeric_limits<double>::infinity();
+      lastProgressAtMs_ = nowMs;
+    }
+    if (!recordProgress(distanceError, finalError, nowMs)) {
+      return stopped(FollowerStatus::Blocked);
+    }
     const double angular = std::clamp(config_.angularGain * finalError,
                                       -config_.maximumCommand,
                                       config_.maximumCommand);
@@ -150,15 +185,8 @@ FollowerOutput PathFollower::update(const FollowerEstimate& estimate,
   const double targetHeading = std::atan2(dx, dy);
   const double headingError =
       wrapRadians(targetHeading - estimate.pose.headingRadians);
-  if (bestDistanceInches_ - distanceError >= config_.minimumProgressInches ||
-      bestHeadingErrorRadians_ - std::abs(headingError) >=
-          config_.minimumHeadingProgressRadians ||
-      !std::isfinite(bestDistanceInches_) ||
-      !std::isfinite(bestHeadingErrorRadians_)) {
-    bestDistanceInches_ = distanceError;
-    bestHeadingErrorRadians_ = std::abs(headingError);
-    lastProgressAtMs_ = nowMs;
-  } else if (nowMs - lastProgressAtMs_ >= config_.blockedDwellMs) {
+  finalAlignmentStarted_ = false;
+  if (!recordProgress(distanceError, headingError, nowMs)) {
     return stopped(FollowerStatus::Blocked);
   }
 
@@ -196,6 +224,7 @@ void PathFollower::reset() noexcept {
   bestHeadingErrorRadians_ = 0.0;
   previousLeft_ = 0.0;
   previousRight_ = 0.0;
+  finalAlignmentStarted_ = false;
 }
 
 FollowerStatus PathFollower::status() const noexcept { return status_; }

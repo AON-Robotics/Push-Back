@@ -265,6 +265,34 @@ void turningProgressDoesNotLookLikeABlockedRobot() {
         FollowerStatus::Following);
 }
 
+void finalHeadingAlignmentMustKeepMakingProgress() {
+  using namespace aon::navigation;
+
+  Path path;
+  path.points[0] = {0.0, 0.0};
+  path.size = 1;
+  const PathFollowerConfig config{8.0, 30.0, 100.0, 1000.0, 1.0, 0.05,
+                                  2.0, 0.2, 3000, 500, 0.25, 0.1};
+
+  PathFollower stalled(config);
+  CHECK(stalled.start(path, 1.0, true, 0) == FollowerStatus::Following);
+  CHECK(stalled.update({{0.0, 0.0, 0.0}, 0.5, 0.02, true}, 0.02, 20).status ==
+        FollowerStatus::Following);
+  const FollowerOutput blocked =
+      stalled.update({{0.0, 0.0, 0.0}, 0.5, 0.02, true}, 0.02, 520);
+  CHECK(blocked.status == FollowerStatus::Blocked);
+  CHECK(blocked.leftCommand == 0.0 && blocked.rightCommand == 0.0);
+
+  PathFollower progressing(config);
+  CHECK(progressing.start(path, 1.0, true, 0) == FollowerStatus::Following);
+  CHECK(progressing.update({{0.0, 0.0, 0.0}, 0.5, 0.02, true}, 0.02, 20)
+            .status == FollowerStatus::Following);
+  CHECK(progressing.update({{0.0, 0.0, 0.3}, 0.5, 0.02, true}, 0.02, 300)
+            .status == FollowerStatus::Following);
+  CHECK(progressing.update({{0.0, 0.0, 0.3}, 0.5, 0.02, true}, 0.02, 520)
+            .status == FollowerStatus::Following);
+}
+
 }  // namespace
 
 int main() {
@@ -279,6 +307,7 @@ int main() {
   followerConsumesFusedPoseAndStopsAtTheGoal();
   followerFailsClosedForCancellationAndUnsafeLocalization();
   turningProgressDoesNotLookLikeABlockedRobot();
+  finalHeadingAlignmentMustKeepMakingProgress();
   std::cout << "navigation tests passed\n";
   return 0;
 }

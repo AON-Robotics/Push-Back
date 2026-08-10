@@ -71,6 +71,9 @@ class PathFollower {
   [[nodiscard]] FollowerOutput stopped(FollowerStatus status) noexcept;
   [[nodiscard]] double slew(double requested, double previous,
                             double dtSeconds) const noexcept;
+  [[nodiscard]] bool recordProgress(double distanceErrorInches,
+                                    double headingErrorRadians,
+                                    std::uint32_t nowMs) noexcept;
 
   PathFollowerConfig config_;
   Path path_{};
@@ -84,6 +87,7 @@ class PathFollower {
   double bestHeadingErrorRadians_ = 0.0;
   double previousLeft_ = 0.0;
   double previousRight_ = 0.0;
+  bool finalAlignmentStarted_ = false;
 };
 
 }  // namespace aon::navigation
