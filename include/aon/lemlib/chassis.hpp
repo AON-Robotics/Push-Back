@@ -1,5 +1,7 @@
 #pragma once
 
+#include "aon/core/task-start.hpp"
+
 namespace lemlib {
 class Chassis;
 }
@@ -19,7 +21,7 @@ void initializeChassis();
 bool localizationReady();
 
 /// Starts the authorized AON localization publisher. Repeated calls are safe.
-void startFusedLocalization();
+[[nodiscard]] core::TaskStartResult startFusedLocalization();
 
 /// Calibrates LemLib odometry and continuously displays its pose.
 /// This function never commands a motor.

@@ -29,6 +29,7 @@ struct LocalizationDiagnostics {
   std::uint32_t imuSensorErrors{0U};
   std::uint32_t gpsSensorErrors{0U};
   std::uint32_t numericalRejections{0U};
+  std::uint32_t snapshotLockTimeouts{0U};
   std::uint32_t resetCount{0U};
 };
 

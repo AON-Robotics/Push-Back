@@ -1,5 +1,7 @@
 #pragma once
 
+#include "aon/core/task-start.hpp"
+
 namespace aon::legacy_motion {
 
 /**
@@ -8,6 +10,6 @@ namespace aon::legacy_motion {
  * Repeated calls are safe. Once started, the task remains active until the
  * program restarts, so LemLib validation should run from a fresh boot.
  */
-void prepare();
+[[nodiscard]] core::TaskStartResult prepare();
 
 }  // namespace aon::legacy_motion

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <optional>
 
@@ -74,6 +75,7 @@ class Odometry {
   std::uint32_t generation_{0U};
   PublishedSnapshot published_{};
   pros::Mutex snapshotMutex_;
+  std::atomic<std::uint32_t> snapshotLockTimeouts_{0U};
 
   void recordDeadlineMiss();
   void publishCurrent(void (*publisher)(const Pose&));

@@ -13,14 +13,31 @@
 #include "aon/auton/actions.hpp"
 #include "aon/shadow/service.hpp"
 
+#include <cstdio>
+
 namespace aon::routines {
 
 namespace {
 
+bool prepareNativeLocalization() {
+  const core::TaskStartResult result = legacy_motion::prepare();
+  if (result == core::TaskStartResult::Started ||
+      result == core::TaskStartResult::AlreadyRunning) {
+    return true;
+  }
+  std::fprintf(stderr, "Native localization task failed to start\n");
+  drivetrain.stop();
+  intake.stop();
+  return false;
+}
+
 int runNativeRoutine(const char* name, void (*routine)()) {
   if (!aon::lemlib_integration::localizationReady()) return 0;
   aon::auton::startRoutine(name);
-  aon::legacy_motion::prepare();
+  if (!prepareNativeLocalization()) {
+    aon::auton::finishRoutine(false);
+    return 0;
+  }
   routine();
   drivetrain.stop();
   intake.stop();
@@ -87,7 +104,10 @@ int BlueRoutine3() {
 int SkillsRoutine1() {
   if (!aon::lemlib_integration::localizationReady()) return 0;
   aon::auton::startRoutine("Skills AUT1");
-  aon::legacy_motion::prepare();
+  if (!prepareNativeLocalization()) {
+    aon::auton::finishRoutine(false);
+    return 0;
+  }
 #if USING_BIG_ROBOT
   BigBotSkillsRoutine();
 #else

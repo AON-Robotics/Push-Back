@@ -145,9 +145,12 @@ void fusedLemLibModeIsPresentButAuthorizationGated() {
   CHECK(chassis.find("calibrate(false)") != std::string::npos);
   CHECK(chassis.find("runLocalizationLoop(publishFusedPose)") !=
         std::string::npos);
-  CHECK(chassisHeader.find("void startFusedLocalization()") !=
+  CHECK(chassisHeader.find("TaskStartResult startFusedLocalization()") !=
         std::string::npos);
   CHECK(legacy.find("startFusedLocalization()") != std::string::npos);
+  CHECK(chassis.find("get_state()") != std::string::npos);
+  CHECK(legacy.find("get_state()") != std::string::npos);
+  CHECK(count(chassis, "localizationBootReady.store(false);") >= 2U);
   CHECK(chassisHeader.find("bool localizationReady()") != std::string::npos);
   CHECK(chassis.find("localizationBootReady") != std::string::npos);
 

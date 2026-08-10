@@ -5,6 +5,7 @@
 #include "aon/constants.hpp"
 #include "aon/core/hardware.hpp"
 #include "aon/lemlib/drive-io.hpp"
+#include "aon/tools/timed-mutex-lock.hpp"
 #include "lemlib/api.hpp"
 #include "pros/imu.hpp"
 #include "pros/llemu.hpp"
@@ -18,6 +19,7 @@
 #include <cmath>
 #include <cstdint>
 #include <memory>
+#include <new>
 #include <vector>
 
 namespace aon::lemlib_integration {
@@ -281,29 +283,45 @@ void initializeChassis() {
   odometry.resetPose(0.0, 0.0, 0.0);
   publishFusedPose(odometry.getPose());
   localizationBootReady.store(true);
-  startFusedLocalization();
+  if (startFusedLocalization() == core::TaskStartResult::Failed) {
+    localizationBootReady.store(false);
+    std::fprintf(stderr, "AON localization task failed to start\n");
+    stopDrive();
+  }
 }
 
 bool localizationReady() {
   return localizationBootReady.load();
 }
 
-void startFusedLocalization() {
+core::TaskStartResult startFusedLocalization() {
   if (!aon::config::activeRobotConfig()
            .localization.fusedLemLibAuthorized) {
-    return;
+    return core::TaskStartResult::Disabled;
   }
-  if (!localizationReady()) return;
+  if (!localizationReady()) return core::TaskStartResult::Failed;
 
   static pros::Mutex taskMutex;
   static std::unique_ptr<pros::Task> localizationTask;
-  taskMutex.take();
-  if (!localizationTask) {
-    localizationTask = std::make_unique<pros::Task>([] {
+  TimedMutexLock lock(taskMutex, 2U);
+  if (!lock.ownsLock()) return core::TaskStartResult::Failed;
+  if (localizationTask &&
+      core::isLiveTaskState(localizationTask->get_state())) {
+    return core::TaskStartResult::AlreadyRunning;
+  }
+  localizationTask.reset();
+  try {
+    auto candidate = std::make_unique<pros::Task>([] {
       aon::core::hardware().odometry.runLocalizationLoop(publishFusedPose);
     }, "AON Fused Localization");
+    if (!core::isLiveTaskState(candidate->get_state())) {
+      return core::TaskStartResult::Failed;
+    }
+    localizationTask = std::move(candidate);
+  } catch (const std::bad_alloc&) {
+    return core::TaskStartResult::Failed;
   }
-  taskMutex.give();
+  return core::TaskStartResult::Started;
 }
 
 void startSensorTest() {

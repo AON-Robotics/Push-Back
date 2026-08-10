@@ -3,14 +3,17 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 
 #include "aon/constants.hpp"
+#include "aon/tools/timed-mutex-lock.hpp"
 #include "pros/error.h"
 
 namespace aon {
 namespace {
 
 constexpr double kInchesPerMeter = 39.37007874015748;
+constexpr std::uint32_t kSnapshotLockTimeoutMs = 2U;
 
 Pose publicPose(localization::EstimatorPose pose) noexcept {
   return {pose.xInches, pose.yInches,
@@ -53,17 +56,23 @@ Odometry::Odometry(const config::LocalizationConfig& config,
 }
 
 Pose Odometry::getPose() {
-  snapshotMutex_.take();
-  const Pose pose = published_.fusedPose;
-  snapshotMutex_.give();
-  return pose;
+  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+  if (!lock.ownsLock()) {
+    ++snapshotLockTimeouts_;
+    const double invalid = std::numeric_limits<double>::quiet_NaN();
+    return {invalid, invalid, invalid};
+  }
+  return published_.fusedPose;
 }
 
 Pose Odometry::rawOdometryPose() {
-  snapshotMutex_.take();
-  const Pose pose = published_.rawPose;
-  snapshotMutex_.give();
-  return pose;
+  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+  if (!lock.ownsLock()) {
+    ++snapshotLockTimeouts_;
+    const double invalid = std::numeric_limits<double>::quiet_NaN();
+    return {invalid, invalid, invalid};
+  }
+  return published_.rawPose;
 }
 
 double Odometry::getX() { return getPose().x; }
@@ -78,10 +87,14 @@ Vector Odometry::getPosition() {
 }
 
 localization::LocalizationDiagnostics Odometry::getDiagnostics() {
-  snapshotMutex_.take();
-  const localization::LocalizationDiagnostics diagnostics =
-      published_.diagnostics;
-  snapshotMutex_.give();
+  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+  if (!lock.ownsLock()) {
+    localization::LocalizationDiagnostics diagnostics{};
+    diagnostics.snapshotLockTimeouts = ++snapshotLockTimeouts_;
+    return diagnostics;
+  }
+  localization::LocalizationDiagnostics diagnostics = published_.diagnostics;
+  diagnostics.snapshotLockTimeouts = snapshotLockTimeouts_.load();
   return diagnostics;
 }
 
@@ -100,7 +113,11 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   const localization::EstimatorPose requested{
       x, y, localization::wrapRadians(localization::radians(thetaDegrees))};
 
-  snapshotMutex_.take();
+  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+  if (!lock.ownsLock()) {
+    ++snapshotLockTimeouts_;
+    return;
+  }
   ++generation_;
   wheelBaselines_ = {
       validRotationReading(leftReading)
@@ -133,9 +150,9 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   diagnostics.rawPose = requested;
   diagnostics.fusedPose = requested;
   diagnostics.covariance = ekf_.covarianceDiagonal();
+  diagnostics.snapshotLockTimeouts = snapshotLockTimeouts_.load();
   diagnostics.resetCount = published_.diagnostics.resetCount + 1U;
   published_ = {publicPose(requested), publicPose(requested), diagnostics};
-  snapshotMutex_.give();
 }
 
 void Odometry::update() {
@@ -144,20 +161,53 @@ void Odometry::update() {
 
   // Capture reset-sensitive state before sampling hardware. A reset that
   // overlaps this update changes generation_ and discards the whole sample.
-  snapshotMutex_.take();
-  const std::uint32_t generation = generation_;
-  localization::EstimatorPose candidateRawPose = rawPose_;
-  localization::Ekf candidateEkf = ekf_;
-  localization::GpsGate candidateGpsGate = gpsGate_;
-  localization::GpsFreshnessTracker candidateGpsFreshness = gpsFreshness_;
+  struct UpdateState {
+    std::uint32_t generation;
+    localization::EstimatorPose rawPose;
+    localization::Ekf ekf;
+    localization::GpsGate gpsGate;
+    localization::GpsFreshnessTracker gpsFreshness;
+    localization::VelocityEstimator velocityEstimator;
+    localization::WheelDistances wheelBaselines;
+    double imuFieldOffsetRadians;
+    bool imuFieldOffsetValid;
+    localization::LocalizationDiagnostics diagnostics;
+    std::uint32_t previousUpdateMs;
+  };
+  const std::optional<UpdateState> captured = [&]()
+      -> std::optional<UpdateState> {
+    TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+    if (!lock.ownsLock()) return std::nullopt;
+    return UpdateState{generation_,
+                       rawPose_,
+                       ekf_,
+                       gpsGate_,
+                       gpsFreshness_,
+                       velocityEstimator_,
+                       wheelBaselines_,
+                       imuFieldOffsetRadians_,
+                       imuFieldOffsetValid_,
+                       published_.diagnostics,
+                       lastUpdateMs_};
+  }();
+  if (!captured) {
+    ++snapshotLockTimeouts_;
+    return;
+  }
+  const std::uint32_t generation = captured->generation;
+  localization::EstimatorPose candidateRawPose = captured->rawPose;
+  localization::Ekf candidateEkf = captured->ekf;
+  localization::GpsGate candidateGpsGate = captured->gpsGate;
+  localization::GpsFreshnessTracker candidateGpsFreshness =
+      captured->gpsFreshness;
   localization::VelocityEstimator candidateVelocityEstimator =
-      velocityEstimator_;
-  localization::WheelDistances candidateBaselines = wheelBaselines_;
-  double candidateImuOffset = imuFieldOffsetRadians_;
-  bool candidateImuOffsetValid = imuFieldOffsetValid_;
-  localization::LocalizationDiagnostics diagnostics = published_.diagnostics;
-  const std::uint32_t previousUpdateMs = lastUpdateMs_;
-  snapshotMutex_.give();
+      captured->velocityEstimator;
+  localization::WheelDistances candidateBaselines =
+      captured->wheelBaselines;
+  double candidateImuOffset = captured->imuFieldOffsetRadians;
+  bool candidateImuOffsetValid = captured->imuFieldOffsetValid;
+  localization::LocalizationDiagnostics diagnostics = captured->diagnostics;
+  const std::uint32_t previousUpdateMs = captured->previousUpdateMs;
 
   const std::int32_t leftReading = encoderLeft_.get_position();
   const std::int32_t rightReading = encoderRight_.get_position();
@@ -297,8 +347,13 @@ void Odometry::update() {
   diagnostics.maximumExecutionMicroseconds =
       std::max(diagnostics.maximumExecutionMicroseconds,
                diagnostics.executionMicroseconds);
+  diagnostics.snapshotLockTimeouts = snapshotLockTimeouts_.load();
 
-  snapshotMutex_.take();
+  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+  if (!lock.ownsLock()) {
+    ++snapshotLockTimeouts_;
+    return;
+  }
   if (generation_ == generation) {
     rawPose_ = candidateRawPose;
     ekf_ = candidateEkf;
@@ -312,7 +367,6 @@ void Odometry::update() {
     published_ = {publicPose(candidateRawPose),
                   publicPose(candidateEkf.pose()), diagnostics};
   }
-  snapshotMutex_.give();
 }
 
 bool Odometry::calibrateImu(std::uint32_t timeoutMs) {
@@ -346,18 +400,24 @@ void Odometry::runLocalizationLoop(void (*publisher)(const Pose&)) {
 
 void Odometry::publishCurrent(void (*publisher)(const Pose&)) {
   if (publisher == nullptr) return;
-  snapshotMutex_.take();
+  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+  if (!lock.ownsLock()) {
+    ++snapshotLockTimeouts_;
+    return;
+  }
   const Pose publicPose = published_.fusedPose;
   // Serialize publication with resetPose so an old snapshot cannot reach the
   // path follower after a newer reset has already been published.
   publisher(publicPose);
-  snapshotMutex_.give();
 }
 
 void Odometry::recordDeadlineMiss() {
-  snapshotMutex_.take();
+  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
+  if (!lock.ownsLock()) {
+    ++snapshotLockTimeouts_;
+    return;
+  }
   ++published_.diagnostics.deadlineMisses;
-  snapshotMutex_.give();
 }
 
 pros::Rotation& Odometry::leftTrackingSensor() noexcept {
