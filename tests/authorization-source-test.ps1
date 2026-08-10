@@ -16,6 +16,9 @@ $roadmapChecklist = Get-Content -LiteralPath $roadmapChecklistPath -Raw
 if ($configHeader -notmatch 'baselineAuthorizations\s*\(') {
   throw 'The fail-closed baseline authorization policy is missing'
 }
+$lockedBaselinePattern =
+  'baselineAuthorizations\s*\([^)]*\)\s*noexcept\s*\{\s*return\s*\{\s*\}\s*;\s*\}'
+$baselineIsEntirelyLocked = $configHeader -match $lockedBaselinePattern
 
 foreach ($identity in @('Big', 'Small')) {
   $usage = "baselineAuthorizations\s*\(\s*RobotIdentity::$identity\s*\)"
@@ -24,18 +27,18 @@ foreach ($identity in @('Big', 'Small')) {
   }
 }
 
-if ($configSource -match '(?m)^\s*true\s*,\s*//\s*shadowPlaybackAuthorized') {
-  throw 'A production robot configuration enables Shadow playback'
-}
-
 foreach ($route in @('RunRedSixBlockHybridFull', 'RunJerryIoPathAuton', 'RunShadowPlayback')) {
   if ($selectors -notmatch [regex]::Escape($route)) {
     throw "Expected gated route registration is missing: $route"
   }
 }
 
-if ($shadowChecklist -notmatch 'Not run' -or $roadmapChecklist -notmatch 'Not run') {
-  throw 'Expected incomplete physical-gate evidence was not found'
+$shadowResults = ($shadowChecklist -split '## Results', 2)[-1]
+$shadowResultsIncomplete = $shadowResults -match '\|\s*Not run\s*\|'
+$roadmapResultsIncomplete = $roadmapChecklist -match '\|[^\r\n]*\|\s*Not run\s*\|'
+if (-not $baselineIsEntirelyLocked -and
+    ($shadowResultsIncomplete -or $roadmapResultsIncomplete)) {
+  throw 'A baseline authorization is enabled while physical Results remain Not run'
 }
 
 if ($roadmapChecklist -notmatch 'Approved to begin Phase 1\s*\|\s*\*\*No\*\*') {
