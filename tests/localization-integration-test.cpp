@@ -58,6 +58,10 @@ void odometryExposesOneCoherentInterface() {
         std::string::npos);
   CHECK(count(combined, "pros::Mutex") == 1U);
   CHECK(source.find("encoderBack_.get_position()") != std::string::npos);
+  CHECK(header.find("localization::VelocityEstimator velocityEstimator_") !=
+        std::string::npos);
+  CHECK(source.find("candidateVelocityEstimator.update(") !=
+        std::string::npos);
 
   const std::size_t getter = source.find("Pose Odometry::getPose()");
   CHECK(getter != std::string::npos);

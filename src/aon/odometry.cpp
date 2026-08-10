@@ -118,6 +118,7 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
                : 0.0;
   rawPose_ = requested;
   ekf_.reset(requested);
+  velocityEstimator_.reset();
   gpsGate_.reset();
   lastUpdateMs_ = pros::millis();
 
@@ -178,12 +179,20 @@ void Odometry::update() {
   localization::EstimatorPose candidateRawPose = rawPose_;
   localization::Ekf candidateEkf = ekf_;
   localization::GpsGate candidateGpsGate = gpsGate_;
+  localization::VelocityEstimator candidateVelocityEstimator =
+      velocityEstimator_;
   localization::WheelDistances candidateBaselines = wheelBaselines_;
   double candidateImuOffset = imuFieldOffsetRadians_;
   bool candidateImuOffsetValid = imuFieldOffsetValid_;
   localization::LocalizationDiagnostics diagnostics = published_.diagnostics;
   const std::uint32_t previousUpdateMs = lastUpdateMs_;
   snapshotMutex_.give();
+
+  const double dtSeconds = previousUpdateMs == 0U
+                               ? static_cast<double>(config_.loopPeriodMs) /
+                                     1000.0
+                               : static_cast<double>(nowMs - previousUpdateMs) /
+                                     1000.0;
 
   const localization::WheelDeltas wheelDeltas{
       currentWheels.leftInches - candidateBaselines.leftInches,
@@ -209,6 +218,13 @@ void Odometry::update() {
   const localization::LocalMotion motion =
       localization::localMotion(wheelDeltas, config_.geometry);
   if (std::isfinite(motion.headingRadians)) {
+    const localization::VelocityUpdateResult velocityResult =
+        candidateVelocityEstimator.update(
+            motion, candidateEkf.pose().headingRadians, dtSeconds);
+    if (velocityResult == localization::VelocityUpdateResult::InvalidMotion ||
+        velocityResult == localization::VelocityUpdateResult::InvalidConfig) {
+      ++diagnostics.numericalRejections;
+    }
     const localization::EstimatorPose propagated =
         localization::propagatePose(candidateRawPose, motion);
     if (std::isfinite(propagated.xInches)) {
@@ -274,11 +290,8 @@ void Odometry::update() {
   diagnostics.timestampMs = nowMs;
   diagnostics.wheelDistances = currentWheels;
   diagnostics.covariance = candidateEkf.covarianceDiagonal();
-  diagnostics.dtSeconds = previousUpdateMs == 0U
-                              ? static_cast<double>(config_.loopPeriodMs) /
-                                    1000.0
-                              : static_cast<double>(nowMs - previousUpdateMs) /
-                                    1000.0;
+  diagnostics.velocity = candidateVelocityEstimator.velocity();
+  diagnostics.dtSeconds = dtSeconds;
   diagnostics.executionMicroseconds = pros::micros() - executionStartUs;
 
   snapshotMutex_.take();
@@ -286,6 +299,7 @@ void Odometry::update() {
     rawPose_ = candidateRawPose;
     ekf_ = candidateEkf;
     gpsGate_ = candidateGpsGate;
+    velocityEstimator_ = candidateVelocityEstimator;
     wheelBaselines_ = candidateBaselines;
     imuFieldOffsetRadians_ = candidateImuOffset;
     imuFieldOffsetValid_ = candidateImuOffsetValid;

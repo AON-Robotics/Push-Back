@@ -48,6 +48,7 @@ void diagnosticsAreFixedValueState() {
   CHECK(diagnostics.deadlineMisses == 0U);
   CHECK(diagnostics.numericalRejections == 0U);
   CHECK(std::isfinite(diagnostics.dtSeconds));
+  CHECK(std::isfinite(diagnostics.velocity.xInchesPerSecond));
 }
 
 void knownBigRobotReversalMismatchRemainsVisible() {
@@ -61,6 +62,7 @@ void diagnosticsCanBeFormattedOnlyWhenRequested() {
   diagnostics.timestampMs = 42U;
   diagnostics.rawPose = {1.0, 2.0, 0.25};
   diagnostics.fusedPose = {1.5, 2.5, 0.2};
+  diagnostics.velocity = {3.0, 4.0, 0.5};
   diagnostics.gpsPositionAccepted = true;
 
   constexpr const char* kOutputPath =
@@ -74,6 +76,8 @@ void diagnosticsCanBeFormattedOnlyWhenRequested() {
   char line[512]{};
   CHECK(std::fgets(line, sizeof(line), output) != nullptr);
   CHECK(std::string(line).find("time_ms,raw_x,raw_y,raw_theta") == 0U);
+  CHECK(std::string(line).find("velocity_x,velocity_y,angular_velocity") !=
+        std::string::npos);
   CHECK(std::fgets(line, sizeof(line), output) != nullptr);
   CHECK(std::string(line).find("42,1.000000,2.000000") == 0U);
   std::fclose(output);

@@ -26,6 +26,7 @@ inline void WriteLocalizationCsvHeader(std::FILE* output) noexcept {
   std::fprintf(
       output,
       "time_ms,raw_x,raw_y,raw_theta,fused_x,fused_y,fused_theta,"
+      "velocity_x,velocity_y,angular_velocity,"
       "imu_theta,imu_valid,gps_x,gps_y,gps_theta,gps_valid,gps_reason,"
       "p_x,p_y,p_theta,dt_s,execution_us,deadline_misses\n");
 }
@@ -38,13 +39,16 @@ inline void WriteLocalizationCsvRow(
   // performs terminal or SD-card I/O while holding its snapshot cadence.
   std::fprintf(
       output,
-      "%lu,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%u,%.6f,%.6f,%.6f,"
+      "%lu,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%u,%.6f,%.6f,%.6f,"
       "%u,%u,%.9f,%.9f,%.9f,%.6f,%lu,%lu\n",
       static_cast<unsigned long>(diagnostics.timestampMs),
       diagnostics.rawPose.xInches, diagnostics.rawPose.yInches,
       localization::degrees(diagnostics.rawPose.headingRadians),
       diagnostics.fusedPose.xInches, diagnostics.fusedPose.yInches,
       localization::degrees(diagnostics.fusedPose.headingRadians),
+      diagnostics.velocity.xInchesPerSecond,
+      diagnostics.velocity.yInchesPerSecond,
+      diagnostics.velocity.angularRadiansPerSecond,
       localization::degrees(diagnostics.imu.headingRadians),
       diagnostics.imu.valid ? 1U : 0U, diagnostics.gps.xInches,
       diagnostics.gps.yInches,

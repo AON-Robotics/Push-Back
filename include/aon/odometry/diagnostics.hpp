@@ -4,6 +4,7 @@
 
 #include "aon/odometry/ekf.hpp"
 #include "aon/odometry/sensor-measurements.hpp"
+#include "aon/localization/velocity-estimator.hpp"
 
 namespace aon::localization {
 
@@ -11,6 +12,7 @@ struct LocalizationDiagnostics {
   std::uint32_t timestampMs{0U};
   EstimatorPose rawPose{};
   EstimatorPose fusedPose{};
+  Velocity2D velocity{};
   WheelDistances wheelDistances{};
   ImuMeasurement imu{};
   GpsMeasurement gps{};

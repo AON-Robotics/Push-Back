@@ -9,6 +9,7 @@
 #include "aon/odometry/ekf.hpp"
 #include "aon/odometry/pose-estimator.hpp"
 #include "aon/odometry/sensor-measurements.hpp"
+#include "aon/localization/velocity-estimator.hpp"
 #include "aon/tools/vector.hpp"
 #include "api.h"
 
@@ -64,6 +65,7 @@ class Odometry {
   localization::EstimatorPose rawPose_{};
   localization::Ekf ekf_;
   localization::GpsGate gpsGate_;
+  localization::VelocityEstimator velocityEstimator_{{0.35, 0.001, 0.2}};
   localization::WheelDistances wheelBaselines_{};
   double imuFieldOffsetRadians_{0.0};
   bool imuFieldOffsetValid_{false};
