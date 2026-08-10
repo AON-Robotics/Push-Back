@@ -10,17 +10,17 @@ class DifferentialDrive : public Drivetrain {
   SmartMotorGroup rightMotors;
 
  public:
-  DifferentialDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
-            const std::initializer_list<okapi::Motor> &rightPorts = {0},
-            Pose pose = Pose(),
-            std::unique_ptr<Odometry> odometry = nullptr,
+  DifferentialDrive(const std::initializer_list<okapi::Motor> &leftPorts,
+            const std::initializer_list<okapi::Motor> &rightPorts,
+            Pose pose,
+            Odometry& odometry,
             SpeedFactors speedFactors = SpeedFactors(),
             std::unique_ptr<MotionProfile> yProfile = nullptr,
             std::unique_ptr<MotionProfile> thetaProfile = nullptr
           )
       : leftMotors(leftPorts, 0, MAX_ACCEL),
         rightMotors(rightPorts, 0, MAX_ACCEL),
-        Drivetrain(pose, std::move(odometry), speedFactors, nullptr, std::move(yProfile), std::move(thetaProfile)) {}
+        Drivetrain(pose, odometry, speedFactors, nullptr, std::move(yProfile), std::move(thetaProfile)) {}
 
   /// @brief Drives the robot using tank control, mapping left and right inputs directly to each side of the drivetrain
   /// @param left The \b RPM to send to the left-side motors (positive is forward)

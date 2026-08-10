@@ -156,17 +156,18 @@ void HDrive::follow(const std::vector<Pose>& path) {
   Timer timer;
   timer.start(timeoutMs);
 
-  while (odometry->getPose().distanceTo(path.back()) > 2.0 && !timer.isCompleted()) {
+  while (odometry.getPose().distanceTo(path.back()) > 2.0 && !timer.isCompleted()) {
     now = pros::micros() / 1E6;
     dt = now - lastTime;
-    output = controller.follow(path, this->odometry->getPose(), dt);
+    output = controller.follow(path, this->odometry.getPose(), dt);
     lastTime = now;
     this->tank(output.first, output.second);
 
-    pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
+    const Pose currentPose = odometry.getPose();
+    pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", currentPose.x, currentPose.y, currentPose.theta);
     pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", path.back().x, path.back().y, path.back().theta);
-    pros::lcd::print(2, "Distance: %.2f", odometry->getPose().distanceTo(path.back()));
-    pros::c::controller_print(pros::E_CONTROLLER_MASTER, 0, 0, "Distance: %.2f", odometry->getPose().distanceTo(path.back()));
+    pros::lcd::print(2, "Distance: %.2f", currentPose.distanceTo(path.back()));
+    pros::c::controller_print(pros::E_CONTROLLER_MASTER, 0, 0, "Distance: %.2f", currentPose.distanceTo(path.back()));
 
     if (output.first == 0 && output.second == 0) { break; }
 

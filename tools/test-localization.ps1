@@ -38,3 +38,15 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {
   throw 'localization config tests failed'
 }
+
+& $compiler -std=c++17 -Wall -Wextra -Werror `
+  tests\localization-integration-test.cpp `
+  -o bin\host-tests\localization-integration-test.exe
+if ($LASTEXITCODE -ne 0) {
+  throw 'localization integration compile failed'
+}
+
+& '.\bin\host-tests\localization-integration-test.exe'
+if ($LASTEXITCODE -ne 0) {
+  throw 'localization integration tests failed'
+}

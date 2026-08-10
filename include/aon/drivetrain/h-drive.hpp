@@ -11,11 +11,11 @@ class HDrive : public Drivetrain {
   SmartMotorGroup midMotors;
 
  public:
-  HDrive(const std::initializer_list<okapi::Motor> &leftPorts = {0},
-         const std::initializer_list<okapi::Motor> &rightPorts = {0},
-         const std::initializer_list<okapi::Motor> &midPorts = {0},
-         Pose pose = Pose(),
-         std::unique_ptr<Odometry> odometry = nullptr,
+  HDrive(const std::initializer_list<okapi::Motor> &leftPorts,
+         const std::initializer_list<okapi::Motor> &rightPorts,
+         const std::initializer_list<okapi::Motor> &midPorts,
+         Pose pose,
+         Odometry& odometry,
          SpeedFactors speedFactors = SpeedFactors(),
          std::unique_ptr<MotionProfile> xProfile = nullptr,
          std::unique_ptr<MotionProfile> yProfile = nullptr,
@@ -24,7 +24,7 @@ class HDrive : public Drivetrain {
       : leftMotors(leftPorts),
         rightMotors(rightPorts),
         midMotors(midPorts),
-        Drivetrain(pose, std::move(odometry), speedFactors, std::move(xProfile), std::move(yProfile), std::move(thetaProfile)) {}
+        Drivetrain(pose, odometry, speedFactors, std::move(xProfile), std::move(yProfile), std::move(thetaProfile)) {}
 
   /// @brief Configures the general settings for the motors
   /// @param brakeMode The braking paradigm we will use, usually `holding` for

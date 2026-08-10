@@ -12,12 +12,12 @@ class XDrive : public Drivetrain {
   SmartMotorGroup backRightMotors;
 
  public:
-  XDrive(const std::initializer_list<okapi::Motor> &FLPorts = {0},
-         const std::initializer_list<okapi::Motor> &FRPorts = {0},
-         const std::initializer_list<okapi::Motor> &BLPorts = {0},
-         const std::initializer_list<okapi::Motor> &BRPorts = {0},
-         Pose pose = Pose(),
-         std::unique_ptr<Odometry> odometry = nullptr,
+  XDrive(const std::initializer_list<okapi::Motor> &FLPorts,
+         const std::initializer_list<okapi::Motor> &FRPorts,
+         const std::initializer_list<okapi::Motor> &BLPorts,
+         const std::initializer_list<okapi::Motor> &BRPorts,
+         Pose pose,
+         Odometry& odometry,
          SpeedFactors speedFactors = SpeedFactors(),
          std::unique_ptr<MotionProfile> xProfile = nullptr,
          std::unique_ptr<MotionProfile> yProfile = nullptr,
@@ -27,7 +27,7 @@ class XDrive : public Drivetrain {
         frontRightMotors(FRPorts),
         backLeftMotors(BLPorts),
         backRightMotors(BRPorts),
-        Drivetrain(pose, std::move(odometry), speedFactors, std::move(xProfile), std::move(yProfile), std::move(thetaProfile)) {}
+        Drivetrain(pose, odometry, speedFactors, std::move(xProfile), std::move(yProfile), std::move(thetaProfile)) {}
 
   /// @brief Moves all motors the same `rpm` to move sideways
   /// @param rpm The speed in which to move all motors in \b rpm (positive is right and negative is left)

@@ -1,109 +1,75 @@
 #pragma once
 
-#ifndef AON_SENSING_ODOMETRY_HPP_
-#define AON_SENSING_ODOMETRY_HPP_
+#include <cstdint>
+#include <optional>
 
-#include <cmath>
-#include <iostream>
-#include "../constants.hpp"
-#include "../../api.h"
-#if GYRO_ENABLED
-#include "../compat/okapi.hpp"
-#endif
-#include "../tools/vector.hpp"
-#include "../math/pose.hpp"
-
+#include "aon/config/robot-config.hpp"
+#include "aon/math/pose.hpp"
+#include "aon/odometry/diagnostics.hpp"
+#include "aon/odometry/ekf.hpp"
+#include "aon/odometry/pose-estimator.hpp"
+#include "aon/odometry/sensor-measurements.hpp"
+#include "aon/tools/vector.hpp"
+#include "api.h"
 
 namespace aon {
 
-    /**
-     * \struct  ENCODER 
-     *
-     * \brief Store encoder data from current and previous odometry
-     * iterations.
-     * */
-    struct ENCODER {
-        double currentValue;
-        double prevValue;
-        double delta;
-        double currentDistance;
-        double previousDistance;
-        double deltaDistance;
+class Odometry {
+ public:
+  Odometry(const config::LocalizationConfig& config, std::int8_t leftPort,
+           std::int8_t rightPort, std::int8_t backPort,
+           std::int8_t imuPort);
+  Odometry(const Odometry&) = delete;
+  Odometry& operator=(const Odometry&) = delete;
 
-    };
-    /**
-     * \struct GYRO
-     *
-     * \brief Store gyro data from current and previous odometry
-     * iterations.
-     * */
-    struct GYRO {
-        double currentDegrees;
-        double prevDegrees;
-        double currentRadians;
-        double deltaRadians;
-        double deltaDegrees;
+  Pose getPose();
+  Pose rawOdometryPose();
+  double getX();
+  double getY();
+  double getDegrees();
+  Vector getPosition();
+  localization::LocalizationDiagnostics getDiagnostics();
 
-    };
+  void resetPose(double x, double y, double thetaDegrees);
+  void update();
 
-    class Odometry {
+  // IMU calibration is a boot operation. Runtime pose resets only change the
+  // field offset and therefore never impose a multi-second autonomous pause.
+  bool calibrateImu(std::uint32_t timeoutMs = 3000U);
+  void initialize();
 
-    private:
-        double deltaTheta;
-        Vector deltaDlocal;
-        Angle orientation;
-        Vector position;
-        Vector changeWeb;
-        const double conversionFactor;
+  // Legacy motion code still needs direct cumulative sensor travel. These
+  // references do not transfer ownership and will also serve the LemLib adapter.
+  pros::Rotation& leftTrackingSensor() noexcept;
+  pros::Rotation& rightTrackingSensor() noexcept;
+  pros::Rotation& backTrackingSensor() noexcept;
+  pros::Imu& imuSensor() noexcept;
 
-        ENCODER encoderBack_data;
-        ENCODER encoderRight_data;
-        ENCODER encoderLeft_data;
-        GYRO gyro_data;
+ private:
+  struct PublishedSnapshot {
+    Pose rawPose{};
+    Pose fusedPose{};
+    localization::LocalizationDiagnostics diagnostics{};
+  };
 
+  config::LocalizationConfig config_;
+  double distancePerCentidegree_;
+  pros::Rotation encoderLeft_;
+  pros::Rotation encoderRight_;
+  pros::Rotation encoderBack_;
+  pros::Imu imu_;
+  std::optional<pros::Gps> gps_;
 
-        pros::Mutex p_mutex;
-        pros::Mutex orientation_mutex;
+  localization::EstimatorPose rawPose_{};
+  localization::Ekf ekf_;
+  localization::GpsGate gpsGate_;
+  localization::WheelDistances wheelBaselines_{};
+  double imuFieldOffsetRadians_{0.0};
+  bool imuFieldOffsetValid_{false};
+  std::uint32_t lastUpdateMs_{0U};
+  std::uint32_t generation_{0U};
+  PublishedSnapshot published_{};
+  pros::Mutex snapshotMutex_;
+};
 
-    public: 
-        Odometry(short left, short right, short back, short gps, short gyro);
-        Odometry(const Odometry& other);
-
-        double getX();
-        double getY();
-
-        Vector getPosition();
-        void SetPosition(double x, double y);
-
-        double getDegrees();
-        void setDegrees(double degrees);
-
-        double getRadians();
-        void setRadians(double radians);
-
-        // MAIN functions
-        void resetInitial();
-        void initialize();
-        void update();
-        void resetCurrent(double x, double y, double theta);
-        Vector gpsPosition();
-        Pose getPose();
-
-
-        //Debugging/Testing
-        void debug();
-
-        pros::Rotation encoderRight;
-        pros::Rotation encoderLeft;//was in private 
-        pros::Rotation encoderBack;
-        pros::Gps gps;
-
-        #if GYRO_ENABLED
-        pros::Imu gyroscope;
-        #endif
-
-    
-
-    };
-}
-#endif
+}  // namespace aon

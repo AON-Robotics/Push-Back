@@ -45,20 +45,21 @@ void DifferentialDrive::goToPose(const Pose& pose) {
   double lastTime = now;
 
   // Generous timeout
-  const uint32_t timeoutMs = (this->odometry->getPose().distanceTo(pose)) * 1E3;
+  const uint32_t timeoutMs = (this->odometry.getPose().distanceTo(pose)) * 1E3;
   Timer timer;
   timer.start(timeoutMs);
-  while (odometry->getPose().distanceTo(pose) > 2.0 && !timer.isCompleted()){
+  while (odometry.getPose().distanceTo(pose) > 2.0 && !timer.isCompleted()){
     now = pros::micros() / 1E6;
     dt = now - lastTime;
-    output = controller.go(pose, this->odometry->getPose(), dt);
+    output = controller.go(pose, this->odometry.getPose(), dt);
     lastTime = now;
     this->tank(output.first, output.second);
 
-    pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", odometry->getX(), odometry->getY(), odometry->getDegrees());
+    const Pose currentPose = odometry.getPose();
+    pros::lcd::print(0, "Current: Pose(%.2f, %.2f, %.2f)", currentPose.x, currentPose.y, currentPose.theta);
     pros::lcd::print(1, "Target: Pose(%.2f, %.2f, %.2f)", pose.x, pose.y, pose.theta);
-    pros::lcd::print(2, "Distance: %.2f", odometry->getPose().distanceTo(pose));
-    pros::c::controller_print(pros::E_CONTROLLER_MASTER, 0, 0, "Distance: %.2f", odometry->getPose().distanceTo(pose));
+    pros::lcd::print(2, "Distance: %.2f", currentPose.distanceTo(pose));
+    pros::c::controller_print(pros::E_CONTROLLER_MASTER, 0, 0, "Distance: %.2f", currentPose.distanceTo(pose));
 
     if (output.first == 0 && output.second == 0) { break; }
 
