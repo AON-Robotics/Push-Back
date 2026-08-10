@@ -124,7 +124,6 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   rawPose_ = requested;
   ekf_.reset(requested);
   velocityEstimator_.reset();
-  wallObservationAdapter_.reset();
   gpsGate_.reset();
   gpsFreshness_.reset();
   lastUpdateMs_ = pros::millis();
@@ -137,27 +136,6 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   diagnostics.resetCount = published_.diagnostics.resetCount + 1U;
   published_ = {publicPose(requested), publicPose(requested), diagnostics};
   snapshotMutex_.give();
-}
-
-localization::WallCorrectionResult Odometry::applyWallObservation(
-    const lidar::WallObservation& observation, double maximumNis) {
-  if (!config_.fusedNavigationAuthorized) {
-    return localization::WallCorrectionResult::Unauthorized;
-  }
-  const std::uint32_t nowMs = pros::millis();
-  snapshotMutex_.take();
-  const localization::WallCorrectionResult result =
-      wallObservationAdapter_.apply(ekf_, observation, maximumNis, nowMs);
-  if (result == localization::WallCorrectionResult::Accepted) {
-    ++generation_;
-    const localization::EstimatorPose corrected = ekf_.pose();
-    published_.fusedPose = publicPose(corrected);
-    published_.diagnostics.fusedPose = corrected;
-    published_.diagnostics.covariance = ekf_.covarianceDiagonal();
-    published_.diagnostics.timestampMs = nowMs;
-  }
-  snapshotMutex_.give();
-  return result;
 }
 
 void Odometry::update() {
