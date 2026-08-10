@@ -35,6 +35,18 @@ void onlyAnEntirelyLockedSnapshotIsSafeBeforeValidation() {
   enabled = locked;
   enabled.jerryIoPath = true;
   CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.gpsHardware = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.gpsHeadingFusion = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.fusedLemLib = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.fusedNavigation = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
 }
 
 void bothRobotBaselinesKeepEveryPhysicalGateLocked() {
@@ -43,6 +55,10 @@ void bothRobotBaselinesKeepEveryPhysicalGateLocked() {
   const auto small = aon::config::baselineAuthorizations(RobotIdentity::Small);
   const auto big = aon::config::baselineAuthorizations(RobotIdentity::Big);
   CHECK(!small.shadowPlayback);
+  CHECK(!small.gpsHardware);
+  CHECK(!small.gpsHeadingFusion);
+  CHECK(!small.fusedLemLib);
+  CHECK(!small.fusedNavigation);
   CHECK(aon::config::safeForUnvalidatedBaseline(small));
   CHECK(aon::config::safeForUnvalidatedBaseline(big));
 }

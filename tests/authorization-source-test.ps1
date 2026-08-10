@@ -16,6 +16,16 @@ $roadmapChecklist = Get-Content -LiteralPath $roadmapChecklistPath -Raw
 if ($configHeader -notmatch 'baselineAuthorizations\s*\(') {
   throw 'The fail-closed baseline authorization policy is missing'
 }
+
+foreach ($mapping in @(
+    'config\.localization\.gps\.enabled',
+    'config\.localization\.gps\.headingUpdateEnabled',
+    'config\.localization\.fusedLemLibAuthorized',
+    'config\.localization\.fusedNavigationAuthorized')) {
+  if ($configHeader -notmatch $mapping) {
+    throw "Authorization snapshot does not map localization gate: $mapping"
+  }
+}
 $lockedBaselinePattern =
   'baselineAuthorizations\s*\([^)]*\)\s*noexcept\s*\{\s*return\s*\{\s*\}\s*;\s*\}'
 $baselineIsEntirelyLocked = $configHeader -match $lockedBaselinePattern

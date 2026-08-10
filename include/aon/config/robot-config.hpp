@@ -4,9 +4,7 @@
 
 #include "aon/auton/motion-health.hpp"
 #include "aon/config/hardware-map.hpp"
-#include "aon/odometry/ekf.hpp"
-#include "aon/odometry/pose-estimator.hpp"
-#include "aon/odometry/sensor-measurements.hpp"
+#include "aon/config/localization-config.hpp"
 
 namespace aon::config {
 
@@ -51,6 +49,10 @@ struct AuthorizationSnapshot {
   bool shadowPlayback;
   bool redSixBlock;
   bool jerryIoPath;
+  bool gpsHardware;
+  bool gpsHeadingFusion;
+  bool fusedLemLib;
+  bool fusedNavigation;
 };
 
 /** Returns the locked authorization baseline for either physical robot. */
@@ -69,7 +71,9 @@ struct AuthorizationSnapshot {
 [[nodiscard]] constexpr bool safeForUnvalidatedBaseline(
     const AuthorizationSnapshot& value) noexcept {
   return !value.automaticEncoderFallback && !value.forcedEncoderTesting &&
-         !value.shadowPlayback && !value.redSixBlock && !value.jerryIoPath;
+         !value.shadowPlayback && !value.redSixBlock && !value.jerryIoPath &&
+         !value.gpsHardware && !value.gpsHeadingFusion &&
+         !value.fusedLemLib && !value.fusedNavigation;
 }
 
 struct FallbackConfig {
@@ -101,26 +105,6 @@ struct LemLibDriveConfig {
   FallbackConfig fallback;
 };
 
-struct GpsHardwareConfig {
-  bool enabled;
-  std::int8_t port;
-  double xOffsetMeters;
-  double yOffsetMeters;
-  double headingOffsetDegrees;
-  bool headingUpdateEnabled;
-  aon::localization::GpsValidationConfig validation;
-};
-
-struct LocalizationConfig {
-  aon::localization::TrackingGeometry geometry;
-  double trackingWheelDiameterInches;
-  std::uint32_t loopPeriodMs;
-  aon::localization::EkfConfig ekf;
-  GpsHardwareConfig gps;
-  bool fusedLemLibAuthorized;
-  bool fusedNavigationAuthorized;
-};
-
 struct RobotConfig {
   RobotIdentity identity;
   LemLibDriveConfig lemlib;
@@ -138,6 +122,10 @@ struct RobotConfig {
       config.shadowPlaybackAuthorized,
       config.autonomousAuthorizations.allows(ExperimentalRoute::RedSixBlock),
       config.autonomousAuthorizations.allows(ExperimentalRoute::JerryIoPath),
+      config.localization.gps.enabled,
+      config.localization.gps.headingUpdateEnabled,
+      config.localization.fusedLemLibAuthorized,
+      config.localization.fusedNavigationAuthorized,
   };
 }
 

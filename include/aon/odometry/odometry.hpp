@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <optional>
 
-#include "aon/config/robot-config.hpp"
+#include "aon/config/localization-config.hpp"
 #include "aon/math/pose.hpp"
 #include "aon/odometry/diagnostics.hpp"
 #include "aon/odometry/ekf.hpp"
