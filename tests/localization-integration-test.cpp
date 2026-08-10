@@ -80,11 +80,27 @@ void drivetrainUsesTheHardwareOwnedEstimator() {
   CHECK(hardware.find("std::make_unique<Odometry>") == std::string::npos);
 }
 
+void lemlibSharesTheHardwareOwnedTrackingDevices() {
+  const std::string chassis = readFile("src/aon/lemlib/chassis.cpp");
+  const std::string odometry =
+      readFile("include/aon/odometry/odometry.hpp");
+
+  CHECK(odometry.find("pros::Rotation encoderLeft_") != std::string::npos);
+  CHECK(odometry.find("pros::Imu imu_") != std::string::npos);
+  CHECK(chassis.find("static pros::Rotation sensor") == std::string::npos);
+  CHECK(chassis.find("static pros::Imu sensor") == std::string::npos);
+  CHECK(chassis.find("hardware().odometry.leftTrackingSensor()") !=
+        std::string::npos);
+  CHECK(chassis.find("hardware().odometry.imuSensor()") !=
+        std::string::npos);
+}
+
 }  // namespace
 
 int main() {
   odometryExposesOneCoherentInterface();
   drivetrainUsesTheHardwareOwnedEstimator();
+  lemlibSharesTheHardwareOwnedTrackingDevices();
   std::cout << "localization integration tests passed\n";
   return 0;
 }

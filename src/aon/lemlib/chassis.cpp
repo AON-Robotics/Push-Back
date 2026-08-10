@@ -3,6 +3,7 @@
 #include "aon/auton/actions.hpp"
 #include "aon/config/robot-config.hpp"
 #include "aon/constants.hpp"
+#include "aon/core/hardware.hpp"
 #include "aon/lemlib/drive-io.hpp"
 #include "lemlib/api.hpp"
 #include "pros/imu.hpp"
@@ -56,8 +57,9 @@ pros::MotorGroup& rightMotors() {
 
 pros::Rotation& leftEncoder() {
   const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
-  static pros::Rotation sensor(ports.left);
-  static const bool configured = [&ports] {
+  pros::Rotation& sensor =
+      aon::core::hardware().odometry.leftTrackingSensor();
+  static const bool configured = [&sensor, &ports] {
     sensor.set_reversed(ports.leftReversed);
     return true;
   }();
@@ -67,8 +69,9 @@ pros::Rotation& leftEncoder() {
 
 pros::Rotation& rightEncoder() {
   const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
-  static pros::Rotation sensor(ports.right);
-  static const bool configured = [&ports] {
+  pros::Rotation& sensor =
+      aon::core::hardware().odometry.rightTrackingSensor();
+  static const bool configured = [&sensor, &ports] {
     sensor.set_reversed(ports.rightReversed);
     return true;
   }();
@@ -78,8 +81,9 @@ pros::Rotation& rightEncoder() {
 
 pros::Rotation& backEncoder() {
   const auto& ports = aon::config::activeRobotConfig().lemlib.trackingPorts;
-  static pros::Rotation sensor(ports.back);
-  static const bool configured = [&ports] {
+  pros::Rotation& sensor =
+      aon::core::hardware().odometry.backTrackingSensor();
+  static const bool configured = [&sensor, &ports] {
     sensor.set_reversed(ports.backReversed);
     return true;
   }();
@@ -88,10 +92,7 @@ pros::Rotation& backEncoder() {
 }
 
 pros::Imu& imu() {
-  const auto port =
-      aon::config::activeRobotConfig().lemlib.trackingPorts.imu;
-  static pros::Imu sensor(port);
-  return sensor;
+  return aon::core::hardware().odometry.imuSensor();
 }
 
 double trackingInches(const pros::Rotation& sensor) {
