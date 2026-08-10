@@ -106,3 +106,146 @@ No nested acquisition of two first-party mutexes was found in the normal paths, 
 - **String copies under lock:** `routineStatus()` copies `std::string` while holding `statusMutex`; GUI calls it every 100 ms. Names likely fit small-string optimization, but measure wait time before redesigning.
 - **Priority inversion:** explicit task priorities are not provided, so PROS defaults apply. If a high-priority controller is later introduced, it must not wait on a lower-priority task that holds a mutex across screen, SD, formatting, or sensor I/O.
 
+## 5. Detailed odometry audit
+
+### 5.1 Existing native architecture
+
+`src/aon/odometry.cpp` implements the lazy-started legacy odometry used by native routes. LemLib maintains a separate pose for current LemLib routes and driver control.
+
+One native iteration currently does this:
+
+1. Read right and left rotation sensors (`update():148-149`). The back rotation read is commented out.
+2. Convert cumulative angles to distance, then derive both angle and distance deltas.
+3. Compute an encoder heading delta into a **local** `double deltaTheta` (`176`), shadowing the class member with the same name.
+4. Read IMU heading, normalize it, and blend gyro/encoder heading. With current `GYRO_CONFIDENCE=1`, the encoder-heading calculation still executes but contributes zero.
+5. Call `getRadians()` once, then call it again inside `setRadians(getRadians() + deltaTheta)` (`206-207`): three orientation lock operations total (two reads and one write).
+6. Calculate the local arc displacement with one `sin` and one `cos` when turning.
+7. Independently update `changeWeb` with another `sin` and `cos` (`245-249`). No production consumer of `changeWeb` was found; only `Odometry::debug()` displays it.
+8. Publish global position through `SetPosition(...)`, but first call `getX()`, `getY()`, and `getRadians()` four times (`253-256`). That adds six lock operations (four orientation, two position) before the final position write.
+9. Update previous encoder/gyro fields without a lock.
+
+This is more synchronization and trig than the algorithm requires, but correctness is the first concern.
+
+### 5.2 Confirmed correctness and coherence risks
+
+- `getX()`, `getY()`, `getPosition()`, `SetPosition()`, `getDegrees()`, `setDegrees()`, `getRadians()`, and `setRadians()` call `Mutex::take(1)` and ignore its Boolean result. They then access state and call `give()` even if ownership was not obtained. Students should first confirm PROS mutex return semantics on target, then treat failed acquisition explicitly.
+- X/Y share one mutex and orientation uses another. `getPose()` calls three getters, so a task switch between them can mix two odometry iterations. A pose used for path following, GUI, or a terminal condition should be one coherent sample.
+- Publishing heading before position creates an interval where readers observe new heading with old position. Publishing position later through a different lock cannot make the tuple atomic.
+- The unprotected class data (`encoder*_data`, `gyro_data`, `deltaDlocal`, `changeWeb`, and member `deltaTheta`) can race with `resetCurrent()` or `debug()` if those are invoked while the odometry task is running.
+- `debug()` calls `update()` itself every 10 ms. If the legacy odometry task is also active, two writers can consume/update the same previous-sample fields, corrupting deltas.
+- `resetCurrent()` reads all three rotation sensors and IMU, mutates filter/history fields, changes pose, tares the IMU, and blocks three seconds. There is no pause/handshake with the update task, so a reset during active native odometry can interleave with an iteration.
+- `setDegrees()` writes member `deltaTheta = 0.0` after releasing the orientation mutex. In `update()`, the local `deltaTheta` shadows that member, so this reset does not affect the local delta used by the current algorithm. Students should determine whether the member is obsolete or intended state.
+
+### 5.3 Duplicate and unnecessary work
+
+- `encoder*_data.delta` is calculated but no consumer was found outside odometry state/debug; the algorithm uses `deltaDistance`.
+- Back encoder state is initialized/reset, but the reads and calculations in `update()` are commented out.
+- `gyro_data.currentRadians` is assigned but not subsequently used by `update()`.
+- `gyro_data.prevDegrees` is assigned at `198` and again at `265`.
+- `changeWeb` is a full second odometry integration performed every cycle only for comparison in `debug()`.
+- Because `GYRO_CONFIDENCE` is the compile-time value 1 in both robot configurations, encoder-derived `deltaTheta` is dead in the current build after optimization only if the compiler can fully propagate the macro expression. Keep fallback capability if needed, but measure whether a competition-mode conditional can make the intended model explicit.
+- The global transform calls `deltaDlocal.GetX()`/`GetY()` repeatedly. Whether those getters recalculate vector polar state should be checked; a local X/Y snapshot is clearer regardless.
+
+### 5.4 Target architecture to investigate, not a replacement implementation
+
+The proposed conceptual flow is the right one:
+
+`read sensors once -> compute deltas -> select/fuse heading -> compute sin/cos once -> compute next pose locally -> publish one complete snapshot`
+
+Students should prototype this behind tests with these invariants:
+
+- One iteration has an immutable sensor sample and one timestamp.
+- All intermediate calculations are local; no getter reacquires the object's own mutex.
+- Heading convention and wrap behavior remain exactly documented and tested across 0/360 and ±180 boundaries.
+- One publication critical section writes `{x, y, heading, timestamp/sequence}` together. Readers copy that whole snapshot under the same synchronization mechanism.
+- Reset cannot interleave halfway through an update; use a clear reset/update ownership protocol.
+- Debug comparison models are build-gated or run on copied samples outside the publisher's critical path.
+- Failed sensor reads and failed lock acquisition have observable counters and defined behavior rather than silently publishing mixed data.
+
+Benchmark existing and candidate models with recorded sensor traces before field deployment. Compare numerical output, maximum update time, deadline misses, and autonomous endpoint distribution—not just average loop time.
+
+### 5.5 LemLib versus native odometry
+
+`initializeChassis()` calibrates LemLib at every normal boot. Native selectors in `src/aon/auton/routine-selectors.cpp:21,86` separately call `legacy_motion::prepare()`, which creates the 10 ms legacy odometry task. The hardware map deliberately validates that legacy and LemLib tracking ports/reversal match (`src/aon/config/hardware-map.cpp:39-69`). Thus both models can read the same sensors concurrently after the first native route.
+
+Do not delete either implementation during migration. Instead:
+
+- Record which pose source each autonomous route and diagnostic uses.
+- Establish a single drivetrain command owner for each competition mode/routine.
+- Decide whether legacy odometry needs to keep running after leaving a native route; if not, investigate lifecycle control.
+- In competition builds, exclude `changeWeb` comparison work and inactive debug paths while keeping their source available in development builds.
+- Compare both models from the same timestamped sensor trace or controlled 20-run test, not from separately timed getter calls.
+
+## 6. Deterministic loop timing
+
+### 6.1 Relative delay versus fixed-period execution
+
+With relative delay:
+
+`work (for W ms) -> delay(10) -> work -> delay(10)`
+
+the start-to-start period is approximately `W + 10 ms`. If work varies from 1 to 6 ms, the period varies from about 11 to 16 ms, and all subsequent starts drift. A fixed-period loop keeps a next-release deadline and sleeps only until it. Work that completes early still starts the next iteration on the planned boundary; work that finishes late increments a deadline-miss counter and advances to the next valid boundary rather than hiding overrun in a fresh full delay.
+
+Use PROS's monotonic deadline API (`pros::delay_until()` where its signature and wrap semantics fit the installed kernel) with an integer millisecond wake anchor. Use `pros::micros()` around work for execution-time measurement. Do not busy-wait for microsecond alignment.
+
+### 6.2 High-value deadline candidates
+
+| Candidate | Current delay | Recommended intent | Why / caveat |
+|---|---:|---:|---|
+| `Odometry::initialize()` | 10 ms | 10 ms release grid | Highest-value native sampler; count overruns and do not run `debug()` as a second writer |
+| `Robot::opcontrol()` | 10 ms | 10 ms release grid | Stabilizes input-to-command latency; avoid replaying an entire autonomous function inside this loop when `TESTING_AUTONOMOUS` is enabled |
+| Shadow recorder task | 20 ms | exactly `kSamplePeriodMs=20` | File format and capacity assume 20 ms samples; deadline misses should be stored/reported |
+| `Actions::runMonitored()` / `arcadeFor()` | 20 ms | 20 ms monitor grid | Stabilizes health observation; LemLib motion itself remains library-controlled |
+| `EncoderMotionController::{driveDistance,turn}` | 20 ms | 20 ms controller grid | Profile/safety fallback depends on sample interval and settle time |
+| Native PID/profile/pure-pursuit loops | 10/20 ms | match controller design dt | Their measured `dt` is good, but fixed releases reduce dt variance; remove loop printing first |
+| Big intake sorter | 10 ms | 10–20 ms state-machine grid | Preserve state deadlines; poll optical only in decision states |
+| Small intake scan/sort | 50/25 ms plus blocking | state machine with 20–50 ms grid | Converting delay API alone does not solve 100–500 ms blocking branches |
+| Orbit follow/scan | 10/20 ms | 20 ms unless vision data rate proves benefit at 10 ms | Avoid polling faster than useful camera refresh; blocking rotate must first be removed from task loop design |
+| GUI | 100 ms normal / 30 ms debug | relative delay is acceptable | Human-facing UI does not need hard periodicity; keep screen work low priority |
+| Safety idle poll | 50 ms | relative delay acceptable | Event latency of 50 ms should be validated; the inner held loop must yield or act once per state change |
+
+Long autonomous dwell delays (200 ms to 8 s), GUI initialization delays, short motor pulse helpers, and calibration waits do not become more correct merely by using `delay_until()`. They are sequencing operations, not periodic controllers. Their issue is blocking/cancellation policy, covered below.
+
+## 7. Sensor polling audit and recommended rates
+
+Rates are starting ranges to validate against device update rates and robot dynamics; they are not vendor guarantees.
+
+| Sensor / telemetry | Observed use | Unused or redundant read | Intentional update-rate investigation |
+|---|---|---|---|
+| Native rotation sensors | `Odometry::update()` reads left/right every ~10+ ms; back is configured but not sampled | Back is read only during reset; `encoder*.delta` not consumed | 100 Hz for active odometry is reasonable; one read per sensor per iteration |
+| Native IMU | `update()` reads heading every ~10+ ms | encoder heading still computed with confidence fixed at 1; reset reads heading then zeroes gyro struct | 50–100 Hz control/odometry; measure actual new-data rate and errors |
+| LemLib tracking + IMU | library odometry is opaque; first-party `sampleDriveSensors()` reads 3 rotations, IMU rotation/status | Fallback linear drive uses only motor averages but receives full sample; monitor already has LemLib pose plus all raw sensors | Keep library defaults; for first-party health checks start at 50 Hz, then split minimal samples per decision if profiling supports it |
+| Motor positions | `sampleDriveSensors()` calls `get_position_all()` for left and right, returning two vectors | Full monitor samples also read tracking sensors/IMU; small driver reads scorer position every 10+ ms | 50 Hz for motion health; 20–50 Hz for mechanism settled checks unless response tests require faster |
+| Small intake distance | Only `scan()` while `scanning`, every ~50 ms; then no read for 500 ms | No idle read when disabled—good | 20–50 Hz is appropriate for block detection; replace fixed 500 ms blindness with timestamped debounce if cancellation matters |
+| Small intake optical hue | Only `sort()` while `scanning`, every ~25 ms, except during 100/125 ms pulse | No idle read when disabled—good | 20–40 Hz; coordinate with distance/position so one block is not repeatedly acted upon |
+| Big intake optical hue | `sort()` reads at top of every 10 ms iteration, before checking `requestedReleasing` or state | Unused while release inactive, `INIT`, `KICKBACK`, `WAIT_*`, `CONFIRM_*`, and `SETTLE` | Read only when `IDLE` needs a color decision; start 20–50 Hz |
+| Big intake proximity | Read only in `WAIT_ACCEPT/CONFIRM_ACCEPT/WAIT_REJECT/CONFIRM_REJECT` | State-gated correctly | 50–100 Hz while waiting, zero otherwise; measure bounce and transport speed |
+| Orbit vision | `follow()` 10 ms; `scan()` 20 ms; `getDistanceToRing()` 100 reads at 5 ms | `getDistanceToRing(Colors color)` overwrites its `color` parameter with current color, then sets color to itself; the parameter has no effect | Start at 20–50 Hz based on new-frame rate. Sampling a stale frame faster adds CPU/device traffic, not information |
+| Orbit rotation | Each follow/scan/rotate iteration | `difference()` calls `getAngle()` up to three times; `groundDistanceToDisk()` calls `getHeight()` repeatedly (cheap) | 50–100 Hz while moving; one snapshot per calculation |
+| GPS | `gpsPosition()` blocks 2 s, then reads once | The fixed wait occurs on every call, even if GPS is already ready | Read on demand after readiness/quality check; often 10–20 Hz is ample for supervisory correction, not the inner drivetrain loop |
+| Controller | opcontrol reads active axes/buttons each ~10+ ms; Shadow recorder rereads all 4 axes every 20+ ms | During recording, axes already used by driver could be captured from one input snapshot | 50–100 Hz driver snapshot, shared read-only for drive/mechanisms/recording |
+
+Important: PROS device APIs may return cached values, but calls still have software/locking overhead and coherence implications. Measure per-call latency on the V5 brain before restructuring a clear design.
+
+## 8. Blocking operations and command architecture
+
+| Function/group | Classification | Evidence and investigation |
+|---|---|---|
+| `Actions::moveToPoint/moveToPose/turnToHeading/followPath()` | Acceptable synchronous autonomous API, with caveat | `runMonitored()` yields every 20 ms, has timeout/cancel/health checks, and lets other tasks run. A command scheduler would help compose parallel mechanisms, but the blocking call itself is not CPU spinning |
+| `Actions::arcadeFor()` and Shadow dwell | Acceptable | Both yield at 20 ms and check cancellation; use fixed release timing for accuracy |
+| Encoder fallback controller | Acceptable/questionable | Yields and times out, but performs broad sensor reads and blocks the autonomous caller. Preserve fail-safe behavior; profile and consider commands only for composition |
+| Native profile/path loops with `Timer` | Questionable | Most have timeout and yield, but loop printing and relative timing add jitter; they block the autonomous caller by design |
+| `Drivetrain::drivePID()` | Harmful if enabled for competition | No timeout or cancellation path; a failed/frozen odometry condition can run forever. It prints three lines per 10 ms iteration |
+| H-drive/Mecanum/X-drive `goToPose()` | Harmful if enabled | Source comments already note missing hard timeout; termination expression can run indefinitely and has no cancellation |
+| `Orbit::rotateRelative()` / `rotateAbsolute()` | Harmful to concurrent Orbit execution | No timeout/cancellation; called from scan/follow task branches while manipulating the same motor and flags |
+| `Orbit::getDistanceToRing()` | Questionable | Deliberately blocks ~500 ms for 100 samples; acceptable as an explicit diagnostic/query, harmful inside a control task. Parameter is currently ineffective |
+| Small `Intake::scan()` / `sort()` branches | Harmful in background task | 500/100/125 ms delays prevent prompt state/cancel observation and leave motor ownership implicit. A timestamped nonblocking state machine is justified |
+| `Intake::lever(timeout)` | Acceptable synchronous mechanism action | Yields every 5 ms and has a timeout; 5 ms motor-position polling may be faster than needed |
+| `Intake::{pickUp,store,reject,score,kickBack}` with duration | Questionable | Convenient sequential autonomous primitives, but cancellation cannot interrupt their delays. Command/state ownership would enable safe parallel autonomous actions |
+| `Odometry::resetCurrent()` / `gpsPosition()` | Questionable/harmful while tasks run | Fixed 3 s IMU tare and 2 s GPS wait block callers and can race native update. Restrict to an initialization/reset protocol |
+| Long delays in native autonomous routines | Acceptable for early sequencing, questionable for reliability | They yield to other tasks, so they do not monopolize CPU, but fixed 3–8 s waits are open-loop and cancellation-insensitive within the helper. Prefer explicit timed mechanism commands with safety cancellation as architecture matures |
+| GUI typewriter/startup delays | Acceptable | Isolated in GUI task during startup; no control-loop role, though the boot sequence itself waits 3 s before starting safety/intake/Shadow tasks |
+| `autonSafety()` held-X loop | Harmful | No yield and repeats stop operations. Investigate edge-triggered stop plus a low-rate held-state watchdog |
+| Infinite diagnostic loops in `native-tests.cpp` and `Odometry::debug()` | Acceptable only in development builds | Keep useful source, but make entry impossible in competition selection and never run debug as a second odometry writer |
+
+A nonblocking command architecture has the highest payoff for intake/Orbit motor ownership and parallel autonomous mechanisms. It is less urgent for already timeout-bounded LemLib motion wrappers. Any command design should provide exclusive subsystem ownership, start/update/cancel/finish transitions, monotonic deadlines, and a stop-on-owner-loss rule.
