@@ -689,20 +689,20 @@ consistency, and `git diff --check` verification before commit.
 
 This roadmap is followed by separate implementation plans for:
 
-1. safety-state reconciliation and baseline;
-2. dual-robot roadmap prerequisites;
-3. Phase 9 runtime instrumentation;
-4. Phase 1 characterization and feedforward;
-5. Phase 8 robot health;
-6. Phase 2 pose estimation;
-7. Phase 3 field correction;
-8. Phase 5 drivetrain observer;
-9. Phase 6 mechanism observers;
-10. Phase 11 adaptive constraints;
-11. Phase 4 autonomous executive;
-12. Phase 7 driver assistance;
-13. Phase 10 telemetry and replay;
-14. Phase 12 performance benchmarking.
+1. `2026-08-10-safety-state-reconciliation-and-baseline.md`;
+2. `2026-08-10-dual-robot-roadmap-prerequisites.md`;
+3. `2026-08-10-phase-09-runtime-instrumentation.md`;
+4. `2026-08-10-phase-01-characterization-feedforward.md`;
+5. `2026-08-10-phase-08-robot-health.md`;
+6. `2026-08-10-localization-ekf.md` for Phase 2;
+7. `2026-08-10-phase-03-field-pose-correction.md`;
+8. `2026-08-10-phase-05-drivetrain-observer.md`;
+9. `2026-08-10-phase-06-mechanism-observers.md`;
+10. `2026-08-10-phase-11-adaptive-constraints.md`;
+11. `2026-08-10-phase-04-autonomous-executive.md`;
+12. `2026-08-10-phase-07-driver-assistance.md`;
+13. `2026-08-10-phase-10-telemetry-replay.md`;
+14. `2026-08-10-phase-12-performance-benchmarking.md`.
 
 Each plan must identify exact files, interfaces, test commands, clean-build
 commands, physical gates, handoff changes, and frequent commit boundaries.

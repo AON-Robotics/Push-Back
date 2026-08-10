@@ -2,11 +2,17 @@
 
 ## 2026-08-10 Roadmap Planning Note
 
-The approved architecture for the twelve-system reliability roadmap is now
+The approved architecture for the twelve-system reliability roadmap is
 recorded in
 `docs/superpowers/specs/2026-08-10-advanced-robot-software-roadmap-design.md`.
-Separate implementation plans must be completed before competition source is
-changed.
+The complete plan suite is under `docs/superpowers/plans/` with 2026-08-10
+filenames. Phase 2 uses the deeper `2026-08-10-localization-ekf.md` plan.
+
+The first executable plan is
+`2026-08-10-safety-state-reconciliation-and-baseline.md`. It restores the
+unsupported small-robot Shadow playback flag to false, verifies every other
+gate remains false, publishes one physical baseline checklist, and then stops
+for measured robot results.
 
 Phase 0 is a hard reconciliation gate. This handoff still contains older text
 stating that Shadow playback authorization is false, while current Git history
