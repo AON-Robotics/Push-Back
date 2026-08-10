@@ -76,6 +76,13 @@ Invoke-HostTest 'pi-route-assembler-test' @(
   'tests\pi-route-assembler-test.cpp',
   'src\aon\navigation\pi-route-assembler.cpp'
 )
+Invoke-HostTest 'pi-navigation-gateway-test' @(
+  'tests\pi-navigation-gateway-test.cpp',
+  'src\aon\communication\pi-navigation-gateway.cpp',
+  'src\aon\communication\pi-protocol.cpp',
+  'src\aon\navigation\dynamic-obstacles.cpp',
+  'src\aon\navigation\pi-route-assembler.cpp'
+)
 Invoke-HostTest 'lidar-scan-test' @(
   'tests\lidar-scan-test.cpp',
   'src\aon\lidar\scan-processor.cpp',
