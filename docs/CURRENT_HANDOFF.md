@@ -1,5 +1,20 @@
 # Current Development Handoff
 
+## 2026-08-10 Roadmap Planning Note
+
+The approved architecture for the twelve-system reliability roadmap is now
+recorded in
+`docs/superpowers/specs/2026-08-10-advanced-robot-software-roadmap-design.md`.
+Separate implementation plans must be completed before competition source is
+changed.
+
+Phase 0 is a hard reconciliation gate. This handoff still contains older text
+stating that Shadow playback authorization is false, while current Git history
+and `src/aon/config/robot-config.cpp` set the small-robot supervised-test flag
+to true. Reconcile that flag with committed physical evidence and current GUI
+registration before changing behavior. Do not infer authorization from builds
+or host tests.
+
 Read this file at the start of a new development session or after changing computers.
 Use Git history as the source of truth when this file and a chat disagree.
 
