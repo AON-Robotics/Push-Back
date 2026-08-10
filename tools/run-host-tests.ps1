@@ -72,6 +72,10 @@ Invoke-HostTest 'pi-protocol-test' @(
   'tests\pi-protocol-test.cpp',
   'src\aon\communication\pi-protocol.cpp'
 )
+Invoke-HostTest 'pi-route-assembler-test' @(
+  'tests\pi-route-assembler-test.cpp',
+  'src\aon\navigation\pi-route-assembler.cpp'
+)
 Invoke-HostTest 'lidar-scan-test' @(
   'tests\lidar-scan-test.cpp',
   'src\aon\lidar\scan-processor.cpp',
