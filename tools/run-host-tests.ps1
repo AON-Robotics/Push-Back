@@ -48,6 +48,10 @@ Invoke-HostTest 'pose-history-test' @(
   'src\aon\localization\pose-history.cpp',
   'src\aon\pose-estimator.cpp'
 )
+Invoke-HostTest 'velocity-estimator-test' @(
+  'tests\velocity-estimator-test.cpp',
+  'src\aon\localization\velocity-estimator.cpp'
+)
 Invoke-HostTest 'wall-observation-test' @(
   'tests\wall-observation-test.cpp',
   'src\aon\localization\wall-observation.cpp',
