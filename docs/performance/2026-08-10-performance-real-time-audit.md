@@ -249,3 +249,152 @@ Important: PROS device APIs may return cached values, but calls still have softw
 | Infinite diagnostic loops in `native-tests.cpp` and `Odometry::debug()` | Acceptable only in development builds | Keep useful source, but make entry impossible in competition selection and never run debug as a second odometry writer |
 
 A nonblocking command architecture has the highest payoff for intake/Orbit motor ownership and parallel autonomous mechanisms. It is less urgent for already timeout-bounded LemLib motion wrappers. Any command design should provide exclusive subsystem ownership, start/update/cancel/finish transitions, monotonic deadlines, and a stop-on-owner-loss rule.
+
+## 9. Memory, allocation, and data-copy audit
+
+### 9.1 Allocation classes
+
+| Class | Sites | Assessment |
+|---|---|---|
+| A — initialization/process lifetime | `Hardware` constructs drivetrain odometry/profiles with `std::make_unique` (`src/aon/core/hardware.cpp:43-46,71-73`); GUI and function reader globals use `make_unique` (`src/aon/tools/gui/gui.cpp:93-100`); LemLib motor port vectors are function-local statics (`src/aon/lemlib/chassis.cpp:41-54`) | Safe, bounded, and outside control loops. Do not replace without measured startup/RAM benefit |
+| A — lazy one-time | `legacy_motion::prepare()` allocates one PROS task; LemLib sensor-test allocates one display task | Acceptable. Confirm task-stack RAM and lifecycle, but not a recurring heap risk |
+| A/B — registries and debug GUI | `std::map`, `std::vector`, `std::string`, and `std::function` in function/auton/debug registries | Registration/menu construction can allocate. Normal execution only copies selected callable/status. Keep debug registration out of competition where possible, not because STL is inherently bad |
+| C — motion health hot loop | `sampleDriveSensors()` calls `MotorGroup::get_position_all()` twice and stores returned `std::vector<double>` (`src/aon/lemlib/chassis.cpp:193-209`) | P1 profiling target. Determine whether PROS allocates on each call and whether a nonallocating per-motor/sample API exists in installed PROS before changing it |
+| C — native pure pursuit hot loop | `PurePursuit::follow(std::vector<Pose> path, ...)` (`include/aon/controls/pure-pursuit.hpp:98`) | P1 confirmed full path copy per controller iteration; likely heap allocation and O(N) copy, followed by O(N) closest-point scan. Change investigation should start with const-reference semantics and retained progress index, with tests |
+| B/C — GUI status | `routineStatus()` copies a `RoutineStatus` containing `std::string`; normal GUI copies/assigns it every 100 ms | P2. Small-string optimization may avoid heap for current names; measure before replacing a clear API |
+| B — routine dispatch | `FunctionReader::ExecuteFunction()` copies `std::function` while locked | Appropriate ownership: it releases the registry mutex before a long routine. One copy per dispatch is preferable to holding the mutex |
+| B — Shadow processing/save | fixed arrays are copied/cleared/processed after recording; `captureSnapshot = recorder.capture()` occurs under service mutex | No heap fragmentation, but large deterministic memory bandwidth and lock hold. Measure save latency and mutex wait; avoid unsafe aliasing just to remove the copy |
+
+No first-party `new`, `delete`, `malloc`, or `free` calls were found outside smart-pointer factories. No `std::unordered_map` was found. The most important allocation question is therefore returned vectors/path copies, not initialization-time smart pointers.
+
+### 9.2 Static RAM pressure
+
+Shadow deliberately trades heap risk for large static workspaces:
+
+- `Storage` owns three 256 KiB `EncodedRecording` buffers: at least 768 KiB before decoded data.
+- It also owns three `DecodedRecording` values, each containing a 3,000-sample capture and a route of up to 1,000 points/512 events.
+- `ServiceStorage` additionally owns recorder capture, capture snapshot, route snapshot, processor workspace, and playback snapshot.
+- `player-pros.cpp` owns a 64 KiB runtime path; `storage-pros.cpp` owns a 64 KiB directory buffer.
+
+This can still be the correct safety design on V5: capacity is known and runtime allocation is avoided. But it is likely the dominant application BSS/RAM consumer. Use the linked ELF section report and map file to quantify `.bss`, then evaluate buffer lifetime overlap. Do not merge/reuse buffers until tests prove save, inspect, cancel, and playback cannot overlap unsafely.
+
+### 9.3 Copying recommendations
+
+- **High value:** pass the native pure-pursuit path by const reference and verify no lifetime escape; avoid starting the closest-point scan at zero after progress is monotonic. Measure separately because they change different behavior/performance properties.
+- **High value:** take one coherent pose snapshot per control iteration and reuse it for termination, controller input, and diagnostics. Current native followers call pose getters repeatedly.
+- **Medium:** investigate an allocation-free motor telemetry snapshot, but only if PROS offers a safe API and profiling confirms vector allocation.
+- **Medium:** time the large Shadow capture copy under `serviceData.mutex`; a snapshot handoff/double-buffer design is only justified by observed GUI/recording stalls.
+- **Low:** `Pose` is three doubles and safe by value in `PurePursuit::go/turn`; references would add aliasing complexity for tiny gains.
+- **Low:** legacy `Vector` is larger and many operators take it by value. Optimize only in demonstrated hot geometry paths, not across the API wholesale.
+- **Low:** `std::function` copies at autonomous dispatch are deliberately outside the periodic loop. Keep the safe ownership model.
+
+## 10. Logging and GUI cost
+
+### 10.1 Observed critical-loop logging
+
+- `Drivetrain::follow()` prints three LCD lines plus one controller line every 10 ms (`include/aon/drivetrain/drivetrain.hpp:785-788`).
+- Differential/H/Mecanum/X drive `goToPose()`/`follow()` repeat the same pattern in their 10 ms loops.
+- `drivePID()` prints three LCD lines every 10 ms; profile loops print every 20 ms.
+- Native diagnostic loops print multiple LCD lines every 5–20 ms.
+- LemLib motion actions log start/finish and exceptional fallback transitions, not every 20 ms. This is a useful bounded pattern.
+- Normal GUI polls at 100 ms and redraws main status only on changes. Shadow slot scans are rate-limited to 1 s. Those are good decisions; full-screen work still needs lower task priority than control.
+
+Formatted floating-point output and controller/screen device calls have variable, often much larger latency than arithmetic. The first experiment should compile-gate or rate-limit native loop telemetry, while preserving source and adding loop statistics counters.
+
+### 10.2 Proposed compile-time modes
+
+| Mode | Keep | Suppress/rate-limit |
+|---|---|---|
+| `DEBUG` | all assertions, sensor screens, per-loop trace when explicitly selected, GUI tools, Shadow diagnostics | Still cap terminal/screen refresh (for example 5–10 Hz) so debugging does not accidentally change controller stability beyond recognition |
+| `DEVELOPMENT` | motion start/finish, failure reasons, profiler summaries, deadline misses, sensor validity, autonomous steps, GUI status | Per-iteration pose/motor printing; debug map/graph work unless opened |
+| `COMPETITION` | boot identity/config, selected routine, failures/cancellations, final autonomous metrics, compact deadline-miss summary | Success spam, per-loop floating-point output, sensor-test task, debug GUI tools, comparison odometry work |
+
+The mode should remove runtime calls with preprocessor/`if constexpr` compile-time policy, not merely make a logger format and discard messages. Preserve source strings where useful; measure resulting code size separately.
+
+## 11. Dead, duplicate, and debug-only runtime work
+
+| Work | Status | Student investigation |
+|---|---|---|
+| Native `changeWeb` integration | Runs every native odometry cycle; only debug display consumes it | Exclude computation from competition mode, keep source/test comparison available |
+| Native encoder heading with gyro confidence 1 | Calculated, then multiplied by zero in source expression | Confirm generated code removes it under `-Os`; make selected model explicit only if it improves clarity/measurement |
+| Native `encoder*.delta`, `gyro.currentRadians`, duplicate `prevDegrees` assignment | No algorithm consumer found | Remove runtime assignments only after trace/tests confirm no diagnostic dependency |
+| Back encoder native update | Configured and reset but update code is commented | Decide whether it is a required three-wheel model. Avoid paying reset/device ownership cost for an intentionally unused model, but correctness decision comes first |
+| Repeated big-sort motor commands | `IDLE` calls `commandSortMotors(..., 2/3 speed, 0)` every 10 ms | Send on state/command change if motor API cost is measurable; retain watchdog refresh if hardware semantics require it |
+| Big-sort hue in inactive/nondecision states | Read every 10 ms but only `IDLE` makes color decision | Gate by state and active release after validating detection latency |
+| Orbit color parameter | `getDistanceToRing(Colors color)` overwrites the parameter and then sets current color to itself | Correct the contract before optimizing its 100-sample math; this is a correctness smell |
+| Repeated pose/distance reads in native followers | Same iteration reconstructs pose for condition, controller, LCD, distance, controller print | One coherent local pose/distance snapshot; diagnostics consume that snapshot |
+| Driver motor refresh | opcontrol sends drive and idle intake/motor position commands every ~10 ms | Usually acceptable watchdog behavior; only suppress unchanged commands after verifying PROS/V5 command semantics and safety |
+| Debug GUI compilation | Debug `.cpp` files compile into normal build, but reachability and section GC determine final inclusion | Use map/`nm` to see what survives. Compile-time source exclusion may reduce build time even when linker removes runtime code |
+
+## 12. Math optimization classification
+
+| Site | Classification | Reason |
+|---|---|---|
+| Native odometry heading/global transform trig | **Cache result / simplify representation** | Same heading is passed to `sin/cos` multiple times. Compute a consistent angle and one sine/cosine pair per chosen model |
+| `Vector::SetPosition()` in odometry | **High-value investigation** | Every call performs `hypot` and `atan2` to maintain polar fields (`include/aon/tools/vector.hpp:442-446`). Odometry invokes it for local delta, comparison model, and global position even where only X/Y are needed. A Cartesian pose/snapshot type may avoid hidden math and improve coherence |
+| `PurePursuit::go()` `hypot`/`atan2` | **Already fine after structural fixes** | These are the controller's geometry. Remove path copy/logging/redundant snapshots before approximating math |
+| Repeated `Pose::distanceTo()` in loop conditions/logs | **Cache result** | One `hypot` result per pose snapshot is enough |
+| Profile `pow(value, 2.0)` | **Simplify algebra / P3** | Multiplication expresses square and may generate simpler code, but inspect compiler output first; it is not the leading loop cost |
+| `sqrt` used to calculate a timeout | **Already fine** | Outside the loop; not timing-critical |
+| Orbit `sqrt` distance geometry | **Already fine** | One calculation per requested sample; vision calls and 500 ms sequence dominate |
+| Shadow `hypot`/`sqrt`/`remainder` processing | **Only optimize after profiling** | Runs after recording in bounded arrays, not in control loop; numerical clarity matters |
+| GUI field mapper trig/sqrt | **Development-only** | Rate-limit rendering; do not complicate math for competition |
+| Repeated degree/radian constants | **Precompute constants** | Use named `constexpr` conversion constants for clarity and compiler folding; expected runtime effect is minor |
+
+The Cortex-A9 build uses hard-float and NEON (`-mfpu=neon-fp16 -mfloat-abi=hard`). Do not introduce fixed-point arithmetic unless on-brain profiling proves math is the bottleneck and error/repeatability tests justify the added risk.
+
+## 13. Compiler optimization and code-size audit
+
+### 13.1 Current build
+
+`common.mk:4-6,37-42` currently supplies:
+
+- `-mcpu=cortex-a9 -mfpu=neon-fp16 -mfloat-abi=hard -mthumb`
+- `-Os -g`
+- `-ffunction-sections -fdata-sections`
+- linker `--gc-sections`
+- no `-flto`
+
+`Makefile` leaves `EXTRA_CFLAGS` and `EXTRA_CXXFLAGS` empty and uses monolithic linking (`USE_PACKAGE=0`). `-g` explains much of the 13.8 MB ELF host file size; debug information is not the same as flash-resident code. The binary was 1,152,560 bytes in the existing stale artifact, but a fresh build/section report is required.
+
+### 13.2 Where code size comes from
+
+- **Application:** every first-party `.cpp` is compiled, including native tests and debug GUI. Reachable registrations/data may keep some code even when direct calls look absent.
+- **PROS/kernel:** `firmware/libpros.a` provides RTOS, devices, controller, screen, SD, and competition runtime.
+- **LemLib:** `firmware/LemLib.a` supplies chassis/odometry/motion. It is the only separate motion library listed in `project.pros` (version 0.5.6).
+- **Okapi:** there is no Okapi archive in `firmware` or template metadata. `include/aon/compat/okapi.hpp` is a local compatibility facade over PROS types; count its instantiated application code, not an imagined Okapi static library.
+- **LVGL:** `firmware/liblvgl.a` is linked through the PROS template. The code uses PROS screen APIs rather than direct LVGL calls, but library archive size does not equal linked contribution.
+- **libc/libm/libstdc++:** formatted I/O, strings/containers, math, and C++ runtime pull reachable archive members.
+- **Static Shadow buffers:** primarily `.bss` RAM rather than binary payload when zero-initialized; verify section placement.
+
+`-ffunction-sections`/`-fdata-sections` put functions/data in independent input sections, and `--gc-sections` discards unreachable sections at link time. Therefore deleting comments, whitespace, Doxygen, or renaming variables cannot shrink the runtime binary. Even deleting unused source functions may make no binary difference if they were already unreachable; use a link map to prove contribution.
+
+### 13.3 Benchmark matrix
+
+Build every row from a clean tree with identical source/config and record the actual flags in the result file.
+
+| Configuration | Binary/sections | Avg control-loop time | Max control-loop time | Autonomous runtime | Final position error | Stability |
+|---|---:|---:|---:|---:|---|---|
+| Current `-Os`, no LTO | baseline | 20-run metrics | 20-run max/p95 | mean/SD | X/Y/heading mean, SD, worst | crashes, stalls, deadline misses |
+| `-O2`, no LTO | measure delta | same | same | same | same | same |
+| `-Os` + LTO | measure delta | same | same | same | same | same |
+| `-O2` + LTO | measure delta | same | same | same | same | same |
+
+Do not default to `-O3`. `-O2` can increase code size but improve hot-loop maximum time; `-Os` may improve instruction-cache behavior; LTO may remove cross-translation-unit abstractions but adds toolchain/archive compatibility risk. Prebuilt PROS/LemLib/LVGL archives may limit whole-program LTO benefit. The winning row is the stable one with best worst-case timing and unchanged/improved endpoint distribution, not merely the smallest or fastest average.
+
+For each experiment capture:
+
+- clean build log and exact command flags;
+- `arm-none-eabi-size` (or the PROS section-size output) for text/data/BSS;
+- linker map plus largest symbols by section;
+- `monolith.bin` size, not only unstripped ELF file size;
+- task stack high-water marks or PROS task information if available;
+- free-heap/free-memory API readings at boot, after GUI initialization, during recording, and after autonomous, if the installed PROS exposes a reliable API.
+
+## 14. Concurrency conclusions
+
+1. Treat `volatile` flags as P0 correctness work. Use synchronization whose memory semantics match one-writer/multi-reader state; first inventory every writer and preserve interrupt/device requirements.
+2. Define one command owner per motor subsystem. The current small intake has background and foreground writers without a common lock; Orbit has multiple potential loop writers; drivetrain has LemLib and legacy wrappers over identical ports.
+3. Preserve the good existing patterns: `MotionLease` serializes autonomous motion; function dispatch releases registry lock before executing; Shadow performs SD/process work outside its service lock; big-sort commands revalidate request ownership around motor calls.
+4. Add lock-wait instrumentation before changing mutex types/priorities. Report count, total wait, maximum wait, and timeout/failure count by lock site.
+5. Do not raise every control task priority. First remove busy looping and long critical sections; then establish a documented priority order: emergency stop/event handling, odometry/control, mechanism state machines/recorder, GUI/diagnostics.
