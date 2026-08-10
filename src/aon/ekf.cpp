@@ -113,6 +113,73 @@ bool Ekf::predict(LocalMotion motion) noexcept {
   return true;
 }
 
+bool Ekf::updateImuHeading(double headingRadians) noexcept {
+  const double measurementVariance = config_.imuHeadingVariance;
+  if (!std::isfinite(headingRadians) ||
+      !std::isfinite(measurementVariance) || measurementVariance < 0.0) {
+    return false;
+  }
+
+  const double innovationVariance =
+      covariance_[2][2] + measurementVariance;
+  if (!std::isfinite(innovationVariance) ||
+      innovationVariance <= config_.singularityTolerance) {
+    return false;
+  }
+
+  const double innovation =
+      shortestAngleDelta(state_.headingRadians, headingRadians);
+  std::array<double, kStateDimension> gain{};
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    gain[row] = covariance_[row][2] / innovationVariance;
+  }
+
+  EstimatorPose candidateState{
+      state_.xInches + gain[0] * innovation,
+      state_.yInches + gain[1] * innovation,
+      wrapRadians(state_.headingRadians + gain[2] * innovation),
+  };
+
+  Matrix3 josephLeft{{{1.0, 0.0, -gain[0]},
+                      {0.0, 1.0, -gain[1]},
+                      {0.0, 0.0, 1.0 - gain[2]}}};
+  Matrix3 candidateCovariance = multiply(
+      multiply(josephLeft, covariance_), transpose(josephLeft));
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    for (std::size_t column = 0; column < kStateDimension; ++column) {
+      candidateCovariance[row][column] +=
+          gain[row] * measurementVariance * gain[column];
+    }
+  }
+
+  // Roundoff can make mirrored entries differ after many updates. Averaging
+  // preserves the covariance meaning without concealing a genuinely bad input.
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    if (candidateCovariance[row][row] < 0.0 &&
+        candidateCovariance[row][row] >= -config_.singularityTolerance) {
+      candidateCovariance[row][row] = 0.0;
+    }
+    for (std::size_t column = row + 1; column < kStateDimension; ++column) {
+      const double average =
+          (candidateCovariance[row][column] +
+           candidateCovariance[column][row]) /
+          2.0;
+      candidateCovariance[row][column] = average;
+      candidateCovariance[column][row] = average;
+    }
+  }
+
+  if (!finitePose(candidateState) ||
+      !validCovariance(candidateCovariance,
+                       config_.singularityTolerance)) {
+    return false;
+  }
+
+  state_ = candidateState;
+  covariance_ = candidateCovariance;
+  return true;
+}
+
 EstimatorPose Ekf::pose() const noexcept { return state_; }
 
 Matrix3 Ekf::covariance() const noexcept { return covariance_; }

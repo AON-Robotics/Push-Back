@@ -33,6 +33,7 @@ class Ekf {
 
   void reset(EstimatorPose pose) noexcept;
   bool predict(LocalMotion motion) noexcept;
+  bool updateImuHeading(double headingRadians) noexcept;
 
   EstimatorPose pose() const noexcept;
   Matrix3 covariance() const noexcept;

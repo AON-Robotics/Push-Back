@@ -221,6 +221,71 @@ void ekfPredictionStaysFiniteAndRejectsBadInput() {
   }
 }
 
+void imuUpdatesUseWrappedInnovationsAndConfiguredNoise() {
+  using namespace aon::localization;
+
+  Ekf ekf(testEkfConfig());
+  ekf.reset({0.0, 0.0, radians(359.0)});
+  const double before359 = ekf.pose().headingRadians;
+  CHECK(ekf.updateImuHeading(radians(1.0)));
+  const double correction359 =
+      shortestAngleDelta(before359, ekf.pose().headingRadians);
+  CHECK(correction359 > 0.0);
+  CHECK(correction359 < radians(2.0));
+
+  ekf.reset({0.0, 0.0, radians(-179.0)});
+  const double beforeNegative = ekf.pose().headingRadians;
+  CHECK(ekf.updateImuHeading(radians(179.0)));
+  const double correctionNegative =
+      shortestAngleDelta(beforeNegative, ekf.pose().headingRadians);
+  CHECK(correctionNegative < 0.0);
+  CHECK(correctionNegative > radians(-2.0));
+
+  EkfConfig lowNoiseConfig = testEkfConfig();
+  lowNoiseConfig.imuHeadingVariance = square(radians(0.1));
+  EkfConfig highNoiseConfig = testEkfConfig();
+  highNoiseConfig.imuHeadingVariance = square(radians(100.0));
+  Ekf lowNoise(lowNoiseConfig);
+  Ekf highNoise(highNoiseConfig);
+  lowNoise.reset({0.0, 0.0, 0.0});
+  highNoise.reset({0.0, 0.0, 0.0});
+  CHECK(lowNoise.updateImuHeading(radians(30.0)));
+  CHECK(highNoise.updateImuHeading(radians(30.0)));
+  CHECK(std::abs(lowNoise.pose().headingRadians) >
+        std::abs(highNoise.pose().headingRadians));
+}
+
+void imuJosephUpdateIsStableAndRejectsInvalidMeasurements() {
+  using namespace aon::localization;
+
+  Ekf ekf(testEkfConfig());
+  ekf.reset({1.0, 2.0, radians(10.0)});
+  const double initialVariance = ekf.covarianceDiagonal().headingVariance;
+  for (int index = 0; index < 1000; ++index) {
+    CHECK(ekf.updateImuHeading(radians(10.0)));
+  }
+  const CovarianceDiagonal diagonal = ekf.covarianceDiagonal();
+  CHECK(std::isfinite(diagonal.headingVariance));
+  CHECK(diagonal.headingVariance >= 0.0);
+  CHECK(diagonal.headingVariance < initialVariance);
+
+  const EstimatorPose beforePose = ekf.pose();
+  const Matrix3 beforeCovariance = ekf.covariance();
+  CHECK(!ekf.updateImuHeading(
+      std::numeric_limits<double>::quiet_NaN()));
+  checkPose(ekf.pose(), beforePose.xInches, beforePose.yInches,
+            beforePose.headingRadians);
+  CHECK(ekf.covariance() == beforeCovariance);
+
+  EkfConfig singularConfig = testEkfConfig();
+  singularConfig.initialHeadingVariance = 0.0;
+  singularConfig.imuHeadingVariance = 0.0;
+  Ekf singular(singularConfig);
+  singular.reset({0.0, 0.0, 0.0});
+  CHECK(!singular.updateImuHeading(0.0));
+  checkPose(singular.pose(), 0.0, 0.0, 0.0);
+}
+
 }  // namespace
 
 int main() {
@@ -231,6 +296,8 @@ int main() {
   posePropagationMatchesTheFieldConvention();
   ekfPredictionPropagatesPoseAndCovariance();
   ekfPredictionStaysFiniteAndRejectsBadInput();
+  imuUpdatesUseWrappedInnovationsAndConfiguredNoise();
+  imuJosephUpdateIsStableAndRejectsInvalidMeasurements();
   std::cout << "localization math tests passed\n";
   return 0;
 }
