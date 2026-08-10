@@ -8,12 +8,12 @@ namespace aon::localization {
 inline constexpr double kPi = 3.14159265358979323846;
 
 struct WheelDistances {
-  double leftInches;
-  double rightInches;
-  double backInches;
-  bool leftValid;
-  bool rightValid;
-  bool backValid;
+  double leftInches{0.0};
+  double rightInches{0.0};
+  double backInches{0.0};
+  bool leftValid{false};
+  bool rightValid{false};
+  bool backValid{false};
 };
 
 inline WheelDistances consumeWheelDistances(
@@ -33,32 +33,32 @@ inline WheelDistances consumeWheelDistances(
 }
 
 struct ImuMeasurement {
-  double headingRadians;
-  bool valid;
+  double headingRadians{0.0};
+  bool valid{false};
 };
 
 struct GpsMeasurement {
-  double xInches;
-  double yInches;
-  double headingRadians;
-  double positionErrorInches;
-  bool positionValid;
-  bool headingValid;
-  bool fresh;
-  std::uint32_t timestampMs;
+  double xInches{0.0};
+  double yInches{0.0};
+  double headingRadians{0.0};
+  double positionErrorInches{0.0};
+  bool positionValid{false};
+  bool headingValid{false};
+  bool fresh{false};
+  std::uint32_t timestampMs{0U};
 };
 
 struct GpsValidationConfig {
-  double minimumXInches;
-  double maximumXInches;
-  double minimumYInches;
-  double maximumYInches;
-  double maximumReportedErrorInches;
-  double maximumJumpInches;
-  double maximumHeadingJumpRadians;
-  std::uint32_t minimumSamplePeriodMs;
-  double maximumPositionNis;
-  double maximumHeadingNis;
+  double minimumXInches{0.0};
+  double maximumXInches{0.0};
+  double minimumYInches{0.0};
+  double maximumYInches{0.0};
+  double maximumReportedErrorInches{0.0};
+  double maximumJumpInches{0.0};
+  double maximumHeadingJumpRadians{0.0};
+  std::uint32_t minimumSamplePeriodMs{0U};
+  double maximumPositionNis{0.0};
+  double maximumHeadingNis{0.0};
 };
 
 enum class GpsRejectionReason {
@@ -75,9 +75,9 @@ enum class GpsRejectionReason {
 };
 
 struct GpsGateResult {
-  bool positionAccepted;
-  bool headingAccepted;
-  GpsRejectionReason reason;
+  bool positionAccepted{false};
+  bool headingAccepted{false};
+  GpsRejectionReason reason{GpsRejectionReason::None};
 };
 
 inline double radians(double degreesValue) noexcept {
@@ -119,7 +119,9 @@ class GpsGate {
     lastHeadingRadians_ = 0.0;
   }
 
-  GpsGateResult evaluate(GpsMeasurement measurement) const noexcept {
+  /** Validates a sample without advancing the accepted-sample baseline. */
+  [[nodiscard]] GpsGateResult evaluate(
+      GpsMeasurement measurement) const noexcept {
     if (!measurement.fresh) {
       return {false, false, GpsRejectionReason::NotFresh};
     }
@@ -175,6 +177,7 @@ class GpsGate {
     return {true, true, GpsRejectionReason::None};
   }
 
+  /** Advances only the components accepted by the downstream filter. */
   void commit(GpsMeasurement measurement, bool positionAccepted,
               bool headingAccepted) noexcept {
     // Physical plausibility is only advanced after the EKF accepts the same

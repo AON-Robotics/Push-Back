@@ -9,22 +9,22 @@ namespace aon::localization {
 using Matrix3 = std::array<std::array<double, 3>, 3>;
 
 struct EkfConfig {
-  double initialPositionVariance;
-  double initialHeadingVariance;
-  double stationaryPositionVariance;
-  double stationaryHeadingVariance;
-  double positionVariancePerInch;
-  double headingVariancePerRadian;
-  double imuHeadingVariance;
-  double gpsPositionVariance;
-  double gpsHeadingVariance;
-  double singularityTolerance;
+  double initialPositionVariance{0.0};
+  double initialHeadingVariance{0.0};
+  double stationaryPositionVariance{0.0};
+  double stationaryHeadingVariance{0.0};
+  double positionVariancePerInch{0.0};
+  double headingVariancePerRadian{0.0};
+  double imuHeadingVariance{0.0};
+  double gpsPositionVariance{0.0};
+  double gpsHeadingVariance{0.0};
+  double singularityTolerance{0.0};
 };
 
 struct CovarianceDiagonal {
-  double xVariance;
-  double yVariance;
-  double headingVariance;
+  double xVariance{0.0};
+  double yVariance{0.0};
+  double headingVariance{0.0};
 };
 
 enum class PositionAxis { X, Y };

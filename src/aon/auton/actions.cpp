@@ -35,9 +35,13 @@ class MotionLease {
  public:
   explicit MotionLease(MotionControl& control)
       : control_(control), acquired_(control_.tryBegin()) {}
-  ~MotionLease() {
+  ~MotionLease() noexcept {
     if (acquired_) control_.finish();
   }
+  MotionLease(const MotionLease&) = delete;
+  MotionLease& operator=(const MotionLease&) = delete;
+  MotionLease(MotionLease&&) = delete;
+  MotionLease& operator=(MotionLease&&) = delete;
 
   bool acquired() const { return acquired_; }
 

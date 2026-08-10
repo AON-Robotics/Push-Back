@@ -54,9 +54,13 @@ void odometryExposesOneCoherentInterface() {
   CHECK(combined.find("gpsPosition()") == std::string::npos);
   CHECK(header.find("Odometry(const Odometry&) = delete") !=
         std::string::npos);
+  CHECK(header.find("Odometry(Odometry&&) = delete") !=
+        std::string::npos);
+  CHECK(header.find("operator=(Odometry&&) = delete") !=
+        std::string::npos);
   CHECK(source.find("Odometry::Odometry(const Odometry&") ==
         std::string::npos);
-  CHECK(count(combined, "pros::Mutex") == 1U);
+  CHECK(count(combined, "pros::Mutex") == 2U);
   CHECK(source.find("encoderBack_.get_position()") != std::string::npos);
   CHECK(header.find("localization::VelocityEstimator velocityEstimator_") !=
         std::string::npos);
@@ -128,6 +132,21 @@ void localizationSchedulingIsDeterministicAndQuiet() {
   CHECK(source.find("candidateBaselines = currentWheels") !=
         std::string::npos);
   CHECK(source.find("publisher(publicPose)") != std::string::npos);
+  CHECK(header.find("pros::Mutex publicationMutex_") != std::string::npos);
+
+  const std::size_t publishFunction =
+      source.find("void Odometry::publishCurrent");
+  const std::size_t publishCall =
+      source.find("publisher(publicPose);", publishFunction);
+  const std::size_t snapshotLock =
+      source.find("TimedMutexLock snapshotLock", publishFunction);
+  const std::size_t snapshotScopeEnd =
+      source.find("\n  }\n", snapshotLock);
+  CHECK(publishFunction != std::string::npos &&
+        publishCall != std::string::npos);
+  CHECK(snapshotLock != std::string::npos &&
+        snapshotScopeEnd != std::string::npos);
+  CHECK(snapshotScopeEnd < publishCall);
 }
 
 void fusedLemLibModeIsPresentButAuthorizationGated() {
@@ -153,6 +172,11 @@ void fusedLemLibModeIsPresentButAuthorizationGated() {
   CHECK(count(chassis, "localizationBootReady.store(false);") >= 2U);
   CHECK(chassisHeader.find("bool localizationReady()") != std::string::npos);
   CHECK(chassis.find("localizationBootReady") != std::string::npos);
+  CHECK(actions.find("MotionLease(const MotionLease&) = delete") !=
+        std::string::npos);
+  CHECK(actions.find("MotionLease(MotionLease&&) = delete") !=
+        std::string::npos);
+  CHECK(actions.find("~MotionLease() noexcept") != std::string::npos);
 
   const std::size_t setPose = actions.find("void Actions::setPose");
   CHECK(setPose != std::string::npos);

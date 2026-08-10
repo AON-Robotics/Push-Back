@@ -3,6 +3,8 @@
 #include "aon/core/task-start.hpp"
 #include "aon/navigation/dynamic-obstacles.hpp"
 #include "aon/navigation/path-planner.hpp"
+#include "aon/odometry/ekf.hpp"
+#include "aon/odometry/sensor-measurements.hpp"
 #include "aon/tools/timed-mutex-lock.hpp"
 #include "aon/tools/gui/gui-debug.hpp"
 
@@ -86,6 +88,17 @@ static_assert(sizeof(aon::navigation::PathPlanner) >
               sizeof(aon::navigation::PathPlannerConfig));
 static_assert(sizeof(aon::communication::FrameParser) <= 512U);
 static_assert(sizeof(aon::navigation::DynamicObstacleMap) <= 4U * 1024U);
+
+constexpr aon::localization::WheelDistances kDefaultWheels;
+constexpr aon::localization::GpsMeasurement kDefaultGps;
+constexpr aon::localization::EkfConfig kDefaultEkfConfig;
+constexpr aon::localization::EstimatorPose kDefaultEstimatorPose;
+static_assert(kDefaultWheels.leftInches == 0.0);
+static_assert(!kDefaultWheels.leftValid);
+static_assert(kDefaultGps.timestampMs == 0U);
+static_assert(!kDefaultGps.fresh);
+static_assert(kDefaultEkfConfig.initialPositionVariance == 0.0);
+static_assert(kDefaultEstimatorPose.headingRadians == 0.0);
 
 int main() {
   timedMutexLockReleasesOnlyAnOwnedLock();

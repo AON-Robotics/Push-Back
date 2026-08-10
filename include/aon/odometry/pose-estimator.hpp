@@ -7,24 +7,24 @@
 namespace aon::localization {
 
 struct TrackingGeometry {
-  double leftOffsetInches;
-  double rightOffsetInches;
-  double backOffsetInches;
+  double leftOffsetInches{0.0};
+  double rightOffsetInches{0.0};
+  double backOffsetInches{0.0};
 };
 
 using WheelDeltas = WheelDistances;
 
 struct LocalMotion {
-  double rightInches;
-  double forwardInches;
-  double headingRadians;
-  bool lateralValid;
+  double rightInches{0.0};
+  double forwardInches{0.0};
+  double headingRadians{0.0};
+  bool lateralValid{false};
 };
 
 struct EstimatorPose {
-  double xInches;
-  double yInches;
-  double headingRadians;
+  double xInches{0.0};
+  double yInches{0.0};
+  double headingRadians{0.0};
 };
 
 /** Returns true only when every pose component is finite. */

@@ -23,13 +23,18 @@ class Odometry {
            std::int8_t imuPort);
   Odometry(const Odometry&) = delete;
   Odometry& operator=(const Odometry&) = delete;
+  Odometry(Odometry&&) = delete;
+  Odometry& operator=(Odometry&&) = delete;
 
+  /** Returns a coherent fused pose, or an all-NaN pose on lock timeout. */
   Pose getPose();
+  /** Returns a coherent raw pose, or an all-NaN pose on lock timeout. */
   Pose rawOdometryPose();
   double getX();
   double getY();
   double getDegrees();
   Vector getPosition();
+  /** Returns diagnostics and the cumulative two-millisecond lock timeouts. */
   localization::LocalizationDiagnostics getDiagnostics();
 
   void resetPose(double x, double y, double thetaDegrees);
@@ -74,7 +79,9 @@ class Odometry {
   std::uint32_t lastUpdateMs_{0U};
   std::uint32_t generation_{0U};
   PublishedSnapshot published_{};
+  pros::Mutex publicationMutex_;
   pros::Mutex snapshotMutex_;
+  std::atomic<std::uint32_t> publicationLockTimeouts_{0U};
   std::atomic<std::uint32_t> snapshotLockTimeouts_{0U};
 
   void recordDeadlineMiss();

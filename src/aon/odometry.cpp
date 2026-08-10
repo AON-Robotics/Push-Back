@@ -14,6 +14,7 @@ namespace {
 
 constexpr double kInchesPerMeter = 39.37007874015748;
 constexpr std::uint32_t kSnapshotLockTimeoutMs = 2U;
+constexpr std::uint32_t kPublicationLockTimeoutMs = 2U;
 
 Pose publicPose(localization::EstimatorPose pose) noexcept {
   return {pose.xInches, pose.yInches,
@@ -90,10 +91,12 @@ localization::LocalizationDiagnostics Odometry::getDiagnostics() {
   TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
   if (!lock.ownsLock()) {
     localization::LocalizationDiagnostics diagnostics{};
+    diagnostics.publicationLockTimeouts = publicationLockTimeouts_.load();
     diagnostics.snapshotLockTimeouts = ++snapshotLockTimeouts_;
     return diagnostics;
   }
   localization::LocalizationDiagnostics diagnostics = published_.diagnostics;
+  diagnostics.publicationLockTimeouts = publicationLockTimeouts_.load();
   diagnostics.snapshotLockTimeouts = snapshotLockTimeouts_.load();
   return diagnostics;
 }
@@ -103,6 +106,15 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
       !std::isfinite(thetaDegrees)) {
     return;
   }
+  // This lock orders reset and external publication without holding the state
+  // lock while calling into LemLib.
+  TimedMutexLock publicationLock(publicationMutex_,
+                                 kPublicationLockTimeoutMs);
+  if (!publicationLock.ownsLock()) {
+    ++publicationLockTimeouts_;
+    return;
+  }
+
   const std::int32_t leftReading = encoderLeft_.get_position();
   const std::int32_t rightReading = encoderRight_.get_position();
   const std::int32_t backReading = encoderBack_.get_position();
@@ -150,6 +162,7 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   diagnostics.rawPose = requested;
   diagnostics.fusedPose = requested;
   diagnostics.covariance = ekf_.covarianceDiagonal();
+  diagnostics.publicationLockTimeouts = publicationLockTimeouts_.load();
   diagnostics.snapshotLockTimeouts = snapshotLockTimeouts_.load();
   diagnostics.resetCount = published_.diagnostics.resetCount + 1U;
   published_ = {publicPose(requested), publicPose(requested), diagnostics};
@@ -347,6 +360,7 @@ void Odometry::update() {
   diagnostics.maximumExecutionMicroseconds =
       std::max(diagnostics.maximumExecutionMicroseconds,
                diagnostics.executionMicroseconds);
+  diagnostics.publicationLockTimeouts = publicationLockTimeouts_.load();
   diagnostics.snapshotLockTimeouts = snapshotLockTimeouts_.load();
 
   TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
@@ -400,14 +414,24 @@ void Odometry::runLocalizationLoop(void (*publisher)(const Pose&)) {
 
 void Odometry::publishCurrent(void (*publisher)(const Pose&)) {
   if (publisher == nullptr) return;
-  TimedMutexLock lock(snapshotMutex_, kSnapshotLockTimeoutMs);
-  if (!lock.ownsLock()) {
-    ++snapshotLockTimeouts_;
+  TimedMutexLock publicationLock(publicationMutex_,
+                                 kPublicationLockTimeoutMs);
+  if (!publicationLock.ownsLock()) {
+    ++publicationLockTimeouts_;
     return;
   }
-  const Pose publicPose = published_.fusedPose;
-  // Serialize publication with resetPose so an old snapshot cannot reach the
-  // path follower after a newer reset has already been published.
+
+  Pose publicPose;
+  {
+    TimedMutexLock snapshotLock(snapshotMutex_, kSnapshotLockTimeoutMs);
+    if (!snapshotLock.ownsLock()) {
+      ++snapshotLockTimeouts_;
+      return;
+    }
+    publicPose = published_.fusedPose;
+  }
+  // publicationMutex_ preserves reset ordering; the state lock is intentionally
+  // released before invoking code outside this module.
   publisher(publicPose);
 }
 
