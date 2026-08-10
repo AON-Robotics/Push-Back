@@ -398,3 +398,263 @@ For each experiment capture:
 3. Preserve the good existing patterns: `MotionLease` serializes autonomous motion; function dispatch releases registry lock before executing; Shadow performs SD/process work outside its service lock; big-sort commands revalidate request ownership around motor calls.
 4. Add lock-wait instrumentation before changing mutex types/priorities. Report count, total wait, maximum wait, and timeout/failure count by lock site.
 5. Do not raise every control task priority. First remove busy looping and long critical sections; then establish a documented priority order: emergency stop/event handling, odometry/control, mechanism state machines/recorder, GUI/diagnostics.
+
+## 15. Lightweight profiling plan
+
+### 15.1 Design goals
+
+Instrumentation must be bounded, allocation-free in periodic loops, silent during a measured run, separately owned by each task, and removable or reducible at compile time. Use `pros::micros()` as the monotonic fine-grained clock. Store timestamps as `std::uint32_t` and calculate elapsed time with unsigned subtraction so normal wraparound remains defined. Confirm the installed PROS API and do not convert absolute microsecond timestamps to floating point.
+
+Each loop owns a small aggregate record conceptually containing:
+
+- iteration count;
+- sum of execution microseconds in `std::uint64_t`;
+- minimum execution time and maximum execution time in microseconds;
+- previous iteration start;
+- sum/min/max actual start-to-start period;
+- maximum positive and negative period error from target;
+- execution deadline misses (`execution_us > budget_us`);
+- release deadline misses (iteration starts after its planned release tolerance);
+- optional overrun buckets, e.g. `<25%`, `25–50%`, `50–75%`, `75–100%`, `>100%` of budget;
+- sensor/lock/error counters relevant to that loop.
+
+Do not update a shared map or print from the hot loop. Use one stat block per statically known loop. If the GUI must read a 64-bit stat while its task writes on 32-bit hardware, snapshot only after stopping the run, use a short explicit synchronization protocol, or use a double-buffered publish—not an unsynchronized read that can tear.
+
+### 15.2 Per-iteration measurement procedure
+
+At loop entry:
+
+1. Read `start_us = pros::micros()` once.
+2. If not the first iteration, calculate `period_us = start_us - previous_start_us` and update period aggregates.
+3. Compare the start to the planned release for deadline/jitter accounting.
+
+After all work and immediately before sleeping:
+
+1. Read `end_us = pros::micros()` once.
+2. Calculate `execution_us = end_us - start_us`.
+3. Update count/sum/min/max/buckets and mark execution overrun against the configured budget.
+4. Sleep to the next fixed release. If late, record the miss and advance the release anchor without busy-waiting.
+
+Two clock reads, integer subtracts, comparisons, and aggregate stores are the base overhead. Measure that overhead with an empty instrumented loop and report it. Do not call `sqrt`, format strings, allocate, or compute percentiles in the control task.
+
+### 15.3 Metrics and definitions
+
+| Metric | Definition / collection |
+|---|---|
+| Execution time | `end_us - start_us`, excluding sleep; report count, min, mean (`sum/count`), max |
+| Loop period | current iteration start minus previous start; report min/mean/max |
+| Jitter | signed `actual_period_us - target_period_us`; retain worst early, worst late, and mean absolute value in offline analysis |
+| Deadline miss | execution exceeds budget, or a scheduled release starts later than an agreed tolerance; report both definitions separately |
+| Mutex wait | timestamp immediately before and after selected `take()`; record count/sum/max/timeouts by mutex/site, not just by mutex object |
+| Autonomous time | timestamp immediately before routine dispatch and immediately after full stop/final status |
+| Final error | after mechanisms and drivetrain settle, take one coherent LemLib/native pose; compute final X error and final Y error as `final - target`, and wrap final heading error with `remainder(...,360)` |
+| Binary size | clean build's `.text`, `.rodata`, `.data`, `.bss`, total flash image and `monolith.bin` bytes |
+| RAM | linked `.data + .bss`, task stack allocation/high-water if available, and reliable runtime free-memory samples |
+
+Use a budget lower than the period to retain headroom. Example starting gates to validate: 10 ms loop budget 7.5 ms; 20 ms loop budget 15 ms; 50 ms task budget 30 ms. These are test thresholds, not claims about current performance.
+
+### 15.4 Where to instrument first
+
+1. Native `Odometry::update()` and full native odometry iteration.
+2. `Robot::opcontrol()` around the entire driver iteration.
+3. `Actions::runMonitored()` around `motionSample()`, monitor observation, and `onPoll` separately.
+4. `sampleDriveSensors()`, with sub-timers for each motor vector, three rotation reads, and IMU/status.
+5. Encoder fallback drive/turn iterations.
+6. Shadow `pollRecorder()` inactive and recording modes separately.
+7. Active robot's intake scan/sort iterations and blocked-state latency.
+8. Native pure pursuit before/after path-copy and logging experiments.
+9. Selected mutex sites: native pose publication/read, Shadow service, motion control, big-sort motor ownership, auton status.
+10. GUI only after control paths, measuring redraw and SD slot inspection separately.
+
+### 15.5 Reporting without perturbing control
+
+- Reset stat blocks before enable/autonomous, freeze them after disable or routine completion, then print/save summaries.
+- In `DEVELOPMENT`, optionally retain a fixed ring of a small number of anomalous samples (timestamp, duration, loop ID, state) only when a threshold is crossed.
+- In `COMPETITION`, retain counters/maxima and one final compact summary; no per-iteration logging.
+- Include a profiler schema version, git commit, robot identity, build flags, route, battery voltage, starting pose, and test-run ID with every dataset.
+- To estimate profiler observer effect, run A/B with instrumentation compiled out versus aggregate-only instrumentation. Reject instrumentation whose overhead materially changes maximum time or endpoint distribution.
+
+## 16. Performance regression and autonomous repeatability protocol
+
+### 16.1 Controlled setup
+
+For every candidate optimization and compiler configuration:
+
+1. Pin commit, compiler flags, PROS/LemLib versions, robot identity, autonomous route, field layout, payload/block arrangement, tire/wheel condition, and controller mode.
+2. Charge or constrain battery state to an agreed range; record start/end voltage and motor/brain temperature when practical.
+3. Use a physical jig/field references to reproduce starting X, Y, and heading. Record the commanded starting pose and an independent measured start offset.
+4. Warm up consistently, then run **at least 20 autonomous trials**. Interleave baseline and candidate runs (A/B/A/B) when battery/temperature drift is significant rather than running all baseline trials first.
+5. After each run, wait for the same settle interval and capture coherent final X, Y, heading, total duration, per-loop aggregates, deadline misses, task-stall events, motion failure reason, and any operator intervention.
+6. Preserve failed runs; do not silently discard outliers. Mark the physical cause if a trial is invalidated.
+
+### 16.2 Required calculations
+
+For X error, Y error, wrapped heading error, autonomous duration, loop mean, loop maximum, and deadline misses calculate:
+
+- arithmetic mean;
+- sample standard deviation;
+- worst case in the unsafe direction (and absolute worst error);
+- median and 95th percentile where the sample count/distribution makes it useful;
+- success/failure count and unexpected task stalls.
+
+With only 20 runs, the empirical 95th percentile is effectively near the worst observed run and is noisy. Report the raw sorted values or the percentile method; do not imply population-level confidence from one number.
+
+### 16.3 Acceptance and rollback gates
+
+An optimization is acceptable only when:
+
+- no new correctness failure, motor ownership conflict, sensor invalid state, or task stall appears;
+- deadline misses and worst-case loop time improve or remain within the predeclared budget;
+- mean autonomous duration does not hide worse maximum duration;
+- X/Y/heading mean, standard deviation, worst case, and success rate remain equal or improve within predeclared engineering tolerances;
+- instrumentation mode and logging mode are identical between compared builds;
+- binary/RAM growth remains within measured headroom.
+
+Rollback if timing improves while autonomous repeatability, failure rate, cancellation response, thermal behavior, or worst-case endpoint error degrades. Never trade a narrower average loop time for a fatter error tail.
+
+### 16.4 Suggested data record
+
+One CSV row per run should include:
+
+`schema, commit, build_flags, robot, route, run, battery_start, battery_end, temperature, start_x, start_y, start_heading, target_x, target_y, target_heading, final_x, final_y, final_heading, x_error, y_error, heading_error, auton_ms, loop_count, loop_mean_us, loop_max_us, period_mean_us, period_max_us, deadline_misses, mutex_wait_max_us, stall_count, result, failure_reason, notes`
+
+Keep raw data and analysis script in version control. Do not report only screenshots or hand-copied averages.
+
+## 17. Ranked optimization backlog
+
+| Priority | Subsystem | File / function | Observed issue | Why it matters | How to measure | Recommended student investigation | Expected impact | Change risk |
+|---|---|---|---|---|---|---|---|---|
+| P0 | Native odometry | `src/aon/odometry.cpp`; getters, setters, `getPose()`, `update()` | timed mutex results ignored; X/Y/heading published/read separately | undefined ownership behavior and incoherent controller input | lock failures/wait; sensor-trace equivalence; 20-run endpoint spread | design one checked lock policy and complete pose snapshot; serialize reset/update | Very high reliability/determinism | High: pose semantics |
+| P0 | Cross-task state | `include/aon/intake/intake.hpp`, `include/aon/orbit/orbit.hpp`, `include/aon/core/hardware.hpp` | `volatile` used as synchronization | C++ data races can produce stale/undefined state | transition/cancel latency, race-focused tests | inventory writers; select atomics or mutex-owned state with documented ownership | High reliability | Medium |
+| P0 | Motor ownership | intake/Orbit/drivetrain call sites | multiple tasks/abstractions can command same motors | last-writer-wins nondeterminism and unsafe cancellation | command-owner trace; conflict counter | exclusive owner/command state machine; prove route selection prevents LemLib/legacy overlap | Very high | High |
+| P0 | Unbounded controllers | `Drivetrain::drivePID()`, H/Mecanum/X `goToPose()`, Orbit rotate methods | loops lack timeout/cancel | sensor/mechanism failure can hang autonomous/task forever | fault injection, timeout tests | add architectural timeout/cancel requirement before competition enablement | Very high safety | Medium |
+| P1 | Safety task | `include/aon/globals.hpp:128` `autonSafety()` | no yield while X held; repeated STOP | CPU starvation/device flood during fault | held-X loop time, command count, cancellation latency | edge-trigger stop plus bounded watchdog/yield | High | Low-medium |
+| P1 | Native path following | `pure-pursuit.hpp:98`; native follow/goToPose loops | path copied/scanned and pose/diagnostics repeated every iteration | heap/O(N), jitter, incoherent reads | allocations, exec max, path size scaling | const path view; retain safe progress index; one pose/distance snapshot | High | Medium: path behavior |
+| P1 | Loop telemetry | native drivetrain loops | formatted LCD/controller writes at 10/20 ms | variable I/O can dominate budget | loop max with logging on/off | compile-time levels and rate-limited snapshot diagnostics | High | Low |
+| P1 | Periodic scheduling | odom/opcontrol/Shadow/actions/fallback/native control | relative delays add work time and drift | variable sample/control timing | period/jitter/deadline misses | deadline-based release grid with overrun accounting | High determinism | Medium |
+| P1 | Small intake | `src/aon/intake.cpp:374,398` | task blocks 100–500 ms; no common motor lock | slow cancellation and writer conflicts | event-to-response latency, conflict traces | timestamped state machine and subsystem ownership | High | Medium-high |
+| P1 | Big intake | `src/aon/intake.cpp:105` | hue read outside decision state; repeated motor commands | needless device traffic/jitter | per-state exec/sensor counts | state-gated polling and command-on-change, preserving watchdog semantics | Moderate-high | Medium |
+| P1 | Motion telemetry | `src/aon/lemlib/chassis.cpp:190` `sampleDriveSensors()` | two returned vectors and all sensors every sample | possible hot-loop allocation/device load | per-sub-read time, allocation counter | decision-specific sample plan or safe nonallocating API | High if confirmed | Medium-high |
+| P1 | Duplicate localization | LemLib chassis + `legacy_motion::prepare()` | both pose stacks can remain active | duplicate sensor/CPU work and ownership ambiguity | task CPU, sensor counts, route mode trace | explicit lifecycle/source-of-truth during migration | High | High |
+| P1 | Shadow sampling | recorder task / `pollRecorder()` | relative 20 ms schedule | replay format/fidelity depends on sample timing | sample period jitter/gaps | fixed release and missed-sample metadata | Moderate-high | Low-medium |
+| P2 | Odometry math | `odometry.cpp` + `Vector::SetPosition()` | repeated trig plus hidden hypot/atan2, debug comparison model | likely native hot-loop cost | sub-timers / generated assembly | local Cartesian next pose; one trig pair; build-gate comparison model | Moderate-high | High: numerical behavior |
+| P2 | Shadow RAM/copies | Shadow storage/service structures | ≥768 KiB encoded scratch plus decoded/snapshot workspaces; large copy under lock | RAM headroom and save latency | ELF BSS/map, copy/lock/save timing | lifetime-overlap map and safe buffer reuse only if needed | Moderate | High |
+| P2 | GUI/status | normal GUI and auton status | string snapshots and redraw/SD work | lower-priority contention, possible allocation | GUI iteration/redraw/lock timing | keep change-driven redraw; fixed-size status only if measurements justify | Low-moderate | Medium |
+| P2 | Logging modes | logging/status/action modules | no unified compile-time policy | inconsistent observer effect and code reachability | binary size and loop time by mode | `DEBUG`/`DEVELOPMENT`/`COMPETITION` policy | Moderate | Low |
+| P2 | Compiler | `common.mk`, Makefile experiment only | `-Os`, no LTO is unbenchmarked against alternatives | potential timing/size gain | matrix in §13/§16 | clean A/B `-Os`/`-O2`/LTO builds | Unknown/moderate | Medium |
+| P3 | Minor math/copies | profile square, tiny Pose/Vector helpers | small algebra/tiny-value copies | likely below device/I/O cost | profile/assembly | simplify only after P0-P2 evidence | Low | Low-medium |
+
+No item should be implemented solely because it appears in this table. Each row names the measurement needed to promote a hypothesis into work.
+
+## 18. Final phased roadmap
+
+### Phase 0 — Establish the baseline
+
+- **Measure before:** fresh `-Os` section sizes, task list/stacks, boot time, battery/temperature, 20 autonomous runs, all current loop/endpoint metrics possible without source instrumentation.
+- **Inspect:** selected robot/routine, physical start repeatability, LemLib/native route ownership, failure logging, test data capture.
+- **Improvement:** a reproducible baseline dataset with no missing/hand-edited trials and documented environmental bounds.
+- **Rollback:** not applicable; invalidate and repeat any baseline whose setup or build identity is ambiguous.
+
+### Phase 1 — Profiling instrumentation
+
+- **Measure before:** empty clock-read/aggregate overhead and uninstrumented A/B control runs.
+- **Inspect:** clock wrap handling, one-writer stat ownership, output timing, profiler compile modes.
+- **Improvement:** execution/period/min/mean/max/deadline-miss data with negligible measured observer effect and no hot-loop allocation/printing.
+- **Rollback:** instrumentation changes control-loop maxima, endpoint distribution, or introduces synchronization stalls.
+
+### Phase 2 — Odometry hot-path correctness and analysis
+
+- **Measure before:** native update timing, lock waits/failures, trace output versus LemLib, pose coherence sequence, 20 native-route endpoints.
+- **Inspect:** unchecked timed locks, split snapshot, reset/update race, variable shadowing, `changeWeb`, `Vector::SetPosition()` hidden math, sensor validity.
+- **Improvement:** checked synchronization, one coherent pose publication, trace-equivalent or intentionally documented math, reduced max time/misses with no endpoint regression.
+- **Rollback:** changed heading convention/wrap, new pose jumps, worse X/Y/heading spread, reset failures, or lock-related stalls.
+
+### Phase 3 — Task scheduling and loop determinism
+
+- **Measure before:** start-to-start periods/jitter/misses for odometry, opcontrol, actions, fallback, Shadow, intake.
+- **Inspect:** every relative periodic delay, task priority, safety busy loop, overrun policy.
+- **Improvement:** narrower period distribution, fewer deadline misses, bounded safety CPU, same or better command response.
+- **Rollback:** task starvation, missed safety input, increased control maximum, or changed autonomous endpoint tail.
+
+### Phase 4 — Sensor polling reduction
+
+- **Measure before:** sensor calls per state/second and latency per API call; detection/cancellation latency.
+- **Inspect:** big-sort hue states, `sampleDriveSensors()` breadth/vector allocation, controller snapshot duplication, Orbit frame freshness, GPS waits.
+- **Improvement:** fewer unused reads and lower maximum loop time with unchanged detection/fault response.
+- **Rollback:** missed blocks, delayed reject/accept, false odometry failures, worse fallback behavior, or stale controller capture.
+
+### Phase 5 — Concurrency and locking
+
+- **Measure before:** per-site wait/max/timeouts, motor-owner trace, cancellation latency, race/fault tests.
+- **Inspect:** volatile fields, small intake ownership, Orbit writers, LemLib/legacy drive selection, Shadow copy under lock, priority order.
+- **Improvement:** explicit single owner per subsystem, defined state synchronization, no unchecked lock failure, shorter bounded waits.
+- **Rollback:** deadlock, priority inversion, delayed emergency stop, lost mechanism command, or inability to recover after cancellation.
+
+### Phase 6 — Blocking-operation audit
+
+- **Measure before:** duration and cancellation response for every synchronous command; fault injection for frozen sensors/targets.
+- **Inspect:** unbounded native/Orbit loops, small intake pauses, GPS/IMU reset waits, long mechanism helpers and autonomous dwells.
+- **Improvement:** every competition-reachable wait has yield, timeout, cancellation, and safe motor-stop semantics; command state machines enable needed concurrency.
+- **Rollback:** premature motion termination, unsafe motor continuation, sequencing race, or autonomous repeatability loss.
+
+### Phase 7 — Logging and GUI overhead
+
+- **Measure before:** loop maxima and binary size with current logging; GUI redraw/SD latency.
+- **Inspect:** native per-loop prints, action/status boundary logs, debug GUI reachability, Shadow menu polling.
+- **Improvement:** competition loops emit no per-iteration formatted I/O; failures/final summaries remain available; GUI stays responsive.
+- **Rollback:** loss of actionable failure evidence, hidden safety fault, or no measurable performance/size benefit for added complexity.
+
+### Phase 8 — Memory and allocation
+
+- **Measure before:** `.data/.bss`, stack high-water, free memory, allocation count in hot loops, Shadow save/copy latency.
+- **Inspect:** pure-pursuit path copy, motor telemetry vectors, Shadow buffer lifetimes, GUI registries/status strings.
+- **Improvement:** zero dynamic allocation in proven critical loops, adequate RAM/stack margin, shorter max time without unsafe ownership.
+- **Rollback:** dangling references, buffer aliasing, corrupted Shadow files, stack overflow, or harder-to-reason ownership for negligible gain.
+
+### Phase 9 — Compiler experiments
+
+- **Measure before:** locked baseline configuration from Phases 0-8.
+- **Inspect:** exact compile/link flags, prebuilt archive compatibility, warnings, map/sections, generated code for leading hot functions.
+- **Improvement:** a matrix row improves worst-case timing or size while all 20-run stability/repeatability gates hold.
+- **Rollback:** any new compiler/link failure, code-size/RAM budget violation, timing-tail regression, crash, or endpoint degradation.
+
+### Phase 10 — Regression and autonomous repeatability release gate
+
+- **Measure before:** candidate and immediately preceding accepted baseline, interleaved for at least 20 runs each where practical.
+- **Inspect:** raw rows, outliers, failure reasons, battery/temperature drift, deadline misses, task stalls, final errors.
+- **Improvement:** predeclared budgets pass; correctness/reliability/repeatability are equal or better; gains persist in worst case and p95, not only mean.
+- **Rollback:** any P0/P1 regression or timing gain paired with worse autonomous repeatability. Revert to the last committed checkpoint and retain the failed dataset.
+
+## 19. Requirement coverage and student handoff
+
+| Requested audit area | Report location |
+|---|---|
+| Performance baseline / high-frequency table | §3 |
+| Profiling plan and metrics | §15 |
+| Detailed `src/aon/odometry.cpp` audit | §5 |
+| Deterministic `delay` versus fixed release | §6 |
+| Sensor polling and intake hue states | §7 |
+| Blocking operation classification | §8 |
+| PROS task/concurrency table | §4 and §14 |
+| Memory and allocation classes | §9 |
+| Logging and GUI modes | §10 |
+| Dead/duplicate runtime work | §11 |
+| Compiler `-Os`/`-O2`/LTO analysis and matrix | §13 |
+| Math classification | §12 |
+| Data copying | §9.3 |
+| Code-size/library/section analysis | §13.2 |
+| 20-run regression procedure/statistics | §16 |
+| P0-P3 ranked backlog | §17 |
+| Phases 0-10 with measurement and rollback | §18 |
+
+### First student sprint
+
+The first implementation sprint should be deliberately narrow:
+
+1. Add aggregate-only timing to native odometry, opcontrol, Shadow recorder, and autonomous monitoring.
+2. Capture the 20-run baseline before changing behavior.
+3. Resolve native pose publication/lock correctness and cross-task `volatile` state ownership with targeted tests.
+4. Remove the safety busy loop and gate native per-loop formatted logging.
+5. Repeat the same 20-run protocol and compare worst cases/distributions.
+
+Only after that evidence should the team choose between pure-pursuit copy removal, sensor polling changes, command state machines, math representation work, or compiler flags. This order protects the engineering priorities: correctness, reliability, deterministic timing, autonomous repeatability, CPU, memory, then binary size.
