@@ -286,6 +286,133 @@ void imuJosephUpdateIsStableAndRejectsInvalidMeasurements() {
   checkPose(singular.pose(), 0.0, 0.0, 0.0);
 }
 
+aon::localization::GpsValidationConfig testGpsGateConfig() {
+  using namespace aon::localization;
+  return {-72.0, 72.0, -72.0, 72.0, 6.0, 18.0, radians(45.0),
+          50U, 9.21, 6.63};
+}
+
+aon::localization::GpsMeasurement gpsSample(
+    double x, double y, double heading, std::uint32_t timestamp) {
+  return {x, y, heading, 1.0, true, true, true, timestamp};
+}
+
+void gpsGateRejectsBadSamplesWithTypedReasons() {
+  using namespace aon::localization;
+
+  const GpsValidationConfig config = testGpsGateConfig();
+  {
+    GpsGate gate(config);
+    GpsMeasurement sample = gpsSample(0.0, 0.0, 0.0, 100U);
+    sample.xInches = std::numeric_limits<double>::quiet_NaN();
+    CHECK(gate.evaluate(sample).reason == GpsRejectionReason::NonFinite);
+  }
+  {
+    GpsGate gate(config);
+    GpsMeasurement sample = gpsSample(0.0, 0.0, 0.0, 100U);
+    sample.fresh = false;
+    CHECK(gate.evaluate(sample).reason == GpsRejectionReason::NotFresh);
+  }
+  {
+    GpsGate gate(config);
+    CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
+              .positionAccepted);
+    CHECK(gate.evaluate(gpsSample(1.0, 1.0, 0.0, 120U)).reason ==
+          GpsRejectionReason::StaleTimestamp);
+  }
+  {
+    GpsGate gate(config);
+    GpsMeasurement sample = gpsSample(0.0, 0.0, 0.0, 100U);
+    sample.positionErrorInches = 7.0;
+    CHECK(gate.evaluate(sample).reason ==
+          GpsRejectionReason::ExcessiveReportedError);
+  }
+  {
+    GpsGate gate(config);
+    CHECK(gate.evaluate(gpsSample(80.0, 0.0, 0.0, 100U)).reason ==
+          GpsRejectionReason::OutsideFieldBounds);
+  }
+  {
+    GpsGate gate(config);
+    CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
+              .positionAccepted);
+    CHECK(gate.evaluate(gpsSample(30.0, 0.0, 0.0, 160U)).reason ==
+          GpsRejectionReason::PositionJump);
+  }
+  {
+    GpsGate gate(config);
+    CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
+              .headingAccepted);
+    const GpsGateResult result =
+        gate.evaluate(gpsSample(1.0, 0.0, radians(90.0), 160U));
+    CHECK(result.positionAccepted);
+    CHECK(!result.headingAccepted);
+    CHECK(result.reason == GpsRejectionReason::HeadingJump);
+  }
+}
+
+void gpsGateRecoversAfterTemporaryLoss() {
+  using namespace aon::localization;
+
+  GpsGate gate(testGpsGateConfig());
+  CHECK(gate.evaluate(gpsSample(0.0, 0.0, 0.0, 100U))
+            .positionAccepted);
+  GpsMeasurement missing = gpsSample(1.0, 0.0, 0.0, 160U);
+  missing.positionValid = false;
+  CHECK(gate.evaluate(missing).reason ==
+        GpsRejectionReason::InvalidPosition);
+  const GpsGateResult recovered =
+      gate.evaluate(gpsSample(2.0, 0.0, 0.0, 220U));
+  CHECK(recovered.positionAccepted);
+  CHECK(recovered.headingAccepted);
+}
+
+void gpsPositionCorrectionIsWeightedAndOutlierGated() {
+  using namespace aon::localization;
+
+  Ekf ekf(testEkfConfig());
+  ekf.reset({10.0, -8.0, 0.0});
+  const CovarianceDiagonal before = ekf.covarianceDiagonal();
+  CHECK(ekf.updateGpsPosition(0.0, 0.0, 1000.0));
+  const EstimatorPose corrected = ekf.pose();
+  CHECK(corrected.xInches > 0.0 && corrected.xInches < 10.0);
+  CHECK(corrected.yInches < 0.0 && corrected.yInches > -8.0);
+  const CovarianceDiagonal after = ekf.covarianceDiagonal();
+  CHECK(after.xVariance < before.xVariance);
+  CHECK(after.yVariance < before.yVariance);
+
+  ekf.reset({0.0, 0.0, 0.0});
+  const EstimatorPose beforeOutlier = ekf.pose();
+  CHECK(!ekf.updateGpsPosition(60.0, 60.0, 9.21));
+  checkPose(ekf.pose(), beforeOutlier.xInches, beforeOutlier.yInches,
+            beforeOutlier.headingRadians);
+
+  EkfConfig singularConfig = testEkfConfig();
+  singularConfig.initialPositionVariance = 0.0;
+  singularConfig.gpsPositionVariance = 0.0;
+  Ekf singular(singularConfig);
+  CHECK(!singular.updateGpsPosition(0.0, 0.0, 9.21));
+}
+
+void gpsHeadingCorrectionWrapsAndCanRemainDisabled() {
+  using namespace aon::localization;
+
+  Ekf ekf(testEkfConfig());
+  ekf.reset({0.0, 0.0, radians(359.0)});
+  const double before = ekf.pose().headingRadians;
+  CHECK(ekf.updateGpsHeading(radians(1.0), 6.63, true));
+  CHECK(shortestAngleDelta(before, ekf.pose().headingRadians) > 0.0);
+
+  ekf.reset({0.0, 0.0, radians(25.0)});
+  CHECK(!ekf.updateGpsHeading(radians(90.0), 6.63, false));
+  checkNear(ekf.pose().headingRadians, radians(25.0));
+
+  const EstimatorPose beforeOutlier = ekf.pose();
+  CHECK(!ekf.updateGpsHeading(radians(170.0), 6.63, true));
+  checkPose(ekf.pose(), beforeOutlier.xInches, beforeOutlier.yInches,
+            beforeOutlier.headingRadians);
+}
+
 }  // namespace
 
 int main() {
@@ -298,6 +425,10 @@ int main() {
   ekfPredictionStaysFiniteAndRejectsBadInput();
   imuUpdatesUseWrappedInnovationsAndConfiguredNoise();
   imuJosephUpdateIsStableAndRejectsInvalidMeasurements();
+  gpsGateRejectsBadSamplesWithTypedReasons();
+  gpsGateRecoversAfterTemporaryLoss();
+  gpsPositionCorrectionIsWeightedAndOutlierGated();
+  gpsHeadingCorrectionWrapsAndCanRemainDisabled();
   std::cout << "localization math tests passed\n";
   return 0;
 }

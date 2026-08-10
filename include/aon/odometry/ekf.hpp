@@ -34,6 +34,10 @@ class Ekf {
   void reset(EstimatorPose pose) noexcept;
   bool predict(LocalMotion motion) noexcept;
   bool updateImuHeading(double headingRadians) noexcept;
+  bool updateGpsPosition(double xInches, double yInches,
+                         double maximumNis) noexcept;
+  bool updateGpsHeading(double headingRadians, double maximumNis,
+                        bool enabled) noexcept;
 
   EstimatorPose pose() const noexcept;
   Matrix3 covariance() const noexcept;
@@ -43,6 +47,9 @@ class Ekf {
   EkfConfig config_;
   EstimatorPose state_{};
   Matrix3 covariance_{};
+
+  bool updateHeading(double headingRadians, double measurementVariance,
+                     double maximumNis) noexcept;
 };
 
 }  // namespace aon::localization

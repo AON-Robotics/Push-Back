@@ -1,6 +1,7 @@
 #include "aon/odometry/ekf.hpp"
 
 #include <cmath>
+#include <limits>
 
 namespace aon::localization {
 namespace {
@@ -54,6 +55,21 @@ Matrix3 transpose(const Matrix3& matrix) noexcept {
     }
   }
   return result;
+}
+
+void stabilizeCovariance(Matrix3& covariance, double tolerance) noexcept {
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    if (covariance[row][row] < 0.0 &&
+        covariance[row][row] >= -tolerance) {
+      covariance[row][row] = 0.0;
+    }
+    for (std::size_t column = row + 1; column < kStateDimension; ++column) {
+      const double average =
+          (covariance[row][column] + covariance[column][row]) / 2.0;
+      covariance[row][column] = average;
+      covariance[column][row] = average;
+    }
+  }
 }
 
 }  // namespace
@@ -114,7 +130,99 @@ bool Ekf::predict(LocalMotion motion) noexcept {
 }
 
 bool Ekf::updateImuHeading(double headingRadians) noexcept {
-  const double measurementVariance = config_.imuHeadingVariance;
+  return updateHeading(headingRadians, config_.imuHeadingVariance,
+                       std::numeric_limits<double>::infinity());
+}
+
+bool Ekf::updateGpsPosition(double xInches, double yInches,
+                            double maximumNis) noexcept {
+  const double measurementVariance = config_.gpsPositionVariance;
+  if (!std::isfinite(xInches) || !std::isfinite(yInches) ||
+      !std::isfinite(measurementVariance) || measurementVariance < 0.0 ||
+      std::isnan(maximumNis) || maximumNis < 0.0) {
+    return false;
+  }
+
+  const double innovationX = xInches - state_.xInches;
+  const double innovationY = yInches - state_.yInches;
+  const double innovation00 = covariance_[0][0] + measurementVariance;
+  const double innovation01 = covariance_[0][1];
+  const double innovation10 = covariance_[1][0];
+  const double innovation11 = covariance_[1][1] + measurementVariance;
+  const double determinant =
+      innovation00 * innovation11 - innovation01 * innovation10;
+  if (!std::isfinite(determinant) ||
+      determinant <= config_.singularityTolerance) {
+    return false;
+  }
+
+  const double inverse00 = innovation11 / determinant;
+  const double inverse01 = -innovation01 / determinant;
+  const double inverse10 = -innovation10 / determinant;
+  const double inverse11 = innovation00 / determinant;
+  const double nis =
+      innovationX * (inverse00 * innovationX + inverse01 * innovationY) +
+      innovationY * (inverse10 * innovationX + inverse11 * innovationY);
+  if (!std::isfinite(nis) || nis > maximumNis) {
+    return false;
+  }
+
+  std::array<std::array<double, 2>, kStateDimension> gain{};
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    gain[row][0] =
+        covariance_[row][0] * inverse00 +
+        covariance_[row][1] * inverse10;
+    gain[row][1] =
+        covariance_[row][0] * inverse01 +
+        covariance_[row][1] * inverse11;
+  }
+
+  EstimatorPose candidateState{
+      state_.xInches + gain[0][0] * innovationX +
+          gain[0][1] * innovationY,
+      state_.yInches + gain[1][0] * innovationX +
+          gain[1][1] * innovationY,
+      wrapRadians(state_.headingRadians + gain[2][0] * innovationX +
+                  gain[2][1] * innovationY),
+  };
+
+  Matrix3 josephLeft{{{1.0 - gain[0][0], -gain[0][1], 0.0},
+                      {-gain[1][0], 1.0 - gain[1][1], 0.0},
+                      {-gain[2][0], -gain[2][1], 1.0}}};
+  Matrix3 candidateCovariance = multiply(
+      multiply(josephLeft, covariance_), transpose(josephLeft));
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    for (std::size_t column = 0; column < kStateDimension; ++column) {
+      candidateCovariance[row][column] +=
+          measurementVariance *
+          (gain[row][0] * gain[column][0] +
+           gain[row][1] * gain[column][1]);
+    }
+  }
+  stabilizeCovariance(candidateCovariance, config_.singularityTolerance);
+
+  if (!finitePose(candidateState) ||
+      !validCovariance(candidateCovariance,
+                       config_.singularityTolerance)) {
+    return false;
+  }
+
+  state_ = candidateState;
+  covariance_ = candidateCovariance;
+  return true;
+}
+
+bool Ekf::updateGpsHeading(double headingRadians, double maximumNis,
+                           bool enabled) noexcept {
+  if (!enabled) {
+    return false;
+  }
+  return updateHeading(headingRadians, config_.gpsHeadingVariance,
+                       maximumNis);
+}
+
+bool Ekf::updateHeading(double headingRadians, double measurementVariance,
+                        double maximumNis) noexcept {
   if (!std::isfinite(headingRadians) ||
       !std::isfinite(measurementVariance) || measurementVariance < 0.0) {
     return false;
@@ -129,6 +237,11 @@ bool Ekf::updateImuHeading(double headingRadians) noexcept {
 
   const double innovation =
       shortestAngleDelta(state_.headingRadians, headingRadians);
+  const double nis = innovation * innovation / innovationVariance;
+  if (std::isnan(maximumNis) || maximumNis < 0.0 ||
+      !std::isfinite(nis) || nis > maximumNis) {
+    return false;
+  }
   std::array<double, kStateDimension> gain{};
   for (std::size_t row = 0; row < kStateDimension; ++row) {
     gain[row] = covariance_[row][2] / innovationVariance;
@@ -154,20 +267,7 @@ bool Ekf::updateImuHeading(double headingRadians) noexcept {
 
   // Roundoff can make mirrored entries differ after many updates. Averaging
   // preserves the covariance meaning without concealing a genuinely bad input.
-  for (std::size_t row = 0; row < kStateDimension; ++row) {
-    if (candidateCovariance[row][row] < 0.0 &&
-        candidateCovariance[row][row] >= -config_.singularityTolerance) {
-      candidateCovariance[row][row] = 0.0;
-    }
-    for (std::size_t column = row + 1; column < kStateDimension; ++column) {
-      const double average =
-          (candidateCovariance[row][column] +
-           candidateCovariance[column][row]) /
-          2.0;
-      candidateCovariance[row][column] = average;
-      candidateCovariance[column][row] = average;
-    }
-  }
+  stabilizeCovariance(candidateCovariance, config_.singularityTolerance);
 
   if (!finitePose(candidateState) ||
       !validCovariance(candidateCovariance,
