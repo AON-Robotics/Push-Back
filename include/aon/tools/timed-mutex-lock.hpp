@@ -4,7 +4,10 @@
 
 namespace aon {
 
-/** Owns a mutex only when acquisition succeeds before the timeout. */
+/**
+ * Acquires a borrowed mutex for at most `timeoutMs` milliseconds.
+ * Destruction releases it exactly once when acquisition succeeded.
+ */
 template <typename Mutex>
 class TimedMutexLock {
  public:
@@ -20,6 +23,7 @@ class TimedMutexLock {
   TimedMutexLock(TimedMutexLock&&) = delete;
   TimedMutexLock& operator=(TimedMutexLock&&) = delete;
 
+  /** True only while this guard owns the borrowed mutex. */
   [[nodiscard]] bool ownsLock() const noexcept { return owns_; }
 
  private:

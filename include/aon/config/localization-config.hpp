@@ -8,6 +8,7 @@
 
 namespace aon::config {
 
+/** GPS installation, validation, and independently gated heading fusion. */
 struct GpsHardwareConfig {
   bool enabled;
   std::int8_t port;
@@ -18,6 +19,7 @@ struct GpsHardwareConfig {
   localization::GpsValidationConfig validation;
 };
 
+/** Fixed localization values and physical-validation authorization gates. */
 struct LocalizationConfig {
   localization::TrackingGeometry geometry;
   double trackingWheelDiameterInches;

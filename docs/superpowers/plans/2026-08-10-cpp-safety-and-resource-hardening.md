@@ -20,6 +20,27 @@
 - Use `-std=c++17 -Wall -Wextra -Werror` for host compilation.
 - Commit and push each completed task independently; never stage unrelated concurrent work.
 
+## Completion Record
+
+The procedural checkboxes below preserve the test-first execution script. The
+following checkpoints are the authoritative completion record:
+
+| Task | Checkpoint |
+|---|---|
+| 1. Polymorphic ownership | `3c729d8` |
+| 2. Monotonic rollover | `656e6fd` |
+| 3. Final-heading progress | `3538150` |
+| 4. Accepted GPS history | `47ae2b7` |
+| 5. Finite pose contract | `8dc2483` |
+| 6. Complete authorization | `87f9c5e` |
+| 7. Bounded locks/task start | `6afd009` |
+| 8. Planner workspace | `502dc26` |
+| 9. Briefs and verification | This documentation checkpoint |
+
+Both ARM variants linked successfully, the small-robot selector was restored,
+and the full host suite passed. Physical validation remains intentionally
+unclaimed.
+
 ---
 
 ## File Structure

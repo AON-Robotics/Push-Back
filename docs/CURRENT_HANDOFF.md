@@ -1,5 +1,31 @@
 # Current Development Handoff
 
+## 2026-08-10 C++ Safety and Resource Hardening Checkpoint
+
+The hardening plan is implemented through bounded runtime ownership:
+
+- GUI and drivetrain polymorphic bases have virtual nonthrowing destruction;
+- millisecond comparisons remain correct across `uint32_t` rollover;
+- final-heading alignment stops after stalled progress;
+- GPS jump history advances only after filter acceptance;
+- every pose component is checked for finiteness;
+- all nine physical authorization gates fail closed;
+- planner scratch data is fixed-capacity, planner-owned storage;
+- odometry mutex waits are bounded at two milliseconds and counted;
+- RTOS task creation returns a typed result and autonomous callers stop on
+  failure.
+
+Fresh verification passed all host tests with warnings as errors. Clean ARM
+builds linked for both robot configurations; the committed selector is
+`USING_BIG_ROBOT false`. Linker-reported BSS remains approximately 48.53 MB
+for big and 48.59 MB for small. The only compiler warning is the existing
+vendored `json.hpp` `std::is_pod` deprecation.
+
+Static inspection found no first-party manual `new`/`delete` or
+`malloc`/`free` ownership and no active object slicing. This does not prove
+physical timing, localization accuracy, LiDAR mounting, or memory headroom on
+the V5 Brain. Every existing physical checklist result remains `Not run`.
+
 ## 2026-08-10 Localization/EKF Software Checkpoint
 
 The corrected three-wheel motion model, fixed three-state EKF, wrapped IMU

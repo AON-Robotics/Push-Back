@@ -38,6 +38,10 @@ class PathPlanner {
  public:
   explicit PathPlanner(PathPlannerConfig config) noexcept;
 
+  /**
+   * Plans without allocation by reusing owned bounded scratch storage.
+   * Calls on the same planner instance must not overlap.
+   */
   [[nodiscard]] PlanResult plan(
       field::Point2 start, field::Point2 goal, double robotRadiusInches,
       const field::FieldMap& field,

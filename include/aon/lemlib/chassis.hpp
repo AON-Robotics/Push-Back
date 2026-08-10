@@ -17,10 +17,10 @@ lemlib::Chassis& chassis();
 /// Calibrates LemLib sensors and starts its odometry task for normal operation.
 void initializeChassis();
 
-/// True when the selected localization path completed its boot checks.
+/// True only when the selected localization path and required task are ready.
 bool localizationReady();
 
-/// Starts the authorized AON localization publisher. Repeated calls are safe.
+/// Starts the authorized publisher or returns a typed, fail-closed result.
 [[nodiscard]] core::TaskStartResult startFusedLocalization();
 
 /// Calibrates LemLib odometry and continuously displays its pose.

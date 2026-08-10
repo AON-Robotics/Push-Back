@@ -9,6 +9,8 @@ namespace aon::legacy_motion {
  *
  * Repeated calls are safe. Once started, the task remains active until the
  * program restarts, so LemLib validation should run from a fresh boot.
+ * @return `Started`, `AlreadyRunning`, or `Failed`; never starts implicitly
+ * when fused localization is selected but unavailable.
  */
 [[nodiscard]] core::TaskStartResult prepare();
 
