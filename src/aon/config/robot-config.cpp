@@ -3,10 +3,55 @@
 #include "aon/constants.hpp"
 
 namespace aon::config {
+namespace {
+
+const LocalizationConfig& localizationConfig() {
+  // These geometry values preserve the existing LemLib configuration; they
+  // remain nominal until the signed full-turn measurements are recorded.
+  static const LocalizationConfig config{
+      {-DISTANCE_LEFT_TRACKING_WHEEL_CENTER,
+       DISTANCE_RIGHT_TRACKING_WHEEL_CENTER,
+       -DISTANCE_BACK_TRACKING_WHEEL_CENTER},
+      TRACKING_WHEEL_DIAMETER,
+      10U,
+      {
+          4.0,
+          aon::localization::radians(5.0) *
+              aon::localization::radians(5.0),
+          1e-6,
+          1e-8,
+          0.01,
+          0.01,
+          aon::localization::radians(2.0) *
+              aon::localization::radians(2.0),
+          4.0,
+          aon::localization::radians(8.0) *
+              aon::localization::radians(8.0),
+          1e-12,
+      },
+      {
+          false,
+          0,
+          0.0,
+          0.0,
+          0.0,
+          false,
+          {-72.0, 72.0, -72.0, 72.0, 6.0, 18.0,
+           aon::localization::radians(45.0), 50U, 9.21, 6.63},
+      },
+      false,
+  };
+  return config;
+}
+
+}  // namespace
 
 const RobotConfig& activeRobotConfig() {
 #if USING_BIG_ROBOT
   constexpr const RobotHardwareMap& hardwareMap = bigRobotHardwareMap;
+  constexpr auto authorizations =
+      baselineAuthorizations(RobotIdentity::Big);
+  const LocalizationConfig& localization = localizationConfig();
   static const RobotConfig config{
       RobotIdentity::Big,
       {
@@ -19,9 +64,9 @@ const RobotConfig& activeRobotConfig() {
           8.0,
           5.0,
           8.0,
-          -DISTANCE_LEFT_TRACKING_WHEEL_CENTER,
-          DISTANCE_RIGHT_TRACKING_WHEEL_CENTER,
-          -DISTANCE_BACK_TRACKING_WHEEL_CENTER,
+          static_cast<float>(localization.geometry.leftOffsetInches),
+          static_cast<float>(localization.geometry.rightOffsetInches),
+          static_cast<float>(localization.geometry.backOffsetInches),
           {
               MOTOR_TO_DRIVE_RATIO,
               4.0,
@@ -31,15 +76,19 @@ const RobotConfig& activeRobotConfig() {
               100,
               250,
               {3, 2, 300, 15.0, 0.02, 8.0, 45.0},
-              false,
-              false,
+              authorizations.automaticEncoderFallback,
+              authorizations.forcedEncoderTesting,
           },
       },
-      false,  // shadowPlaybackAuthorized
-      {false, false},  // Experimental routes await physical validation.
+      localization,
+      authorizations.shadowPlayback,
+      {authorizations.redSixBlock, authorizations.jerryIoPath},
   };
 #else
   constexpr const RobotHardwareMap& hardwareMap = smallRobotHardwareMap;
+  constexpr auto authorizations =
+      baselineAuthorizations(RobotIdentity::Small);
+  const LocalizationConfig& localization = localizationConfig();
   static const RobotConfig config{
       RobotIdentity::Small,
       {
@@ -52,9 +101,9 @@ const RobotConfig& activeRobotConfig() {
           8.0,
           5.0,
           8.0,
-          -DISTANCE_LEFT_TRACKING_WHEEL_CENTER,
-          DISTANCE_RIGHT_TRACKING_WHEEL_CENTER,
-          -DISTANCE_BACK_TRACKING_WHEEL_CENTER,
+          static_cast<float>(localization.geometry.leftOffsetInches),
+          static_cast<float>(localization.geometry.rightOffsetInches),
+          static_cast<float>(localization.geometry.backOffsetInches),
           {
               MOTOR_TO_DRIVE_RATIO,
               4.0,
@@ -64,12 +113,13 @@ const RobotConfig& activeRobotConfig() {
               100,
               250,
               {3, 2, 300, 15.0, 0.02, 8.0, 45.0},
-              false,
-              false,
+              authorizations.automaticEncoderFallback,
+              authorizations.forcedEncoderTesting,
           },
       },
-      false,  // shadowPlaybackAuthorized: physical checklist remains incomplete.
-      {false, false},  // Experimental routes await physical validation.
+      localization,
+      authorizations.shadowPlayback,
+      {authorizations.redSixBlock, authorizations.jerryIoPath},
   };
 #endif
   return config;

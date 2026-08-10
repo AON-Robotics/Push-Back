@@ -18,8 +18,8 @@ The current GUI registrations are:
 
 | Menu | AUT1 | AUT2 | AUT3 |
 |---|---|---|---|
-| Red | Kevin Loader | Kevin Park | Red Six Block (locked) |
-| Blue | Kevin Loader | Kevin Park | JerryIO Path (locked) |
+| Red | Kevin Loader | Kevin Park | RED 6-BLOCK HYBRID (locked) |
+| Blue | Kevin Loader | Kevin Park | TEST JerryIO Path (locked) |
 | Skills | Skills AUT1 | TEST LemLib Forward 12in | SHADOW PLAYBACK (locked) |
 
 ## Authorization state required before ordinary uploads
@@ -79,8 +79,12 @@ Upload a clean small-robot build with every authorization gate false.
 | Cold boot | Correct config; no fatal startup fault; GUI responsive | Not run | |
 | Disabled safety | Drivetrain and mechanisms remain stopped | Not run | |
 | Teleop controls | Expected drive direction; intake/pistons correct; X stops outputs | Not run | |
-| Kevin Loader | Red or Blue AUT1 completes or fails safely; final outputs zero | Not run | |
-| Kevin Park | Red or Blue AUT2 completes or fails safely; final outputs zero | Not run | |
+| Kevin Loader GUI | Red or Blue AUT1 displays `Kevin Loader` after a fresh boot | Not run | |
+| Kevin Loader motion | Expected drivetrain path and mechanism sequence complete | Not run | |
+| Kevin Loader safe stop | Route succeeds; drivetrain and mechanisms finish at zero | Not run | |
+| Kevin Park GUI | Red or Blue AUT2 displays `Kevin Park` after a fresh boot | Not run | |
+| Kevin Park motion | Expected drivetrain path and mechanism sequence complete | Not run | |
+| Kevin Park safe stop | Route succeeds; drivetrain and mechanisms finish at zero | Not run | |
 | LemLib forward | Skills AUT2 travels forward 12 in; record final X/Y/heading and endpoint error | Not run | |
 | SD logging | Log created, flushed, readable, and free of repeated write faults | Not run | |
 | Reboot recovery | Clean reboot after run; no stale autonomous or actuator state | Not run | |
@@ -93,10 +97,15 @@ error, duration, battery voltage, and whether correction oscillated.
 
 The figure-eight implementation still exists, but it is not registered in the
 current GUI: Skills AUT2 is the 12-inch forward validation. Do not silently
-substitute one route for the other. Record the reviewed test commit and exact
-invocation used to expose `RunLemLibFigureEightValidation()` before uploading.
-If no reviewed invocation is available, leave these rows incomplete and do not
-advance.
+substitute one route for the other. Create a dedicated supervised-test commit
+that changes only `SkillsRoutine2()` in
+`src/aon/auton/routine-selectors.cpp` from `RunLemLibForwardValidation` to
+`RunLemLibFigureEightValidation`, and changes the Skills AUT2 label in
+`include/aon/tools/gui/gui.hpp` from `TEST LemLib Forward 12in` to
+`TEST LemLib Figure 8`. Clean-build, upload, and record that exact commit.
+After the test, revert both substitutions in a separate checkpoint and verify
+the normal forward-validation slot again. If this exact test build is not
+available, leave these rows incomplete and do not advance.
 
 | Gate | Required observation | Result | Measurements / evidence |
 |---|---|---|---|
@@ -118,8 +127,12 @@ after the test upload.
 | Cold boot | Correct config; no fatal startup fault; GUI responsive | Not run | |
 | Disabled safety | Drivetrain and mechanisms remain stopped | Not run | |
 | Teleop controls | Expected drive direction; mechanisms correct; X stops outputs | Not run | |
-| Kevin Loader | Red or Blue AUT1 completes or fails safely; final outputs zero | Not run | |
-| Kevin Park | Red or Blue AUT2 completes or fails safely; final outputs zero | Not run | |
+| Kevin Loader GUI | Red or Blue AUT1 displays `Kevin Loader` after a fresh boot | Not run | |
+| Kevin Loader motion | Expected drivetrain path and mechanism sequence complete | Not run | |
+| Kevin Loader safe stop | Route succeeds; drivetrain and mechanisms finish at zero | Not run | |
+| Kevin Park GUI | Red or Blue AUT2 displays `Kevin Park` after a fresh boot | Not run | |
+| Kevin Park motion | Expected drivetrain path and mechanism sequence complete | Not run | |
+| Kevin Park safe stop | Route succeeds; drivetrain and mechanisms finish at zero | Not run | |
 | LemLib forward | Skills AUT2 travels forward 12 in; record final X/Y/heading and endpoint error | Not run | |
 | SD logging | Log created, flushed, readable, and free of repeated write faults | Not run | |
 | Reboot recovery | Clean reboot after run; no stale autonomous or actuator state | Not run | |
@@ -157,11 +170,13 @@ Do not authorize Red Six Block, JerryIO Path, forced encoder testing, or
 automatic encoder fallback as part of this checklist. Each requires its own
 progressive physical evidence and explicit review.
 
-## F. Timing and memory evidence
+## F. Optional pre-instrumentation timing and memory evidence
 
 The clean linker reports showed approximately 48.53 MB BSS for big and
 48.59 MB BSS for small. Before adding roadmap services, collect a runtime
-baseline so later phases have a real budget rather than an assumed one.
+baseline so later phases have a real budget rather than an assumed one. These
+rows are informative in Phase 0 and do not block Phase 1 when the required
+instrumentation does not exist yet.
 
 | Measurement | Small result | Big result | Evidence |
 |---|---|---|---|
@@ -173,8 +188,9 @@ baseline so later phases have a real budget rather than an assumed one.
 | SD write worst-case latency | Not run | Not run | |
 
 If the current firmware does not expose one of these measurements reliably,
-record `Blocked: instrumentation absent` rather than inventing a value. That
-result becomes the input to the Phase 9 instrumentation plan.
+record `Deferred: instrumentation absent` rather than inventing a value. That
+result becomes input to the Phase 9 instrumentation plan and is not a failed
+physical safety result.
 
 ## Gate decision
 
@@ -183,10 +199,10 @@ result becomes the input to the Phase 9 instrumentation plan.
 | Small baseline accepted | Not run |
 | Big baseline accepted | Not run |
 | Shadow playback accepted | Not run |
-| Runtime budget recorded | Not run |
 | Approved to begin Phase 1 | **No** |
 
-Advancement requires all applicable safety rows to pass, raw evidence to be
+Advancement requires all required safety rows in sections A through E to pass,
+raw evidence to be
 preserved, anomalies to be resolved or explicitly bounded, and a reviewer to
 change the final decision to `Yes` in a dedicated commit. `Not run`, `Blocked`,
 or an unexplained failure means stop.

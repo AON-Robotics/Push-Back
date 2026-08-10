@@ -104,6 +104,16 @@ void experimentalRoutesRequireIndividualAuthorization() {
   CHECK(jerryOnly.allows(ExperimentalRoute::JerryIoPath));
 }
 
+void bothRobotBaselinesKeepEveryPhysicalGateLocked() {
+  using aon::config::RobotIdentity;
+
+  const auto small = aon::config::baselineAuthorizations(RobotIdentity::Small);
+  const auto big = aon::config::baselineAuthorizations(RobotIdentity::Big);
+  CHECK(!small.shadowPlayback);
+  CHECK(aon::config::safeForUnvalidatedBaseline(small));
+  CHECK(aon::config::safeForUnvalidatedBaseline(big));
+}
+
 }  // namespace
 
 int main() {
@@ -112,6 +122,7 @@ int main() {
   validatorDistinguishesPortAndReversalFailures();
   validatorRejectsPortsOutsideTheV5Range();
   experimentalRoutesRequireIndividualAuthorization();
+  bothRobotBaselinesKeepEveryPhysicalGateLocked();
   std::cout << "hardware map tests passed\n";
   return 0;
 }

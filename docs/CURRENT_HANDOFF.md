@@ -48,12 +48,10 @@ unsupported small-robot Shadow playback flag to false, verifies every other
 gate remains false, publishes one physical baseline checklist, and then stops
 for measured robot results.
 
-Phase 0 is a hard reconciliation gate. This handoff still contains older text
-stating that Shadow playback authorization is false, while current Git history
-and `src/aon/config/robot-config.cpp` set the small-robot supervised-test flag
-to true. Reconcile that flag with committed physical evidence and current GUI
-registration before changing behavior. Do not infer authorization from builds
-or host tests.
+Historical reconciliation note (resolved by `4bc0e36`): the small-robot Shadow
+flag had temporarily been true for a supervised test even though the physical
+results remained `Not run`. The active source now keeps it false. Do not infer
+future authorization from builds or host tests.
 
 Read this file at the start of a new development session or after changing computers.
 Use Git history as the source of truth when this file and a chat disagree.

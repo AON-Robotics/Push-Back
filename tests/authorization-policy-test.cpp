@@ -17,12 +17,34 @@ namespace {
 void onlyAnEntirelyLockedSnapshotIsSafeBeforeValidation() {
   using aon::config::safeForUnvalidatedBaseline;
 
-  CHECK(safeForUnvalidatedBaseline({false, false, false, false, false}));
-  CHECK(!safeForUnvalidatedBaseline({true, false, false, false, false}));
-  CHECK(!safeForUnvalidatedBaseline({false, true, false, false, false}));
-  CHECK(!safeForUnvalidatedBaseline({false, false, true, false, false}));
-  CHECK(!safeForUnvalidatedBaseline({false, false, false, true, false}));
-  CHECK(!safeForUnvalidatedBaseline({false, false, false, false, true}));
+  const aon::config::AuthorizationSnapshot locked{};
+  CHECK(safeForUnvalidatedBaseline(locked));
+
+  auto enabled = locked;
+  enabled.automaticEncoderFallback = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.forcedEncoderTesting = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.shadowPlayback = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.redSixBlock = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+  enabled = locked;
+  enabled.jerryIoPath = true;
+  CHECK(!safeForUnvalidatedBaseline(enabled));
+}
+
+void bothRobotBaselinesKeepEveryPhysicalGateLocked() {
+  using aon::config::RobotIdentity;
+
+  const auto small = aon::config::baselineAuthorizations(RobotIdentity::Small);
+  const auto big = aon::config::baselineAuthorizations(RobotIdentity::Big);
+  CHECK(!small.shadowPlayback);
+  CHECK(aon::config::safeForUnvalidatedBaseline(small));
+  CHECK(aon::config::safeForUnvalidatedBaseline(big));
 }
 
 void activeConfigurationIsSafeBeforePhysicalValidation() {
@@ -35,6 +57,7 @@ void activeConfigurationIsSafeBeforePhysicalValidation() {
 
 int main() {
   onlyAnEntirelyLockedSnapshotIsSafeBeforeValidation();
+  bothRobotBaselinesKeepEveryPhysicalGateLocked();
   activeConfigurationIsSafeBeforePhysicalValidation();
   std::cout << "authorization policy tests passed\n";
   return 0;

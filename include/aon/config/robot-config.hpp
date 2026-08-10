@@ -4,6 +4,9 @@
 
 #include "aon/auton/motion-health.hpp"
 #include "aon/config/hardware-map.hpp"
+#include "aon/odometry/ekf.hpp"
+#include "aon/odometry/pose-estimator.hpp"
+#include "aon/odometry/sensor-measurements.hpp"
 
 namespace aon::config {
 
@@ -50,11 +53,18 @@ struct AuthorizationSnapshot {
   bool jerryIoPath;
 };
 
+/** Returns the locked authorization baseline for either physical robot. */
+[[nodiscard]] constexpr AuthorizationSnapshot baselineAuthorizations(
+    RobotIdentity) noexcept {
+  return {};
+}
+
 /**
  * @brief Reports whether no unvalidated behavior is enabled.
  *
- * This pure policy is shared by host checks and the configuration handoff. It
- * does not grant authorization; it only proves that all risky gates are shut.
+ * This pure policy is shared by configuration construction and host checks. It
+ * does not grant authorization; it only proves that the enumerated gates are
+ * shut.
  */
 [[nodiscard]] constexpr bool safeForUnvalidatedBaseline(
     const AuthorizationSnapshot& value) noexcept {
@@ -91,9 +101,29 @@ struct LemLibDriveConfig {
   FallbackConfig fallback;
 };
 
+struct GpsHardwareConfig {
+  bool enabled;
+  std::int8_t port;
+  double xOffsetMeters;
+  double yOffsetMeters;
+  double headingOffsetDegrees;
+  bool headingUpdateEnabled;
+  aon::localization::GpsValidationConfig validation;
+};
+
+struct LocalizationConfig {
+  aon::localization::TrackingGeometry geometry;
+  double trackingWheelDiameterInches;
+  std::uint32_t loopPeriodMs;
+  aon::localization::EkfConfig ekf;
+  GpsHardwareConfig gps;
+  bool fusedLemLibAuthorized;
+};
+
 struct RobotConfig {
   RobotIdentity identity;
   LemLibDriveConfig lemlib;
+  LocalizationConfig localization;
   bool shadowPlaybackAuthorized;
   AutonomousAuthorizations autonomousAuthorizations;
 };
