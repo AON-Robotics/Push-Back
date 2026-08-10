@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "aon/config/hardware-map.hpp"
+#include "aon/config/robot-config.hpp"
 
 namespace aon::core {
 namespace {
