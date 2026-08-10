@@ -61,12 +61,26 @@ void invalidAndOutOfOrderCandidatesFailClosed() {
             .status == RecoveryStatus::Invalid);
 }
 
+void recoveryObservationsRemainOrderedAcrossClockRollover() {
+  using namespace aon::localization;
+  constexpr std::uint32_t nearWrap =
+      std::numeric_limits<std::uint32_t>::max() - 10U;
+  RecoveryMonitor monitor({2, 2.0, radians(5.0), 300});
+  CHECK(monitor.observe({1.0, 2.0, radians(3.0), nearWrap}).status ==
+        RecoveryStatus::Collecting);
+  const RecoveryDecision decision =
+      monitor.observe({1.5, 2.0, radians(4.0), 5U});
+  CHECK(decision.status == RecoveryStatus::Consistent);
+  CHECK(decision.allowCorrection);
+}
+
 }  // namespace
 
 int main() {
   covarianceMapsToExplicitDriveSafetyLevels();
   largeCorrectionsNeedRepeatedIndependentAgreement();
   invalidAndOutOfOrderCandidatesFailClosed();
+  recoveryObservationsRemainOrderedAcrossClockRollover();
   std::cout << "localization confidence tests passed\n";
   return 0;
 }

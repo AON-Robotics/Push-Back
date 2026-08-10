@@ -63,12 +63,29 @@ void capacityEvictsOnlyTheOldestSamples() {
   CHECK(sample.pose.xInches == 3.0);
 }
 
+void historyOrdersAndInterpolatesAcrossClockRollover() {
+  using namespace aon::localization;
+  constexpr std::uint32_t nearWrap =
+      std::numeric_limits<std::uint32_t>::max() - 10U;
+  PoseHistory history;
+  CHECK(history.push({{0.0, 0.0, 0.0}, nearWrap}) ==
+        PoseHistoryPushResult::Accepted);
+  CHECK(history.push({{16.0, 0.0, 0.0}, 5U}) ==
+        PoseHistoryPushResult::Accepted);
+
+  TimedPose sample;
+  CHECK(history.sampleAt(0U, sample) ==
+        PoseHistorySampleResult::Interpolated);
+  CHECK(std::abs(sample.pose.xInches - 11.0) < 1e-9);
+}
+
 }  // namespace
 
 int main() {
   historyInterpolatesPositionAndWrappedHeading();
   historyRejectsInvalidOrderingAndOutOfRangeQueries();
   capacityEvictsOnlyTheOldestSamples();
+  historyOrdersAndInterpolatesAcrossClockRollover();
   std::cout << "pose history tests passed\n";
   return 0;
 }

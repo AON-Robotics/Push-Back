@@ -61,6 +61,21 @@ void detectionsAssociateIntoMovingTracksAndExpire() {
   CHECK(obstacles.size() == 0);
 }
 
+void obstacleLifetimeSpansClockRollover() {
+  constexpr std::uint32_t nearWrap =
+      std::numeric_limits<std::uint32_t>::max() - 10U;
+  DynamicObstacleMap obstacles({6.0, 20, 0.5});
+  CHECK(obstacles.update(circle(1.0, 0.0, nearWrap)) ==
+        ObstacleUpdateResult::Inserted);
+
+  obstacles.expire(nearWrap + 5U);
+  CHECK(obstacles.size() == 1);
+  obstacles.expire(5U);
+  CHECK(obstacles.size() == 1);
+  obstacles.expire(9U);
+  CHECK(obstacles.size() == 0);
+}
+
 void olderDetectionCannotForkAnExistingTrack() {
   DynamicObstacleMap obstacles({6.0, 500, 0.5});
   CHECK(obstacles.update(circle(1.0, 0.0, 100)) ==
@@ -254,6 +269,7 @@ void turningProgressDoesNotLookLikeABlockedRobot() {
 
 int main() {
   detectionsAssociateIntoMovingTracksAndExpire();
+  obstacleLifetimeSpansClockRollover();
   olderDetectionCannotForkAnExistingTrack();
   fullMapPreservesStrongerTracks();
   invalidGeometryAndConfigurationFailClosed();

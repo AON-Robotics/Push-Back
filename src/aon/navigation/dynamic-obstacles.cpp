@@ -1,4 +1,5 @@
 #include "aon/navigation/dynamic-obstacles.hpp"
+#include "aon/time/monotonic.hpp"
 
 #include <cmath>
 #include <limits>
@@ -67,7 +68,8 @@ std::size_t DynamicObstacleMap::replacementIndex() const noexcept {
     const auto& current = obstacles_[replacement];
     if (candidate.confidence < current.confidence ||
         (candidate.confidence == current.confidence &&
-         candidate.lastObservedMs < current.lastObservedMs)) {
+         time::strictlyAfter(current.lastObservedMs,
+                             candidate.lastObservedMs))) {
       replacement = index;
     }
   }
@@ -81,11 +83,13 @@ ObstacleUpdateResult DynamicObstacleMap::update(
   const std::size_t associated = associationFor(detection);
   if (associated < size_) {
     DynamicObstacle& obstacle = obstacles_[associated];
-    if (detection.timestampMs <= obstacle.lastObservedMs) {
+    if (!time::strictlyAfter(detection.timestampMs,
+                             obstacle.lastObservedMs)) {
       return ObstacleUpdateResult::OutOfOrder;
     }
     const double elapsedSeconds =
-        static_cast<double>(detection.timestampMs - obstacle.lastObservedMs) /
+        static_cast<double>(time::elapsed(detection.timestampMs,
+                                          obstacle.lastObservedMs)) /
         1000.0;
     const double measuredX =
         (detection.center.xInches - obstacle.center.xInches) / elapsedSeconds;
@@ -131,7 +135,7 @@ ObstacleUpdateResult DynamicObstacleMap::update(
 void DynamicObstacleMap::expire(std::uint32_t nowMs) noexcept {
   std::size_t write = 0;
   for (std::size_t read = 0; read < size_; ++read) {
-    if (nowMs < obstacles_[read].expiresAtMs) {
+    if (time::beforeDeadline(nowMs, obstacles_[read].expiresAtMs)) {
       if (write != read) obstacles_[write] = obstacles_[read];
       ++write;
     }

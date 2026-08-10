@@ -1,4 +1,5 @@
 #include "aon/localization/pose-history.hpp"
+#include "aon/time/monotonic.hpp"
 
 #include <cmath>
 
@@ -10,8 +11,9 @@ PoseHistoryPushResult PoseHistory::push(TimedPose sample) noexcept {
       !std::isfinite(sample.pose.headingRadians)) {
     return PoseHistoryPushResult::Invalid;
   }
-  if (size_ != 0 &&
-      sample.timestampMs <= logicalAt(size_ - 1).timestampMs) {
+  if (size_ != 0 && !time::strictlyAfter(
+                        sample.timestampMs,
+                        logicalAt(size_ - 1).timestampMs)) {
     return PoseHistoryPushResult::OutOfOrder;
   }
   sample.pose.headingRadians = wrapRadians(sample.pose.headingRadians);
@@ -26,10 +28,12 @@ PoseHistorySampleResult PoseHistory::sampleAt(
   if (size_ == 0) return PoseHistorySampleResult::Empty;
   const TimedPose& oldest = logicalAt(0);
   const TimedPose& newest = logicalAt(size_ - 1);
-  if (timestampMs < oldest.timestampMs) {
+  if (timestampMs != oldest.timestampMs &&
+      time::strictlyAfter(oldest.timestampMs, timestampMs)) {
     return PoseHistorySampleResult::TooOld;
   }
-  if (timestampMs > newest.timestampMs) {
+  if (timestampMs != newest.timestampMs &&
+      time::strictlyAfter(timestampMs, newest.timestampMs)) {
     return PoseHistorySampleResult::Future;
   }
 
@@ -39,12 +43,17 @@ PoseHistorySampleResult PoseHistory::sampleAt(
       sample = upper;
       return PoseHistorySampleResult::Exact;
     }
-    if (timestampMs < upper.timestampMs) {
+    const std::uint32_t queryOffset =
+        time::elapsed(timestampMs, oldest.timestampMs);
+    const std::uint32_t upperOffset =
+        time::elapsed(upper.timestampMs, oldest.timestampMs);
+    if (queryOffset < upperOffset) {
       const TimedPose& lower = logicalAt(index - 1);
-      const double span = static_cast<double>(upper.timestampMs -
-                                              lower.timestampMs);
-      const double ratio = static_cast<double>(timestampMs -
-                                               lower.timestampMs) /
+      const double span = static_cast<double>(
+          time::elapsed(upper.timestampMs, lower.timestampMs));
+      const double ratio = static_cast<double>(
+                               time::elapsed(timestampMs,
+                                             lower.timestampMs)) /
                            span;
       sample.pose.xInches = lower.pose.xInches +
                             (upper.pose.xInches - lower.pose.xInches) * ratio;

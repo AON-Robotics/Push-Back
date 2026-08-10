@@ -1,4 +1,5 @@
 #include "aon/localization/confidence.hpp"
+#include "aon/time/monotonic.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -68,7 +69,8 @@ RecoveryDecision RecoveryMonitor::observe(
   if (!validRecoveryPolicy(policy_) || !finiteCandidate(candidate)) {
     return {RecoveryStatus::Invalid, false, consistentObservations_};
   }
-  if (hasReference_ && candidate.timestampMs <= reference_.timestampMs) {
+  if (hasReference_ && !time::strictlyAfter(candidate.timestampMs,
+                                             reference_.timestampMs)) {
     return {RecoveryStatus::OutOfOrder, false, consistentObservations_};
   }
   if (!hasReference_) {
@@ -80,7 +82,8 @@ RecoveryDecision RecoveryMonitor::observe(
 
   const double dx = candidate.xInches - reference_.xInches;
   const double dy = candidate.yInches - reference_.yInches;
-  const bool inWindow = candidate.timestampMs - reference_.timestampMs <=
+  const bool inWindow = time::elapsed(candidate.timestampMs,
+                                      reference_.timestampMs) <=
                         policy_.maximumObservationWindowMs;
   const bool agrees =
       std::hypot(dx, dy) <= policy_.maximumPositionSeparationInches &&
