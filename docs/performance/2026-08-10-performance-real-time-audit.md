@@ -61,6 +61,53 @@ One polymorphic lifetime defect is confirmed. Other Rule-of-3/5/0 and slicing co
 | Destructor exceptions | **Not found** | First-party custom destructors only release motion or mutex ownership. No destructor contains `throw`; `MotionLease` and `Lock` call nonthrowing-style PROS/state methods | Mark cleanup functions `noexcept` only after verifying called APIs cannot propagate; do not add catch-all logic without an exception policy |
 | General exception policy | **Conditional** | `common.mk` does not disable exceptions. Native number/profile headers contain explicit throws, while real-time paths mostly return status values | Keep exceptions out of task/control boundaries; document whether invalid configuration is allowed to terminate during initialization |
 
+### 1.4 Code design and architecture brief
+
+The hierarchy depth is shallow. The main design costs are duplicated motion ownership, an inconsistent native pose facade, and broad debug interfaces—not deep inheritance by itself.
+
+| Concern | Status | Repository evidence | Decision |
+|---|---|---|---|
+| Deep inheritance | **Not found** | First-party drivetrain, GUI, scaler, file-store, and validation hierarchies are one derived layer deep | Do not flatten working hierarchies for style alone |
+| Excessive virtual dispatch | **Conditional** | `Gui` exposes many virtual no-op debug hooks in `include/aon/tools/gui/gui.hpp:111-182`. Drivetrain virtual calls represent real hardware variants | Keep virtual dispatch off measured hot paths where practical; prioritize the GUI destructor defect over speculative vtable cost |
+| Excessive getters/setters | **Confirmed** | Native `Odometry::getPose()` composes three separately locked scalar getters. `Drivetrain` keeps a local `pose`, but its scalar getters query odometry while scalar setters update only the local pose | Replace this split boundary with one documented pose source and coherent snapshot before micro-optimizing accessors |
+| Over-engineering | **Confirmed at subsystem level** | LemLib and the legacy native drivetrain both wrap the same drive hardware. Section 4 shows separate task and ownership paths | Define one active motion owner per mode; retain legacy code only behind an explicit migration/test boundary |
+| Simple data versus objects | **Acceptable** | Shadow samples, sensor snapshots, configuration, and status values are plain structs with bounded storage | Preserve these value types; do not add inheritance or heap ownership without a concrete need |
+| Broad public hardware surface | **Conditional debt** | `include/aon/core/hardware.hpp:20-25` calls public members a temporary compatibility surface | Shrink the surface only with route-by-route tests; avoid a large encapsulation rewrite during competition tuning |
+
+### 1.5 Build system and dependency ecosystem brief
+
+No clean-build timing is available. The build is conventional for PROS and already pins its main templates, but one umbrella header creates avoidable parsing fan-out in a key translation unit.
+
+| Concern | Status | Repository evidence | Decision |
+|---|---|---|---|
+| Slow compilation | **Unmeasured; plausible** | `include/aon/tools/json.hpp` is about 19,000 lines and enters through `include/aon/api.hpp:17`; `include/main.hpp:25` includes that umbrella and `src/aon/core/robot.cpp:3` includes `main.hpp` | Capture clean and incremental build times plus include traces before splitting headers |
+| Heavy templates/includes | **Conditional** | Native `include/aon/drivetrain/drivetrain.hpp` contains large inline implementations and is included by four derived headers and `globals.hpp`; its own TODO records the intended source split | Move non-template bodies only after native-route validation; measure rebuild fan-out before and after |
+| Header/source split overhead | **Not a defect by itself** | The project mixes `.hpp` interfaces with `.cpp` implementations in the normal PROS pattern. Manual separation adds maintenance but keeps embedded linking predictable | Prefer clear ownership boundaries; do not convert files merely to follow a language trend |
+| C++ modules | **Not applicable now** | `common.mk` uses GNU Make and has no module rules or module flags. PROS/LemLib headers and archives use classic includes | Do not introduce modules until the PROS toolchain, dependency headers, IDE, and CI all support one reproducible workflow |
+| Fragmented dependency management | **Partly mitigated** | `project.pros` pins kernel 4.2.2, LemLib 0.5.6, and LVGL 9.2.0; matching firmware archives are present. No vcpkg or Conan workflow is required | Treat `project.pros` as the dependency manifest; verify templates on a clean machine and record checksums/build provenance |
+| Machine-specific metadata | **Conditional** | Template `location` fields in `project.pros` contain an absolute user profile path, while version and bundled system-file lists are portable metadata | Test bootstrap on a second machine; do not hand-edit paths unless PROS fails to resolve installed templates |
+
+### 1.6 Priority brief
+
+The added criteria change one priority: polymorphic GUI destruction joins the correctness backlog. They do not justify a heap rewrite, modules migration, or package-manager replacement.
+
+| Priority | Act now | Measure or defer |
+|---|---|---|
+| **P0** | Native pose locking/snapshot; demonstrated cross-task `volatile`; exclusive motor ownership | None of the new general memory concerns outranks these active correctness defects |
+| **P1** | Define safe `Gui` base destruction; bound safety/native control loops; clarify active motion stack | File-handle RAII, header fan-out, and exception policy after behavior/toolchain checks |
+| **P2** | Preserve fixed-capacity Shadow design and quantify RAM | Compile-time decomposition and broad interface cleanup |
+| **P3** | Correct stale comments during touched work | Modules, fixed-point math, STL removal, and package-manager changes without evidence |
+
+### 1.7 Comments and brief-style policy
+
+Comments that encode validation gates are safety controls. Keep the timeout and physical-validation markers in native routes and controls until tests close them.
+
+The comment at `include/aon/drivetrain/drivetrain.hpp:349`—“tare or reset depending on the time issue”—does not state a decision, owner, or acceptance test. Convert such notes into a named issue or a test-backed comment.
+
+The generic `Makefile:26` “CHANGE THIS” marker applies to inactive library-template settings because `IS_LIBRARY=0`. Clarify that scope when the build file is next edited; it is not a competition fault.
+
+Comments, whitespace, and documentation are removed before code generation and cannot reduce runtime or flash size. Edit them for truth and decision value, never as a performance optimization.
+
 ## 2. Scope, method, and baseline limitations
 
 ### 2.1 What was inspected
@@ -570,6 +617,7 @@ Keep raw data and analysis script in version control. Do not report only screens
 | P0 | Motor ownership | intake/Orbit/drivetrain call sites | multiple tasks/abstractions can command same motors | last-writer-wins nondeterminism and unsafe cancellation | command-owner trace; conflict counter | exclusive owner/command state machine; prove route selection prevents LemLib/legacy overlap | Very high | High |
 | P0 | Unbounded controllers | `Drivetrain::drivePID()`, H/Mecanum/X `goToPose()`, Orbit rotate methods | loops lack timeout/cancel | sensor/mechanism failure can hang autonomous/task forever | fault injection, timeout tests | add architectural timeout/cancel requirement before competition enablement | Very high safety | Medium |
 | P1 | Safety task | `include/aon/globals.hpp:128` `autonSafety()` | no yield while X held; repeated STOP | CPU starvation/device flood during fault | held-X loop time, command count, cancellation latency | edge-trigger stop plus bounded watchdog/yield | High | Low-medium |
+| P1 | Polymorphic lifetime | `include/aon/tools/gui/gui.hpp`; `src/aon/tools/gui/gui.cpp:91-95` | `unique_ptr<Gui>` can own `GuiDebug`, but `Gui` has no virtual destructor | deletion through the base owner has undefined behavior; embedded teardown may hide it | host destructor probe; compile-time base-destructor assertion; shutdown/reset path review | define and test one safe base-ownership contract before adding lifecycle/reset behavior | High correctness | Low |
 | P1 | Native path following | `pure-pursuit.hpp:98`; native follow/goToPose loops | path copied/scanned and pose/diagnostics repeated every iteration | heap/O(N), jitter, incoherent reads | allocations, exec max, path size scaling | const path view; retain safe progress index; one pose/distance snapshot | High | Medium: path behavior |
 | P1 | Loop telemetry | native drivetrain loops | formatted LCD/controller writes at 10/20 ms | variable I/O can dominate budget | loop max with logging on/off | compile-time levels and rate-limited snapshot diagnostics | High | Low |
 | P1 | Periodic scheduling | odom/opcontrol/Shadow/actions/fallback/native control | relative delays add work time and drift | variable sample/control timing | period/jitter/deadline misses | deadline-based release grid with overrun accounting | High determinism | Medium |
@@ -678,6 +726,10 @@ No item should be implemented solely because it appears in this table. Each row 
 | Blocking operation classification | §8 |
 | PROS task/concurrency table | §4 and §14 |
 | Memory and allocation classes | §9 |
+| Memory safety, RAII, initialization, and lifetime rules | §1.2-1.3 |
+| OOP and architecture review | §1.4 |
+| Build-system and dependency ecosystem review | §1.5 |
+| Comment quality and brief-style policy | §1.7 |
 | Logging and GUI modes | §10 |
 | Dead/duplicate runtime work | §11 |
 | Compiler `-Os`/`-O2`/LTO analysis and matrix | §13 |
@@ -694,7 +746,7 @@ The first implementation sprint should be deliberately narrow:
 
 1. Add aggregate-only timing to native odometry, opcontrol, Shadow recorder, and autonomous monitoring.
 2. Capture the 20-run baseline before changing behavior.
-3. Resolve native pose publication/lock correctness and cross-task `volatile` state ownership with targeted tests.
+3. Resolve native pose publication/lock correctness, cross-task `volatile` ownership, and the `Gui` base-destructor contract with targeted tests.
 4. Remove the safety busy loop and gate native per-loop formatted logging.
 5. Repeat the same 20-run protocol and compare worst cases/distributions.
 

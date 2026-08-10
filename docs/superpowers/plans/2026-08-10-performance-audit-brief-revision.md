@@ -61,23 +61,23 @@ Check paragraph lengths, table structure, cited paths, and `git diff --check`. S
 - Consumes: Task 1 evidence statuses and the existing performance findings.
 - Produces: architecture, build ecosystem, priority, and comment/style briefs.
 
-- [ ] **Step 1: Inspect class and dependency structure**
+- [x] **Step 1: Inspect class and dependency structure**
 
 Measure inheritance depth, large implementation headers, duplicated abstractions, dependency declarations, and source-comment markers. Avoid equating line count with a defect without usage evidence.
 
-- [ ] **Step 2: Add the code-design brief**
+- [x] **Step 2: Add the code-design brief**
 
 Cover OOP misuse, deep inheritance, virtual dispatch, excessive getter/setter boundaries, and over-engineering. Link confirmed concerns to the existing odometry and dual-motion-stack findings.
 
-- [ ] **Step 3: Add the build/ecosystem brief**
+- [x] **Step 3: Add the build/ecosystem brief**
 
 Cover compile-time evidence, header/source organization, C++ modules, and dependency management. Mark unavailable timing data clearly and avoid recommending unsupported ecosystem changes.
 
-- [ ] **Step 4: Add priority and comments/style briefs**
+- [x] **Step 4: Add priority and comments/style briefs**
 
 Map new conclusions into P0-P3 without duplicating the full backlog. State which comments help safety, which stale markers require review, and why deleting comments cannot improve the binary.
 
-- [ ] **Step 5: Validate and commit**
+- [x] **Step 5: Validate and commit**
 
 Check logical order, paragraph lengths, table structure, citations, and `git diff --check`. Stage only the audit and plan, mark Task 2 complete, then commit `docs: add architecture and build audit briefs`.
 
