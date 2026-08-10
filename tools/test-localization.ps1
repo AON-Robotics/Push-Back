@@ -13,6 +13,7 @@ $env:Path = "$compilerDirectory;$env:Path"
 New-Item -ItemType Directory -Force 'bin\host-tests' | Out-Null
 & $compiler -std=c++17 -Wall -Wextra -Werror -Iinclude `
   tests\localization-math-test.cpp `
+  src\aon\pose-estimator.cpp `
   -o bin\host-tests\localization-math-test.exe
 if ($LASTEXITCODE -ne 0) {
   throw 'localization host compile failed'
