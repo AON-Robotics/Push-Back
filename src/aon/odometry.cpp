@@ -122,6 +122,7 @@ void Odometry::resetPose(double x, double y, double thetaDegrees) {
   lastUpdateMs_ = pros::millis();
 
   localization::LocalizationDiagnostics diagnostics{};
+  diagnostics.timestampMs = lastUpdateMs_;
   diagnostics.rawPose = requested;
   diagnostics.fusedPose = requested;
   diagnostics.covariance = ekf_.covarianceDiagonal();
@@ -270,6 +271,7 @@ void Odometry::update() {
   }
   diagnostics.rawPose = candidateRawPose;
   diagnostics.fusedPose = candidateEkf.pose();
+  diagnostics.timestampMs = nowMs;
   diagnostics.wheelDistances = currentWheels;
   diagnostics.covariance = candidateEkf.covarianceDiagonal();
   diagnostics.dtSeconds = previousUpdateMs == 0U
@@ -304,14 +306,24 @@ bool Odometry::calibrateImu(std::uint32_t timeoutMs) {
   return imu_.get_status() == pros::ImuStatus::ready;
 }
 
-void Odometry::initialize() {
+void Odometry::runLocalizationLoop() {
   resetPose(INITIAL_ODOMETRY_X, INITIAL_ODOMETRY_Y,
             INITIAL_ODOMETRY_THETA);
   std::uint32_t wake = pros::millis();
   while (true) {
+    const std::uint32_t deadline = wake + config_.loopPeriodMs;
     update();
+    if (static_cast<std::int32_t>(pros::millis() - deadline) > 0) {
+      recordDeadlineMiss();
+    }
     pros::Task::delay_until(&wake, config_.loopPeriodMs);
   }
+}
+
+void Odometry::recordDeadlineMiss() {
+  snapshotMutex_.take();
+  ++published_.diagnostics.deadlineMisses;
+  snapshotMutex_.give();
 }
 
 pros::Rotation& Odometry::leftTrackingSensor() noexcept {

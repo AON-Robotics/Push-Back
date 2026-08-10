@@ -76,8 +76,8 @@ class Drivetrain {
   // TODO(ARCH-DRIVETRAIN): Move non-template implementations to source files
   // after the native PROS drivetrain migration is physically validated.
 
-  /// @brief Starts the underlying odometry thread
-  void initialize() { this->odometry.initialize(); }
+  /// @brief Runs the underlying localization deadline loop.
+  void runLocalizationLoop() { this->odometry.runLocalizationLoop(); }
   
   Pose getPose() { return this->odometry.getPose(); }
   void setPose(Pose pose) {

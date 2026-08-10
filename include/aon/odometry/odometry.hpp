@@ -36,7 +36,7 @@ class Odometry {
   // IMU calibration is a boot operation. Runtime pose resets only change the
   // field offset and therefore never impose a multi-second autonomous pause.
   bool calibrateImu(std::uint32_t timeoutMs = 3000U);
-  void initialize();
+  void runLocalizationLoop();
 
   // Legacy motion code still needs direct cumulative sensor travel. These
   // references do not transfer ownership and will also serve the LemLib adapter.
@@ -70,6 +70,8 @@ class Odometry {
   std::uint32_t generation_{0U};
   PublishedSnapshot published_{};
   pros::Mutex snapshotMutex_;
+
+  void recordDeadlineMiss();
 };
 
 }  // namespace aon

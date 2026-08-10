@@ -95,12 +95,35 @@ void lemlibSharesTheHardwareOwnedTrackingDevices() {
         std::string::npos);
 }
 
+void localizationSchedulingIsDeterministicAndQuiet() {
+  const std::string header =
+      readFile("include/aon/odometry/odometry.hpp");
+  const std::string source = readFile("src/aon/odometry.cpp");
+  const std::string legacy =
+      readFile("src/aon/drivetrain/legacy-motion.cpp");
+
+  CHECK(header.find("void runLocalizationLoop()") != std::string::npos);
+  CHECK(header.find("void initialize()") == std::string::npos);
+  CHECK(source.find("pros::Task::delay_until") != std::string::npos);
+  CHECK(legacy.find("runLocalizationLoop()") != std::string::npos);
+
+  const std::size_t update = source.find("void Odometry::update()");
+  const std::size_t updateEnd = source.find("bool Odometry::calibrateImu", update);
+  CHECK(update != std::string::npos && updateEnd != std::string::npos);
+  const std::string updateBody = source.substr(update, updateEnd - update);
+  CHECK(updateBody.find("pros::delay") == std::string::npos);
+  CHECK(updateBody.find("printf") == std::string::npos);
+  CHECK(updateBody.find("cout") == std::string::npos);
+  CHECK(updateBody.find("lcd::") == std::string::npos);
+}
+
 }  // namespace
 
 int main() {
   odometryExposesOneCoherentInterface();
   drivetrainUsesTheHardwareOwnedEstimator();
   lemlibSharesTheHardwareOwnedTrackingDevices();
+  localizationSchedulingIsDeterministicAndQuiet();
   std::cout << "localization integration tests passed\n";
   return 0;
 }

@@ -8,6 +8,7 @@
 namespace aon::localization {
 
 struct LocalizationDiagnostics {
+  std::uint32_t timestampMs{0U};
   EstimatorPose rawPose{};
   EstimatorPose fusedPose{};
   WheelDistances wheelDistances{};

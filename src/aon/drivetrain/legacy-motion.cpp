@@ -14,7 +14,7 @@ void prepare() {
   const bool startingTask = !odometryTask;
   if (startingTask) {
     odometryTask =
-        std::make_unique<pros::Task>([] { drivetrain.initialize(); },
+        std::make_unique<pros::Task>([] { drivetrain.runLocalizationLoop(); },
                                     "Legacy Odometry");
   }
   taskMutex.give();

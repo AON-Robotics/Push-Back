@@ -4,6 +4,7 @@
 
 #include "aon/config/robot-config.hpp"
 #include "aon/odometry/diagnostics.hpp"
+#include "aon/tools/logging.hpp"
 
 #define CHECK(expression)                                                     \
   do {                                                                        \
@@ -54,12 +55,37 @@ void knownBigRobotReversalMismatchRemainsVisible() {
         aon::config::HardwareMapIssue::RightTrackingReversalMismatch);
 }
 
+void diagnosticsCanBeFormattedOnlyWhenRequested() {
+  aon::localization::LocalizationDiagnostics diagnostics{};
+  diagnostics.timestampMs = 42U;
+  diagnostics.rawPose = {1.0, 2.0, 0.25};
+  diagnostics.fusedPose = {1.5, 2.5, 0.2};
+  diagnostics.gpsPositionAccepted = true;
+
+  constexpr const char* kOutputPath =
+      "bin/host-tests/localization-diagnostics-test.csv";
+  std::FILE* output = std::fopen(kOutputPath, "w+");
+  CHECK(output != nullptr);
+  aon::logging::WriteLocalizationCsvHeader(output);
+  aon::logging::WriteLocalizationCsvRow(output, diagnostics);
+  std::rewind(output);
+
+  char line[512]{};
+  CHECK(std::fgets(line, sizeof(line), output) != nullptr);
+  CHECK(std::string(line).find("time_ms,raw_x,raw_y,raw_theta") == 0U);
+  CHECK(std::fgets(line, sizeof(line), output) != nullptr);
+  CHECK(std::string(line).find("42,1.000000,2.000000") == 0U);
+  std::fclose(output);
+  CHECK(std::remove(kOutputPath) == 0);
+}
+
 }  // namespace
 
 int main() {
   localizationPolicyStartsSafeAndExplicit();
   diagnosticsAreFixedValueState();
   knownBigRobotReversalMismatchRemainsVisible();
+  diagnosticsCanBeFormattedOnlyWhenRequested();
   std::cout << "localization config tests passed\n";
   return 0;
 }
