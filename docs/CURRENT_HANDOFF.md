@@ -28,10 +28,11 @@ Verification for this checkpoint:
 - linker-reported BSS was approximately 48.53 MB for big and 48.59 MB for
   small, so the roadmap memory-budget gate remains mandatory.
 
-The next checkpoint publishes
-`docs/testing/2026-08-10-roadmap-baseline-checklist.md`, then stops for physical
-measurements. Do not enable a gate or start later roadmap implementation before
-that checklist is completed and committed.
+The physical gate is published at
+`docs/testing/2026-08-10-roadmap-baseline-checklist.md`. Every physical result
+is intentionally `Not run`, and the advancement decision is `No`. Stop here
+for measurements. Do not enable a gate or start later roadmap implementation
+before that checklist is completed, reviewed, and committed with raw evidence.
 
 ## 2026-08-10 Roadmap Planning Note
 

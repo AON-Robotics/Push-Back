@@ -33,7 +33,9 @@
   ten-executable host suite passed, and clean big/restored-small ARM builds
   linked successfully. The only compiler warning was the existing vendored
   `json.hpp` `std::is_pod` deprecation.
-- Task 3 is the next checkpoint and ends at the physical robot gate.
+- Task 3 is published as
+  `docs/testing/2026-08-10-roadmap-baseline-checklist.md`. Its result cells are
+  intentionally `Not run`; execution is stopped at the physical robot gate.
 
 ---
 
