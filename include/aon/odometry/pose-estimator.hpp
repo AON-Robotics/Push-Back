@@ -27,14 +27,17 @@ struct EstimatorPose {
   double headingRadians{0.0};
 };
 
-/** Returns true only when every pose component is finite. */
+/** @brief Returns true only when every pose component is finite. */
 [[nodiscard]] inline bool isFinite(EstimatorPose pose) noexcept {
   return std::isfinite(pose.xInches) && std::isfinite(pose.yInches) &&
          std::isfinite(pose.headingRadians);
 }
 
+/** @brief Converts incremental wheel travel in inches to robot-local motion. */
 LocalMotion localMotion(WheelDeltas wheels,
                         TrackingGeometry geometry) noexcept;
+
+/** @brief Applies robot-local inches/radians to a field-frame pose. */
 EstimatorPose propagatePose(EstimatorPose pose,
                             LocalMotion motion) noexcept;
 

@@ -28,6 +28,17 @@ Static inspection found no first-party manual `new`/`delete` or
 physical timing, localization accuracy, LiDAR mounting, or memory headroom on
 the V5 Brain. Every existing physical checklist result remains `Not run`.
 
+Final review checkpoint `a9fdc2a` also makes zero progress thresholds strict,
+keeps clearance-only replanning free of planner scratch storage, sources all
+localization gates from the baseline authorization snapshot, rechecks fused
+task liveness before autonomous motion, and makes pose-reset failure explicit.
+
+Exact next action: keep these changes on `Testing` with every authorization
+false, then execute
+`docs/testing/2026-08-10-roadmap-baseline-checklist.md` on the real robots.
+Do not authorize Phase 1, fused localization, navigation, or playback until
+that checklist records passing evidence and explicit approval.
+
 ## 2026-08-10 Localization/EKF Software Checkpoint
 
 The corrected three-wheel motion model, fixed three-state EKF, wrapped IMU

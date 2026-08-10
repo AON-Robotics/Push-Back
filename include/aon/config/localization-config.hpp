@@ -8,26 +8,26 @@
 
 namespace aon::config {
 
-/** GPS installation, validation, and independently gated heading fusion. */
+/** @brief GPS installation, validation, and gated heading fusion values. */
 struct GpsHardwareConfig {
-  bool enabled;
-  std::int8_t port;
-  double xOffsetMeters;
-  double yOffsetMeters;
-  double headingOffsetDegrees;
-  bool headingUpdateEnabled;
-  localization::GpsValidationConfig validation;
+  bool enabled{false};
+  std::int8_t port{0};
+  double xOffsetMeters{0.0};
+  double yOffsetMeters{0.0};
+  double headingOffsetDegrees{0.0};
+  bool headingUpdateEnabled{false};
+  localization::GpsValidationConfig validation{};
 };
 
-/** Fixed localization values and physical-validation authorization gates. */
+/** @brief Fixed localization values and physical authorization gates. */
 struct LocalizationConfig {
-  localization::TrackingGeometry geometry;
-  double trackingWheelDiameterInches;
-  std::uint32_t loopPeriodMs;
-  localization::EkfConfig ekf;
-  GpsHardwareConfig gps;
-  bool fusedLemLibAuthorized;
-  bool fusedNavigationAuthorized;
+  localization::TrackingGeometry geometry{};
+  double trackingWheelDiameterInches{0.0};
+  std::uint32_t loopPeriodMs{0U};
+  localization::EkfConfig ekf{};
+  GpsHardwareConfig gps{};
+  bool fusedLemLibAuthorized{false};
+  bool fusedNavigationAuthorized{false};
 };
 
 }  // namespace aon::config

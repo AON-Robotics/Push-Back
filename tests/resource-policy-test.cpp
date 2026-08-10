@@ -1,4 +1,5 @@
 #include "aon/communication/pi-protocol.hpp"
+#include "aon/config/localization-config.hpp"
 #include "aon/core/task-start.hpp"
 #include "aon/navigation/dynamic-obstacles.hpp"
 #include "aon/navigation/path-planner.hpp"
@@ -100,12 +101,15 @@ constexpr aon::localization::WheelDistances kDefaultWheels;
 constexpr aon::localization::GpsMeasurement kDefaultGps;
 constexpr aon::localization::EkfConfig kDefaultEkfConfig;
 constexpr aon::localization::EstimatorPose kDefaultEstimatorPose;
+constexpr aon::config::LocalizationConfig kDefaultLocalizationConfig;
 static_assert(kDefaultWheels.leftInches == 0.0);
 static_assert(!kDefaultWheels.leftValid);
 static_assert(kDefaultGps.timestampMs == 0U);
 static_assert(!kDefaultGps.fresh);
 static_assert(kDefaultEkfConfig.initialPositionVariance == 0.0);
 static_assert(kDefaultEstimatorPose.headingRadians == 0.0);
+static_assert(!kDefaultLocalizationConfig.gps.enabled);
+static_assert(!kDefaultLocalizationConfig.fusedLemLibAuthorized);
 
 int main() {
   timedMutexLockReleasesOnlyAnOwnedLock();

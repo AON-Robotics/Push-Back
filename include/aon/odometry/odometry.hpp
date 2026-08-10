@@ -16,6 +16,7 @@
 
 namespace aon {
 
+/** @brief Owns localization sensors and publishes coherent raw/fused poses. */
 class Odometry {
  public:
   Odometry(const config::LocalizationConfig& config, std::int8_t leftPort,
@@ -26,32 +27,36 @@ class Odometry {
   Odometry(Odometry&&) = delete;
   Odometry& operator=(Odometry&&) = delete;
 
-  /** Returns a coherent fused pose, or an all-NaN pose on lock timeout. */
+  /** @brief Returns fused inches/degrees, or all-NaN on lock timeout. */
   Pose getPose();
-  /** Returns a coherent raw pose, or an all-NaN pose on lock timeout. */
+  /** @brief Returns raw inches/degrees, or all-NaN on lock timeout. */
   Pose rawOdometryPose();
   double getX();
   double getY();
   double getDegrees();
   Vector getPosition();
-  /** Returns diagnostics and the cumulative two-millisecond lock timeouts. */
+  /** @brief Returns diagnostics including two-millisecond lock timeouts. */
   localization::LocalizationDiagnostics getDiagnostics();
 
-  /** Returns false without changing state when validation or locking fails. */
+  /** @brief Resets inches/degrees, returning false without a partial reset. */
   bool resetPose(double x, double y, double thetaDegrees);
+  /** @brief Samples sensors and attempts one bounded estimator update. */
   void update();
 
-  // IMU calibration is a boot operation. Runtime pose resets only change the
-  // field offset and therefore never impose a multi-second autonomous pause.
+  /** @brief Performs boot-only IMU calibration with a millisecond timeout. */
   bool calibrateImu(std::uint32_t timeoutMs = 3000U);
+  /** @brief Runs deterministic updates using the configured millisecond period. */
   void runLocalizationLoop();
+  /** @brief Runs updates and publishes fused poses without holding state locks. */
   void runLocalizationLoop(void (*publisher)(const Pose&));
 
-  // Legacy motion code still needs direct cumulative sensor travel. These
-  // references do not transfer ownership and will also serve the LemLib adapter.
+  /** @brief Borrows the owned left tracker; ownership is not transferred. */
   pros::Rotation& leftTrackingSensor() noexcept;
+  /** @brief Borrows the owned right tracker; ownership is not transferred. */
   pros::Rotation& rightTrackingSensor() noexcept;
+  /** @brief Borrows the owned lateral tracker; ownership is not transferred. */
   pros::Rotation& backTrackingSensor() noexcept;
+  /** @brief Borrows the owned IMU; ownership is not transferred. */
   pros::Imu& imuSensor() noexcept;
 
  private:

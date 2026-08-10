@@ -39,7 +39,7 @@ class PathPlanner {
   explicit PathPlanner(PathPlannerConfig config) noexcept;
 
   /**
-   * Plans without allocation by reusing owned bounded scratch storage.
+   * @brief Plans without allocation using owned bounded scratch storage.
    * Calls on the same planner instance must not overlap.
    */
   [[nodiscard]] PlanResult plan(
@@ -52,7 +52,7 @@ class PathPlanner {
       const field::FieldMap& field,
       const DynamicObstacleMap& obstacles) const noexcept;
 
-  /** Checks clearance without constructing the planner scratch workspace. */
+  /** @brief Checks clearance without constructing planner scratch storage. */
   [[nodiscard]] static bool pathHasClearance(
       const Path& path, double robotRadiusInches,
       double safetyMarginInches, const field::FieldMap& field,

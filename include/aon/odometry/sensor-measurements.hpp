@@ -119,7 +119,7 @@ class GpsGate {
     lastHeadingRadians_ = 0.0;
   }
 
-  /** Validates a sample without advancing the accepted-sample baseline. */
+  /** @brief Validates without advancing the accepted-sample baseline. */
   [[nodiscard]] GpsGateResult evaluate(
       GpsMeasurement measurement) const noexcept {
     if (!measurement.fresh) {
@@ -177,7 +177,7 @@ class GpsGate {
     return {true, true, GpsRejectionReason::None};
   }
 
-  /** Advances only the components accepted by the downstream filter. */
+  /** @brief Advances only components accepted by the downstream filter. */
   void commit(GpsMeasurement measurement, bool positionAccepted,
               bool headingAccepted) noexcept {
     // Physical plausibility is only advanced after the EKF accepts the same
@@ -206,8 +206,10 @@ class GpsGate {
 
 class GpsFreshnessTracker {
  public:
+  /** @brief Clears the last observed GPS signature. */
   void reset() noexcept { hasSample_ = false; }
 
+  /** @brief Marks exact duplicate polls stale and timestamps changed samples. */
   bool observe(GpsMeasurement& sample, std::uint32_t observationMs) noexcept {
     const bool changed =
         !hasSample_ || sample.xInches != last_.xInches ||

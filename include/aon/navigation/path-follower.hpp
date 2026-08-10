@@ -54,12 +54,12 @@ class PathFollower {
  public:
   explicit PathFollower(PathFollowerConfig config) noexcept;
 
-  /** Starts a bounded path run using a modular millisecond timestamp. */
+  /** @brief Starts a bounded path run using a modular millisecond timestamp. */
   [[nodiscard]] FollowerStatus start(const Path& path,
                                      double finalHeadingRadians,
                                      bool alignFinalHeading,
                                      std::uint32_t nowMs) noexcept;
-  /** Returns stopped output for timeout, stalled progress, or unsafe pose. */
+  /** @brief Stops on timeout, stalled progress, or an unsafe pose estimate. */
   [[nodiscard]] FollowerOutput update(
       const FollowerEstimate& estimate, double dtSeconds,
       std::uint32_t nowMs) noexcept;
