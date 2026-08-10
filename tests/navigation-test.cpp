@@ -1,5 +1,6 @@
 #include "aon/navigation/dynamic-obstacles.hpp"
 #include "aon/navigation/path-planner.hpp"
+#include "aon/navigation/replanner.hpp"
 #include "aon/field/push-back-field.hpp"
 
 #include <cmath>
@@ -146,6 +147,43 @@ void plannerHandlesSatisfiedAndUnreachableRequests() {
   CHECK(unreachable.path.size == 0);
 }
 
+void replanningOnlyTriggersForMeaningfulRouteChanges() {
+  using namespace aon::field;
+  using namespace aon::navigation;
+
+  const FieldMap& field = pushBackField();
+  DynamicObstacleMap obstacles({6.0, 500, 0.5});
+  RouteState route;
+  route.path.points[0] = {-20.0, 0.0};
+  route.path.points[1] = {20.0, 0.0};
+  route.path.size = 2;
+  route.nextPointIndex = 1;
+  route.worldRevision = 1;
+  route.objectiveRevision = 4;
+
+  Replanner replanner({2.0, 1.0, 5.0, 250});
+  CHECK(replanner.evaluate(route, obstacles, field, 1, 4, 100).reason ==
+        ReplanReason::None);
+
+  CHECK(obstacles.update(circle(0.0, 30.0, 110)) ==
+        ObstacleUpdateResult::Inserted);
+  CHECK(replanner.evaluate(route, obstacles, field, 2, 4, 120).reason ==
+        ReplanReason::None);
+
+  CHECK(obstacles.update(circle(0.0, 0.0, 130)) ==
+        ObstacleUpdateResult::Inserted);
+  CHECK(replanner.evaluate(route, obstacles, field, 3, 4, 140).reason ==
+        ReplanReason::RouteObstructed);
+  CHECK(replanner.evaluate(route, obstacles, field, 3, 5, 150).reason ==
+        ReplanReason::RateLimited);
+  CHECK(replanner.evaluate(route, obstacles, field, 3, 5, 400).reason ==
+        ReplanReason::GoalChanged);
+
+  RouteState invalidRoute;
+  CHECK(replanner.evaluate(invalidRoute, obstacles, field, 3, 5, 410).reason ==
+        ReplanReason::InvalidRoute);
+}
+
 }  // namespace
 
 int main() {
@@ -155,6 +193,7 @@ int main() {
   invalidGeometryAndConfigurationFailClosed();
   plannerUsesDirectRoutesAndDetoursAroundInflatedObstacles();
   plannerHandlesSatisfiedAndUnreachableRequests();
+  replanningOnlyTriggersForMeaningfulRouteChanges();
   std::cout << "navigation tests passed\n";
   return 0;
 }
