@@ -30,23 +30,23 @@
 - Consumes: the approved revision design and pinned source evidence.
 - Produces: executive evidence standard plus memory/resource and C++ lifetime matrices.
 
-- [ ] **Step 1: Verify ownership and lifetime evidence**
+- [x] **Step 1: Verify ownership and lifetime evidence**
 
 Run targeted searches for `new`, `delete`, `malloc`, `free`, smart pointers, C file handles, raw owning pointers, custom destructors, copy/move operations, exceptions, and potentially uninitialized locals.
 
-- [ ] **Step 2: Trace every matching first-party resource path**
+- [x] **Step 2: Trace every matching first-party resource path**
 
 Read allocation, file-handle, task-capture, and custom-resource sites in context. Classify each requested concern as confirmed, conditional, not found, or not applicable.
 
-- [ ] **Step 3: Add the evidence standard and memory/resource brief**
+- [x] **Step 3: Add the evidence standard and memory/resource brief**
 
 Add concise front-layer prose and a table covering leaks, manual allocation, dangling pointers, use-after-free, uninitialized variables, and RAII. Cite exact files and state scan limits.
 
-- [ ] **Step 4: Add the object-lifetime brief**
+- [x] **Step 4: Add the object-lifetime brief**
 
 Cover Rule of 3/5/0, object slicing, and destructor exception behavior. Distinguish repository evidence from generic C++ risk and note compiler exception settings where relevant.
 
-- [ ] **Step 5: Validate and commit**
+- [x] **Step 5: Validate and commit**
 
 Check paragraph lengths, table structure, cited paths, and `git diff --check`. Stage only the audit and plan, mark Task 1 complete, then commit `docs: audit C++ resource and lifetime risks`.
 

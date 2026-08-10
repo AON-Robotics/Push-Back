@@ -24,6 +24,43 @@ The highest-leverage findings are:
 
 Recommended order: fix/validate snapshot and synchronization correctness; establish measurements; move critical loops to deadline scheduling; remove or gate loop logging; then reduce sensor/motor calls based on measurements. Do not start with trig substitutions, fixed-point math, STL removal, or comment deletion.
 
+### 1.1 Concise review and evidence standard
+
+This front layer answers the added C++ safety and design criteria. The detailed audit below remains the evidence record and implementation roadmap.
+
+| Status | Meaning |
+|---|---|
+| **Confirmed** | The pinned first-party source contains a concrete defect or costly behavior |
+| **Conditional** | The construct is unsafe only if a dormant path, ownership mode, or lifecycle event occurs |
+| **Not found** | Targeted static inspection found no matching first-party defect; this is not proof of absence |
+| **Not applicable** | The concern does not fit the pinned toolchain or repository architecture |
+
+### 1.2 Memory and resource management brief
+
+The dominant memory concern is bounded static RAM, not a confirmed heap leak. Shadow avoids runtime allocation but reserves large fixed buffers; Section 9 identifies the exact owners and measurement plan.
+
+| Concern | Status | Repository evidence | Decision |
+|---|---|---|---|
+| Leaks from `new`/`delete` or `malloc`/`free` | **Not found** | No first-party manual heap allocation was found outside the vendored JSON header. Construction uses `make_unique` in `src/aon/core/hardware.cpp:43-46,71-73` and `src/aon/tools/gui/gui.cpp:93-100` | Keep smart ownership; add heap instrumentation only if profiling shows runtime growth |
+| Manual file-resource cleanup | **Conditional** | `src/aon/tools/gui/gui.cpp:60-78` closes each successful `fopen`. `src/aon/shadow/storage-pros.cpp:60-106` closes reads directly and writes through the bounded cleanup path in `include/aon/shadow/sd-write.hpp:25-53` | Current paths close handles, but a small nonthrowing file guard would make future early returns safer; validate behavior before refactoring |
+| Dangling pointers or use-after-free | **Not found** | No owning raw heap pointer was found. `Storage` borrows `FileStore&` and documents the lifetime contract in `include/aon/shadow/storage.hpp:38-50`; `ServiceStorage` declares `files` before `storage` in `src/aon/shadow/service.cpp:43-47` | Preserve declaration order and the documented lifetime contract; add a construction/lifetime test if these members move |
+| Moved-from misuse | **Not found** | Native drivetrain constructors transfer `unique_ptr` parameters once with `std::move` in `include/aon/drivetrain/drivetrain.hpp:61-64`; no later use of those parameters was found | No optimization work justified |
+| Uninitialized reads | **Not found, scan-limited** | Core samples use default member initializers in `include/aon/auton/motion-health.hpp:25-41` and `include/aon/lemlib/drive-io.hpp:8-20`. Reviewed production aggregates are fully assigned before return | Enable full embedded warnings/static analysis when the ARM toolchain is available; host tests do not compile every production path |
+| Ignored RAII | **Partly disproved** | `MotionLease` releases motion ownership in `src/aon/auton/actions.cpp:33-45`. Shadow `Lock` releases its mutex and deletes copying in `src/aon/shadow/service.cpp:32-41` | Extend this pattern only to manual file handles if it reduces cleanup risk without adding exceptions or heap use |
+
+### 1.3 Object lifetime and C++ correctness brief
+
+One polymorphic lifetime defect is confirmed. Other Rule-of-3/5/0 and slicing concerns are conditional because the audited call graph does not exercise unsafe base ownership.
+
+| Concern | Status | Repository evidence | Decision |
+|---|---|---|---|
+| Rule of 3/5/0: GUI base deletion | **Confirmed** | `Gui` has virtual methods but no virtual destructor in `include/aon/tools/gui/gui.hpp:48-183`. `src/aon/tools/gui/gui.cpp:91-95` stores `GuiDebug` in `std::unique_ptr<Gui>` | Treat as a correctness fix before any lifecycle/reset feature; verify the embedded program's shutdown model and add a base-ownership destructor test |
+| Rule of 3/5/0: native drivetrain base | **Conditional** | `Drivetrain` owns `unique_ptr` members and has virtual methods but no virtual destructor (`include/aon/drivetrain/drivetrain.hpp:16-764`). No `Drivetrain*` or `unique_ptr<Drivetrain>` owner was found | Either forbid base deletion explicitly or define a safe virtual destructor before polymorphic ownership is introduced |
+| Rule of 3/5/0: explicit resource wrappers | **Acceptable** | `FileStore` and `LemLibValidationMotion` define virtual default destructors; Shadow `Lock` deletes copy operations | Keep Rule-of-Zero defaults where members own resources safely |
+| Object slicing | **Not found** | Derived drivetrain, GUI, scaler, file-store, and validation objects are not passed or assigned as base values in the inspected first-party call graph | Prefer references or owning smart pointers if new polymorphic APIs appear |
+| Destructor exceptions | **Not found** | First-party custom destructors only release motion or mutex ownership. No destructor contains `throw`; `MotionLease` and `Lock` call nonthrowing-style PROS/state methods | Mark cleanup functions `noexcept` only after verifying called APIs cannot propagate; do not add catch-all logic without an exception policy |
+| General exception policy | **Conditional** | `common.mk` does not disable exceptions. Native number/profile headers contain explicit throws, while real-time paths mostly return status values | Keep exceptions out of task/control boundaries; document whether invalid configuration is allowed to terminate during initialization |
+
 ## 2. Scope, method, and baseline limitations
 
 ### 2.1 What was inspected
