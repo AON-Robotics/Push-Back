@@ -221,6 +221,59 @@ bool Ekf::updateGpsHeading(double headingRadians, double maximumNis,
                        maximumNis);
 }
 
+bool Ekf::updateAxisPosition(PositionAxis axis, double positionInches,
+                             double measurementVariance,
+                             double maximumNis) noexcept {
+  if (!std::isfinite(positionInches) ||
+      !std::isfinite(measurementVariance) || measurementVariance < 0.0 ||
+      std::isnan(maximumNis) || maximumNis < 0.0) {
+    return false;
+  }
+  const std::size_t observed = axis == PositionAxis::X ? 0U : 1U;
+  const double current = observed == 0 ? state_.xInches : state_.yInches;
+  const double innovation = positionInches - current;
+  const double innovationVariance =
+      covariance_[observed][observed] + measurementVariance;
+  if (!std::isfinite(innovationVariance) ||
+      innovationVariance <= config_.singularityTolerance) {
+    return false;
+  }
+  const double nis = innovation * innovation / innovationVariance;
+  if (!std::isfinite(nis) || nis > maximumNis) return false;
+
+  std::array<double, kStateDimension> gain{};
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    gain[row] = covariance_[row][observed] / innovationVariance;
+  }
+  EstimatorPose candidateState{
+      state_.xInches + gain[0] * innovation,
+      state_.yInches + gain[1] * innovation,
+      wrapRadians(state_.headingRadians + gain[2] * innovation)};
+
+  Matrix3 josephLeft{{{1.0, 0.0, 0.0},
+                      {0.0, 1.0, 0.0},
+                      {0.0, 0.0, 1.0}}};
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    josephLeft[row][observed] -= gain[row];
+  }
+  Matrix3 candidateCovariance = multiply(
+      multiply(josephLeft, covariance_), transpose(josephLeft));
+  for (std::size_t row = 0; row < kStateDimension; ++row) {
+    for (std::size_t column = 0; column < kStateDimension; ++column) {
+      candidateCovariance[row][column] +=
+          measurementVariance * gain[row] * gain[column];
+    }
+  }
+  stabilizeCovariance(candidateCovariance, config_.singularityTolerance);
+  if (!finitePose(candidateState) ||
+      !validCovariance(candidateCovariance, config_.singularityTolerance)) {
+    return false;
+  }
+  state_ = candidateState;
+  covariance_ = candidateCovariance;
+  return true;
+}
+
 bool Ekf::updateHeading(double headingRadians, double measurementVariance,
                         double maximumNis) noexcept {
   if (!std::isfinite(headingRadians) ||

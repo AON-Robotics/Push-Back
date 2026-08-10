@@ -27,6 +27,8 @@ struct CovarianceDiagonal {
   double headingVariance;
 };
 
+enum class PositionAxis { X, Y };
+
 class Ekf {
  public:
   explicit Ekf(EkfConfig config) noexcept;
@@ -38,6 +40,9 @@ class Ekf {
                          double maximumNis) noexcept;
   bool updateGpsHeading(double headingRadians, double maximumNis,
                         bool enabled) noexcept;
+  bool updateAxisPosition(PositionAxis axis, double positionInches,
+                          double measurementVariance,
+                          double maximumNis) noexcept;
 
   EstimatorPose pose() const noexcept;
   Matrix3 covariance() const noexcept;
