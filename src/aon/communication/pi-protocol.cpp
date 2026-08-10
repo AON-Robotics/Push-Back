@@ -68,6 +68,26 @@ bool validMessageType(std::uint8_t value) noexcept {
   return false;
 }
 
+bool validObstacle(const ObstaclePayload& obstacle) noexcept {
+  const bool finite = std::isfinite(obstacle.xInches) &&
+                      std::isfinite(obstacle.yInches) &&
+                      std::isfinite(obstacle.radiusInches) &&
+                      std::isfinite(obstacle.halfWidthInches) &&
+                      std::isfinite(obstacle.halfHeightInches) &&
+                      std::isfinite(obstacle.headingRadians) &&
+                      std::isfinite(obstacle.confidence);
+  if (!finite || obstacle.confidence < 0.0 || obstacle.confidence > 1.0) {
+    return false;
+  }
+  if (obstacle.shape == ObstaclePayloadShape::Circle) {
+    return obstacle.radiusInches > 0.0;
+  }
+  if (obstacle.shape == ObstaclePayloadShape::Rectangle) {
+    return obstacle.halfWidthInches > 0.0 && obstacle.halfHeightInches > 0.0;
+  }
+  return false;
+}
+
 }  // namespace
 
 std::uint32_t crc32(const std::uint8_t* data, std::size_t size) noexcept {
@@ -299,6 +319,133 @@ PayloadStatus decodeWallObservation(const ProtocolMessage& message,
       !std::isfinite(decoded.variance) || decoded.variance <= 0.0 ||
       decoded.support == 0) {
     return PayloadStatus::InvalidValue;
+  }
+  payload = decoded;
+  return PayloadStatus::Success;
+}
+
+PayloadStatus encodeObstacleBatch(const ObstacleBatchPayload& payload,
+                                  ProtocolMessage& message) noexcept {
+  if (payload.count > kMaximumObstaclesPerBatch) {
+    return PayloadStatus::InvalidLength;
+  }
+  for (std::size_t index = 0; index < payload.count; ++index) {
+    if (!validObstacle(payload.obstacles[index])) {
+      return PayloadStatus::InvalidValue;
+    }
+  }
+  message = {};
+  message.type = MessageType::ObstacleBatch;
+  message.payload[0] = static_cast<std::uint8_t>(payload.count);
+  message.payloadSize = 1 + payload.count * 29;
+  for (std::size_t index = 0; index < payload.count; ++index) {
+    const ObstaclePayload& obstacle = payload.obstacles[index];
+    const std::size_t offset = 1 + index * 29;
+    message.payload[offset] = static_cast<std::uint8_t>(obstacle.shape);
+    const double values[] = {obstacle.xInches, obstacle.yInches,
+                             obstacle.radiusInches, obstacle.halfWidthInches,
+                             obstacle.halfHeightInches,
+                             obstacle.headingRadians, obstacle.confidence};
+    for (std::size_t valueIndex = 0; valueIndex < 7; ++valueIndex) {
+      writeFloat(&message.payload[offset + 1 + valueIndex * 4],
+                 static_cast<float>(values[valueIndex]));
+    }
+  }
+  return PayloadStatus::Success;
+}
+
+PayloadStatus decodeObstacleBatch(const ProtocolMessage& message,
+                                  ObstacleBatchPayload& payload) noexcept {
+  if (message.type != MessageType::ObstacleBatch) {
+    return PayloadStatus::WrongMessageType;
+  }
+  if (message.payloadSize < 1) return PayloadStatus::InvalidLength;
+  const std::size_t count = message.payload[0];
+  if (count > kMaximumObstaclesPerBatch ||
+      message.payloadSize != 1 + count * 29) {
+    return PayloadStatus::InvalidLength;
+  }
+  ObstacleBatchPayload decoded;
+  decoded.count = count;
+  for (std::size_t index = 0; index < count; ++index) {
+    const std::size_t offset = 1 + index * 29;
+    if (message.payload[offset] >
+        static_cast<std::uint8_t>(ObstaclePayloadShape::Rectangle)) {
+      return PayloadStatus::InvalidValue;
+    }
+    ObstaclePayload& obstacle = decoded.obstacles[index];
+    obstacle.shape = static_cast<ObstaclePayloadShape>(message.payload[offset]);
+    double* values[] = {&obstacle.xInches, &obstacle.yInches,
+                        &obstacle.radiusInches, &obstacle.halfWidthInches,
+                        &obstacle.halfHeightInches, &obstacle.headingRadians,
+                        &obstacle.confidence};
+    for (std::size_t valueIndex = 0; valueIndex < 7; ++valueIndex) {
+      *values[valueIndex] = readFloat(
+          &message.payload[offset + 1 + valueIndex * 4]);
+    }
+    if (!validObstacle(obstacle)) return PayloadStatus::InvalidValue;
+  }
+  payload = decoded;
+  return PayloadStatus::Success;
+}
+
+PayloadStatus encodeRouteChunk(const RouteChunkPayload& payload,
+                               ProtocolMessage& message) noexcept {
+  if (payload.pointCount > kMaximumRoutePointsPerChunk) {
+    return PayloadStatus::InvalidLength;
+  }
+  if (payload.routeId == 0 || payload.chunkCount == 0 ||
+      payload.chunkIndex >= payload.chunkCount || payload.pointCount == 0) {
+    return PayloadStatus::InvalidValue;
+  }
+  for (std::size_t index = 0; index < payload.pointCount; ++index) {
+    if (!std::isfinite(payload.points[index].xInches) ||
+        !std::isfinite(payload.points[index].yInches)) {
+      return PayloadStatus::InvalidValue;
+    }
+  }
+  message = {};
+  message.type = MessageType::RouteResponse;
+  write32(&message.payload[0], payload.routeId);
+  message.payload[4] = payload.chunkIndex;
+  message.payload[5] = payload.chunkCount;
+  message.payload[6] = static_cast<std::uint8_t>(payload.pointCount);
+  message.payloadSize = 7 + payload.pointCount * 8;
+  for (std::size_t index = 0; index < payload.pointCount; ++index) {
+    writeFloat(&message.payload[7 + index * 8],
+               static_cast<float>(payload.points[index].xInches));
+    writeFloat(&message.payload[11 + index * 8],
+               static_cast<float>(payload.points[index].yInches));
+  }
+  return PayloadStatus::Success;
+}
+
+PayloadStatus decodeRouteChunk(const ProtocolMessage& message,
+                               RouteChunkPayload& payload) noexcept {
+  if (message.type != MessageType::RouteResponse) {
+    return PayloadStatus::WrongMessageType;
+  }
+  if (message.payloadSize < 7) return PayloadStatus::InvalidLength;
+  RouteChunkPayload decoded;
+  decoded.routeId = read32(&message.payload[0]);
+  decoded.chunkIndex = message.payload[4];
+  decoded.chunkCount = message.payload[5];
+  decoded.pointCount = message.payload[6];
+  if (decoded.pointCount > kMaximumRoutePointsPerChunk ||
+      message.payloadSize != 7 + decoded.pointCount * 8) {
+    return PayloadStatus::InvalidLength;
+  }
+  if (decoded.routeId == 0 || decoded.chunkCount == 0 ||
+      decoded.chunkIndex >= decoded.chunkCount || decoded.pointCount == 0) {
+    return PayloadStatus::InvalidValue;
+  }
+  for (std::size_t index = 0; index < decoded.pointCount; ++index) {
+    decoded.points[index].xInches = readFloat(&message.payload[7 + index * 8]);
+    decoded.points[index].yInches = readFloat(&message.payload[11 + index * 8]);
+    if (!std::isfinite(decoded.points[index].xInches) ||
+        !std::isfinite(decoded.points[index].yInches)) {
+      return PayloadStatus::InvalidValue;
+    }
   }
   payload = decoded;
   return PayloadStatus::Success;

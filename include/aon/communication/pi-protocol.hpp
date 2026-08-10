@@ -123,6 +123,40 @@ struct WallObservationPayload {
   std::uint32_t captureTimestampMs = 0;
 };
 
+inline constexpr std::size_t kMaximumObstaclesPerBatch = 4;
+enum class ObstaclePayloadShape : std::uint8_t { Circle = 0, Rectangle = 1 };
+
+struct ObstaclePayload {
+  ObstaclePayloadShape shape = ObstaclePayloadShape::Circle;
+  double xInches = 0.0;
+  double yInches = 0.0;
+  double radiusInches = 0.0;
+  double halfWidthInches = 0.0;
+  double halfHeightInches = 0.0;
+  double headingRadians = 0.0;
+  double confidence = 0.0;
+};
+
+struct ObstacleBatchPayload {
+  std::array<ObstaclePayload, kMaximumObstaclesPerBatch> obstacles{};
+  std::size_t count = 0;
+};
+
+inline constexpr std::size_t kMaximumRoutePointsPerChunk = 14;
+
+struct RoutePointPayload {
+  double xInches = 0.0;
+  double yInches = 0.0;
+};
+
+struct RouteChunkPayload {
+  std::uint32_t routeId = 0;
+  std::uint8_t chunkIndex = 0;
+  std::uint8_t chunkCount = 0;
+  std::array<RoutePointPayload, kMaximumRoutePointsPerChunk> points{};
+  std::size_t pointCount = 0;
+};
+
 [[nodiscard]] PayloadStatus encodePoseSnapshot(
     const PoseSnapshotPayload& payload, ProtocolMessage& message) noexcept;
 [[nodiscard]] PayloadStatus decodePoseSnapshot(
@@ -131,5 +165,13 @@ struct WallObservationPayload {
     const WallObservationPayload& payload, ProtocolMessage& message) noexcept;
 [[nodiscard]] PayloadStatus decodeWallObservation(
     const ProtocolMessage& message, WallObservationPayload& payload) noexcept;
+[[nodiscard]] PayloadStatus encodeObstacleBatch(
+    const ObstacleBatchPayload& payload, ProtocolMessage& message) noexcept;
+[[nodiscard]] PayloadStatus decodeObstacleBatch(
+    const ProtocolMessage& message, ObstacleBatchPayload& payload) noexcept;
+[[nodiscard]] PayloadStatus encodeRouteChunk(
+    const RouteChunkPayload& payload, ProtocolMessage& message) noexcept;
+[[nodiscard]] PayloadStatus decodeRouteChunk(
+    const ProtocolMessage& message, RouteChunkPayload& payload) noexcept;
 
 }  // namespace aon::communication

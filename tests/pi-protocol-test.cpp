@@ -131,6 +131,61 @@ void typedPoseAndWallPayloadsRoundTripAndRejectNonFiniteValues() {
         PayloadStatus::InvalidValue);
 }
 
+void typedObstacleBatchesAreBoundedAndValidated() {
+  using namespace aon::communication;
+
+  ObstacleBatchPayload batch;
+  batch.count = 2;
+  batch.obstacles[0] = {ObstaclePayloadShape::Circle, 10.0, 20.0, 4.0,
+                        0.0, 0.0, 0.0, 0.8};
+  batch.obstacles[1] = {ObstaclePayloadShape::Rectangle, -8.0, 3.5, 0.0,
+                        6.0, 9.0, 0.25, 0.6};
+  ProtocolMessage message;
+  CHECK(encodeObstacleBatch(batch, message) == PayloadStatus::Success);
+  CHECK(message.type == MessageType::ObstacleBatch);
+  ObstacleBatchPayload decoded;
+  CHECK(decodeObstacleBatch(message, decoded) == PayloadStatus::Success);
+  CHECK(decoded.count == 2);
+  CHECK(decoded.obstacles[0].shape == ObstaclePayloadShape::Circle);
+  CHECK(std::abs(decoded.obstacles[0].radiusInches - 4.0) < 1e-6);
+  CHECK(decoded.obstacles[1].shape == ObstaclePayloadShape::Rectangle);
+  CHECK(std::abs(decoded.obstacles[1].halfHeightInches - 9.0) < 1e-6);
+
+  batch.count = kMaximumObstaclesPerBatch + 1;
+  CHECK(encodeObstacleBatch(batch, message) == PayloadStatus::InvalidLength);
+  batch.count = 1;
+  batch.obstacles[0].confidence = 1.1;
+  CHECK(encodeObstacleBatch(batch, message) == PayloadStatus::InvalidValue);
+}
+
+void routeChunksRoundTripAndRejectInvalidMetadata() {
+  using namespace aon::communication;
+
+  RouteChunkPayload chunk;
+  chunk.routeId = 42;
+  chunk.chunkIndex = 1;
+  chunk.chunkCount = 3;
+  chunk.pointCount = 2;
+  chunk.points[0] = {1.25, -2.5};
+  chunk.points[1] = {30.0, 40.0};
+  ProtocolMessage message;
+  CHECK(encodeRouteChunk(chunk, message) == PayloadStatus::Success);
+  CHECK(message.type == MessageType::RouteResponse);
+  RouteChunkPayload decoded;
+  CHECK(decodeRouteChunk(message, decoded) == PayloadStatus::Success);
+  CHECK(decoded.routeId == 42);
+  CHECK(decoded.chunkIndex == 1);
+  CHECK(decoded.chunkCount == 3);
+  CHECK(decoded.pointCount == 2);
+  CHECK(std::abs(decoded.points[1].yInches - 40.0) < 1e-6);
+
+  chunk.chunkIndex = chunk.chunkCount;
+  CHECK(encodeRouteChunk(chunk, message) == PayloadStatus::InvalidValue);
+  chunk.chunkIndex = 0;
+  chunk.pointCount = kMaximumRoutePointsPerChunk + 1;
+  CHECK(encodeRouteChunk(chunk, message) == PayloadStatus::InvalidLength);
+}
+
 }  // namespace
 
 int main() {
@@ -138,6 +193,8 @@ int main() {
   corruptionAndUnknownTypesFailClosedThenParserResynchronizes();
   linkHealthRequiresFreshForwardSequenceProgress();
   typedPoseAndWallPayloadsRoundTripAndRejectNonFiniteValues();
+  typedObstacleBatchesAreBoundedAndValidated();
+  routeChunksRoundTripAndRejectInvalidMetadata();
   std::cout << "Pi protocol tests passed\n";
   return 0;
 }
