@@ -59,6 +59,20 @@ void measurementTypesCarryValuesAndValidity() {
   CHECK(gps.timestampMs == 100U);
 }
 
+void poseFinitenessChecksEveryComponent() {
+  using namespace aon::localization;
+
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  const double infinity = std::numeric_limits<double>::infinity();
+  CHECK(isFinite({1.0, 2.0, 3.0}));
+  CHECK(!isFinite({nan, 2.0, 3.0}));
+  CHECK(!isFinite({1.0, nan, 3.0}));
+  CHECK(!isFinite({1.0, 2.0, nan}));
+  CHECK(!isFinite({infinity, 2.0, 3.0}));
+  CHECK(!isFinite({1.0, infinity, 3.0}));
+  CHECK(!isFinite({1.0, 2.0, infinity}));
+}
+
 void wheelRecoveryRebaselinesWithoutAccumulatedMotion() {
   using namespace aon::localization;
 
@@ -482,6 +496,7 @@ int main() {
   angleConversionsAndWrappingAreConsistent();
   sincIsStableNearZero();
   measurementTypesCarryValuesAndValidity();
+  poseFinitenessChecksEveryComponent();
   wheelRecoveryRebaselinesWithoutAccumulatedMotion();
   threeWheelMotionUsesSignedOffsets();
   posePropagationMatchesTheFieldConvention();

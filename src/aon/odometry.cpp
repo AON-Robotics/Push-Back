@@ -220,7 +220,7 @@ void Odometry::update() {
     }
     const localization::EstimatorPose propagated =
         localization::propagatePose(candidateRawPose, motion);
-    if (std::isfinite(propagated.xInches)) {
+    if (localization::isFinite(propagated)) {
       candidateRawPose = propagated;
     } else {
       ++diagnostics.numericalRejections;

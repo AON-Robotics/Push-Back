@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include "aon/odometry/sensor-measurements.hpp"
 
 namespace aon::localization {
@@ -24,6 +26,12 @@ struct EstimatorPose {
   double yInches;
   double headingRadians;
 };
+
+/** Returns true only when every pose component is finite. */
+[[nodiscard]] inline bool isFinite(EstimatorPose pose) noexcept {
+  return std::isfinite(pose.xInches) && std::isfinite(pose.yInches) &&
+         std::isfinite(pose.headingRadians);
+}
 
 LocalMotion localMotion(WheelDeltas wheels,
                         TrackingGeometry geometry) noexcept;
