@@ -5,17 +5,6 @@
 namespace aon::config {
 namespace {
 
-constexpr AuthorizationSnapshot smallRobotLocalizationTestAuthorizations()
-    noexcept {
-  auto authorizations = baselineAuthorizations(RobotIdentity::Small);
-  // This authorizes the wheel-and-IMU EKF and its pose consumers for a
-  // supervised test. GPS stays disabled because port and mounting geometry
-  // have not been supplied for this robot.
-  authorizations.fusedLemLib = true;
-  authorizations.fusedNavigation = true;
-  return authorizations;
-}
-
 const LocalizationConfig& localizationConfig(
     const AuthorizationSnapshot& authorizations) {
   // These geometry values preserve the existing LemLib configuration; they
@@ -101,7 +90,7 @@ const RobotConfig& activeRobotConfig() {
 #else
   constexpr const RobotHardwareMap& hardwareMap = smallRobotHardwareMap;
   constexpr auto authorizations =
-      smallRobotLocalizationTestAuthorizations();
+      baselineAuthorizations(RobotIdentity::Small);
   const LocalizationConfig& localization =
       localizationConfig(authorizations);
   static const RobotConfig config{
