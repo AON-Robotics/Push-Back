@@ -69,16 +69,20 @@ void activeConfigurationMatchesRobotSpecificAuthorization() {
   if (config.identity == aon::config::RobotIdentity::Small) {
     CHECK(authorizations.shadowPlayback);
     CHECK(authorizations.redSixBlock);
+    CHECK(authorizations.jerryIoPath);
+    CHECK(authorizations.fusedLemLib);
+    CHECK(authorizations.fusedNavigation);
   } else {
     CHECK(aon::config::safeForUnvalidatedBaseline(authorizations));
   }
   CHECK(!authorizations.automaticEncoderFallback);
   CHECK(!authorizations.forcedEncoderTesting);
-  CHECK(!authorizations.jerryIoPath);
   CHECK(!authorizations.gpsHardware);
   CHECK(!authorizations.gpsHeadingFusion);
-  CHECK(!authorizations.fusedLemLib);
-  CHECK(!authorizations.fusedNavigation);
+  if (config.identity != aon::config::RobotIdentity::Small) {
+    CHECK(!authorizations.fusedLemLib);
+    CHECK(!authorizations.fusedNavigation);
+  }
 }
 
 }  // namespace

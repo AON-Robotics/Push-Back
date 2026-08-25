@@ -17,7 +17,7 @@
 
 namespace {
 
-void localizationPolicyStartsSafeAndExplicit() {
+void localizationPolicyEnablesOnlyTheSelectedTestPath() {
   const aon::config::RobotConfig& config =
       aon::config::activeRobotConfig();
 
@@ -26,8 +26,13 @@ void localizationPolicyStartsSafeAndExplicit() {
   CHECK(config.localization.geometry.rightOffsetInches > 0.0);
   CHECK(config.localization.geometry.backOffsetInches < 0.0);
   CHECK(config.localization.trackingWheelDiameterInches > 0.0);
+#if USING_BIG_ROBOT
   CHECK(!config.localization.fusedLemLibAuthorized);
   CHECK(!config.localization.fusedNavigationAuthorized);
+#else
+  CHECK(config.localization.fusedLemLibAuthorized);
+  CHECK(config.localization.fusedNavigationAuthorized);
+#endif
   CHECK(!config.localization.gps.enabled);
   CHECK(config.localization.gps.port == 0);
   CHECK(!config.localization.gps.headingUpdateEnabled);
@@ -87,7 +92,7 @@ void diagnosticsCanBeFormattedOnlyWhenRequested() {
 }  // namespace
 
 int main() {
-  localizationPolicyStartsSafeAndExplicit();
+  localizationPolicyEnablesOnlyTheSelectedTestPath();
   diagnosticsAreFixedValueState();
   knownBigRobotReversalMismatchRemainsVisible();
   diagnosticsCanBeFormattedOnlyWhenRequested();
