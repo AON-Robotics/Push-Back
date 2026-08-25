@@ -122,7 +122,7 @@ const RobotConfig& activeRobotConfig() {
           },
       },
       localization,
-      authorizations.shadowPlayback,
+      true,  // Supervised small-robot Shadow playback physical test only.
       {authorizations.redSixBlock, authorizations.jerryIoPath},
   };
 #endif
