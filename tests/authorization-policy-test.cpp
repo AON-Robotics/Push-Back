@@ -63,10 +63,22 @@ void bothRobotBaselinesKeepEveryPhysicalGateLocked() {
   CHECK(aon::config::safeForUnvalidatedBaseline(big));
 }
 
-void activeConfigurationIsSafeBeforePhysicalValidation() {
+void activeConfigurationMatchesRobotSpecificAuthorization() {
   const auto& config = aon::config::activeRobotConfig();
   const auto authorizations = aon::config::authorizationSnapshot(config);
-  CHECK(aon::config::safeForUnvalidatedBaseline(authorizations));
+  if (config.identity == aon::config::RobotIdentity::Small) {
+    CHECK(authorizations.shadowPlayback);
+    CHECK(authorizations.redSixBlock);
+  } else {
+    CHECK(aon::config::safeForUnvalidatedBaseline(authorizations));
+  }
+  CHECK(!authorizations.automaticEncoderFallback);
+  CHECK(!authorizations.forcedEncoderTesting);
+  CHECK(!authorizations.jerryIoPath);
+  CHECK(!authorizations.gpsHardware);
+  CHECK(!authorizations.gpsHeadingFusion);
+  CHECK(!authorizations.fusedLemLib);
+  CHECK(!authorizations.fusedNavigation);
 }
 
 }  // namespace
@@ -74,7 +86,7 @@ void activeConfigurationIsSafeBeforePhysicalValidation() {
 int main() {
   onlyAnEntirelyLockedSnapshotIsSafeBeforeValidation();
   bothRobotBaselinesKeepEveryPhysicalGateLocked();
-  activeConfigurationIsSafeBeforePhysicalValidation();
+  activeConfigurationMatchesRobotSpecificAuthorization();
   std::cout << "authorization policy tests passed\n";
   return 0;
 }
