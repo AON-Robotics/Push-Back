@@ -17,7 +17,7 @@
 
 namespace {
 
-void localizationPolicyEnablesOnlyTheSelectedTestPath() {
+void localizationConfigMatchesRobotAuthorization() {
   const aon::config::RobotConfig& config =
       aon::config::activeRobotConfig();
 
@@ -92,7 +92,7 @@ void diagnosticsCanBeFormattedOnlyWhenRequested() {
 }  // namespace
 
 int main() {
-  localizationPolicyEnablesOnlyTheSelectedTestPath();
+  localizationConfigMatchesRobotAuthorization();
   diagnosticsAreFixedValueState();
   knownBigRobotReversalMismatchRemainsVisible();
   diagnosticsCanBeFormattedOnlyWhenRequested();

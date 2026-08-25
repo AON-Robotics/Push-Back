@@ -134,7 +134,7 @@ const RobotConfig& activeRobotConfig() {
       },
       localization,
       true,  // Supervised small-robot Shadow playback physical test only.
-      {true, true},  // Supervised Red Six Block and JerryIO physical tests.
+      {true, false},  // Supervised Red Six Block physical test only.
   };
 #endif
   return config;

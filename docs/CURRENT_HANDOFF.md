@@ -1,5 +1,18 @@
 # Current Development Handoff
 
+## 2026-08-25 Supervised Fused-Localization Test Authorization
+
+Commit `b8df092` authorizes the small robot's wheel-and-IMU EKF as LemLib's
+pose source and authorizes the fused navigation consumer. This supersedes the
+older instruction below to keep those two gates disabled. The authorization
+is for supervised measurement and validation only; it is not evidence that
+the nominal tracking-wheel geometry is correct.
+
+GPS position and heading fusion remain disabled because the configured GPS
+port is zero and measured mounting geometry has not been supplied. Big-robot
+fused localization also remains disabled. Do not interpret this checkpoint as
+authorization for GPS, JerryIO, fallback, or other unrelated gated behavior.
+
 ## 2026-08-10 C++ Safety and Resource Hardening Checkpoint
 
 The hardening plan is implemented through bounded runtime ownership:
@@ -33,11 +46,9 @@ keeps clearance-only replanning free of planner scratch storage, sources all
 localization gates from the baseline authorization snapshot, rechecks fused
 task liveness before autonomous motion, and makes pose-reset failure explicit.
 
-Exact next action: keep these changes on `Testing` with every authorization
-false, then execute
-`docs/testing/2026-08-10-roadmap-baseline-checklist.md` on the real robots.
-Do not authorize Phase 1, fused localization, navigation, or playback until
-that checklist records passing evidence and explicit approval.
+The original next action was to keep every authorization false pending the
+roadmap checklist. The 2026-08-25 supervised authorization above intentionally
+supersedes that instruction for small-robot fused localization only.
 
 ## 2026-08-10 Localization/EKF Software Checkpoint
 
