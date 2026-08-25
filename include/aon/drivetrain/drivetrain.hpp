@@ -10,6 +10,7 @@
 #include "../controls/s-curve-profile.hpp"
 #include "../math/timer.hpp"
 #include "../controls/pure-pursuit.hpp"
+#include "legacy-motion-safety.hpp"
 #include <cfloat>
 
 
@@ -332,6 +333,10 @@ class Drivetrain {
   /// @param dist The distance to be moved in \b inches
   /// @param MAX_REVS The maximum RPM to send to the movement
   void drivePID(PID pid = PID(0.02, 0, 0), double dist = TILE_WIDTH, const double &MAX_REVS = 100.0) {
+    if (dist == 0.0 || MAX_REVS <= 0.0) {
+      this->stop();
+      return;
+    }
     const int sign = dist / abs(dist);  // Getting the direction of the movement
     dist = abs(dist);                   // Setting the magnitude to positive
     pid.Reset();
@@ -342,7 +347,9 @@ class Drivetrain {
     const double start_time = pros::micros() / 1E6;
     #define time (pros::micros() / 1E6) - start_time  // every time the variable is called it is recalculated automatically
 
-    while ((odometry.getPosition() - initialPos).GetMagnitude() < dist) {
+    while (legacy_motion::shouldContinue(
+        (odometry.getPosition() - initialPos).GetMagnitude() >= dist,
+        time >= 3.0 * timeLimit, pros::competition::is_disabled())) {
       double currentDisplacement = (odometry.getPosition() - initialPos).GetMagnitude();
       double output = pid.Output(dist, currentDisplacement);
 
@@ -365,6 +372,10 @@ class Drivetrain {
   /// @param angle The angle to make the robot turn in \b degrees
   /// @param MAX_REVS The maximum RPM to send to the movement
   void turnPID(PID pid = PID(0.002, 0, 0), double angle = 90, const double &MAX_REVS = 50.0) {
+    if (angle == 0.0 || MAX_REVS <= 0.0) {
+      this->stop();
+      return;
+    }
     const int sign = angle / abs(angle);  // Getting the direction of the movement
     angle = abs(angle);                   // Setting the magnitude to positive
     pid.Reset();
@@ -378,7 +389,9 @@ class Drivetrain {
     const double startTime = pros::micros() / 1E6;
     #define time (pros::micros() / 1E6) - startTime
 
-    while (time < 3 * timeLimit) {
+    while (legacy_motion::shouldContinue(
+        false, time >= 3.0 * timeLimit,
+        pros::competition::is_disabled())) {
 
       const double traveledAngle = std::abs(localization::degrees(
           localization::shortestAngleDelta(
@@ -426,7 +439,9 @@ class Drivetrain {
     this->yProfile->setVelocity(this->getRPM());
     this->yProfile->setFinalVelocity(settle ? 0 : 100);
 
-    while (traveledDist < dist && !timer.isCompleted()) {
+    while (legacy_motion::shouldContinue(
+        traveledDist >= dist, timer.isCompleted(),
+        pros::competition::is_disabled())) {
       traveledDist = (odometry.getPosition() - startPos).GetMagnitude();
       double remainingDist = dist - traveledDist;
       now = pros::micros() / 1E6;
@@ -445,7 +460,7 @@ class Drivetrain {
       pros::delay(20);
     }
 
-    if (settle) { this->stop(); }
+    if (settle || pros::competition::is_disabled()) { this->stop(); }
   }
 
   /// @brief S-graph motion profile for linear movement
@@ -472,7 +487,9 @@ class Drivetrain {
     this->xProfile->setVelocity(this->getRPM());
     this->xProfile->setFinalVelocity(settle ? 0 : 100);
 
-    while(traveledDist < dist && !timer.isCompleted()){
+    while (legacy_motion::shouldContinue(
+        traveledDist >= dist, timer.isCompleted(),
+        pros::competition::is_disabled())) {
       traveledDist = (odometry.getPosition() - startPos).GetMagnitude();
       // traveledDist += getSpeed(this->getRPM()) * dt; //# in case of odom failure
 
@@ -489,7 +506,7 @@ class Drivetrain {
       pros::delay(20);
     }
 
-    if(settle) this->stop();
+    if (settle || pros::competition::is_disabled()) this->stop();
   }
 
   /// @brief S-graph motion profile for rotations
@@ -521,7 +538,9 @@ class Drivetrain {
 
     this->thetaProfile->setFinalVelocity(settle ? 0 : 50);
 
-    while (traveledAngle < angle && !timer.isCompleted()) {
+    while (legacy_motion::shouldContinue(
+        traveledAngle >= angle, timer.isCompleted(),
+        pros::competition::is_disabled())) {
       currAngle = odometry.imuSensor().get_rotation();
       traveledAngle = abs(currAngle - startAngle);
       // traveledAngle = abs(aon::odometry::GetDegrees() - startAngle);
@@ -540,7 +559,7 @@ class Drivetrain {
 
       pros::delay(20);
     }
-    if (settle) this->stop();
+    if (settle || pros::competition::is_disabled()) this->stop();
   }
 
   /// @brief Moves the robot a given distance
@@ -656,7 +675,9 @@ class Drivetrain {
     Timer timer;
     timer.start(timeoutMs);
 
-    while(traveledDist < distance && !timer.isCompleted()){
+    while (legacy_motion::shouldContinue(
+        traveledDist >= distance, timer.isCompleted(),
+        pros::competition::is_disabled())) {
       // traveledDist = odometry::getTraveledDistance() - startDist;
       const double rightEncDist = (std::abs(odometry.rightTrackingSensor().get_position() - rightEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
       const double leftEncDist = (std::abs(odometry.leftTrackingSensor().get_position() - leftEncStartPos) / 100 ) * M_PI * TRACKING_WHEEL_DIAMETER / DEGREES_PER_REVOLUTION; //! Temporary
@@ -672,7 +693,7 @@ class Drivetrain {
       pros::delay(20);
     }
 
-    if(settle) this->stop();
+    if (settle || pros::competition::is_disabled()) this->stop();
   }
 
   /// @brief Makes the robot drive in an arc motion to a specified point in the
@@ -789,6 +810,10 @@ class Drivetrain {
   /// @param path The path to follow
   /// @note The `path`s intermediate headings are ignored, only the final one is actually aligned
   virtual void follow(const std::vector<Pose>& path) {
+    if (path.empty()) {
+      this->stop();
+      return;
+    }
     PurePursuit controller = PurePursuit(*this->yProfile, *this->thetaProfile, 5, 2.5, 2.5);
 
     std::pair<double, double> output = {-1, -1};
@@ -802,7 +827,9 @@ class Drivetrain {
     Timer timer;
     timer.start(timeoutMs);
 
-    while (odometry.getPose().distanceTo(path.back()) > 2.0 && !timer.isCompleted()) {
+    while (legacy_motion::shouldContinue(
+        odometry.getPose().distanceTo(path.back()) <= 2.0,
+        timer.isCompleted(), pros::competition::is_disabled())) {
       now = pros::micros() / 1E6;
       dt = now - lastTime;
       output = controller.follow(path, this->odometry.getPose(), dt);
@@ -820,7 +847,9 @@ class Drivetrain {
       pros::delay(10);
     }
 
-    this->turnToHeading(path.back().theta);
+    if (!pros::competition::is_disabled()) {
+      this->turnToHeading(path.back().theta);
+    }
 
     this->stop();
   }

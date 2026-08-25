@@ -83,7 +83,7 @@ void Intake::scan() {
   size_t stopTime = UINT32_MAX;
   const short DELAY_PER_BALL = 2200;  // ms
   while (true) {
-    if (scanning) {
+    if (scanning.load(std::memory_order_acquire)) {
       if (this->isObjectDetected()) {
         this->pickUp();
         stopTime = pros::millis() + DELAY_PER_BALL;
@@ -143,8 +143,11 @@ void Intake::sort() {
           commandSortMotors(requestedRequest, INTAKE_VELOCITY * 2 / 3, 0);
           if (armed && (red || blue)) {
             armed = false;
-            pendingCorrect = (ALLIANCE == Alliance::Skills) ||
-                             (red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue);
+            const Alliance alliance =
+                ALLIANCE.load(std::memory_order_acquire);
+            pendingCorrect = (alliance == Alliance::Skills) ||
+                             (red && alliance == Alliance::Red) ||
+                             (blue && alliance == Alliance::Blue);
             const Height height = pendingCorrect
                                       ? requestedAcceptHeight
                                       : (requestedAcceptHeight == TOP ? MIDDLE
@@ -274,9 +277,13 @@ void Intake::raiseCart() { cart.deactivate(); }
 
 bool Intake::isCartDropped() const { return cart.isActivated(); }
 
-void Intake::activateScan() { scanning = true; }
+void Intake::activateScan() {
+  scanning.store(true, std::memory_order_release);
+}
 
-void Intake::stopScan() { scanning = false; }
+void Intake::stopScan() {
+  scanning.store(false, std::memory_order_release);
+}
 
 std::uint32_t Intake::requestReleasing(bool active) {
   std::uint32_t current = releaseRequest.load(std::memory_order_relaxed);
@@ -316,7 +323,9 @@ bool Intake::stopReleasingAndWait() {
   return true;
 }
 
-Intake::SortState Intake::getSortingState() const { return sortState; }
+Intake::SortState Intake::getSortingState() const {
+  return sortState.load(std::memory_order_acquire);
+}
   
 #else
 
@@ -376,7 +385,7 @@ void Intake::scan() {
   size_t stopTime = UINT32_MAX;
   const short DELAY_PER_BALL = 2450;  // ms
   while (true) {
-    if (scanning) {
+    if (scanning.load(std::memory_order_acquire)) {
       if (this->isObjectDetected()) {
         this->pickUp();
         stopTime = pros::millis() + DELAY_PER_BALL;
@@ -397,17 +406,21 @@ void Intake::scan() {
 
 void Intake::sort() {
   while (true) {
-    if (scanning) {
+    if (scanning.load(std::memory_order_acquire)) {
       const double hue = this->hue();
       const bool red = isRed(hue), blue = isBlue(hue);
+      const Alliance alliance = ALLIANCE.load(std::memory_order_acquire);
 
       if (red || blue) {
-        if (ALLIANCE != Alliance::Skills && ((red && ALLIANCE == Alliance::Blue) || (blue && ALLIANCE == Alliance::Red))) {
+        if (alliance != Alliance::Skills &&
+            ((red && alliance == Alliance::Blue) ||
+             (blue && alliance == Alliance::Red))) {
           // Wrong alliance color detected — reverse motor to eject
           this->judge(-INTAKE_VELOCITY);
           pros::delay(100);
           this->judge(0);
-        } else if ((red && ALLIANCE == Alliance::Red) || (blue && ALLIANCE == Alliance::Blue)) {
+        } else if ((red && alliance == Alliance::Red) ||
+                   (blue && alliance == Alliance::Blue)) {
         // Correct alliance color detected — move motor to accept
           this->judge(INTAKE_VELOCITY);
           pros::delay(125);
@@ -510,11 +523,11 @@ void Intake::scorer(const int& rpm) {
 }
 
 void Intake::activateScan() {
-  scanning = true;
+  scanning.store(true, std::memory_order_release);
 }
 
 void Intake::stopScan() {
-  scanning = false;
+  scanning.store(false, std::memory_order_release);
   this->corridor(0);
   this->elevator(0);
 }
@@ -527,7 +540,9 @@ double Intake::distance() { return distanceSensor.get(); }
 
 bool Intake::isObjectDetected() { return this->distance() <= INTAKE_ACTIVATION_DISTANCE; }
 
-bool Intake::isScanning() { return this->scanning; }
+bool Intake::isScanning() {
+  return scanning.load(std::memory_order_acquire);
+}
 
 void Intake::kickBack() {
   this->move(-100);
@@ -537,7 +552,9 @@ void Intake::kickBack() {
 
 double Intake::hue() { return colorSensor.get_hue(); }
 
-void Intake::setScoreDown(bool down) { scoreDown = down; }
+void Intake::setScoreDown(bool down) {
+  scoreDown.store(down, std::memory_order_release);
+}
 
 bool Intake::isRed(const double& hue) { return (hue >= 356 && hue <= 359) || (hue >= 1 && hue <= 25); }
 bool Intake::isBlue(const double& hue) { return 170 <= hue && hue <= 230; }

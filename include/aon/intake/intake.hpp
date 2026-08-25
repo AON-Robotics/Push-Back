@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <initializer_list>
 
-extern volatile Alliance& ALLIANCE;
+extern std::atomic<Alliance>& ALLIANCE;
 
 namespace aon {
 
@@ -37,7 +37,7 @@ class Intake {
   enum SortState { INIT, IDLE, KICKBACK, SETTLE, WAIT_ACCEPT, CONFIRM_ACCEPT, WAIT_REJECT, CONFIRM_REJECT };
 
  private:
-  SortState sortState = INIT;
+  std::atomic<SortState> sortState{INIT};
   pros::MotorGroup elevatorMG;
   pros::MotorGroup judgeMG;
   Piston cart;
@@ -46,13 +46,13 @@ class Intake {
   Proximity acceptSensor;
   Proximity rejectSensor;
 
-  volatile bool scanning = false;
-  volatile bool scoreDown = false;
+  std::atomic<bool> scanning{false};
+  std::atomic<bool> scoreDown{false};
   std::atomic<std::uint32_t> releaseRequest{0};
   std::atomic<std::uint32_t> processedReleaseRequest{0};
   std::atomic<bool> sortFaulted{false};
   pros::Mutex sortMotorMutex;
-  volatile bool lastColorSeen = false;
+  bool lastColorSeen = false;
   std::atomic<Height> acceptHeight{TOP};
 
   std::uint32_t requestReleasing(bool active);
@@ -115,8 +115,8 @@ class Intake {
   pros::Distance distanceSensor;
   pros::Optical colorSensor;
 
-  volatile bool scanning = true;
-  volatile bool scoreDown = false;
+  std::atomic<bool> scanning{true};
+  std::atomic<bool> scoreDown{false};
 
  public:
   double leverTarget = 0.0;

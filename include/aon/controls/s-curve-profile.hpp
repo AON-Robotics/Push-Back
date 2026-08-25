@@ -30,7 +30,10 @@ class MotionProfile {
   };
 
  private:
-  double MAX_VELOCITY, MAX_ACCELERATION, MAX_DECELERATION, JERK;
+  double MAX_VELOCITY = MAX_RPM;
+  double MAX_ACCELERATION = MAX_ACCEL;
+  double MAX_DECELERATION = MAX_DECEL;
+  double JERK = MAX_ACCEL;
   double currVelocity = 0;
   double currAccel = 0;
   double targetFinalVelocity = 0;
@@ -45,7 +48,7 @@ class MotionProfile {
     this->JERK = std::abs(JERK);  // RPM/(s^2)
   }
 
-  MotionProfile(){}
+  MotionProfile() = default;
 
   /// @brief Returns the current stage of the motion profile
   /// @return The stage of the motion profile

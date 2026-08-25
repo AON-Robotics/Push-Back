@@ -48,7 +48,9 @@ void DifferentialDrive::goToPose(const Pose& pose) {
   const uint32_t timeoutMs = (this->odometry.getPose().distanceTo(pose)) * 1E3;
   Timer timer;
   timer.start(timeoutMs);
-  while (odometry.getPose().distanceTo(pose) > 2.0 && !timer.isCompleted()){
+  while (legacy_motion::shouldContinue(
+      odometry.getPose().distanceTo(pose) <= 2.0, timer.isCompleted(),
+      pros::competition::is_disabled())) {
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     output = controller.go(pose, this->odometry.getPose(), dt);
@@ -66,7 +68,9 @@ void DifferentialDrive::goToPose(const Pose& pose) {
     pros::delay(10);
   }
 
-  this->turnToHeading(pose.theta);
+  if (!pros::competition::is_disabled()) {
+    this->turnToHeading(pose.theta);
+  }
 
   this->stop();
 }

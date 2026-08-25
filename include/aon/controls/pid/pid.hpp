@@ -25,7 +25,7 @@ class PID {
   /// Gains
   double kP, kI, kD, kT;
   /// Stores the value in Output method which is the sum of the pid constants.
-  double result;
+  double result = 0;
   /// Starts accumulating the integral when the error reaches a certain value.
   double start_integral;
   /// Keeps the integral from passing an error range.

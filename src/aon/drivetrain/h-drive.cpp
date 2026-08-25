@@ -105,9 +105,11 @@ void HDrive::goToPose(const Pose& target){
   const double ROBOT_RADIUS = hypot(drive_width, drive_length) / 2;
   const double circumference = M_TWOPI * ROBOT_RADIUS;
 
-  // TODO(DRIVE-TIMEOUT): Add a hard timeout before enabling this blocking
-  // controller in competition autonomous.
-  while(remainingX > 0.05 || remainingY > 0.05 || remainingTheta > 0.05){
+  // A physically validated timeout is still required before enabling this
+  // controller in competition autonomous; field disable always aborts it.
+  while (legacy_motion::shouldContinue(
+      remainingX <= 0.05 && remainingY <= 0.05 && remainingTheta <= 0.05,
+      false, pros::competition::is_disabled())) {
 
     pros::lcd::print(0, "(x, y, theta): (%.2f, %.2f, %.2f)", this->getX(), this->getY(), this->getTheta());
     remainingX = target.x - this->getX();
@@ -143,6 +145,10 @@ void HDrive::goToPose(const Pose& target){
 }
 
 void HDrive::follow(const std::vector<Pose>& path) {
+  if (path.empty()) {
+    this->stop();
+    return;
+  }
   PurePursuit controller = PurePursuit(*this->yProfile, *this->thetaProfile, 5, 2.5, 2.5);
 
   std::pair<double, double> output = {-1, -1};
@@ -156,7 +162,9 @@ void HDrive::follow(const std::vector<Pose>& path) {
   Timer timer;
   timer.start(timeoutMs);
 
-  while (odometry.getPose().distanceTo(path.back()) > 2.0 && !timer.isCompleted()) {
+  while (legacy_motion::shouldContinue(
+      odometry.getPose().distanceTo(path.back()) <= 2.0,
+      timer.isCompleted(), pros::competition::is_disabled())) {
     now = pros::micros() / 1E6;
     dt = now - lastTime;
     output = controller.follow(path, this->odometry.getPose(), dt);
@@ -174,7 +182,9 @@ void HDrive::follow(const std::vector<Pose>& path) {
     pros::delay(10);
   }
 
-  this->turnToHeading(path.back().theta);
+  if (!pros::competition::is_disabled()) {
+    this->turnToHeading(path.back().theta);
+  }
 
   this->stop();
 }

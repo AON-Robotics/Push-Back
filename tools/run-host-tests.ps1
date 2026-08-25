@@ -37,6 +37,10 @@ function Invoke-HostTest {
   }
 }
 
+Invoke-HostTest 'legacy-motion-safety-test' @(
+  'tests\legacy-motion-safety-test.cpp'
+)
+
 Invoke-HostTest 'localization-math-test' @(
   'tests\localization-math-test.cpp',
   'src\aon\pose-estimator.cpp',

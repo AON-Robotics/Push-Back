@@ -3,6 +3,7 @@
 #define AON_TOOLS_GUI_HPP_
 
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -19,7 +20,7 @@
 #include "aon/shadow/service.hpp"
 #include "../function-reader.hpp"
 
-extern volatile Alliance& ALLIANCE;
+extern std::atomic<Alliance>& ALLIANCE;
 
 namespace aon {
   class Gui;

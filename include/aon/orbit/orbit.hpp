@@ -7,6 +7,8 @@
 #include "pros/rotation.hpp"
 #include "pros/vision.hpp"
 
+#include <atomic>
+
 namespace aon {
 enum Colors { RED = 1, BLUE, STAKE };
 
@@ -21,11 +23,11 @@ class Orbit {
   pros::Motor motor;
   aon::PID PID = aon::PID(0.25, 0, 0);
 
-  Colors COLOR = RED;
+  std::atomic<Colors> COLOR{RED};
 
-  volatile bool following = false;
-  volatile bool braking = true;
-  volatile bool scanning = false;
+  std::atomic<bool> following{false};
+  std::atomic<bool> braking{true};
+  std::atomic<bool> scanning{false};
   pros::vision_signature_s_t RED_SIG = pros::Vision::signature_from_utility(
       RED, 8973, 11143, 10058, -2119, -1053, -1586, 5.4, 0);
   pros::vision_signature_s_t BLUE_SIG = pros::Vision::signature_from_utility(
@@ -50,7 +52,9 @@ class Orbit {
   const int getRightLimit() { return rightLimit; }
 
   ///@brief sets the color
-  void setColor(Colors color) { this->COLOR = color; }
+  void setColor(Colors color) {
+    COLOR.store(color, std::memory_order_release);
+  }
 
   /// @brief returns the angle using the encoder
   double getAngle() { return (this->encoder.get_angle()) / 100; }
@@ -59,16 +63,18 @@ class Orbit {
   const double getHeight() { return height; }
 
   ///@brief Returns COLOR
-  Colors getColor() { return COLOR; }
+  Colors getColor() { return COLOR.load(std::memory_order_acquire); }
 
   /// @brief  Returns true if the orbit IS following
-  bool isFollowing() { return following; };
+  bool isFollowing() {
+    return following.load(std::memory_order_acquire);
+  };
 
   /// @brief  Returns true if the orbit IS braking
-  bool isBraking() { return braking; };
+  bool isBraking() { return braking.load(std::memory_order_acquire); };
 
   /// @brief  Returns true if the orbit IS scanning
-  bool isScanning() { return scanning; };
+  bool isScanning() { return scanning.load(std::memory_order_acquire); };
 
   /// @brief  Adds the colors to the vision sensor
   void configure();

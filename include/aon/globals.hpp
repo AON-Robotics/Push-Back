@@ -61,7 +61,7 @@ inline auto& orbit = aon::core::hardware().orbit;
 
 
 /// Set by the GUI; drives color-sort accept/reject logic at runtime.
-inline volatile Alliance& ALLIANCE = aon::core::hardware().alliance;
+inline std::atomic<Alliance>& ALLIANCE = aon::core::hardware().alliance;
 
 // Potentiometer
 inline auto& potentiometer = aon::core::hardware().potentiometer;

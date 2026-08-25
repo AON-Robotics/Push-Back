@@ -15,6 +15,8 @@
 #include "pros/adi.hpp"
 #include "pros/misc.hpp"
 
+#include <atomic>
+
 namespace aon::core {
 
 /**
@@ -51,7 +53,7 @@ class Hardware {
 #endif
   Piston brooks;
   Orbit orbit;
-  volatile Alliance alliance;
+  std::atomic<Alliance> alliance;
   pros::adi::Potentiometer potentiometer;
   PID drivePID;
   PID turnPID;

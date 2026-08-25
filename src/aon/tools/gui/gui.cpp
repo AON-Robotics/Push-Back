@@ -231,7 +231,7 @@ void Gui::selectAutonByList(Alliance alliance, int index1Based) {
       selectedSkill = index1Based;
       break;
   }
-  ALLIANCE = alliance;
+  ALLIANCE.store(alliance, std::memory_order_release);
   const AutonOption& choice = options[index1Based - 1];
   selectedAuton = choice;
   selectedAutonName = choice.name;
