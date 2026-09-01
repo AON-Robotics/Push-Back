@@ -966,26 +966,24 @@ void playbackServicePolicyTests() {
   SlotSummary valid{};
   valid.result = ResultCode::Ok;
   valid.valid = true;
-  CHECK(authorizePlaybackArm(false, RobotIdentity::Small, true, valid) ==
+  CHECK(authorizePlaybackArm(false, RobotIdentity::Small, valid) ==
         ResultCode::PlayLocked);
-  CHECK(authorizePlaybackArm(true, RobotIdentity::Big, true, valid) ==
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Big, valid) ==
         ResultCode::UnsupportedRobot);
-  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, false, valid) ==
-        ResultCode::UnsafeState);
   SlotSummary wrongRobot{};
   wrongRobot.result = ResultCode::WrongRobot;
-  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, true, wrongRobot) ==
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, wrongRobot) ==
         ResultCode::WrongRobot);
   SlotSummary empty{};
-  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, true, empty) ==
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, empty) ==
         ResultCode::EmptyRecording);
-  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, true, valid) ==
+  CHECK(authorizePlaybackArm(true, RobotIdentity::Small, valid) ==
         ResultCode::Ok);
-  CHECK(playbackEligibility(true, RobotIdentity::Small, true, valid,
+  CHECK(playbackEligibility(true, RobotIdentity::Small, valid,
                             ServiceMode::Saved) == ResultCode::Ok);
-  CHECK(playbackEligibility(true, RobotIdentity::Small, true, valid,
+  CHECK(playbackEligibility(true, RobotIdentity::Small, valid,
                             ServiceMode::Armed) == ResultCode::PlayLocked);
-  CHECK(playbackEligibility(true, RobotIdentity::Small, true, valid,
+  CHECK(playbackEligibility(true, RobotIdentity::Small, valid,
                             ServiceMode::Playing) == ResultCode::PlayLocked);
 
   MemoryFileStore files;
@@ -1080,7 +1078,7 @@ void serviceStateTests() {
   const std::uint32_t firstSession = state.recordingSession();
   CHECK(state.acceptsSample(firstSession));
   CHECK(state.status().mode == ServiceMode::Recording);
-  CHECK(state.authorizePlay(false, true, true) == ResultCode::PlayLocked);
+  CHECK(state.authorizePlay(false, true) == ResultCode::PlayLocked);
   CHECK(state.beginProcessing() == ResultCode::Ok);
   CHECK(state.status().mode == ServiceMode::Processing);
   CHECK(state.finishSave(ResultCode::WriteFailed) == ResultCode::WriteFailed);
@@ -1110,9 +1108,8 @@ void serviceStateTests() {
         ResultCode::Cancelled);
   CHECK(state.status().mode == ServiceMode::Cancelled);
 
-  CHECK(state.authorizePlay(true, false, true) == ResultCode::PlayLocked);
-  CHECK(state.authorizePlay(true, true, false) == ResultCode::EmptyRecording);
-  CHECK(state.authorizePlay(true, true, true) == ResultCode::Ok);
+  CHECK(state.authorizePlay(true, false) == ResultCode::EmptyRecording);
+  CHECK(state.authorizePlay(true, true) == ResultCode::Ok);
   CHECK(state.armPlay(2, 100) == ResultCode::Ok);
   CHECK(state.status().mode == ServiceMode::Armed);
   CHECK(!state.consumeArm(1, 101));

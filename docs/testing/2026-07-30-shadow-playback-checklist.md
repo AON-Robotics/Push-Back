@@ -9,13 +9,13 @@ uploading.
 
 - Automated host suites: passed on 2026-07-31.
 - Clean ARM builds: small, big, then restored small all passed on 2026-07-31.
-- Small playback authorization: `false` pending the physical tests below.
+- Small playback authorization: `true` for supervised physical testing.
 - Physical tests: not run.
 
-Create a dedicated supervised-test checkpoint that changes only the small
-configuration's `shadowPlaybackAuthorized` value to `true` immediately before
-uploading the physical-test build. Keep the big configuration locked. If any
-physical gate fails, restore the small value to `false` before any further run.
+The small robot may arm playback whether competition control reports enabled or
+disabled. Keep the big configuration locked. If any physical gate fails,
+restore the small robot's `shadowPlaybackAuthorized` value to `false` before
+any further run.
 
 ## Progressive test
 
@@ -24,8 +24,9 @@ physical gate fails, restore the small value to `false` before any further run.
 2. Record and save a short, low-speed route without mechanism events.
 3. Verify the displayed start X, Y, and heading, then place the robot at that
    pose before arming.
-4. Press `PLAY`, then `CONFIRM PLAY` within five seconds. Verify Skills AUT3
-   selects `SHADOW PLAYBACK`, then start autonomous within five seconds.
+4. Press `PLAY`, then `CONFIRM PLAY` within five seconds in any competition
+   state. Verify Skills AUT3 selects `SHADOW PLAYBACK`, then invoke autonomous
+   playback within five seconds.
 5. Let the drivetrain-only route finish normally. Verify travel direction,
    endpoint error, and stopped drivetrain/intake outputs.
 6. Re-arm the same short route, start autonomous, and press controller X

@@ -79,8 +79,7 @@ shadow::ResultCode shadowPlayEligibility(const shadow::SlotSummary& summary,
                          ? shadow::RobotIdentity::Small
                          : shadow::RobotIdentity::Big;
   return shadow::playbackEligibility(
-      config.shadowPlaybackAuthorized, robot,
-      pros::competition::is_disabled(), summary, mode);
+      config.shadowPlaybackAuthorized, robot, summary, mode);
 }
 
 }  // namespace

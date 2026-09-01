@@ -30,9 +30,8 @@ class Service {
   SlotSummary slot(std::uint8_t slot) const;
   /** Returns the current service state by value. */
   Status status() const;
-  /** Arms a valid slot for one playback while the robot is disabled. */
-  ResultCode armPlayback(std::uint8_t slot, bool startConfirmed,
-                         bool robotDisabled);
+  /** Arms a valid slot for one playback after explicit confirmation. */
+  ResultCode armPlayback(std::uint8_t slot, bool startConfirmed);
   /** Consumes the current arm and runs playback synchronously. */
   ResultCode runArmedPlayback();
   /** Invalidates any pending playback arm without deleting recordings. */
@@ -63,10 +62,8 @@ ResultCode dispatchArmedPlayback(ServiceStateMachine& state, Storage& storage,
                                  std::uint32_t now = 0);
 
 ResultCode authorizePlaybackArm(bool authorized, RobotIdentity activeRobot,
-                                bool robotDisabled,
                                 const SlotSummary& summary);
 ResultCode playbackEligibility(bool authorized, RobotIdentity activeRobot,
-                               bool robotDisabled,
                                const SlotSummary& summary, ServiceMode mode);
 
 /** Returns the non-owning, process-lifetime Shadow service. */

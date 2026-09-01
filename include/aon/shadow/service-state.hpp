@@ -46,8 +46,7 @@ class ServiceStateMachine {
   ResultCode beginProcessing(std::uint32_t now = 0);
   ResultCode finishSave(ResultCode result, std::uint32_t now = 0,
                         std::uint32_t operation = 0);
-  ResultCode authorizePlay(bool startConfirmed, bool robotDisabled,
-                           bool slotValid) const;
+  ResultCode authorizePlay(bool startConfirmed, bool slotValid) const;
   ResultCode armPlay(std::uint8_t slot, std::uint32_t now = 0);
   bool consumeArm(std::uint8_t slot, std::uint32_t now = 0);
   ResultCode finishPlayback(ResultCode result, std::uint32_t now = 0);

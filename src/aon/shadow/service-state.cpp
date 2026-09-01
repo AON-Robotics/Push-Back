@@ -55,10 +55,8 @@ ResultCode ServiceStateMachine::finishSave(ResultCode result,
 }
 
 ResultCode ServiceStateMachine::authorizePlay(bool startConfirmed,
-                                              bool robotDisabled,
                                               bool slotValid) const {
-  if (!startConfirmed || !robotDisabled ||
-      status_.mode == ServiceMode::Recording ||
+  if (!startConfirmed || status_.mode == ServiceMode::Recording ||
       status_.mode == ServiceMode::Processing ||
       status_.mode == ServiceMode::Armed ||
       status_.mode == ServiceMode::Playing) {
@@ -149,25 +147,22 @@ void ServiceStateMachine::cancel(std::uint32_t now) {
 Status ServiceStateMachine::status() const { return status_; }
 
 ResultCode authorizePlaybackArm(bool authorized, RobotIdentity activeRobot,
-                                bool robotDisabled,
                                 const SlotSummary& summary) {
   if (activeRobot != RobotIdentity::Small) {
     return ResultCode::UnsupportedRobot;
   }
   if (!authorized) return ResultCode::PlayLocked;
-  if (!robotDisabled) return ResultCode::UnsafeState;
   if (summary.result != ResultCode::Ok) return summary.result;
   return summary.valid ? ResultCode::Ok : ResultCode::EmptyRecording;
 }
 
 ResultCode playbackEligibility(bool authorized, RobotIdentity activeRobot,
-                               bool robotDisabled,
                                const SlotSummary& summary, ServiceMode mode) {
   if (mode == ServiceMode::Recording || mode == ServiceMode::Processing ||
       mode == ServiceMode::Armed || mode == ServiceMode::Playing) {
     return ResultCode::PlayLocked;
   }
-  return authorizePlaybackArm(authorized, activeRobot, robotDisabled, summary);
+  return authorizePlaybackArm(authorized, activeRobot, summary);
 }
 
 ResultCode loadAndRunPlayback(Storage& storage, std::uint8_t slot,

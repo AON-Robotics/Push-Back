@@ -53,8 +53,7 @@ shadow::ResultCode shadowPlaybackEligibility(
     const shadow::SlotSummary& summary, shadow::ServiceMode mode) {
   const auto& config = aon::config::activeRobotConfig();
   return shadow::playbackEligibility(
-      config.shadowPlaybackAuthorized, activeShadowRobot(),
-      pros::competition::is_disabled(), summary, mode);
+      config.shadowPlaybackAuthorized, activeShadowRobot(), summary, mode);
 }
 
 void saveAutonSelection(Alliance alliance, int index) {
@@ -536,8 +535,8 @@ void Gui::handleShadowMenuTouch() {
       return;
     }
 
-    const auto result = shadow::service().armPlayback(
-        selectedShadowSlot, true, pros::competition::is_disabled());
+    const auto result =
+        shadow::service().armPlayback(selectedShadowSlot, true);
     shadowConfirmation = ShadowConfirmation::None;
     shadowActionResult = result;
     shadowHasActionResult = result != shadow::ResultCode::Ok;

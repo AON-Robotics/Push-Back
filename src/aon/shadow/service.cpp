@@ -262,8 +262,7 @@ Status Service::status() const {
   return serviceData.state.status();
 }
 
-ResultCode Service::armPlayback(std::uint8_t slotValue, bool startConfirmed,
-                                bool robotDisabled) {
+ResultCode Service::armPlayback(std::uint8_t slotValue, bool startConfirmed) {
   const auto& robotConfig = aon::config::activeRobotConfig();
   const RobotIdentity robot = activeShadowRobot();
   if (robot == RobotIdentity::Big) return ResultCode::UnsupportedRobot;
@@ -272,14 +271,14 @@ ResultCode Service::armPlayback(std::uint8_t slotValue, bool startConfirmed,
 
   const SlotSummary summary = slot(slotValue);
   const ResultCode policy = authorizePlaybackArm(
-      robotConfig.shadowPlaybackAuthorized, robot, robotDisabled, summary);
+      robotConfig.shadowPlaybackAuthorized, robot, summary);
   if (policy != ResultCode::Ok) return policy;
 
   auto& serviceData = data();
   Lock lock(serviceData.mutex);
   if (serviceData.ioBusy) return ResultCode::UnsafeState;
-  const ResultCode statePolicy = serviceData.state.authorizePlay(
-      startConfirmed, robotDisabled, summary.valid);
+  const ResultCode statePolicy =
+      serviceData.state.authorizePlay(startConfirmed, summary.valid);
   if (statePolicy != ResultCode::Ok) return statePolicy;
   return serviceData.state.armPlay(slotValue, pros::millis());
 }
