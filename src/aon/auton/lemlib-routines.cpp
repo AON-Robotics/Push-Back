@@ -4,6 +4,7 @@
 #include "aon/auton/figure-eight-validation.hpp"
 #include "aon/auton/hybrid-sequence.hpp"
 #include "aon/auton/jerryio-path-auton.hpp"
+#include "aon/auton/jerryio-sequence.hpp"
 #include "aon/auton/mechanism-actions.hpp"
 #include "aon/auton/motion-health.hpp"
 #include "aon/auton/red-six-block.hpp"
@@ -17,7 +18,9 @@
 
 #include <cstdio>
 
-ASSET(path_jerryio_txt);
+ASSET(path_jerryio_intake_txt);
+ASSET(path_jerryio_outtake_txt);
+ASSET(path_jerryio_pistons_txt);
 ASSET(figure_eight_jerryio_txt);
 ASSET(red_six_loader_approach_jerryio_txt);
 ASSET(red_six_goal_transfer_jerryio_txt);
@@ -68,6 +71,38 @@ const char* redSixPhaseName(aon::auton::RedSixPhase phase) {
   return "invalid phase";
 }
 
+const char* jerryIoPhaseName(aon::auton::JerryIoPhase phase) {
+  using aon::auton::JerryIoPhase;
+  switch (phase) {
+    case JerryIoPhase::FollowToIntake:
+      return "follow to intake";
+    case JerryIoPhase::Intake:
+      return "intake";
+    case JerryIoPhase::FollowToOuttake:
+      return "follow to outtake";
+    case JerryIoPhase::Outtake:
+      return "outtake";
+    case JerryIoPhase::FollowToPistons:
+      return "follow to pistons";
+    case JerryIoPhase::PulsePistons:
+      return "pulse pistons";
+  }
+  return "invalid phase";
+}
+
+bool waitForCheckpoint(aon::auton::Actions& routine,
+                       std::uint32_t durationMs) {
+  const std::uint32_t startedAt = pros::millis();
+  while (pros::millis() - startedAt < durationMs) {
+    if (routine.isCancellationLatched() ||
+        pros::competition::is_disabled()) {
+      return false;
+    }
+    pros::delay(20);
+  }
+  return true;
+}
+
 bool redSixMotion(aon::auton::RedSixPhase phase,
                   const aon::auton::MotionResult& result) {
   if (result.succeeded) return true;
@@ -104,7 +139,10 @@ int RunLemLibFigureEightValidation() {
 
 int RunJerryIoPathAuton() {
   using aon::auton::JerryIoPathAuton;
+  using aon::auton::JerryIoCallbacks;
+  using aon::auton::JerryIoPhase;
   auto& routine = aon::auton::actions();
+  auto& hardware = aon::core::hardware();
 
   if (!aon::config::activeRobotConfig()
            .autonomousAuthorizations.allows(
@@ -123,11 +161,68 @@ int RunJerryIoPathAuton() {
   aon::auton::logStep(JerryIoPathAuton::name, "start");
   routine.setPose(JerryIoPathAuton::startX, JerryIoPathAuton::startY,
                   JerryIoPathAuton::startHeading);
-  const auto result = routine.followPath(
-      JerryIoPathAuton::name, path_jerryio_txt, JerryIoPathAuton::lookahead,
-      JerryIoPathAuton::timeoutMs, true, {},
-      aon::auton::OdometryMonitoring::FailClosed);
-  routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+  aon::auton::mechanisms::resetLoaderCart(hardware);
+
+  const auto followAndFace = [&](const char* name, const asset& path,
+                                 double heading) {
+    const auto followed = routine.followPath(
+        name, path, JerryIoPathAuton::lookahead,
+        JerryIoPathAuton::timeoutMs, true, {},
+        aon::auton::OdometryMonitoring::FailClosed);
+    if (!followed.succeeded) return false;
+    return routine
+        .turnToHeading(name, heading, JerryIoPathAuton::headingTimeoutMs,
+                       {.direction = lemlib::AngularDirection::AUTO,
+                        .maxSpeed = 45})
+        .succeeded;
+  };
+
+  JerryIoCallbacks callbacks;
+  callbacks.run = [&](JerryIoPhase phase) {
+    aon::auton::logStep(JerryIoPathAuton::name, jerryIoPhaseName(phase));
+    switch (phase) {
+      case JerryIoPhase::FollowToIntake:
+        return followAndFace("JerryIO: intake checkpoint",
+                             path_jerryio_intake_txt,
+                             JerryIoPathAuton::intakeHeading);
+      case JerryIoPhase::Intake: {
+        hardware.intake.move();
+        const bool completed = waitForCheckpoint(
+            routine, JerryIoPathAuton::actionDurationMs);
+        hardware.intake.stop();
+        return completed;
+      }
+      case JerryIoPhase::FollowToOuttake:
+        return followAndFace("JerryIO: outtake checkpoint",
+                             path_jerryio_outtake_txt,
+                             JerryIoPathAuton::outtakeHeading);
+      case JerryIoPhase::Outtake: {
+        hardware.intake.move(-INTAKE_VELOCITY);
+        const bool completed = waitForCheckpoint(
+            routine, JerryIoPathAuton::actionDurationMs);
+        hardware.intake.stop();
+        return completed;
+      }
+      case JerryIoPhase::FollowToPistons:
+        return followAndFace("JerryIO: piston checkpoint",
+                             path_jerryio_pistons_txt,
+                             JerryIoPathAuton::pistonsHeading);
+      case JerryIoPhase::PulsePistons: {
+        aon::auton::mechanisms::prepareLoaderCart(hardware);
+        const bool completed = waitForCheckpoint(
+            routine, JerryIoPathAuton::actionDurationMs);
+        aon::auton::mechanisms::resetLoaderCart(hardware);
+        return completed;
+      }
+    }
+    return false;
+  };
+  callbacks.stopAll = [&] {
+    routine.stop(pros::E_MOTOR_BRAKE_BRAKE);
+    aon::auton::mechanisms::stopAll(hardware);
+  };
+
+  const auto result = aon::auton::runJerryIoSequence(callbacks);
   aon::auton::logStep(JerryIoPathAuton::name,
                       result.succeeded ? "finish" : "failed");
   return result.succeeded ? 1 : 0;

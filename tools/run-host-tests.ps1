@@ -41,6 +41,11 @@ Invoke-HostTest 'legacy-motion-safety-test' @(
   'tests\legacy-motion-safety-test.cpp'
 )
 
+Invoke-HostTest 'jerryio-path-auton-test' @(
+  'tests\jerryio-path-auton-test.cpp',
+  'src\aon\auton\jerryio-sequence.cpp'
+)
+
 Invoke-HostTest 'localization-math-test' @(
   'tests\localization-math-test.cpp',
   'src\aon\pose-estimator.cpp',
