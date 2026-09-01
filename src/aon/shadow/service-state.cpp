@@ -84,10 +84,6 @@ bool ServiceStateMachine::consumeArm(std::uint8_t slot, std::uint32_t now) {
       armedSlot_ != slot) {
     return false;
   }
-  if (playbackArmExpired(status_, now)) {
-    cancel(now);
-    return false;
-  }
   armedSlot_ = 0;
   status_.mode = ServiceMode::Playing;
   status_.result = ResultCode::Ok;

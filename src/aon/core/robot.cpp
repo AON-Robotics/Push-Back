@@ -40,7 +40,10 @@ void Robot::initialize() {
 }
 
 void Robot::disabled() {
-  aon::shadow::service().clearPlaybackArm();
+  if (aon::shadow::service().status().mode ==
+      aon::shadow::ServiceMode::Playing) {
+    aon::shadow::service().clearPlaybackArm();
+  }
   aon::auton::actions().stop();
   aon::shadow::stopAllMechanisms();
 }

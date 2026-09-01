@@ -208,6 +208,9 @@ void Gui::applyPreselectedAuton() {
 void Gui::selectAutonByList(Alliance alliance, int index1Based) {
   if (index1Based < 1) index1Based = 1;
   if (index1Based > 3) index1Based = 3;
+  if (alliance != Alliance::Skills || index1Based != 3) {
+    clearShadowArmIfPresent();
+  }
 
   const AutonOption* options = nullptr;
   switch (alliance) {
@@ -409,7 +412,6 @@ void Gui::handleShadowMenuTouch() {
   if (busy) return;
 
   if (shadowBackBtn.isHit(x, y)) {
-    clearShadowArmIfPresent();
     shadowConfirmation = ShadowConfirmation::None;
     displayMainMenu();
     currentScreen = MainMenu;
@@ -509,8 +511,15 @@ void Gui::handleShadowMenuTouch() {
   }
 
   if (shadowPlayBtn.isHit(x, y)) {
-    if (status.mode == shadow::ServiceMode::Armed ||
-        status.mode == shadow::ServiceMode::Playing) {
+    if (status.mode == shadow::ServiceMode::Armed) {
+      clearShadowArmIfPresent();
+      shadowConfirmation = ShadowConfirmation::None;
+      shadowHasActionResult = false;
+      shadowDeleteSucceeded = false;
+      displayShadowMenu();
+      return;
+    }
+    if (status.mode == shadow::ServiceMode::Playing) {
       return;
     }
     const auto eligibility = shadowPlaybackEligibility(
@@ -567,11 +576,6 @@ void Gui::updateShadowMenu() {
       timeReached(now, shadowConfirmationExpiresAt)) {
     clearShadowArmIfPresent();
     shadowConfirmation = ShadowConfirmation::None;
-    redraw = true;
-  }
-  if (shadow::playbackArmExpired(shadowStatus, now,
-                                 kShadowPlayConfirmationMs)) {
-    clearShadowArmIfPresent();
     redraw = true;
   }
   if (redraw) displayShadowMenu();

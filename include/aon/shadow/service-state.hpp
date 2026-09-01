@@ -6,8 +6,6 @@
 
 namespace aon::shadow {
 
-constexpr std::uint32_t kPlaybackArmLifetimeMs = 5000;
-
 constexpr bool confirmationExpired(std::uint32_t now,
                                    std::uint32_t deadline) {
   return static_cast<std::int32_t>(now - deadline) >= 0;
@@ -31,13 +29,6 @@ struct Status {
   std::uint8_t slot = 0;
   std::uint32_t changedAt = 0;
 };
-
-constexpr bool playbackArmExpired(const Status& status, std::uint32_t now,
-                                  std::uint32_t maximumAgeMs =
-                                      kPlaybackArmLifetimeMs) {
-  return status.mode == ServiceMode::Armed &&
-         confirmationExpired(now, status.changedAt + maximumAgeMs);
-}
 
 class ServiceStateMachine {
  public:

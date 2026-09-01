@@ -376,7 +376,7 @@ void Gui::displayShadowMenu() {
   } else if (status.mode == shadow::ServiceMode::Armed) {
     pros::screen::set_pen(COLOR_ORANGE);
     pros::screen::print(pros::E_TEXT_SMALL, 10, 164,
-                        "START AUTON WITHIN 5s");
+                        "START AUTON; TAP ARMED TO CANCEL");
   } else if (status.result != shadow::ResultCode::Ok) {
     pros::screen::set_pen(COLOR_RED);
     pros::screen::print(pros::E_TEXT_SMALL, 10, 164, "%s",

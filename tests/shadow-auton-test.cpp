@@ -1047,17 +1047,10 @@ void serviceStateTests() {
   CHECK(!confirmationExpired(4999, 5000));
   CHECK(confirmationExpired(5000, 5000));
   CHECK(confirmationExpired(5, std::numeric_limits<std::uint32_t>::max()));
-  CHECK(!playbackArmExpired({ServiceMode::Armed, ResultCode::Ok, 1, 100},
-                            5099, 5000));
-  CHECK(playbackArmExpired({ServiceMode::Armed, ResultCode::Ok, 1, 100},
-                           5100, 5000));
-  CHECK(!playbackArmExpired({ServiceMode::Finished, ResultCode::Ok, 1, 100},
-                            5100, 5000));
-
-  ServiceStateMachine expiredArm;
-  CHECK(expiredArm.armPlay(1, 100) == ResultCode::Ok);
-  CHECK(!expiredArm.consumeArm(1, 5100));
-  CHECK(expiredArm.status().mode == ServiceMode::Cancelled);
+  ServiceStateMachine persistentArm;
+  CHECK(persistentArm.armPlay(1, 100) == ResultCode::Ok);
+  CHECK(persistentArm.consumeArm(1, 600100));
+  CHECK(persistentArm.status().mode == ServiceMode::Playing);
 
   ServiceStateMachine pendingStart;
   const std::uint32_t pendingRevision = pendingStart.revision();

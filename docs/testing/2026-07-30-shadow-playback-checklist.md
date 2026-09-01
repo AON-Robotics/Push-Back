@@ -25,8 +25,9 @@ any further run.
 3. Verify the displayed start X, Y, and heading, then place the robot at that
    pose before arming.
 4. Press `PLAY`, then `CONFIRM PLAY` within five seconds in any competition
-   state. Verify Skills AUT3 selects `SHADOW PLAYBACK`, then invoke autonomous
-   playback within five seconds.
+   state. Verify Skills AUT3 selects `SHADOW PLAYBACK`. The arm persists while
+   navigating screens and transitioning through Disabled; invoke autonomous
+   playback when ready. Tap `ARMED` to cancel it.
 5. Let the drivetrain-only route finish normally. Verify travel direction,
    endpoint error, and stopped drivetrain/intake outputs.
 6. Re-arm the same short route, start autonomous, and press controller X
